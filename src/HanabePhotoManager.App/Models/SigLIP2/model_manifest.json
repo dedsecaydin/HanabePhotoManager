@@ -1,0 +1,12 @@
+{
+  "model_id": "siglip2-visual-example",
+  "model_file": "siglip2_visual.onnx",
+  "image_size": 256,
+  "input_name": "TODO",
+  "output_name": "TODO",
+  "embedding_dimension": null,
+  "preprocessing": "TODO",
+  "label_prompt_template": "{label}",
+  "score_type": "cosine",
+  "sha256": "TODO"
+}

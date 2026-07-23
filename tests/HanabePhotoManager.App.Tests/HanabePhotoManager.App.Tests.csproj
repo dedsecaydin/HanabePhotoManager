@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <IsTestProject>true</IsTestProject>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/HanabePhotoManager.App/HanabePhotoManager.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\face-reference.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\HanabePhotoManager.App\Models\Face\face_recognition_sface_2021dec.onnx" Link="Models\Face\face_recognition_sface_2021dec.onnx" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\HanabePhotoManager.App\Models\Face\haarcascade_frontalface_alt2.xml" Link="Models\Face\haarcascade_frontalface_alt2.xml" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

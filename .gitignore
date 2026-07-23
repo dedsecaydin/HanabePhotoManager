@@ -1,0 +1,12 @@
+.superpowers/
+.worktrees/
+work/
+outputs/
+
+# .NET build and test outputs
+**/bin/
+**/obj/
+.vs/
+TestResults/
+artifacts/
+.artifacts/

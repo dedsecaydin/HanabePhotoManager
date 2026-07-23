@@ -1,0 +1,1 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"><FontFamily x:Key="Typography.FontFamily.UI">Segoe UI Variable, Microsoft YaHei UI</FontFamily><FontFamily x:Key="Typography.FontFamily.Mono">Cascadia Mono, Consolas</FontFamily></ResourceDictionary>

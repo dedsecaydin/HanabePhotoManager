@@ -33,7 +33,7 @@ public static class SigLip2OnnxSessionManager
             if (_session is not null) return; // already initialized
 
             if (!File.Exists(manifestPath))
-                throw new FileNotFoundException("SigLIP2 model manifest not found.", manifestPath);
+                            throw new FileNotFoundException($"SigLIP2 model manifest not found: {manifestPath}", manifestPath);
 
             ModelManifest manifest;
             try

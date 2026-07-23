@@ -1,3 +1,7 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.ML.OnnxRuntime;
 
@@ -66,8 +70,8 @@ public static class SigLip2OnnxSessionManager
             // Create InferenceSession and enumerate inputs/outputs
             try
             {
-                var options = new SessionOptions();
-                _session = new InferenceSession(modelPath, options);
+                // Use default session options for now; do not assume any provider.
+                _session = new InferenceSession(modelPath);
 
                 // capture metadata
                 _inputMetadata = _session.InputMetadata.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -125,17 +129,17 @@ public static class SigLip2OnnxSessionManager
         }
     }
 
-    private sealed class ModelManifest
+    public sealed class ModelManifest
     {
-        public string? ModelId { get; set; }
-        public string? ModelFile { get; set; }
-        public int? ImageSize { get; set; }
-        public string? InputName { get; set; }
-        public string? OutputName { get; set; }
-        public int? EmbeddingDimension { get; set; }
-        public string? Preprocessing { get; set; }
-        public string? LabelPromptTemplate { get; set; }
-        public string? ScoreType { get; set; }
-        public string? Sha256 { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("model_id")] public string? ModelId { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("model_file")] public string? ModelFile { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("image_size")] public int? ImageSize { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("input_name")] public string? InputName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("output_name")] public string? OutputName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("embedding_dimension")] public int? EmbeddingDimension { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("preprocessing")] public string? Preprocessing { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("label_prompt_template")] public string? LabelPromptTemplate { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("score_type")] public string? ScoreType { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("sha256")] public string? Sha256 { get; set; }
     }
 }

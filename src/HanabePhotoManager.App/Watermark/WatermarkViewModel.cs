@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Windows;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -51,6 +52,7 @@ public sealed partial class WatermarkViewModel : ObservableObject
     [ObservableProperty] private double _progress;
     [ObservableProperty] private string _statusText = "添加图片和透明 PNG 水印后即可导出。";
     [ObservableProperty] private BitmapImage? _previewImage;
+    [ObservableProperty] private BitmapImage? _watermarkPreviewImage;
 
     public bool HasItems => Items.Count > 0;
     public bool ShowSignatureSettings => !IsTiled;
@@ -58,9 +60,16 @@ public sealed partial class WatermarkViewModel : ObservableObject
     public bool ShowManualTileSettings => IsTiled && IsManualTile;
     public bool CanExport => HasItems && File.Exists(WatermarkPath) && Directory.Exists(OutputDirectory) && !IsBusy;
 
-    partial void OnIsTiledChanged(bool value) { OnPropertyChanged(nameof(ShowSignatureSettings)); OnPropertyChanged(nameof(ShowTileSettings)); OnPropertyChanged(nameof(ShowManualTileSettings)); }
-    partial void OnIsManualTileChanged(bool value) => OnPropertyChanged(nameof(ShowManualTileSettings));
-    partial void OnWatermarkPathChanged(string value) => OnPropertyChanged(nameof(CanExport));
+    partial void OnIsTiledChanged(bool value) { OnPropertyChanged(nameof(ShowSignatureSettings)); OnPropertyChanged(nameof(ShowTileSettings)); OnPropertyChanged(nameof(ShowManualTileSettings)); NotifyPreviewSettings(); }
+    partial void OnIsManualTileChanged(bool value) { OnPropertyChanged(nameof(ShowManualTileSettings)); NotifyPreviewSettings(); }
+    partial void OnWatermarkPathChanged(string value)
+    {
+        WatermarkPreviewImage = LoadBitmap(value, 800);
+        foreach (var item in Items.Where(x => PathsEqual(x.Path, value)).ToArray()) Items.Remove(item);
+        if (SelectedItem is not null && PathsEqual(SelectedItem.Path, value)) SelectedItem = Items.FirstOrDefault();
+        ChangedItems();
+        OnPropertyChanged(nameof(CanExport));
+    }
     partial void OnOutputDirectoryChanged(string value) => OnPropertyChanged(nameof(CanExport));
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanExport));
     partial void OnSelectedItemChanged(WatermarkQueueItem? value)
@@ -75,15 +84,46 @@ public sealed partial class WatermarkViewModel : ObservableObject
     public bool HasSelectedItem => SelectedItem is not null;
     public double PreviewOpacity => SelectedItem?.UseIndividualSettings == true ? SelectedItem.Opacity : Opacity;
     public double PreviewWatermarkWidth => 60 + ((SelectedItem?.UseIndividualSettings == true ? SelectedItem.SizeRatio : SizeRatio) * 500);
+    public double PreviewCenterX => SelectedItem?.UseIndividualSettings == true ? SelectedItem.CenterX : CenterX;
+    public double PreviewCenterY => SelectedItem?.UseIndividualSettings == true ? SelectedItem.CenterY : CenterY;
+    public System.Windows.HorizontalAlignment PreviewHorizontalAlignment => PreviewCenterX < .34 ? System.Windows.HorizontalAlignment.Left : PreviewCenterX > .66 ? System.Windows.HorizontalAlignment.Right : System.Windows.HorizontalAlignment.Center;
+    public System.Windows.VerticalAlignment PreviewVerticalAlignment => PreviewCenterY < .34 ? System.Windows.VerticalAlignment.Top : PreviewCenterY > .66 ? System.Windows.VerticalAlignment.Bottom : System.Windows.VerticalAlignment.Center;
+    public Rect PreviewTileViewport
+    {
+        get
+        {
+            var size = Math.Clamp(SelectedItem?.UseIndividualSettings == true ? SelectedItem.SizeRatio : SizeRatio, .03, .6);
+            var width = IsManualTile
+                ? Math.Clamp(size + (HorizontalGap * .35), .05, .85)
+                : Math.Clamp(size * (1.45 - (Density * .9)), .045, .7);
+            var height = IsManualTile
+                ? Math.Clamp(size + (VerticalGap * .35), .05, .85)
+                : width;
+            return new Rect(0, 0, width, height);
+        }
+    }
+    public double PreviewTileAngle => IsManualTile ? Angle : -24;
 
     partial void OnOpacityChanged(double value) => NotifyPreviewSettings();
     partial void OnSizeRatioChanged(double value) => NotifyPreviewSettings();
+    partial void OnCenterXChanged(double value) => NotifyPreviewSettings();
+    partial void OnCenterYChanged(double value) => NotifyPreviewSettings();
+    partial void OnDensityChanged(double value) => NotifyPreviewSettings();
+    partial void OnHorizontalGapChanged(double value) => NotifyPreviewSettings();
+    partial void OnVerticalGapChanged(double value) => NotifyPreviewSettings();
+    partial void OnAngleChanged(double value) => NotifyPreviewSettings();
 
     private void SelectedItem_PropertyChanged(object? sender, PropertyChangedEventArgs e) => NotifyPreviewSettings();
     private void NotifyPreviewSettings()
     {
         OnPropertyChanged(nameof(PreviewOpacity));
         OnPropertyChanged(nameof(PreviewWatermarkWidth));
+        OnPropertyChanged(nameof(PreviewCenterX));
+        OnPropertyChanged(nameof(PreviewCenterY));
+        OnPropertyChanged(nameof(PreviewHorizontalAlignment));
+        OnPropertyChanged(nameof(PreviewVerticalAlignment));
+        OnPropertyChanged(nameof(PreviewTileViewport));
+        OnPropertyChanged(nameof(PreviewTileAngle));
     }
 
     [RelayCommand] private void ChooseImages()
@@ -111,7 +151,9 @@ public sealed partial class WatermarkViewModel : ObservableObject
     {
         var result = _discovery.Discover(paths, Recursive);
         var known = Items.Select(x => x.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var file in result.Files) if (known.Add(file)) Items.Add(new(file) { CenterX = CenterX, CenterY = CenterY, SizeRatio = SizeRatio, Opacity = Opacity });
+        foreach (var file in result.Files)
+            if (!PathsEqual(file, WatermarkPath) && known.Add(file))
+                Items.Add(new(file) { CenterX = CenterX, CenterY = CenterY, SizeRatio = SizeRatio, Opacity = Opacity });
         if (SelectedItem is null && Items.Count > 0) SelectedItem = Items[0];
         StatusText = result.Warnings.Count == 0 ? $"已添加 {Items.Count:N0} 张图片。" : $"已添加 {Items.Count:N0} 张，{result.Warnings.Count} 个路径被跳过。";
         ChangedItems();
@@ -157,5 +199,30 @@ public sealed partial class WatermarkViewModel : ObservableObject
 
     private void ChangedItems() { OnPropertyChanged(nameof(HasItems)); OnPropertyChanged(nameof(CanExport)); }
     private void LoadPreview(string path)
-    { try { var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.DecodePixelWidth = 1200; image.UriSource = new Uri(path); image.EndInit(); image.Freeze(); PreviewImage = image; } catch { } }
+    { PreviewImage = LoadBitmap(path, 1200); }
+
+    private static BitmapImage? LoadBitmap(string path, int decodePixelWidth)
+    {
+        if (!File.Exists(path)) return null;
+        try
+        {
+            using var stream = File.OpenRead(path);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.DecodePixelWidth = decodePixelWidth;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch { return null; }
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        if (string.IsNullOrWhiteSpace(left) || string.IsNullOrWhiteSpace(right)) return false;
+        try { return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase); }
+        catch { return string.Equals(left, right, StringComparison.OrdinalIgnoreCase); }
+    }
 }

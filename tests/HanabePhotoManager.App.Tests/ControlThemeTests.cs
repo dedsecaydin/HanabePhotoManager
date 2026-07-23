@@ -230,6 +230,21 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("Setter Property=\"Margin\" Value=\"0\"");
     }
 
+    [Fact]
+    public void WatermarkPreview_RendersSeparateSignatureAndTiledLayers()
+    {
+        var watermarkXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Watermark", "WatermarkPage.xaml"));
+
+        watermarkXaml.Should().Contain("Source=\"{Binding WatermarkPreviewImage}\"");
+        watermarkXaml.Should().Contain("TileMode=\"Tile\"");
+        watermarkXaml.Should().Contain("Viewport=\"{Binding PreviewTileViewport}\"");
+        watermarkXaml.Should().Contain("Angle=\"{Binding PreviewTileAngle}\"");
+        watermarkXaml.Should().Contain("Visibility=\"{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}\"");
+        watermarkXaml.Should().Contain("Visibility=\"{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}\"");
+        watermarkXaml.Should().Contain("DataTrigger Binding=\"{Binding HasItems}\" Value=\"True\"");
+    }
+
     private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

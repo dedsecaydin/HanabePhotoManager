@@ -120,7 +120,7 @@ public interface IExternalFileService
 }
 ```
 
-The project targets `net8.0`, references Core and Infrastructure, and uses CommunityToolkit.Mvvm 8.4.0. Add both new projects to the solution under the existing `src` and `tests` solution folders.
+The project targets `net8.0`, references Core only, and uses CommunityToolkit.Mvvm 8.4.0. Desktop.Core does not consume Infrastructure; a later Desktop composition project may reference Infrastructure when it composes implementations. Add both new projects to the solution under the existing `src` and `tests` solution folders.
 
 - [ ] **Step 4: Run contract and existing portable tests**
 

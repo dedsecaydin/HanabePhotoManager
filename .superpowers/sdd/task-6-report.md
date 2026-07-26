@@ -60,3 +60,26 @@ dotnet test HanabePhotoManager.sln -c Release --no-build
 ```
 
 Results: metadata test 1/1 passed; Git Bash syntax validation and all three overlap regression cases passed. The Release solution build finished with 0 warnings and 0 errors. Full regression passed 718/718 (Core 351, Desktop.Core 24, Infrastructure 136, App 207).
+
+## Executable-mode and rejection-message follow-up
+
+- `tools/macos/create-app-bundle.sh` and `tools/macos/test-create-app-bundle.sh` are now tracked with executable mode `100755` for CI and macOS execution.
+- The Bash regression suite invokes the target explicitly through `bash`, so a missing executable bit cannot be mistaken for a successful overlap rejection.
+- Each overlap case now captures combined output and requires the appropriate explicit rejection message in addition to a nonzero exit status and source-sentinel preservation.
+
+### Follow-up TDD evidence
+
+Before changing the tracked modes, the strengthened Git Bash test failed as expected: `Expected tools/macos/create-app-bundle.sh to be tracked as executable, found mode 100644.` After setting both modes to `100755` and invoking the target through `bash`, the regression suite passed.
+
+### Follow-up verification
+
+```powershell
+& 'C:\Program Files\Git\bin\bash.exe' -n tools/macos/create-app-bundle.sh
+& 'C:\Program Files\Git\bin\bash.exe' -n tools/macos/test-create-app-bundle.sh
+& 'C:\Program Files\Git\bin\bash.exe' tools/macos/test-create-app-bundle.sh
+dotnet test tests/HanabePhotoManager.Desktop.Core.Tests/HanabePhotoManager.Desktop.Core.Tests.csproj -c Release --filter BundleMetadataTests
+dotnet build HanabePhotoManager.sln -c Release /warnaserror
+dotnet test HanabePhotoManager.sln -c Release --no-build
+```
+
+Results: both Bash syntax checks, the overlap regression suite, and the metadata test 1/1 passed. The Release build had 0 warnings and 0 errors; full regression passed 718/718 (Core 351, Desktop.Core 24, Infrastructure 136, App 207).

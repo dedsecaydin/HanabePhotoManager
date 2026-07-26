@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Themes.Fluent;
+using HanabePhotoManager.Desktop.Composition;
 using HanabePhotoManager.Desktop.Core.ViewModels;
 using HanabePhotoManager.Desktop.Views;
 
@@ -22,6 +23,8 @@ internal static class Program
     internal static int RunSmokeTest()
     {
         DesktopStartupComposition.ValidateShell();
+        using var serviceProvider = DesktopComposition.CreateServiceProvider();
+        var shellViewModel = DesktopComposition.ResolveServicesForCurrentPlatform(serviceProvider);
         BuildAvaloniaApp().SetupWithoutStarting();
 
         if (Application.Current is not App app || !app.Styles.OfType<FluentTheme>().Any())
@@ -31,7 +34,7 @@ internal static class Program
 
         var mainWindow = new MainWindow
         {
-            DataContext = new DesktopShellViewModel()
+            DataContext = shellViewModel
         };
 
         try

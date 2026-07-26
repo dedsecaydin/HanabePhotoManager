@@ -19,3 +19,42 @@ public static class DesktopServices
             .AddSingleton<DesktopShellViewModel>();
     }
 }
+
+public static class DesktopComposition
+{
+    public static ServiceProvider CreateServiceProvider()
+    {
+        return new ServiceCollection()
+            .AddHanabeDesktop()
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+    }
+
+    public static DesktopShellViewModel ResolveServicesForCurrentPlatform(IServiceProvider serviceProvider)
+    {
+        ArgumentNullException.ThrowIfNull(serviceProvider);
+
+        var shellViewModel = serviceProvider.GetRequiredService<DesktopShellViewModel>();
+
+        foreach (var serviceType in DesktopServiceResolutionPolicy.GetPlatformServiceTypes(OperatingSystem.IsMacOS()))
+        {
+            _ = serviceProvider.GetRequiredService(serviceType);
+        }
+
+        return shellViewModel;
+    }
+}
+
+public static class DesktopServiceResolutionPolicy
+{
+    public static IReadOnlyList<Type> GetPlatformServiceTypes(bool isMacOs)
+    {
+        return isMacOs
+            ? [
+                typeof(IAppPaths),
+                typeof(ITrashService),
+                typeof(IExternalFileService),
+                typeof(IProcessRunner)
+            ]
+            : Array.Empty<Type>();
+    }
+}

@@ -10,6 +10,24 @@ namespace HanabePhotoManager.Desktop.Core.Tests.Composition;
 public sealed class ServiceContractTests
 {
     [Fact]
+    public void GetPlatformServiceTypes_WhenNotRunningOnMacOs_ReturnsNoMacOsOnlyServices()
+    {
+        DesktopServiceResolutionPolicy.GetPlatformServiceTypes(isMacOs: false)
+            .Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GetPlatformServiceTypes_WhenRunningOnMacOs_ReturnsEveryMacOsOnlyService()
+    {
+        DesktopServiceResolutionPolicy.GetPlatformServiceTypes(isMacOs: true)
+            .Should().Equal(
+                typeof(IAppPaths),
+                typeof(ITrashService),
+                typeof(IExternalFileService),
+                typeof(IProcessRunner));
+    }
+
+    [Fact]
     public void AddHanabeDesktop_RegistersOneImplementationPerPlatformContract()
     {
         var services = new ServiceCollection()

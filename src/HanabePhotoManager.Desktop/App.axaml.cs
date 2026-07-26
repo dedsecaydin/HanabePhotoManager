@@ -1,7 +1,6 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using HanabePhotoManager.Desktop.Composition;
-using HanabePhotoManager.Desktop.Core.ViewModels;
 using HanabePhotoManager.Desktop.Views;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,13 +14,11 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            _serviceProvider = new ServiceCollection()
-                .AddHanabeDesktop()
-                .BuildServiceProvider();
+            _serviceProvider = DesktopComposition.CreateServiceProvider();
 
             desktop.MainWindow = new MainWindow
             {
-                DataContext = _serviceProvider.GetRequiredService<DesktopShellViewModel>()
+                DataContext = DesktopComposition.ResolveServicesForCurrentPlatform(_serviceProvider)
             };
             desktop.Exit += OnDesktopExit;
         }

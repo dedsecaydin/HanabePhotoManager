@@ -201,6 +201,18 @@ public sealed class MediaGroupBuilderTests
     }
 
     [Fact]
+    public void Build_GroupsFullyQualifiedPosixPaths()
+    {
+        var primary = CreateSource("/Users/test/camera/C0001.MP4", 900, 1);
+        var sidecar = CreateSource("/Users/test/camera/C0001M01.XML", 10, 2);
+
+        var group = CreateBuilder().Build(new[] { sidecar, primary }).Single();
+
+        group.Primary.Should().BeSameAs(primary);
+        group.Sidecars.Should().ContainSingle().Which.Should().BeSameAs(sidecar);
+    }
+
+    [Fact]
     public void Build_SortsByNormalizedPathIdentity()
     {
         var normalizesToZ = CreateSource(@"D:\a\..\z\photo.ARW", 1, 1);

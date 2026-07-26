@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using HanabePhotoManager.Core;
 
 namespace HanabePhotoManager.Core.Imports;
 
@@ -50,7 +51,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
             groups.Add(new NormalizedMediaGroup(
                 new MediaGroup(
-                    Path.GetFileNameWithoutExtension(file.PathIdentity),
+                    LocalPathSyntax.GetFileNameWithoutExtension(file.PathIdentity),
                     candidates[index].SuggestedCategory,
                     file.Source,
                     Array.Empty<SourceMediaFile>()),
@@ -102,7 +103,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
         foreach (var file in files)
         {
-            var fileName = Path.GetFileName(file.PathIdentity);
+            var fileName = LocalPathSyntax.GetFileName(file.PathIdentity);
             var sonyMatch = SonySidecarPattern().Match(fileName);
             if (sonyMatch.Success)
             {
@@ -114,7 +115,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
             if (extension.Equals(".LRF", StringComparison.OrdinalIgnoreCase) ||
                 extension.Equals(".AAC", StringComparison.OrdinalIgnoreCase))
             {
-                AddSidecar(index, CreateMediaKey(file.PathIdentity, Path.GetFileNameWithoutExtension(fileName)), file);
+                AddSidecar(index, CreateMediaKey(file.PathIdentity, LocalPathSyntax.GetFileNameWithoutExtension(fileName)), file);
             }
         }
 
@@ -143,7 +144,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         IReadOnlyDictionary<string, IReadOnlyList<NormalizedMediaFile>> sidecarIndex,
         ISet<string> consumedPaths)
     {
-        var key = Path.GetFileNameWithoutExtension(primary.PathIdentity).ToUpperInvariant();
+        var key = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity).ToUpperInvariant();
         var sidecars = ConsumeSidecars(primary, key, sidecarIndex, consumedPaths);
 
         return new MediaGroup(key, MediaCategory.Video, primary.Source, sidecars);
@@ -154,7 +155,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         IReadOnlyDictionary<string, IReadOnlyList<NormalizedMediaFile>> sidecarIndex,
         ISet<string> consumedPaths)
     {
-        var key = Path.GetFileNameWithoutExtension(primary.PathIdentity);
+        var key = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity);
         var sidecars = ConsumeSidecars(primary, key, sidecarIndex, consumedPaths);
 
         return new MediaGroup(key, MediaCategory.ActionVideo, primary.Source, sidecars);
@@ -179,20 +180,18 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
     private static string CreateMediaKey(string pathIdentity, string stem)
     {
-        var parentDirectory = Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(pathIdentity)!);
+        var parentDirectory = LocalPathSyntax.GetDirectoryName(pathIdentity);
         return $"{parentDirectory}\0{stem}";
     }
 
     private static string NormalizePathIdentity(string fullPath)
     {
-        if (!Path.IsPathFullyQualified(fullPath))
+        if (!LocalPathSyntax.IsFullyQualified(fullPath))
         {
             throw new ArgumentException($"FullPath '{fullPath}' must be fully qualified.", nameof(fullPath));
         }
 
-        var normalized = Path.GetFullPath(fullPath)
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        return Path.TrimEndingDirectorySeparator(normalized);
+        return LocalPathSyntax.NormalizeIdentity(fullPath);
     }
 
     private static bool IsPrimaryVideoFile(string path)

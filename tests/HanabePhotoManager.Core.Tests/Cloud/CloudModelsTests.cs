@@ -412,6 +412,20 @@ public sealed class CloudModelsTests
     }
 
     [Fact]
+    public void CloudTransferFile_AcceptsAbsolutePosixLocalPath()
+    {
+        const string localPath = "/Users/test/photos/photo.jpg";
+
+        var file = new CloudTransferFile(
+            localPath,
+            new CloudRelativePath("photo.jpg"),
+            42,
+            null);
+
+        file.LocalPath.Should().Be(localPath);
+    }
+
+    [Fact]
     public void CloudTransferFile_RejectsNullRelativePath()
     {
         var act = () => new CloudTransferFile("C:/photo.jpg", null!, 42, null);

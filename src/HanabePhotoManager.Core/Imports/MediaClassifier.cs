@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using HanabePhotoManager.Core;
 
 namespace HanabePhotoManager.Core.Imports;
 
@@ -23,7 +24,7 @@ public sealed partial class MediaClassifier
     {
         ArgumentNullException.ThrowIfNull(file);
 
-        var fileName = Path.GetFileName(file.FullPath);
+        var fileName = LocalPathSyntax.GetFileName(file.FullPath);
         if (DjiActionVideoPattern().IsMatch(fileName))
         {
             return Recognized(file, MediaCategory.ActionVideo, "DJI action-video filename");

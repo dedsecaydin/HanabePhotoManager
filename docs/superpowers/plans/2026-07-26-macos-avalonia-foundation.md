@@ -556,7 +556,7 @@ Expected: FAIL because the workflow does not exist.
 
 - [ ] **Step 3: Create the workflow**
 
-Trigger on `workflow_dispatch` and pull requests changing `src/**`, `tests/**`, `tools/macos/**`, or the workflow itself. Use `actions/checkout`, `actions/setup-dotnet`, restore, run all three portable test projects, publish Desktop with:
+Trigger on `workflow_dispatch` and pull requests changing `src/**`, `tests/**`, `tools/macos/**`, or the workflow itself. Use `actions/checkout`, `actions/setup-dotnet`, restore and test the phase 1 cross-platform Core and Desktop.Core projects, then publish Desktop with:
 
 ```bash
 dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj \
@@ -565,6 +565,13 @@ dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj 
 ```
 
 Run the bundle script, execute the app host with a `--smoke-test` argument that exits zero before creating a window, zip the `.app` with `ditto`, generate SHA-256 using `shasum -a 256`, and upload the zip plus checksum. Pin released major versions of GitHub actions; do not use floating branch names.
+
+Do not run Infrastructure tests in the phase 1 macOS job. Infrastructure
+currently contains Windows DPAPI, `kernel32` file-handle operations, and
+Win32-specific lock-contention semantics. The full Windows solution remains the
+mandatory regression gate for Infrastructure in phase 1. Port and test those
+adapters on macOS in the later full-parity phases before wiring them into the
+Avalonia application.
 
 - [ ] **Step 4: Document first launch and smoke checks**
 

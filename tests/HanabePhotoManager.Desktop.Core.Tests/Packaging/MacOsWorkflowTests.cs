@@ -22,7 +22,6 @@ public sealed class MacOsWorkflowTests
 
         AssertContains(workflow, @"runs-on:\s*macos-14");
         AssertContains(commands, @"dotnet\s+test\s+tests/HanabePhotoManager\.Core\.Tests/HanabePhotoManager\.Core\.Tests\.csproj");
-        AssertContains(commands, @"dotnet\s+test\s+tests/HanabePhotoManager\.Infrastructure\.Tests/HanabePhotoManager\.Infrastructure\.Tests\.csproj");
         AssertContains(commands, @"dotnet\s+test\s+tests/HanabePhotoManager\.Desktop\.Core\.Tests/HanabePhotoManager\.Desktop\.Core\.Tests\.csproj");
         AssertContains(commands, @"dotnet\s+publish\s+src/HanabePhotoManager\.Desktop/HanabePhotoManager\.Desktop\.csproj");
         AssertContains(commands, @"-r\s+osx-arm64");
@@ -36,6 +35,9 @@ public sealed class MacOsWorkflowTests
         workflow.Should().NotContain(
             "HanabePhotoManager.App.Tests",
             "the WPF test project cannot run on macOS");
+        workflow.Should().NotContain(
+            "HanabePhotoManager.Infrastructure.Tests",
+            "phase 1 Infrastructure still contains Windows-only DPAPI, kernel32, and lock semantics");
     }
 
     private static void AssertContains(string workflow, string pattern)

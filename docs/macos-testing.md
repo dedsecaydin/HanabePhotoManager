@@ -22,6 +22,18 @@ shasum -a 256 -c HanabePhotoManager-osx-arm64.zip.sha256
 Extract the ZIP and drag `Hanabe Photo Manager.app` into `/Applications`.
 The build is self-contained for Apple silicon and is not code-signed or notarized.
 
+## Automated test scope
+
+The macOS workflow runs the cross-platform Core and Desktop.Core test projects,
+then publishes, bundles, and smoke-tests the Avalonia host. The complete Windows
+solution build and test run remains a separate mandatory phase 1 regression gate.
+
+Infrastructure is Windows-gated in phase 1 because its current implementations
+include DPAPI, `kernel32` file-handle operations, and Win32-specific lock
+contention handling. The Avalonia phase 1 shell does not reference Infrastructure.
+Those implementations must be migrated and tested on macOS in later full-parity
+phases; a green phase 1 macOS workflow does not claim they are portable.
+
 ## First launch
 
 For the first launch, use Finder:

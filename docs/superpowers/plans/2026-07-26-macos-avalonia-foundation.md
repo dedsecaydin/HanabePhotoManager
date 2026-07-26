@@ -284,6 +284,8 @@ Use Avalonia 11 package versions resolved consistently across `Avalonia`, `Avalo
 
 `MainWindow.axaml` binds its title and two text elements to `Title` and `Status`, uses `FluentTheme`, and contains no Windows-specific namespace. `App.OnFrameworkInitializationCompleted` creates the main window with `DesktopShellViewModel` as its data context.
 
+`Program` must accept `--smoke-test`, validate the startup composition prerequisites, and exit with code 0 before creating a window. This is the runtime contract consumed by Task 7 macOS CI.
+
 - [ ] **Step 5: Build the Avalonia project and run tests**
 
 Run:

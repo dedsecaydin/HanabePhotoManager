@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.App", "src\HanabePhotoManager.App\HanabePhotoManager.App.csproj", "{EBF27DA7-5456-4FF1-B013-B0BADA4A8D85}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Desktop.Core", "src\HanabePhotoManager.Desktop.Core\HanabePhotoManager.Desktop.Core.csproj", "{4FD5D16E-A630-4BC3-818B-62379DB9933E}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Core.Tests", "tests\HanabePhotoManager.Core.Tests\HanabePhotoManager.Core.Tests.csproj", "{C94684DA-4C0B-4FFD-AD50-0479CAB0929E}"
@@ -18,6 +20,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Infrastructure.Tests", "tests\HanabePhotoManager.Infrastructure.Tests\HanabePhotoManager.Infrastructure.Tests.csproj", "{3E83B841-B169-4C4D-BB73-37B494A76560}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.App.Tests", "tests\HanabePhotoManager.App.Tests\HanabePhotoManager.App.Tests.csproj", "{9421BE16-6C73-4C7B-B4A9-7238AE60E989}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Desktop.Core.Tests", "tests\HanabePhotoManager.Desktop.Core.Tests\HanabePhotoManager.Desktop.Core.Tests.csproj", "{37D3B73B-D278-4BBA-8747-2A9D77D060F4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -40,6 +44,10 @@ Global
 		{EBF27DA7-5456-4FF1-B013-B0BADA4A8D85}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EBF27DA7-5456-4FF1-B013-B0BADA4A8D85}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EBF27DA7-5456-4FF1-B013-B0BADA4A8D85}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4FD5D16E-A630-4BC3-818B-62379DB9933E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FD5D16E-A630-4BC3-818B-62379DB9933E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FD5D16E-A630-4BC3-818B-62379DB9933E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FD5D16E-A630-4BC3-818B-62379DB9933E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C94684DA-4C0B-4FFD-AD50-0479CAB0929E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C94684DA-4C0B-4FFD-AD50-0479CAB0929E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C94684DA-4C0B-4FFD-AD50-0479CAB0929E}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -52,13 +60,19 @@ Global
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Release|Any CPU.Build.0 = Release|Any CPU
+		{37D3B73B-D278-4BBA-8747-2A9D77D060F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{37D3B73B-D278-4BBA-8747-2A9D77D060F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{37D3B73B-D278-4BBA-8747-2A9D77D060F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{37D3B73B-D278-4BBA-8747-2A9D77D060F4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3D863F74-E846-4E8E-975D-9CD8DBF82D1C} = {412C1305-5DCB-4838-BECC-E40B732E4A98}
 		{CB3F82B6-C0BF-4253-9EE6-43CF99301B04} = {412C1305-5DCB-4838-BECC-E40B732E4A98}
 		{EBF27DA7-5456-4FF1-B013-B0BADA4A8D85} = {412C1305-5DCB-4838-BECC-E40B732E4A98}
+		{4FD5D16E-A630-4BC3-818B-62379DB9933E} = {412C1305-5DCB-4838-BECC-E40B732E4A98}
 		{C94684DA-4C0B-4FFD-AD50-0479CAB0929E} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 		{3E83B841-B169-4C4D-BB73-37B494A76560} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
+		{37D3B73B-D278-4BBA-8747-2A9D77D060F4} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 	EndGlobalSection
 EndGlobal

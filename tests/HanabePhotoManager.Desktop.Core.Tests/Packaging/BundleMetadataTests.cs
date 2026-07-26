@@ -14,12 +14,12 @@ public sealed class BundleMetadataTests
             .Element("dict")!
             .Elements()
             .Chunk(2)
-            .ToDictionary(pair => pair[0].Value, pair => pair[1].Value);
+            .ToDictionary(pair => pair[0].Value, pair => pair[1]);
 
-        values["CFBundleIdentifier"].Should().Be("com.hanabe.photomanager");
-        values["CFBundleExecutable"].Should().Be("HanabePhotoManager.Desktop");
-        values["LSMinimumSystemVersion"].Should().Be("11.0");
-        values["NSHighResolutionCapable"].Should().Be("true");
+        values["CFBundleIdentifier"].Value.Should().Be("com.hanabe.photomanager");
+        values["CFBundleExecutable"].Value.Should().Be("HanabePhotoManager.Desktop");
+        values["LSMinimumSystemVersion"].Value.Should().Be("11.0");
+        values["NSHighResolutionCapable"].Name.LocalName.Should().Be("true");
     }
 
     private static string FindRepositoryRoot()

@@ -45,8 +45,15 @@ if [[ ! -f "$publish_directory/$executable_name" ]]; then
 fi
 
 case "$bundle_directory" in
-  "$publish_directory"/*)
-    printf 'Output directory must not be inside the publish directory.\n' >&2
+  "$publish_directory"|"$publish_directory"/*)
+    printf 'Bundle target must not equal or be inside the publish directory.\n' >&2
+    exit 1
+    ;;
+esac
+
+case "$publish_directory" in
+  "$bundle_directory"/*)
+    printf 'Publish directory must not be inside the bundle target.\n' >&2
     exit 1
     ;;
 esac

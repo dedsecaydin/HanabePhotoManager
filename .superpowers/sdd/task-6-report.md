@@ -38,3 +38,25 @@ Results: focused metadata test 1/1 passed. Git Bash completed the shell syntax v
 - The source plist is derived from the script location, not the caller's working directory; test repository discovery is likewise working-directory independent.
 - `codesign`, notarization, `spctl`, `xattr`, `sudo`, and Gatekeeper changes are absent.
 - This Windows host cannot execute a produced macOS application bundle. The metadata, script syntax, bundle layout construction logic, solution build, and automated regression suite were verified here; macOS runtime launch remains an environment-specific follow-up.
+
+## Important findings follow-up
+
+- `NSHighResolutionCapable` is now the plist boolean element `<true/>`, not a string. `BundleMetadataTests` retains the required string metadata assertions and specifically asserts the high-resolution value element name is `true`.
+- `create-app-bundle.sh` now rejects every publish/bundle overlap before `rm -rf`: bundle equal to publish, bundle inside publish, and publish inside bundle.
+- Added `tools/macos/test-create-app-bundle.sh`, a Git Bash regression test. Each case creates a temporary source sentinel, expects the script to return nonzero, and verifies the sentinel remains after rejection.
+
+### Follow-up TDD evidence
+
+The strengthened plist test first failed because `NSHighResolutionCapable` was a `string` element rather than `true`. The initial Bash overlap test first failed with `Source sentinel was deleted for source inside target.` Both focused tests passed after the minimal plist and pre-deletion overlap checks were added.
+
+### Follow-up verification
+
+```powershell
+dotnet test tests/HanabePhotoManager.Desktop.Core.Tests/HanabePhotoManager.Desktop.Core.Tests.csproj -c Release --filter BundleMetadataTests
+& 'C:\Program Files\Git\bin\bash.exe' -n tools/macos/create-app-bundle.sh
+& 'C:\Program Files\Git\bin\bash.exe' tools/macos/test-create-app-bundle.sh
+dotnet build HanabePhotoManager.sln -c Release /warnaserror
+dotnet test HanabePhotoManager.sln -c Release --no-build
+```
+
+Results: metadata test 1/1 passed; Git Bash syntax validation and all three overlap regression cases passed. The Release solution build finished with 0 warnings and 0 errors. Full regression passed 718/718 (Core 351, Desktop.Core 24, Infrastructure 136, App 207).

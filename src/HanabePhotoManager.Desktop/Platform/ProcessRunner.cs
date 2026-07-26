@@ -31,17 +31,16 @@ public sealed class ProcessRunner : IProcessRunner
 
         using var process = Process.Start(startInfo)
             ?? throw new InvalidOperationException($"Unable to start process '{command.FileName}'.");
-        var standardErrorTask = process.StandardError.ReadToEndAsync(cancellationToken);
 
-        await process.WaitForExitAsync(cancellationToken);
-        var standardError = await standardErrorTask;
-
-        if (process.ExitCode != 0)
+        try
+        {
+            return await ProcessExecution.RunAsync(new ProcessHandle(process), cancellationToken);
+        }
+        catch (ProcessExitException exception)
         {
             throw new InvalidOperationException(
-                $"Process '{command.FileName}' exited with code {process.ExitCode}: {standardError}");
+                $"Process '{command.FileName}' exited with code {exception.ExitCode}: {exception.StandardError}",
+                exception);
         }
-
-        return process.ExitCode;
     }
 }

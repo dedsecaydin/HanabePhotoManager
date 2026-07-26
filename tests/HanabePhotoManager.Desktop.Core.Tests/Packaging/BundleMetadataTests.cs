@@ -22,6 +22,22 @@ public sealed class BundleMetadataTests
         values["NSHighResolutionCapable"].Name.LocalName.Should().Be("true");
     }
 
+    [Fact]
+    public void BundleScript_UsesMacOsCompatibleChmodSyntax()
+    {
+        var scriptPath = Path.Combine(
+            FindRepositoryRoot(),
+            "tools",
+            "macos",
+            "create-app-bundle.sh");
+        var script = File.ReadAllText(scriptPath);
+
+        script.Should().Contain("chmod +x \"$app_host\"");
+        script.Should().NotContain(
+            "chmod +x --",
+            "the BSD chmod shipped with macOS does not support GNU-style double-dash handling");
+    }
+
     private static string FindRepositoryRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)

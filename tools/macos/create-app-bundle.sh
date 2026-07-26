@@ -63,6 +63,6 @@ mkdir -p -- "$macos_directory" "$resources_directory"
 
 cp -- "$plist_source" "$contents_directory/Info.plist"
 cp -R -- "$publish_directory/." "$macos_directory"
-chmod +x -- "$app_host"
+chmod +x "$app_host"
 
 printf 'Created unsigned app bundle: %s\n' "$bundle_directory"

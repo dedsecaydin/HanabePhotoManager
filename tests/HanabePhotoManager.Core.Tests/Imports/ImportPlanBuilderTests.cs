@@ -5,6 +5,25 @@ namespace HanabePhotoManager.Core.Tests.Imports;
 
 public sealed class ImportPlanBuilderTests
 {
+    [Fact]
+    public async Task BuildAsync_UsesRemarkedDateFolderWhenProvided()
+    {
+        var source = CreateSource(@"D:\camera\portrait.jpg");
+        var group = new MediaGroup("portrait", MediaCategory.Jpeg, source, []);
+
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(
+                @"E:\library",
+                new LibraryDate(2026, 7, 16),
+                TransferMode.CopyKeepSource,
+                [group],
+                Path.Combine("7月", "07.16_棚拍"),
+                CancellationToken.None);
+
+        plan.Items.Single().Files.Single().DestinationPath.Should()
+            .Contain(Path.Combine("7月", "07.16_棚拍", "JPG生图"));
+    }
+
     [Theory]
     [InlineData(MediaCategory.Raw, "RAW生图")]
     [InlineData(MediaCategory.Jpeg, "JPG生图")]

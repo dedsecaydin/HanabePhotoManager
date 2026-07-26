@@ -6,4 +6,5 @@
   <Color x:Key="Color.Accent.Default">#9AAAB5</Color><Color x:Key="Color.Accent.Hover">#ACBAC3</Color><Color x:Key="Color.Accent.Pressed">#C0CBD2</Color><Color x:Key="Color.Accent.Subtle">#30383D</Color>
   <Color x:Key="Color.Status.Info">#7FA6BC</Color><Color x:Key="Color.Status.Success">#76A990</Color><Color x:Key="Color.Status.Warning">#C6A56B</Color><Color x:Key="Color.Status.Danger">#D48787</Color>
   <Color x:Key="Color.Viewer.Canvas">#111315</Color>
+  <Color x:Key="Color.Overlay.Scrim">#B0000000</Color>
 </ResourceDictionary>

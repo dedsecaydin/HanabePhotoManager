@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.IO;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -24,11 +25,23 @@ public partial class MainWindow : Window
     private readonly EdgeAutoScrollPolicy _edgeAutoScrollPolicy = new();
     private readonly DispatcherTimer _rubberBandAutoScrollTimer;
     private readonly DispatcherTimer _windowStateSaveTimer;
+    private readonly DispatcherTimer _previewLongPressTimer;
+    private PreviewFileViewModel? _previewPressedFile;
+    private FrameworkElement? _previewPressedCard;
+    private System.Windows.Point _previewPressPoint;
+    private bool _previewLongPressTriggered;
     private System.Windows.Point? _navigationDragStart;
     private NavigationItemViewModel? _navigationDragSource;
+    private CancellationTokenSource? _navigationTransitionCancellation;
+    private NavigationDisplayMode _lastNavigationDisplayMode;
 
     public MainWindow()
     {
+        _previewLongPressTimer = new DispatcherTimer(DispatcherPriority.Input)
+        {
+            Interval = TimeSpan.FromMilliseconds(520)
+        };
+        _previewLongPressTimer.Tick += PreviewLongPressTimer_Tick;
         _rubberBandAutoScrollTimer = new DispatcherTimer(DispatcherPriority.Input)
         {
             Interval = TimeSpan.FromMilliseconds(24)
@@ -38,6 +51,7 @@ public partial class MainWindow : Window
         _windowStateSaveTimer.Tick += (_, _) => { _windowStateSaveTimer.Stop(); PersistWindowState(); };
         InitializeComponent();
         DataContext = _viewModel;
+        _lastNavigationDisplayMode = _viewModel.NavigationDisplayMode;
         Loaded += MainWindow_Loaded;
         Activated += (_, _) => _viewModel.RefreshWindowsWallpaper();
         Deactivated += (_, _) => EndRubberBandSelection();
@@ -46,10 +60,71 @@ public partial class MainWindow : Window
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
     }
 
+    public static readonly DependencyProperty IsPreviewSelectionModeProperty =
+        DependencyProperty.Register(
+            nameof(IsPreviewSelectionMode),
+            typeof(bool),
+            typeof(MainWindow),
+            new PropertyMetadata(false));
+
+    public bool IsPreviewSelectionMode
+    {
+        get => (bool)GetValue(IsPreviewSelectionModeProperty);
+        set => SetValue(IsPreviewSelectionModeProperty, value);
+    }
+
     private void PrimaryNavigationItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _navigationDragStart = e.GetPosition(PrimaryNavigationList);
         _navigationDragSource = (sender as FrameworkElement)?.DataContext as NavigationItemViewModel;
+    }
+
+    private async void PrimaryNavigationItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { DataContext: NavigationItemViewModel item })
+        {
+            if (string.Equals(_viewModel.CurrentPage, item.Key, StringComparison.Ordinal))
+                return;
+            await NavigateWithTransitionAsync(() => item.Command.Execute(null));
+        }
+    }
+
+    private async void SettingsNavigation_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.Equals(_viewModel.CurrentPage, "Settings", StringComparison.Ordinal))
+            return;
+        await NavigateWithTransitionAsync(() => _viewModel.ShowSettingsCommand.Execute(null));
+    }
+
+    private async Task NavigateWithTransitionAsync(Action navigate)
+    {
+        _navigationTransitionCancellation?.Cancel();
+        _navigationTransitionCancellation?.Dispose();
+        var cancellation = _navigationTransitionCancellation = new CancellationTokenSource();
+        var current = GetPageElement(_viewModel.CurrentPage);
+
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            navigate();
+            return;
+        }
+
+        current.RenderTransform = new TranslateTransform();
+        current.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(120)));
+        ((TranslateTransform)current.RenderTransform).BeginAnimation(
+            TranslateTransform.XProperty,
+            new DoubleAnimation(0, -10, TimeSpan.FromMilliseconds(120)));
+        try
+        {
+            await Task.Delay(120, cancellation.Token);
+            navigate();
+        }
+        catch (OperationCanceledException)
+        {
+            current.BeginAnimation(OpacityProperty, null);
+            current.Opacity = 1;
+            current.RenderTransform = new TranslateTransform();
+        }
     }
 
     private void PrimaryNavigationItem_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
@@ -118,6 +193,10 @@ public partial class MainWindow : Window
         {
             ApplyCustomWindowIcon();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.NavigationDisplayMode))
+        {
+            Dispatcher.BeginInvoke(AnimateNavigationMode);
+        }
     }
 
     private void ApplyCustomWindowIcon()
@@ -127,18 +206,7 @@ public partial class MainWindow : Window
 
     private void AnimateVisiblePage()
     {
-        FrameworkElement page = _viewModel.CurrentPage switch
-        {
-            "Import" => ImportPage,
-            "Preview" => PreviewPage,
-            "FaceSearch" => FaceSearchPage,
-            "MapPhotos" => MapPageHost,
-            "Compression" => CompressionPageHost,
-            "BaiduCloud" => BaiduCloudPageHost,
-            "QuarkCloud" => QuarkCloudPageHost,
-            "Settings" => SettingsPage,
-            _ => HomePage
-        };
+        var page = GetPageElement(_viewModel.CurrentPage);
 
         if (!SystemParameters.ClientAreaAnimation)
         {
@@ -148,26 +216,96 @@ public partial class MainWindow : Window
         }
 
         page.Opacity = 0;
-        page.RenderTransform = new TranslateTransform(0, 18);
+        page.RenderTransform = new TranslateTransform(12, 0);
 
         var storyboard = new Storyboard();
-        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(220))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         Storyboard.SetTarget(fade, page);
         Storyboard.SetTargetProperty(fade, new PropertyPath(UIElement.OpacityProperty));
 
-        var slide = new DoubleAnimation(18, 0, TimeSpan.FromMilliseconds(280))
+        var slide = new DoubleAnimation(12, 0, TimeSpan.FromMilliseconds(240))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         Storyboard.SetTarget(slide, page);
-        Storyboard.SetTargetProperty(slide, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+        Storyboard.SetTargetProperty(slide, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.X)"));
 
         storyboard.Children.Add(fade);
         storyboard.Children.Add(slide);
         storyboard.Begin();
+    }
+
+    private FrameworkElement GetPageElement(string page) =>
+        page switch
+        {
+            "Import" => ImportPage,
+            "Preview" => PreviewPage,
+            "FaceSearch" => FaceSearchPage,
+            "MapPhotos" => MapPageHost,
+            "Compression" => CompressionPageHost,
+            "Watermark" => WatermarkPageHost,
+            "BaiduCloud" => BaiduCloudPageHost,
+            "QuarkCloud" => QuarkCloudPageHost,
+            "ContestOpen" => ContestOpenPageHost,
+            "ContestJudged" => ContestJudgedPageHost,
+            "Settings" => SettingsCenterPageHost,
+            _ => HomePage
+        };
+
+    private void AnimateNavigationMode()
+    {
+        var previousMode = _lastNavigationDisplayMode;
+        var currentMode = _viewModel.NavigationDisplayMode;
+        _lastNavigationDisplayMode = currentMode;
+        if (!SystemParameters.ClientAreaAnimation) return;
+        foreach (var element in FindVisualChildren<FrameworkElement>(SidebarRoot))
+        {
+            if (element.Name is not ("NavigationLabel" or "NavigationIcon" or "FooterNavigationLabel" or "FooterNavigationIcon")) continue;
+            var wasVisible = IsNavigationPartVisible(previousMode, element.Name);
+            var isVisible = IsNavigationPartVisible(currentMode, element.Name);
+            element.RenderTransform = new TranslateTransform();
+            element.BeginAnimation(OpacityProperty, new DoubleAnimation
+            {
+                From = wasVisible ? 1 : 0,
+                To = isVisible ? 1 : 0,
+                Duration = TimeSpan.FromMilliseconds(220),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
+            ((TranslateTransform)element.RenderTransform).BeginAnimation(
+                TranslateTransform.XProperty,
+                new DoubleAnimation(
+                    isVisible && !wasVisible ? (element.Name.EndsWith("Icon", StringComparison.Ordinal) ? -8 : 10) : 0,
+                    !isVisible && wasVisible ? (element.Name.EndsWith("Icon", StringComparison.Ordinal) ? -8 : 10) : 0,
+                    TimeSpan.FromMilliseconds(240))
+                {
+                    EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+                });
+        }
+    }
+
+    private static bool IsNavigationPartVisible(NavigationDisplayMode mode, string elementName) =>
+        mode == NavigationDisplayMode.IconAndText ||
+        (mode == NavigationDisplayMode.Text && elementName.EndsWith("Label", StringComparison.Ordinal)) ||
+        (mode == NavigationDisplayMode.Icon && elementName.EndsWith("Icon", StringComparison.Ordinal));
+
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T match) yield return match;
+            foreach (var descendant in FindVisualChildren<T>(child)) yield return descendant;
+        }
+    }
+
+    private async void ImportSources_Drop(object sender, System.Windows.DragEventArgs e)
+    {
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] paths)
+            await _viewModel.AddImportSourcePathsAsync(paths.Where(Directory.Exists));
+        e.Handled = true;
     }
 
     protected override void OnClosed(EventArgs e)
@@ -485,39 +623,97 @@ public partial class MainWindow : Window
             }
 
             _viewModel.SelectedPreviewFile = file;
-            var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            _previewPressedFile = file;
+            _previewPressedCard = element;
+            _previewPressPoint = e.GetPosition(element);
+            _previewLongPressTriggered = false;
+            _previewLongPressTimer.Stop();
+            _previewLongPressTimer.Start();
+            e.Handled = true;
+        }
+    }
 
-            if (!control && !shift && e.ClickCount == 1)
-            {
-                OpenIndependentViewer(file);
-                e.Handled = true;
-                return;
-            }
+    private void PreviewThumbnail_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _previewLongPressTimer.Stop();
+        if (sender is not FrameworkElement element ||
+            element.DataContext is not PreviewFileViewModel file ||
+            !ReferenceEquals(file, _previewPressedFile))
+        {
+            ResetPreviewPress();
+            return;
+        }
 
-            if (shift)
+        if (!_previewLongPressTriggered)
+        {
+            if (IsPreviewSelectionMode)
             {
-                SelectPreviewRange(file, additive: control);
-            }
-            else if (control)
-            {
-                file.IsSelected = !file.IsSelected;
-                _selectionAnchor = file;
+                TogglePreviewFileSelection(file);
             }
             else
             {
-                foreach (var item in _viewModel.PreviewFiles) item.IsSelected = ReferenceEquals(item, file);
-                _selectionAnchor = file;
-            }
-
-            _viewModel.NotifyPreviewSelectionChanged();
-
-            // Double click: open file
-            if (e.ClickCount == 2 && System.IO.File.Exists(file.PreviewPath))
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.PreviewPath) { UseShellExecute = true });
+                var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+                var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+                if (shift)
+                    SelectPreviewRange(file, additive: control);
+                else if (control)
+                    TogglePreviewFileSelection(file);
+                else
+                    OpenIndependentViewer(file);
             }
         }
+
+        ResetPreviewPress();
+        e.Handled = true;
+    }
+
+    private void PreviewThumbnail_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+            _previewLongPressTimer.Stop();
+    }
+
+    private void PreviewLongPressTimer_Tick(object? sender, EventArgs e)
+    {
+        _previewLongPressTimer.Stop();
+        if (_previewPressedFile is null || _previewPressedCard is null || Mouse.LeftButton != MouseButtonState.Pressed)
+            return;
+
+        var current = Mouse.GetPosition(_previewPressedCard);
+        if (Math.Abs(current.X - _previewPressPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+            Math.Abs(current.Y - _previewPressPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
+            return;
+
+        SetPreviewSelectionMode(true);
+        if (!_previewPressedFile.IsSelected)
+            TogglePreviewFileSelection(_previewPressedFile);
+        _previewLongPressTriggered = true;
+    }
+
+    private void TogglePreviewSelectionMode(object sender, RoutedEventArgs e) =>
+        SetPreviewSelectionMode(!IsPreviewSelectionMode);
+
+    private void SetPreviewSelectionMode(bool enabled)
+    {
+        IsPreviewSelectionMode = enabled;
+        PreviewSelectionModeButton.Content = enabled ? "取消" : "选择";
+        if (!enabled)
+            ClearPreviewSelection();
+    }
+
+    private void TogglePreviewFileSelection(PreviewFileViewModel file)
+    {
+        file.IsSelected = !file.IsSelected;
+        _selectionAnchor = file;
+        _viewModel.NotifyPreviewSelectionChanged();
+    }
+
+    private void ResetPreviewPress()
+    {
+        _previewLongPressTimer.Stop();
+        _previewPressedFile = null;
+        _previewPressedCard = null;
+        _previewLongPressTriggered = false;
     }
 
     private void SelectPreviewRange(PreviewFileViewModel clicked, bool additive)
@@ -658,7 +854,7 @@ public partial class MainWindow : Window
         while (current is not null)
         {
             if (current is FrameworkElement element && Equals(element.Tag, "PreviewCard")) return element;
-            current = VisualTreeHelper.GetParent(current);
+            current = GetSafeParent(current);
         }
         return null;
     }
@@ -669,10 +865,20 @@ public partial class MainWindow : Window
         while (current is not null)
         {
             if (current is T match) return match;
-            current = VisualTreeHelper.GetParent(current);
+            current = GetSafeParent(current);
         }
         return null;
     }
+
+    private static DependencyObject? GetSafeParent(DependencyObject current) =>
+        current switch
+        {
+            FrameworkContentElement frameworkContentElement =>
+                frameworkContentElement.Parent ?? ContentOperations.GetParent(frameworkContentElement),
+            ContentElement contentElement => ContentOperations.GetParent(contentElement),
+            Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(current),
+            _ => LogicalTreeHelper.GetParent(current)
+        };
 
     private static IEnumerable<T> FindVisualDescendants<T>(DependencyObject root) where T : DependencyObject
     {
@@ -686,11 +892,15 @@ public partial class MainWindow : Window
 
     private void PreviewThumbnail_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
+        if (IsPreviewSelectionMode)
+            return;
+
         if (e.LeftButton == System.Windows.Input.MouseButtonState.Pressed
             && sender is System.Windows.FrameworkElement element
             && element.DataContext is PreviewFileViewModel file
             && System.IO.File.Exists(file.PreviewPath))
         {
+            _previewLongPressTimer.Stop();
             var data = new System.Windows.DataObject(System.Windows.DataFormats.FileDrop, new[] { file.PreviewPath });
             DragDrop.DoDragDrop(element, data, System.Windows.DragDropEffects.Copy);
         }

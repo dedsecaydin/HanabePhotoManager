@@ -91,7 +91,8 @@ public sealed class DesignSystemResourceTests
 
         inputs.Should().Contain("x:Key=\"Input.SettingsComboBox\"")
             .And.Contain("<ControlTemplate TargetType=\"ComboBox\">")
-            .And.Contain("<Trigger Property=\"Validation.HasError\" Value=\"True\"><Setter TargetName=\"Chrome\" Property=\"BorderBrush\" Value=\"{DynamicResource Brush.Status.Danger}\"/></Trigger>");
+            .And.Contain("<Trigger Property=\"Validation.HasError\" Value=\"True\">")
+            .And.Contain("TargetName=\"Chrome\" Property=\"BorderBrush\" Value=\"{DynamicResource Brush.Status.Danger}\"");
         settings.Should().Contain("Style=\"{StaticResource Input.SettingsComboBox}\" ItemsSource=\"{Binding BackgroundModes}\"")
             .And.Contain("Style=\"{StaticResource Input.SettingsComboBox}\" ItemsSource=\"{Binding BackgroundImageLayouts}\"");
         compression.Should().Contain("Style=\"{DynamicResource Input.SettingsComboBox}\" ItemsSource=\"{Binding TargetModes}\"")

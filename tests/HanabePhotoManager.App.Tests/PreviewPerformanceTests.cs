@@ -9,6 +9,29 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class PreviewPerformanceTests
 {
     [Fact]
+    public void PreviewCards_ProvideExplicitSelectionModeAndLongPressSelection()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        xaml.Should().Contain("x:Name=\"PreviewSelectionModeButton\"");
+        xaml.Should().Contain("PreviewThumbnail_MouseLeftButtonUp");
+        code.Should().Contain("TogglePreviewSelectionMode");
+        code.Should().Contain("PreviewLongPressTimer_Tick");
+        code.Should().Contain("IsPreviewSelectionMode");
+    }
+
+    [Theory]
+    [InlineData("07.16_棚拍", "07.16_棚拍")]
+    [InlineData("07.16", "07.16")]
+    public void DateFolderDisplayName_PreservesSavedRemark(string folderName, string expected)
+    {
+        MainWindowViewModel.DateFolderDisplayName(folderName, new LibraryDate(2026, 7, 16))
+            .Should().Be(expected);
+    }
+
+    [Fact]
     public void PhotoWalls_UseBoundedCollectionsWhileKeepingAllFeaturesInTemplate()
     {
         var root = FindSourceRoot();
@@ -194,6 +217,16 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("ItemsSource=\"{Binding CalendarDays}\"");
         xaml.Should().Contain("IsEnabled=\"{Binding IsAvailable}\"");
         xaml.Should().Contain("SelectCalendarDayCommand");
+    }
+
+    [Fact]
+    public void PreviewCardAncestorLookup_SupportsContentElementsWithoutCrashing()
+    {
+        var root = FindSourceRoot();
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        code.Should().Contain("ContentOperations.GetParent(contentElement)")
+            .And.Contain("FrameworkContentElement");
     }
 
     [Fact]

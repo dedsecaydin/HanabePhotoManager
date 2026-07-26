@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Security.Cryptography;
 using Microsoft.ML.OnnxRuntime;
 
 namespace HanabePhotoManager.App.Services;
@@ -57,25 +58,35 @@ public static class SigLip2OnnxSessionManager
 
             // Check for Git LFS pointer (text file beginning with LFS pointer header)
             using (var stream = File.OpenRead(modelPath))
-            using (var reader = new StreamReader(stream))
             {
-                stream.Seek(0, SeekOrigin.Begin);
-                var header = reader.ReadLine();
-                if (header is not null && header.StartsWith("version https://git-lfs.github.com/spec/v1", StringComparison.Ordinal))
+                var headerBytes = new byte[Math.Min(64, (int)stream.Length)];
+                _ = stream.Read(headerBytes);
+                var header = System.Text.Encoding.ASCII.GetString(headerBytes);
+                if (header.StartsWith("version https://git-lfs.github.com/spec/v1", StringComparison.Ordinal))
                 {
                     throw new InvalidDataException("Model file appears to be a Git LFS pointer. Please ensure the real model binary is available.");
                 }
+            }
+            if (!string.IsNullOrWhiteSpace(manifest.Sha256))
+            {
+                using var stream = File.OpenRead(modelPath);
+                var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+                if (!string.Equals(actual, manifest.Sha256, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidDataException("SigLIP2 model SHA-256 does not match model_manifest.json.");
             }
 
             // Create InferenceSession and enumerate inputs/outputs
             try
             {
-                // Use default session options for now; do not assume any provider.
-                _session = new InferenceSession(modelPath);
+                _session = OnnxRuntimeSessionFactory.Create(modelPath);
 
                 // capture metadata
                 _inputMetadata = _session.InputMetadata.ToDictionary(kv => kv.Key, kv => kv.Value);
                 _outputMetadata = _session.OutputMetadata.ToDictionary(kv => kv.Key, kv => kv.Value);
+                if (!string.IsNullOrWhiteSpace(manifest.InputName) && !_inputMetadata.ContainsKey(manifest.InputName))
+                    throw new InvalidDataException($"SigLIP2 input '{manifest.InputName}' was not found in the ONNX graph.");
+                if (!string.IsNullOrWhiteSpace(manifest.OutputName) && !_outputMetadata.ContainsKey(manifest.OutputName))
+                    throw new InvalidDataException($"SigLIP2 output '{manifest.OutputName}' was not found in the ONNX graph.");
             }
             catch (OnnxRuntimeException ex)
             {

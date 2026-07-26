@@ -15,10 +15,10 @@
         </Grid>
         <DataTemplate.Triggers>
           <DataTrigger Binding="{Binding DataContext.NavigationDisplayMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="Text">
-            <Setter TargetName="FooterNavigationIcon" Property="Visibility" Value="Collapsed" /><Setter TargetName="FooterNavigationLabel" Property="Grid.Column" Value="0" /><Setter TargetName="FooterNavigationLabel" Property="Grid.ColumnSpan" Value="2" /><Setter TargetName="FooterNavigationLabel" Property="Margin" Value="0" />
+            <Setter TargetName="FooterNavigationIcon" Property="Opacity" Value="0" /><Setter TargetName="FooterNavigationLabel" Property="Grid.Column" Value="0" /><Setter TargetName="FooterNavigationLabel" Property="Grid.ColumnSpan" Value="2" /><Setter TargetName="FooterNavigationLabel" Property="Margin" Value="0" />
           </DataTrigger>
           <DataTrigger Binding="{Binding DataContext.NavigationDisplayMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="Icon">
-            <Setter TargetName="FooterNavigationIcon" Property="Grid.ColumnSpan" Value="2" /><Setter TargetName="FooterNavigationIcon" Property="HorizontalAlignment" Value="Center" /><Setter TargetName="FooterNavigationLabel" Property="Visibility" Value="Collapsed" />
+            <Setter TargetName="FooterNavigationIcon" Property="Grid.ColumnSpan" Value="2" /><Setter TargetName="FooterNavigationIcon" Property="HorizontalAlignment" Value="Center" /><Setter TargetName="FooterNavigationLabel" Property="Opacity" Value="0" />
           </DataTrigger>
         </DataTemplate.Triggers>
       </DataTemplate>
@@ -356,7 +356,7 @@
         <ColumnDefinition Width="232" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
-      <Border Grid.Column="0" Style="{StaticResource Sidebar.Container}">
+      <Border x:Name="SidebarRoot" Grid.Column="0" Style="{StaticResource Sidebar.Container}">
         <DockPanel LastChildFill="True">
           <StackPanel DockPanel.Dock="Top">
             <Grid Width="104" Height="104" Margin="4,0,4,18" HorizontalAlignment="Center" ClipToBounds="True">
@@ -375,7 +375,7 @@
                 <DataTemplate DataType="{x:Type navigation:NavigationItemViewModel}">
                   <Button Tag="{Binding Key}"
                           Style="{StaticResource Navigation.ReorderableItem}"
-                          Command="{Binding Command}"
+                          Click="PrimaryNavigationItem_Click"
                           ToolTip="{Binding Label}"
                           AutomationProperties.Name="{Binding Label}"
                           PreviewMouseLeftButtonDown="PrimaryNavigationItem_PreviewMouseLeftButtonDown"
@@ -393,7 +393,7 @@
                   </Button>
                   <DataTemplate.Triggers>
                       <DataTrigger Binding="{Binding DataContext.NavigationDisplayMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="Text">
-                        <Setter TargetName="NavigationIcon" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="NavigationIcon" Property="Opacity" Value="0" />
                         <Setter TargetName="NavigationLabel" Property="Grid.Column" Value="0" />
                         <Setter TargetName="NavigationLabel" Property="Grid.ColumnSpan" Value="2" />
                         <Setter TargetName="NavigationLabel" Property="Margin" Value="0" />
@@ -401,7 +401,7 @@
                       <DataTrigger Binding="{Binding DataContext.NavigationDisplayMode, RelativeSource={RelativeSource AncestorType=Window}}" Value="Icon">
                         <Setter TargetName="NavigationIcon" Property="Grid.ColumnSpan" Value="2" />
                         <Setter TargetName="NavigationIcon" Property="HorizontalAlignment" Value="Center" />
-                        <Setter TargetName="NavigationLabel" Property="Visibility" Value="Collapsed" />
+                        <Setter TargetName="NavigationLabel" Property="Opacity" Value="0" />
                       </DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Home"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Home}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Import"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Import}" /></DataTrigger>
@@ -421,7 +421,7 @@
           </StackPanel>
           <StackPanel DockPanel.Dock="Bottom">
             <Button x:Name="ThemeToggleButton" AutomationProperties.Name="切换主题" Style="{StaticResource Navigation.Item}" HorizontalContentAlignment="Stretch" Content="深色模式" Tag="{StaticResource Icon.Theme}" ContentTemplate="{StaticResource SidebarFooterContentTemplate}" Click="ToggleTheme_Click" />
-            <Button AutomationProperties.Name="设置" Style="{StaticResource Navigation.Item}" HorizontalContentAlignment="Stretch" Content="设置" Tag="{StaticResource Icon.Settings}" ContentTemplate="{StaticResource SidebarFooterContentTemplate}" Command="{Binding ShowSettingsCommand}" />
+            <Button AutomationProperties.Name="设置" Style="{StaticResource Navigation.Item}" HorizontalContentAlignment="Stretch" Content="设置" Tag="{StaticResource Icon.Settings}" ContentTemplate="{StaticResource SidebarFooterContentTemplate}" Click="SettingsNavigation_Click" />
             <TextBlock Text="●" FontSize="12" HorizontalAlignment="Center" Margin="0,8,0,4">
               <FrameworkElement.Style>
                 <Style TargetType="{x:Type TextBlock}">
@@ -660,9 +660,54 @@
                 </Border>
                 <Border Style="{DynamicResource Card.Default}" Padding="16" Margin="0,0,0,14">
                   <StackPanel>
-                    <TextBlock Text="来源" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock TextWrapping="Wrap" Opacity="0.86" Margin="0,6,0,12" Text="{Binding SourceFolder, StringFormat=来源：{0}}" />
-                    <Button Content="选择来源文件夹" Margin="0,0,0,8" Command="{Binding BrowseSourceCommand}" />
+                    <TextBlock Text="图库根目录" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="导入后的照片统一保存到这里，只能设置一个图库根目录。" TextWrapping="Wrap" Opacity="0.78" Margin="0,6,0,10" />
+                    <Border Padding="10" Margin="0,0,0,8" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                      <TextBlock Text="{Binding LibraryRoot}" TextWrapping="Wrap" ToolTip="{Binding LibraryRoot}" />
+                    </Border>
+                    <Button Content="选择图库根目录" Command="{Binding BrowseLibraryCommand}" />
+                    <TextBlock Text="{Binding LibraryHealthText}" TextWrapping="Wrap" FontSize="11" Opacity=".75" Margin="0,8,0,0" />
+                  </StackPanel>
+                </Border>
+                <Border AllowDrop="True" Drop="ImportSources_Drop" Style="{DynamicResource Card.Default}" Padding="16" Margin="0,0,0,14">
+                  <StackPanel>
+                    <TextBlock Text="来源文件夹" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="可添加多个待导入文件夹，目录列表会自动保存。父子目录只扫描一次。" TextWrapping="Wrap" Opacity="0.78" Margin="0,6,0,10" />
+                    <Button Content="添加来源文件夹" Margin="0,0,0,8" Command="{Binding BrowseSourceCommand}" />
+                    <ItemsControl ItemsSource="{Binding ImportSources.Items}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ImportSourceItemViewModel}">
+                          <Border Padding="10" Margin="0,0,0,8" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                            <StackPanel>
+                              <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" ToolTip="{Binding Path}"/>
+                              <TextBlock Text="{Binding StateText}" FontSize="11" Opacity=".72" Margin="0,3,0,6"/>
+                              <WrapPanel>
+                                <CheckBox Content="启用" IsChecked="{Binding IsEnabled}" Margin="0,0,10,4"/>
+                                <CheckBox Content="包含子目录" IsChecked="{Binding IncludeSubdirectories}" Margin="0,0,10,4"/>
+                                <CheckBox Content="自动监听" IsChecked="{Binding AutoWatch}" Margin="0,0,10,4"/>
+                              </WrapPanel>
+                              <StackPanel Orientation="Horizontal">
+                                <Button Content="重新扫描" Padding="10,4" Command="{Binding DataContext.ImportSources.RescanCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                                <Button Content="移除" Padding="10,4" Margin="8,0,0,0" Command="{Binding DataContext.ImportSources.RemoveCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}"/>
+                              </StackPanel>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="{Binding ImportSources.StatusText}" TextWrapping="Wrap" FontSize="11" Opacity=".75" Margin="0,0,0,8"/>
+                    <Button x:Name="ScanEnabledSourcesButton" Content="扫描全部已启用来源" Margin="0,0,0,8" Command="{Binding ImportSources.ScanEnabledCommand}" />
+                    <Popup PlacementTarget="{Binding ElementName=ScanEnabledSourcesButton}" Placement="Right" HorizontalOffset="10" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False" IsOpen="{Binding PlacementTarget.DataContext.IsOnboardingImportStep, RelativeSource={RelativeSource Self}, Mode=OneWay}">
+                      <Border Background="{DynamicResource Brush.Background.Canvas}" BorderBrush="{DynamicResource Brush.Border.Focus}" BorderThickness="2" CornerRadius="12" Padding="14,10">
+                        <StackPanel Orientation="Horizontal">
+                          <Path Data="M 18,0 L 0,12 L 18,24" Stroke="{DynamicResource Brush.Border.Focus}" StrokeThickness="3" Width="20" Height="26" Stretch="Fill" Margin="0,0,10,0"/>
+                          <TextBlock Text="先扫描全部已启用来源" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                      </Border>
+                    </Popup>
+                    <Button Content="取消扫描" Margin="0,0,0,8" Command="{Binding CancelCurrentTaskCommand}" />
+                    <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding ProgressLabel}" FontSize="11" Opacity=".75" Margin="0,0,0,10"/>
                     <Border CornerRadius="16" Padding="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Margin="0,0,0,8">
                       <DockPanel>
                         <TextBlock Text="本地 AI 人物识别" FontWeight="SemiBold" VerticalAlignment="Center" />
@@ -671,8 +716,16 @@
                     </Border>
                     <TextBlock Text="只识别 JPG/JPEG；同名 RAW 自动继承结果，视频完全跳过。照片只在本机处理。" FontSize="12" TextWrapping="Wrap" Opacity="0.78" Margin="0,0,0,10" />
                     <Button Content="开始分析与分类" Margin="0,0,0,8" Command="{Binding AnalyzeSourceCommand}" />
-                    <ComboBox SelectedValuePath="Mode" DisplayMemberPath="Display" Margin="0,0,0,8" ItemsSource="{Binding TransferModes}" SelectedValue="{Binding SelectedTransferMode}" />
-                    <Button Content="手动开始 / 继续导入" Command="{Binding ImportSelectedCommand}" />
+                    <ComboBox SelectedValuePath="Mode" Margin="0,0,0,8" ItemsSource="{Binding TransferModes}" SelectedValue="{Binding SelectedTransferMode}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Display}"/></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                    <Button x:Name="StartImportButton" Content="手动开始 / 继续导入" Command="{Binding ImportSelectedCommand}" />
+                    <Popup PlacementTarget="{Binding ElementName=StartImportButton}" Placement="Right" HorizontalOffset="10" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False" IsOpen="{Binding PlacementTarget.DataContext.IsOnboardingImportStep, RelativeSource={RelativeSource Self}, Mode=OneWay}">
+                      <Border Background="{DynamicResource Brush.Background.Canvas}" BorderBrush="{DynamicResource Brush.Border.Focus}" BorderThickness="2" CornerRadius="12" Padding="14,10">
+                        <StackPanel Orientation="Horizontal">
+                          <Path Data="M 18,0 L 0,12 L 18,24" Stroke="{DynamicResource Brush.Border.Focus}" StrokeThickness="3" Width="20" Height="26" Stretch="Fill" Margin="0,0,10,0"/>
+                          <TextBlock Text="检查队列后，从这里开始导入" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                      </Border>
+                    </Popup>
                   </StackPanel>
                 </Border>
                 <Border Style="{DynamicResource Card.Default}" Padding="16">
@@ -825,7 +878,9 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                   </Grid.RowDefinitions>
-                  <Border Grid.Row="0" Grid.Column="1" CornerRadius="14" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="14,8" VerticalAlignment="Center">
+                  <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                  <Button x:Name="PreviewSelectionModeButton" Content="选择" Click="TogglePreviewSelectionMode" Padding="14,8" Margin="0,0,10,0" />
+                  <Border CornerRadius="14" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="14,8" VerticalAlignment="Center">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                       <TextBlock Text="缩略图" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,10,0" />
                       <TextBlock Text="小" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
@@ -836,6 +891,7 @@
                       </Border>
                     </StackPanel>
                   </Border>
+                  </StackPanel>
                   <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="🗑 删除选中" Background="{DynamicResource Brush.Surface.Subtle}" Foreground="{DynamicResource Brush.Text.Primary}" Padding="10,5" Margin="0,0,10,0" Command="{Binding DeleteSelectedFilesCommand}" Visibility="{Binding HasSelectedFiles, Converter={StaticResource BoolToVis}}" />
                     <TextBlock Text="当前浏览" Opacity="0.62" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -1098,7 +1154,7 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
-                                        <Border Tag="PreviewCard" Margin="0,0,14,14" Padding="0" CornerRadius="22" ClipToBounds="True" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Cursor="Hand" Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
+                                        <Border Tag="PreviewCard" Margin="0,0,14,14" Padding="0" CornerRadius="22" ClipToBounds="True" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Cursor="Hand" Width="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseLeftButtonUp="PreviewThumbnail_MouseLeftButtonUp" MouseLeave="PreviewThumbnail_MouseLeave" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
                                           <FrameworkElement.ContextMenu>
                                             <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="14">
                                               <MenuItem Header="🖼  打开" Style="{DynamicResource Menu.Item}" Click="PreviewContextMenu_Open" />
@@ -1134,7 +1190,7 @@
                                             <Border CornerRadius="21,21,0,0" ClipToBounds="True" Margin="0" Height="{Binding DataContext.ThumbnailSize, RelativeSource={RelativeSource AncestorType=Window}}">
                                               <Border.Background><ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" /></Border.Background>
                                               <Grid>
-                                                <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Width="24" Height="24" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
+                                                <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10" Width="24" Height="24" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" Visibility="{Binding IsPreviewSelectionMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
                                                 <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="10" Padding="8,4" CornerRadius="10">
                                                   <FrameworkElement.Style>
                                                     <Style TargetType="{x:Type Border}">
@@ -1345,7 +1401,7 @@
             <cloud:CloudPage x:Name="QuarkCloudPageHost" Style="{StaticResource PageSurface}" InitialUrl="https://pan.quark.cn" IsActive="{Binding DataContext.IsQuarkCloudPage, RelativeSource={RelativeSource AncestorType=Window}}" Visibility="{Binding DataContext.IsQuarkCloudPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <contest:ContestOpenPage x:Name="ContestOpenPageHost" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsContestOpenPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <contest:ContestJudgedPage x:Name="ContestJudgedPageHost" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsContestJudgedPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
-            <local:SettingsCenterPage Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}" />
+            <local:SettingsCenterPage x:Name="SettingsCenterPageHost" Style="{StaticResource PageSurface}" Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}" />
             <ScrollViewer Name="SettingsPage" Style="{StaticResource PageSurface}" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
               <StackPanel>
                 <Border Style="{DynamicResource Card.Default}" Padding="18" Margin="0,0,0,14">
@@ -1566,6 +1622,63 @@
             </ScrollViewer>
           </Grid>
         </DockPanel>
+      </Border>
+      <Border Grid.ColumnSpan="2" Panel.ZIndex="100" Visibility="{Binding IsOnboardingVisible, Converter={StaticResource BoolToVis}}">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource Brush.Overlay.Scrim}"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsOnboardingImportStep}" Value="True"><Setter Property="Background" Value="{x:Null}"/></DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <Border Padding="32" CornerRadius="24" Background="{DynamicResource Brush.Background.Canvas}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Width" Value="600"/>
+              <Setter Property="HorizontalAlignment" Value="Center"/>
+              <Setter Property="VerticalAlignment" Value="Center"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOnboardingImportStep}" Value="True">
+                  <Setter Property="Width" Value="480"/>
+                  <Setter Property="HorizontalAlignment" Value="Right"/>
+                  <Setter Property="VerticalAlignment" Value="Top"/>
+                  <Setter Property="Margin" Value="0,24,24,0"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <StackPanel>
+            <DockPanel LastChildFill="True">
+              <TextBlock DockPanel.Dock="Right" Text="{Binding OnboardingStepText}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center"/>
+              <TextBlock Text="Hanabe 新手教程" Style="{StaticResource Layout.PageTitle}"/>
+            </DockPanel>
+            <ProgressBar Minimum="0" Maximum="3" Value="{Binding OnboardingProgress, Mode=OneWay}" Height="6" Margin="0,14,0,24"/>
+            <TextBlock Text="{Binding OnboardingTitle}" Style="{StaticResource Layout.SectionTitle}"/>
+            <TextBlock Text="{Binding OnboardingDescription}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,10,0,26" LineHeight="24"/>
+            <StackPanel Visibility="{Binding IsOnboardingLibraryStep, Converter={StaticResource BoolToVis}}" Margin="0,0,0,24">
+              <TextBlock Text="当前图库根目录" Style="{StaticResource Layout.SettingsFieldLabel}"/>
+              <TextBox Text="{Binding LibraryRoot}" IsReadOnly="True" Style="{StaticResource Input.TextBox}" Margin="0,6,0,10"/>
+              <Button Content="选择图库根目录" Command="{Binding BrowseLibraryCommand}" Style="{StaticResource Button.Primary}" HorizontalAlignment="Stretch"/>
+            </StackPanel>
+            <StackPanel Visibility="{Binding IsOnboardingSourceStep, Converter={StaticResource BoolToVis}}" Margin="0,0,0,24">
+              <Button Content="添加来源文件夹" Command="{Binding BrowseSourceCommand}" Style="{StaticResource Button.Primary}" HorizontalAlignment="Stretch"/>
+              <ItemsControl ItemsSource="{Binding ImportSources.Items}" Margin="0,10,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate><TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,3"/></DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+            <TextBlock Visibility="{Binding IsOnboardingImportStep, Converter={StaticResource BoolToVis}}" Text="现在可以直接操作左侧导入面板。两个箭头会分别指向扫描和开始导入按钮。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,20"/>
+            <DockPanel>
+              <Button DockPanel.Dock="Left" Content="跳过教程" Command="{Binding DismissOnboardingCommand}" Style="{StaticResource Button.Ghost}"/>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="上一步" Command="{Binding PreviousOnboardingStepCommand}" Style="{StaticResource Button.Secondary}" IsEnabled="{Binding CanGoToPreviousOnboardingStep}"/>
+                <Button Content="{Binding OnboardingPrimaryActionText}" Command="{Binding NextOnboardingStepCommand}" Margin="10,0,0,0"/>
+              </StackPanel>
+            </DockPanel>
+          </StackPanel>
+        </Border>
       </Border>
     </Grid>
   </Grid>

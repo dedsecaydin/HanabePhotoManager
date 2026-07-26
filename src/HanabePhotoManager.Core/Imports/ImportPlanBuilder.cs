@@ -20,6 +20,15 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         TransferMode mode,
         IEnumerable<MediaGroup> groups,
         CancellationToken cancellationToken)
+        => await BuildAsync(root, date, mode, groups, date.RelativePath, cancellationToken).ConfigureAwait(false);
+
+    public async Task<ImportPlan> BuildAsync(
+        string root,
+        LibraryDate date,
+        TransferMode mode,
+        IEnumerable<MediaGroup> groups,
+        string dateRelativePath,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(groups);
@@ -28,11 +37,17 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         {
             throw new ArgumentException("Library root cannot be null or whitespace.", nameof(root));
         }
+        if (string.IsNullOrWhiteSpace(dateRelativePath) || Path.IsPathFullyQualified(dateRelativePath))
+            throw new ArgumentException("Date path must be a non-empty relative path.", nameof(dateRelativePath));
+        var dateRoot = Path.GetFullPath(Path.Combine(root, dateRelativePath));
+        var normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        if (!dateRoot.StartsWith(normalizedRoot + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Date path escapes the library root.", nameof(dateRelativePath));
 
         var inputGroups = groups.ToArray();
         ValidateGroups(inputGroups, nameof(groups));
 
-        var sequenceByGroup = BuildSequenceMap(root, date, inputGroups);
+        var sequenceByGroup = BuildSequenceMap(dateRoot, inputGroups);
         var items = new List<ImportPlanItem>();
         var plannedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in inputGroups)
@@ -46,7 +61,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
             foreach (var source in EnumerateGroupFiles(group))
             {
                 var destinationFileName = BuildRenamedFileName(sequenceName, source.FullPath, extensionCounts);
-                var destination = Path.Combine(root, date.RelativePath, categoryFolder, destinationFileName);
+                var destination = Path.Combine(dateRoot, categoryFolder, destinationFileName);
                 var normalizedDestination = NormalizeDestinationIdentity(destination);
                 var conflict = plannedDestinations.Add(normalizedDestination)
                     ? await _destinationProbe.CheckAsync(source, destination, cancellationToken).ConfigureAwait(false)
@@ -88,13 +103,13 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         }
     }
 
-    private static Dictionary<MediaGroup, string> BuildSequenceMap(string root, LibraryDate date, IReadOnlyList<MediaGroup> groups)
+    private static Dictionary<MediaGroup, string> BuildSequenceMap(string dateRoot, IReadOnlyList<MediaGroup> groups)
     {
         var result = new Dictionary<MediaGroup, string>();
         foreach (var categoryGroup in groups.GroupBy(group => group.Category))
         {
             var categoryFolder = CategoryFolders[categoryGroup.Key];
-            var next = FindNextSequence(Path.Combine(root, date.RelativePath, categoryFolder));
+            var next = FindNextSequence(Path.Combine(dateRoot, categoryFolder));
             foreach (var group in categoryGroup
                          .OrderBy(group => Path.GetFileNameWithoutExtension(group.Primary.FullPath), NaturalStringComparer.OrdinalIgnoreCase)
                          .ThenBy(group => group.Primary.FullPath, StringComparer.OrdinalIgnoreCase))

@@ -1,0 +1,6 @@
+# SigLIP2 export tool ignores
+output/
+.venv/
+__pycache__/
+tools/SigLIP2Export/test_images/*
+!tools/SigLIP2Export/test_images/.gitkeep

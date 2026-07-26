@@ -10,13 +10,21 @@ public sealed class ControlThemeTests
     [Fact]
     public void SettingsChoiceComboBoxes_RenderLabelsInsteadOfRecordText()
     {
+        var root = FindSourceRoot();
         var mainXaml = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+            root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var settingsXaml = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        var compressionXaml = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "Compression", "CompressionPage.xaml"));
 
         mainXaml.Should().NotContain("ItemsSource=\"{Binding PreviewSortChoices}\" DisplayMemberPath=\"Label\"");
         mainXaml.Should().NotContain("ItemsSource=\"{Binding BrowseEntryModes}\" DisplayMemberPath=\"Label\"");
         mainXaml.Should().Contain("DataType=\"{x:Type vm:PreviewSortChoice}\"");
         mainXaml.Should().Contain("DataType=\"{x:Type vm:BrowseEntryChoice}\"");
+        settingsXaml.Should().NotContain("DisplayMemberPath=");
+        compressionXaml.Should().NotContain("DisplayMemberPath=");
+        compressionXaml.Should().Contain("<TextBlock Text=\"{Binding Label}\"");
     }
 
     [Fact]
@@ -120,6 +128,115 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("PrimaryNavigationItem_PreviewMouseMove");
         mainXaml.Should().Contain("x:Name=\"ThemeToggleButton\"");
         mainXaml.Should().NotContain("Win11NavButton");
+    }
+
+    [Fact]
+    public void PrimaryNavigation_AnimatesAllDisplayModesAndOrderedPageChanges()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        xaml.Should().Contain("Click=\"PrimaryNavigationItem_Click\"");
+        xaml.Should().Contain("x:Name=\"SidebarRoot\"");
+        xaml.Should().NotContain("TargetName=\"FooterNavigationIcon\" Property=\"Visibility\"");
+        xaml.Should().NotContain("TargetName=\"FooterNavigationLabel\" Property=\"Visibility\"");
+        code.Should().Contain("NavigateWithTransitionAsync");
+        code.Should().Contain("string.Equals(_viewModel.CurrentPage, item.Key");
+        code.Should().Contain("string.Equals(_viewModel.CurrentPage, \"Settings\"");
+        code.Should().Contain("_navigationTransitionCancellation");
+        code.Should().Contain("NavigationDisplayMode.IconAndText");
+        code.Should().Contain("TranslateTransform.XProperty");
+        code.Should().Contain("SystemParameters.ClientAreaAnimation");
+    }
+
+    [Fact]
+    public void SettingsSecondaryNavigation_AnimatesSelectionAndCompleteContentRegion()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml.cs"));
+        var navigation = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "Themes", "Controls", "Navigation.xaml"));
+
+        xaml.Should().Contain("x:Name=\"SettingsTabs\"");
+        xaml.Should().Contain("SelectionChanged=\"SettingsTabs_SelectionChanged\"");
+        navigation.Should().Contain("x:Name=\"PART_SelectedContentHost\"");
+        code.Should().Contain("AnimateSettingsContent");
+        code.Should().Contain("AnimateSelectedTab");
+        code.Should().Contain("SystemParameters.ClientAreaAnimation");
+    }
+
+    [Fact]
+    public void SharedComboBox_UsesTheWholeSurfaceAsItsDropDownTarget()
+    {
+        var inputs = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Inputs.xaml"));
+
+        inputs.Should().Contain("<ToggleButton Grid.ColumnSpan=\"2\"");
+        inputs.Should().Contain("Panel.ZIndex=\"1\"");
+    }
+
+    [Fact]
+    public void EveryComboBox_UsesTheApplicationWideMouseDropDownHandler()
+    {
+        var root = FindSourceRoot();
+        var appCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "App.xaml.cs"));
+
+        appCode.Should().Contain("EventManager.RegisterClassHandler")
+            .And.Contain("typeof(ComboBox)")
+            .And.Contain("ComboBox_PreviewMouseLeftButtonDown");
+    }
+
+    [Fact]
+    public void Settings_OffersImmediateOnboardingReplay()
+    {
+        var root = FindSourceRoot();
+        var settings = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        var main = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var viewModel = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        settings.Should().Contain("Content=\"再次体验新手教程\"")
+            .And.Contain("Command=\"{Binding ReplayOnboardingCommand}\"");
+        main.Should().Contain("OnboardingTitle")
+            .And.Contain("PreviousOnboardingStepCommand")
+            .And.Contain("NextOnboardingStepCommand")
+            .And.Contain("OnboardingPrimaryActionText")
+            .And.Contain("Value=\"{Binding OnboardingProgress, Mode=OneWay}\"");
+        main.Should().Contain("Command=\"{Binding BrowseLibraryCommand}\"")
+            .And.Contain("Command=\"{Binding BrowseSourceCommand}\"")
+            .And.Contain("x:Name=\"ScanEnabledSourcesButton\"")
+            .And.Contain("x:Name=\"StartImportButton\"")
+            .And.Contain("PlacementTarget=\"{Binding ElementName=ScanEnabledSourcesButton}\"")
+            .And.Contain("PlacementTarget=\"{Binding ElementName=StartImportButton}\"");
+        viewModel.Should().Contain("public IRelayCommand ReplayOnboardingCommand")
+            .And.Contain("public int OnboardingStep")
+            .And.Contain("public bool IsOnboardingLibraryStep")
+            .And.Contain("public bool IsOnboardingSourceStep")
+            .And.Contain("public bool IsOnboardingImportStep");
+    }
+
+    [Fact]
+    public void Settings_ShowsLockedOwnerOnlyAccessDeclaration()
+    {
+        var root = FindSourceRoot();
+        var settings = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+
+        settings.Should().Contain("Text=\"所有权与访问声明\"")
+            .And.Contain("Text=\"dedsecaydin\"")
+            .And.Contain("IsReadOnly=\"True\"")
+            .And.NotContain("解锁声明");
+    }
+
+    [Fact]
+    public void PageHeader_UsesAClosedSharedContainer()
+    {
+        var layout = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Layout.xaml"));
+
+        layout.Should().Contain("x:Key=\"Layout.TopBar\"");
+        layout.Should().Contain("<Setter Property=\"CornerRadius\" Value=\"{StaticResource Radius.Card}\"");
+        layout.Should().Contain("<Setter Property=\"BorderThickness\" Value=\"1\"");
     }
 
     [Fact]
@@ -228,6 +345,20 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("Setter Property=\"Padding\" Value=\"0\"");
         mainXaml.Should().Contain("Setter Property=\"Padding\" Value=\"24,20,24,18\"");
         mainXaml.Should().Contain("Setter Property=\"Margin\" Value=\"0\"");
+    }
+
+    [Fact]
+    public void ImportWorkspace_SeparatesSingleLibraryRootFromMultipleSourceFolders()
+    {
+        var mainXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        mainXaml.Should().Contain("Text=\"图库根目录\"");
+        mainXaml.Should().Contain("Text=\"来源文件夹\"");
+        mainXaml.Should().Contain("Text=\"{Binding LibraryRoot}\"");
+        mainXaml.Should().Contain("Content=\"选择图库根目录\"");
+        mainXaml.Should().Contain("ItemsSource=\"{Binding ImportSources.Items}\"");
+        mainXaml.Should().NotContain("Text=\"来源文件夹 / 图库根目录\"");
     }
 
     [Fact]

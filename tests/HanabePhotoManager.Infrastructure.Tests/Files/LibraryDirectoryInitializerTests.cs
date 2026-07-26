@@ -7,6 +7,19 @@ namespace HanabePhotoManager.Infrastructure.Tests.Files;
 public sealed class LibraryDirectoryInitializerTests
 {
     [Fact]
+    public void EnsureDateTree_UsesRemarkedRelativePath()
+    {
+        using var workspace = new DirectoryWorkspace();
+        var relativePath = Path.Combine("7月", "07.16_棚拍");
+
+        new LibraryDirectoryInitializer().EnsureDateTree(workspace.Root, relativePath);
+
+        foreach (var category in LibraryDirectoryInitializer.CategoryFolders)
+            Directory.Exists(Path.Combine(workspace.Root, relativePath, category)).Should().BeTrue();
+        Directory.Exists(Path.Combine(workspace.Root, "7月", "07.16")).Should().BeFalse();
+    }
+
+    [Fact]
     public void EnsureDateTree_CreatesSixCategoryDirectoriesAndIsIdempotent()
     {
         using var workspace = new DirectoryWorkspace();

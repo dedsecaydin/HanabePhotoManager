@@ -1,0 +1,8 @@
+torch
+transformers
+optimum
+onnx
+onnxruntime
+huggingface_hub
+Pillow
+numpy

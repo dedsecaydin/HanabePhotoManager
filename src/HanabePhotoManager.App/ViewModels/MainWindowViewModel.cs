@@ -159,9 +159,12 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _previewHasLoaded;
     private bool _isBrowseConditionsExpanded;
     private bool _isInitialized;
+    private bool _isOnboardingVisible;
+    private int _onboardingStep;
     private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.Text;
     private int _previewPage;
     private readonly Dictionary<string, bool> _previewDateExpansion = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<LibraryDate, string> _dateRemarks = [];
     private bool _suppressPreviewSectionRefresh;
     private DateTime _calendarDisplayMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateOnly? _calendarSelectedDate;
@@ -241,6 +244,13 @@ public sealed class MainWindowViewModel : ObservableObject
         ShowContestOpenCommand = new RelayCommand(() => CurrentPage = "ContestOpen");
         ShowContestJudgedCommand = new RelayCommand(() => CurrentPage = "ContestJudged");
         ShowSettingsCommand = new RelayCommand(() => CurrentPage = "Settings");
+        DismissOnboardingCommand = new AsyncRelayCommand(DismissOnboardingAsync);
+        ReplayOnboardingCommand = new RelayCommand(ReplayOnboarding);
+        PreviousOnboardingStepCommand = new RelayCommand(ShowPreviousOnboardingStep);
+        NextOnboardingStepCommand = new RelayCommand(() => _ = ShowNextOnboardingStepAsync());
+        ImportSources = new ImportSourcesViewModel(
+            SaveSettingsAsync,
+            ScanImportSourcesAsync);
         ResetNavigationItems(null);
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
@@ -409,6 +419,66 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ImportPreviewItemViewModel> ImportItems { get; } = [];
 
+    public ImportSourcesViewModel ImportSources { get; }
+    public IAsyncRelayCommand DismissOnboardingCommand { get; }
+    public IRelayCommand ReplayOnboardingCommand { get; }
+    public IRelayCommand PreviousOnboardingStepCommand { get; }
+    public IRelayCommand NextOnboardingStepCommand { get; }
+
+    public int OnboardingStep
+    {
+        get => _onboardingStep;
+        private set
+        {
+            if (!SetProperty(ref _onboardingStep, Math.Clamp(value, 0, 2))) return;
+            OnPropertyChanged(nameof(OnboardingTitle));
+            OnPropertyChanged(nameof(OnboardingDescription));
+            OnPropertyChanged(nameof(OnboardingStepText));
+            OnPropertyChanged(nameof(OnboardingProgress));
+            OnPropertyChanged(nameof(OnboardingPrimaryActionText));
+            OnPropertyChanged(nameof(IsFirstOnboardingStep));
+            OnPropertyChanged(nameof(IsLastOnboardingStep));
+            OnPropertyChanged(nameof(CanGoToPreviousOnboardingStep));
+            OnPropertyChanged(nameof(IsOnboardingLibraryStep));
+            OnPropertyChanged(nameof(IsOnboardingSourceStep));
+            OnPropertyChanged(nameof(IsOnboardingImportStep));
+        }
+    }
+
+    public string OnboardingTitle => OnboardingStep switch
+    {
+        0 => "第一步：设置图库根目录",
+        1 => "第二步：添加来源文件夹",
+        _ => "第三步：扫描并导入"
+    };
+
+    public string OnboardingDescription => OnboardingStep switch
+    {
+        0 => "图库根目录是整理后照片的唯一存放位置。可在“设置 → 照片库与导入”中选择或更改。",
+        1 => "进入“导入照片”，添加一个或多个来源文件夹。相机、NAS 和临时素材目录可以分别管理。",
+        _ => "扫描已启用来源，检查导入队列、日期和备注，然后开始导入。扫描和复制都在后台执行。"
+    };
+
+    public string OnboardingStepText => $"{OnboardingStep + 1} / 3";
+    public int OnboardingProgress => OnboardingStep + 1;
+    public string OnboardingPrimaryActionText => IsLastOnboardingStep ? "完成" : "下一步";
+    public bool IsFirstOnboardingStep => OnboardingStep == 0;
+    public bool IsLastOnboardingStep => OnboardingStep == 2;
+    public bool CanGoToPreviousOnboardingStep => !IsFirstOnboardingStep;
+    public bool IsOnboardingLibraryStep => OnboardingStep == 0;
+    public bool IsOnboardingSourceStep => OnboardingStep == 1;
+    public bool IsOnboardingImportStep => OnboardingStep == 2 && IsOnboardingVisible;
+
+    public bool IsOnboardingVisible
+    {
+        get => _isOnboardingVisible;
+        private set
+        {
+            if (SetProperty(ref _isOnboardingVisible, value))
+                OnPropertyChanged(nameof(IsOnboardingImportStep));
+        }
+    }
+
     public ObservableCollection<ImportCategorySectionViewModel> ImportSections { get; } = [];
 
     public ObservableCollection<ConnectedDeviceViewModel> ConnectedDevices { get; } = [];
@@ -496,9 +566,17 @@ public sealed class MainWindowViewModel : ObservableObject
             _ = SaveSettingsAsync();
         }
     }
-    public bool IsGpuProviderAvailable => File.Exists(Path.Combine(AppContext.BaseDirectory, "onnxruntime_providers_cuda.dll"));
+    public bool IsGpuProviderAvailable
+    {
+        get
+        {
+            var available = OnnxRuntimeSessionFactory.TryCreateDirectMlOptions(out var options);
+            options?.Dispose();
+            return available;
+        }
+    }
     public string InferenceProviderStatus => IsGpuProviderAvailable
-        ? "检测到可用 GPU Provider；自动模式将优先使用它。"
+        ? "检测到 DirectML GPU Provider；自动模式下 SigLIP2 将优先使用 GPU。"
         : InferenceDevice == "auto" ? "未检测到 GPU Provider；自动模式已回退 CPU。" : "当前固定使用 CPU。";
     public int SemanticMaxLabels { get => MobileClipRuntimeOptions.MaximumLabels; set { MobileClipRuntimeOptions.MaximumLabels = Math.Clamp(value, 1, 5); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
     public double SemanticSimilarityWindow { get => MobileClipRuntimeOptions.SimilarityWindow; set { MobileClipRuntimeOptions.SimilarityWindow = Math.Clamp(value, .02, .30); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
@@ -1204,6 +1282,8 @@ public sealed class MainWindowViewModel : ObservableObject
         ResetNavigationItems(settings.NavigationOrder);
         NavigationDisplayMode = settings.NavigationDisplayMode;
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
+        ImportSources.Load(settings.ImportSources);
+        IsOnboardingVisible = !settings.HasCompletedOnboarding;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
         OnPropertyChanged(nameof(DefaultThumbnailSize));
@@ -1751,15 +1831,16 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusMessage = "根目录已保存。不会自动加载照片；进入预览页或点刷新时才读取缩略图。";
     }
 
-    private Task BrowseSourceAsync()
+    private async Task BrowseSourceAsync()
     {
         var selected = PickFolder("选择相机来源文件夹", SourceFolder);
         if (selected is null)
         {
-            return Task.CompletedTask;
+            return;
         }
 
         SourceFolder = selected;
+        await ImportSources.AddPathsAsync([selected]).ConfigureAwait(true);
         _sourceScanPaths = [selected];
         CancelImportThumbnailLoading();
         ImportItems.Clear();
@@ -1771,11 +1852,17 @@ public sealed class MainWindowViewModel : ObservableObject
         ProgressValue = 0;
         ProgressLabel = "等待开始";
         NotifyCommandStates();
-        return Task.CompletedTask;
+        return;
     }
 
     private async Task AnalyzeSourceAsync()
     {
+        var configuredPaths = ImportSources.EnabledPaths;
+        if (configuredPaths.Count > 0)
+        {
+            _sourceScanPaths = configuredPaths;
+            SourceFolder = configuredPaths[0];
+        }
         if (!Directory.Exists(SourceFolder))
         {
             StatusMessage = "来源文件夹不存在。";
@@ -1786,7 +1873,63 @@ public sealed class MainWindowViewModel : ObservableObject
         await AnalyzeSourcePathsAsync(paths, SourceFolder).ConfigureAwait(true);
     }
 
-    private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
+    public Task AddImportSourcePathsAsync(IEnumerable<string> paths) =>
+        ImportSources.AddPathsAsync(paths);
+
+    private async Task DismissOnboardingAsync()
+    {
+        IsOnboardingVisible = false;
+        await _settingsStore.UpdateAsync(settings => settings.HasCompletedOnboarding = true).ConfigureAwait(true);
+    }
+
+    private void ReplayOnboarding()
+    {
+        OnboardingStep = 0;
+        CurrentPage = "Settings";
+        IsOnboardingVisible = true;
+    }
+
+    private void ShowPreviousOnboardingStep()
+    {
+        if (OnboardingStep == 0) return;
+        OnboardingStep--;
+        CurrentPage = OnboardingStep == 0 ? "Settings" : "Import";
+    }
+
+    private async Task ShowNextOnboardingStepAsync()
+    {
+        if (IsLastOnboardingStep)
+        {
+            await DismissOnboardingAsync().ConfigureAwait(true);
+            return;
+        }
+
+        OnboardingStep++;
+        CurrentPage = "Import";
+    }
+
+    private async Task ScanImportSourcesAsync(IReadOnlyList<ImportSourceSettings> sources)
+    {
+        var existingSources = sources.Where(source => source.IsEnabled && Directory.Exists(source.Path))
+            .DistinctBy(source => ImportSourcePolicy.Normalize(source.Path), StringComparer.OrdinalIgnoreCase).ToArray();
+        var existing = existingSources.Select(source => source.Path).ToArray();
+        if (existing.Length == 0)
+        {
+            StatusMessage = "没有可扫描的已启用来源目录。";
+            return;
+        }
+        SourceFolder = existing[0];
+        _sourceScanPaths = existing;
+        var topOnlyPaths = existingSources.Where(source => !source.IncludeSubdirectories)
+            .Select(source => ImportSourcePolicy.Normalize(source.Path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        await AnalyzeSourcePathsAsync(existing, existing[0], topOnlyPaths).ConfigureAwait(true);
+    }
+
+    private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(
+        IReadOnlyList<string> paths,
+        string dateHintPath,
+        IReadOnlySet<string>? topOnlyPaths = null)
     {
         CancelImportThumbnailLoading();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Analysis);
@@ -1815,7 +1958,7 @@ public sealed class MainWindowViewModel : ObservableObject
             });
             var scanProgress = new ThrottledProgress<ImportFileScanProgress>(uiScanProgress, TimeSpan.FromMilliseconds(125));
             var fileInfos = await Task.Run(
-                () => EnumerateImportFileInfos(paths, cancellationToken, scanProgress).ToArray(),
+                () => EnumerateImportFileInfos(paths, cancellationToken, scanProgress, topOnlyPaths).ToArray(),
                 cancellationToken).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
             ProgressValue = 35;
@@ -2102,48 +2245,70 @@ public sealed class MainWindowViewModel : ObservableObject
         var skipped = 0;
         var lines = new List<string>();
 
-        _directoryInitializer.EnsureDateTree(LibraryRoot, date);
+        var dateRelativePath = ResolveDateRelativePath(date);
+        _directoryInitializer.EnsureDateTree(LibraryRoot, dateRelativePath);
         var plan = await _planBuilder.BuildAsync(
             LibraryRoot,
             date,
             deleteSourcesAfterVerify ? TransferMode.MoveAfterVerify : TransferMode.CopyKeepSource,
             groups,
+            dateRelativePath,
             cancellationToken).ConfigureAwait(true);
 
-        for (var index = 0; index < plan.Items.Count; index++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var item = plan.Items[index];
-            ProgressLabel = $"正在处理 {date.Month:00}.{date.Day:00} · {index + 1}/{plan.Items.Count}：{item.Group.GroupKey}";
-            ProgressValue = plan.Items.Count == 0 ? 100 : index * 100d / plan.Items.Count;
-
-            if (item.Conflict == ConflictKind.SameNameDifferentContent)
+        var completed = 0;
+        var concurrentLines = new ConcurrentQueue<(int Index, string Text)>();
+        var parallelism = Math.Clamp(Environment.ProcessorCount, 2, 6);
+        await Parallel.ForEachAsync(
+            plan.Items.Select((item, index) => (Item: item, Index: index)),
+            new ParallelOptions
             {
-                failed++;
-                lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
-                continue;
-            }
-
-            var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
-            if (result.Success)
+                MaxDegreeOfParallelism = parallelism,
+                CancellationToken = cancellationToken
+            },
+            async (entry, token) =>
             {
-                if (item.Conflict == ConflictKind.Identical)
+                var item = entry.Item;
+                if (item.Conflict == ConflictKind.SameNameDifferentContent)
                 {
-                    skipped++;
-                    lines.Add($"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。");
+                    Interlocked.Increment(ref failed);
+                    concurrentLines.Enqueue((entry.Index,
+                        $"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。"));
                 }
                 else
                 {
-                    success++;
-                    lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                    var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, token).ConfigureAwait(false);
+                    if (result.Success)
+                    {
+                        if (item.Conflict == ConflictKind.Identical)
+                        {
+                            Interlocked.Increment(ref skipped);
+                            concurrentLines.Enqueue((entry.Index,
+                                $"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。"));
+                        }
+                        else
+                        {
+                            Interlocked.Increment(ref success);
+                            concurrentLines.Enqueue((entry.Index,
+                                $"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}"));
+                        }
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref failed);
+                        concurrentLines.Enqueue((entry.Index,
+                            $"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}"));
+                    }
                 }
-            }
-            else
-            {
-                failed++;
-                lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
-            }
-        }
+
+                var current = Interlocked.Increment(ref completed);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    ProgressLabel = $"并行导入 {date.Month:00}.{date.Day:00} · {current}/{plan.Items.Count}（最多 {parallelism} 项）";
+                    ProgressValue = plan.Items.Count == 0 ? 100 : current * 100d / plan.Items.Count;
+                });
+            }).ConfigureAwait(true);
+
+        lines.AddRange(concurrentLines.OrderBy(entry => entry.Index).Select(entry => entry.Text));
 
         return new ImportRunResult(success, skipped, failed, lines);
     }
@@ -2170,6 +2335,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
             try
             {
+                _dateRemarks[date] = remark;
                 RenameDateFolderWithRemark(date, remark);
                 StatusMessage = $"已给 {date.Month:00}.{date.Day:00} 添加备注：{remark}";
             }
@@ -2212,6 +2378,26 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         Directory.Move(current, target);
+    }
+
+    private string ResolveDateRelativePath(LibraryDate date)
+    {
+        var monthName = $"{date.Month}月";
+        var prefix = $"{date.Month:00}.{date.Day:00}";
+        if (_dateRemarks.TryGetValue(date, out var remark) && !string.IsNullOrWhiteSpace(remark))
+            return Path.Combine(monthName, $"{prefix}_{remark}");
+
+        var monthDirectory = Path.Combine(LibraryRoot, monthName);
+        if (Directory.Exists(monthDirectory))
+        {
+            var existing = Directory.EnumerateDirectories(monthDirectory, prefix + "*", SearchOption.TopDirectoryOnly)
+                .Select(Path.GetFileName)
+                .OrderByDescending(name => name?.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase) == true)
+                .FirstOrDefault(name => name is not null && DateFolderDisplayName(name, date) == name);
+            if (!string.IsNullOrWhiteSpace(existing))
+                return Path.Combine(monthName, existing);
+        }
+        return date.RelativePath;
     }
 
     private static string SanitizeRemark(string input, LibraryDate date)
@@ -3746,8 +3932,11 @@ public sealed class MainWindowViewModel : ObservableObject
         foreach (var dayDirectory in Directory.EnumerateDirectories(monthDirectory))
         {
             var dayName = Path.GetFileName(dayDirectory);
-            var parts = dayName.Split('.');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out _) || !int.TryParse(parts[1], out var day))
+            var match = Regex.Match(dayName, @"^(?<month>\d{2})\.(?<day>\d{2})(?:_|$)");
+            if (!match.Success ||
+                !int.TryParse(match.Groups["month"].Value, out var folderMonth) ||
+                !int.TryParse(match.Groups["day"].Value, out var day) ||
+                folderMonth != month)
             {
                 continue;
             }
@@ -3755,12 +3944,21 @@ public sealed class MainWindowViewModel : ObservableObject
             try
             {
                 var date = new LibraryDate(year, month, day);
-                nodes.Add(new LibraryDateNode(FormatDate(date), dayDirectory, date));
+                nodes.Add(new LibraryDateNode(DateFolderDisplayName(dayName, date), dayDirectory, date));
             }
             catch (ArgumentOutOfRangeException)
             {
             }
         }
+    }
+
+    public static string DateFolderDisplayName(string folderName, LibraryDate date)
+    {
+        var prefix = $"{date.Month:00}.{date.Day:00}";
+        return string.Equals(folderName, prefix, StringComparison.OrdinalIgnoreCase) ||
+               folderName.StartsWith(prefix + "_", StringComparison.OrdinalIgnoreCase)
+            ? folderName
+            : prefix;
     }
 
     private static bool TryParseMonthName(string monthName, out int month)
@@ -3811,6 +4009,8 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.NavigationOrder = NavigationItems.Select(item => item.Key).ToList();
             settings.NavigationDisplayMode = NavigationDisplayMode;
             settings.LibraryRoot = LibraryRoot;
+            settings.ImportSources = ImportSources.Snapshot();
+            settings.HasCompletedOnboarding = !IsOnboardingVisible;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
             settings.GlassIntensity = GlassIntensity;
             settings.BackgroundMode = BackgroundMode;
@@ -4752,7 +4952,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private static IEnumerable<FileInfo> EnumerateImportFileInfos(
         IEnumerable<string> paths,
         CancellationToken cancellationToken,
-        IProgress<ImportFileScanProgress>? progress)
+        IProgress<ImportFileScanProgress>? progress,
+        IReadOnlySet<string>? topOnlyPaths = null)
     {
         var matched = 0;
         foreach (var path in paths)
@@ -4820,6 +5021,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
                     yield return info;
                 }
+
+                if (topOnlyPaths?.Contains(ImportSourcePolicy.Normalize(path)) == true)
+                    continue;
 
                 string[] directories;
                 try

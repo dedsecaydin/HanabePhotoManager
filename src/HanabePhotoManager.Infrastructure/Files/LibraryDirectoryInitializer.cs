@@ -15,15 +15,21 @@ public sealed class LibraryDirectoryInitializer
     ]);
 
     public void EnsureDateTree(string root, LibraryDate date)
+        => EnsureDateTree(root, date.RelativePath);
+
+    public void EnsureDateTree(string root, string dateRelativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
+        ArgumentException.ThrowIfNullOrWhiteSpace(dateRelativePath);
+        if (Path.IsPathFullyQualified(dateRelativePath))
+            throw new ArgumentException("Date path must be relative.", nameof(dateRelativePath));
 
         var normalizedRoot = Path.GetFullPath(root);
         normalizedRoot = Path.TrimEndingDirectorySeparator(normalizedRoot);
 
         foreach (var categoryFolder in CategoryFolders)
         {
-            var directory = Path.GetFullPath(Path.Combine(normalizedRoot, date.RelativePath, categoryFolder));
+            var directory = Path.GetFullPath(Path.Combine(normalizedRoot, dateRelativePath, categoryFolder));
             if (!IsWithinRoot(normalizedRoot, directory))
             {
                 throw new InvalidOperationException($"Resolved date directory escapes the library root: {directory}");

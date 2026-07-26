@@ -1,24 +1,72 @@
-using System.Reflection;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using FluentAssertions;
-using HanabePhotoManager.Desktop;
 
 namespace HanabePhotoManager.Desktop.Core.Tests;
 
 public sealed class ProgramSmokeTests
 {
     [Fact]
-    public void RunSmokeTest_LoadsTheAvaloniaApplicationAndMainWindowWithoutShowing()
+    public async Task SmokeTestHost_LoadsTheAvaloniaApplicationAndMainWindowWithoutShowing()
     {
-        var programType = typeof(App).Assembly.GetType("HanabePhotoManager.Desktop.Program");
+        var hostName = OperatingSystem.IsWindows()
+            ? "HanabePhotoManager.Desktop.exe"
+            : "HanabePhotoManager.Desktop";
+        var hostPath = Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "HanabePhotoManager.Desktop",
+            "bin",
+            "Release",
+            "net8.0",
+            RuntimeInformation.RuntimeIdentifier,
+            hostName);
+        File.Exists(hostPath).Should().BeTrue("the Desktop project reference should build its self-contained native host");
 
-        programType.Should().NotBeNull();
+        using var process = Process.Start(new ProcessStartInfo
+        {
+            FileName = hostPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+            ArgumentList = { "--smoke-test" }
+        });
+        process.Should().NotBeNull();
 
-        var method = programType!.GetMethod("RunSmokeTest", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+        var outputTask = process!.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        try
+        {
+            await process.WaitForExitAsync(timeout.Token);
+        }
+        finally
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
 
-        method.Should().NotBeNull();
+        var output = await outputTask;
+        var error = await errorTask;
+        process.ExitCode.Should().Be(0, $"stdout: {output}{Environment.NewLine}stderr: {error}");
+    }
 
-        var result = method!.Invoke(null, null);
+    private static string FindRepositoryRoot()
+    {
+        for (var directory = new DirectoryInfo(AppContext.BaseDirectory);
+             directory is not null;
+             directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "HanabePhotoManager.sln")))
+            {
+                return directory.FullName;
+            }
+        }
 
-        result.Should().Be(0);
+        throw new DirectoryNotFoundException(
+            "Could not locate the repository root from the test output directory.");
     }
 }

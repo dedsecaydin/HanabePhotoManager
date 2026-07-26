@@ -1,5 +1,7 @@
 using Avalonia;
+using Avalonia.Themes.Fluent;
 using HanabePhotoManager.Desktop.Core.ViewModels;
+using HanabePhotoManager.Desktop.Views;
 
 namespace HanabePhotoManager.Desktop;
 
@@ -10,13 +12,41 @@ internal static class Program
     {
         if (args.Any(argument => string.Equals(argument, "--smoke-test", StringComparison.Ordinal)))
         {
-            DesktopStartupComposition.ValidateShell();
-            _ = BuildAvaloniaApp();
-            return 0;
+            return RunSmokeTest();
         }
 
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         return 0;
+    }
+
+    internal static int RunSmokeTest()
+    {
+        DesktopStartupComposition.ValidateShell();
+        BuildAvaloniaApp().SetupWithoutStarting();
+
+        if (Application.Current is not App app || !app.Styles.OfType<FluentTheme>().Any())
+        {
+            throw new InvalidOperationException("The Avalonia application and Fluent theme must load at startup.");
+        }
+
+        var mainWindow = new MainWindow
+        {
+            DataContext = new DesktopShellViewModel()
+        };
+
+        try
+        {
+            if (mainWindow.Content is null || mainWindow.IsVisible)
+            {
+                throw new InvalidOperationException("The main window XAML must load without showing the window.");
+            }
+
+            return 0;
+        }
+        finally
+        {
+            mainWindow.Close();
+        }
     }
 
     public static AppBuilder BuildAvaloniaApp()

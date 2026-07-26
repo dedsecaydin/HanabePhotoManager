@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\HanabePhotoManager.Desktop.Core\HanabePhotoManager.Desktop.Core.csproj" />
+    <ProjectReference Include="..\..\src\HanabePhotoManager.Desktop\HanabePhotoManager.Desktop.csproj" />
   </ItemGroup>
 
 </Project>

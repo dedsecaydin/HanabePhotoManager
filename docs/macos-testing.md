@@ -1,7 +1,7 @@
 # macOS ARM64 Testing
 
 > **Purpose:** Verify the unsigned phase 1 macOS ARM64 application produced by GitHub Actions.
-> **Scope:** Artifact integrity, first launch, application paths, Finder reveal, and move-to-Trash behavior.
+> **Scope:** Artifact integrity, first launch, startup smoke testing, and observable application paths.
 > **Audience:** Contributors and reviewers testing `hanabe-photo-manager-osx-arm64`.
 > **References:** [testing.md](testing.md), [macos-arm64.yml](../.github/workflows/macos-arm64.yml)
 
@@ -42,30 +42,43 @@ xattr -dr com.apple.quarantine "/Applications/Hanabe Photo Manager.app"
 
 Do not apply `xattr` to `/Applications`, the home directory, or any other broad path.
 
-## Manual smoke checks
+## Available phase 1 checks
 
-Use disposable files and record the macOS version, Apple silicon model, workflow
-run, source revision, and result of each check.
+Record the macOS version, Apple silicon model, workflow run, source revision,
+and result of each available check.
 
 1. **Startup:** Launch the app, confirm the shell appears without a crash or
-   missing resources, then quit and launch it again.
-2. **Application data paths:** After launch, confirm app-created state stays under
-   `~/Library/Application Support/Hanabe Photo Manager` and cache data stays under
-   `~/Library/Caches/Hanabe Photo Manager`. No app state should appear inside the
-   `.app` bundle or the source/download directory.
-3. **Finder reveal:** Use the shell action that reveals a disposable existing file
-   or directory. Finder must open and select the requested item.
-4. **Move to Trash:** Use the shell action on a disposable file. Confirm Finder
-   moves it to Trash rather than permanently deleting it, then restore or empty it
-   manually as appropriate.
+   missing resources. Confirm it displays `Hanabe Photo Manager` and
+   `macOS migration foundation`, then quit and launch it again.
+2. **Application data paths:** If the test environment permits inspecting the
+   user Library, confirm the launch creates or uses only
+   `~/Library/Application Support/Hanabe Photo Manager` for durable data and
+   `~/Library/Caches/Hanabe Photo Manager` for cache data. No app state should
+   appear inside the `.app` bundle or the source/download directory.
+3. **Automated startup smoke:** Confirm the workflow's `Smoke-test published
+   host` step passes. It runs `HanabePhotoManager.Desktop --smoke-test` against
+   the published ARM64 host and validates startup composition and XAML loading
+   without showing a window.
 
-The workflow also runs `HanabePhotoManager.Desktop --smoke-test` against the
-published ARM64 host. That automated check validates startup composition and XAML
-loading without showing a window; it does not replace the manual checks above.
+## Adapter readiness and deferred interaction checks
+
+Phase 1 includes registered macOS adapters for Finder reveal and move-to-Trash,
+but the current shell has no controls or commands wired to those services.
+Testers therefore cannot perform either interaction through the application UI,
+and phase 1 acceptance must not report those end-to-end checks as passed.
+
+Defer the following checks to phase 2, after the core UI exposes the corresponding
+actions:
+
+- Reveal a disposable existing file or directory and confirm Finder opens and
+  selects the requested item.
+- Move a disposable file to Trash and confirm Finder moves it rather than
+  permanently deleting it.
 
 ## Phase 1 limitation
 
 Phase 1 is a native macOS shell foundation, not feature parity with the Windows
-WPF application. Passing this checklist confirms the shell, packaging, and current
-platform integrations only. It does not claim that the Windows photo-management
-feature set is available on macOS.
+WPF application. Passing the available checks confirms only artifact integrity,
+shell startup, startup composition, and currently observable path behavior. It
+does not validate unwired adapter interactions or claim that the Windows
+photo-management feature set is available on macOS.

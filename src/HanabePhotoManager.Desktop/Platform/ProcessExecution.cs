@@ -51,9 +51,22 @@ internal sealed class ProcessExitException : InvalidOperationException
 
 internal static class ProcessExecution
 {
-    public static async Task<int> RunAsync(IProcessHandle process, CancellationToken cancellationToken)
+    internal static readonly TimeSpan CancellationCleanupTimeout = TimeSpan.FromSeconds(2);
+
+    public static Task<int> RunAsync(IProcessHandle process, CancellationToken cancellationToken) =>
+        RunAsync(process, cancellationToken, CancellationCleanupTimeout);
+
+    public static async Task<int> RunAsync(
+        IProcessHandle process,
+        CancellationToken cancellationToken,
+        TimeSpan cleanupTimeout)
     {
         ArgumentNullException.ThrowIfNull(process);
+
+        if (cleanupTimeout < TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(cleanupTimeout));
+        }
 
         var standardErrorTask = process.ReadStandardErrorAsync();
 
@@ -63,7 +76,7 @@ internal static class ProcessExecution
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await TerminateAndDrainAsync(process, standardErrorTask);
+            await TerminateAndDrainAsync(process, standardErrorTask, cleanupTimeout);
             throw;
         }
 
@@ -77,7 +90,20 @@ internal static class ProcessExecution
         return process.ExitCode;
     }
 
-    private static async Task TerminateAndDrainAsync(IProcessHandle process, Task<string> standardErrorTask)
+    private static async Task TerminateAndDrainAsync(
+        IProcessHandle process,
+        Task<string> standardErrorTask,
+        TimeSpan cleanupTimeout)
+    {
+        TryTerminate(process);
+
+        await ObserveWithinCleanupTimeoutAsync(
+            () => process.WaitForExitAsync(CancellationToken.None),
+            cleanupTimeout);
+        await ObserveWithinCleanupTimeoutAsync(standardErrorTask, cleanupTimeout);
+    }
+
+    private static void TryTerminate(IProcessHandle process)
     {
         try
         {
@@ -87,13 +113,9 @@ internal static class ProcessExecution
                 {
                     process.Kill(entireProcessTree: true);
                 }
-                catch (InvalidOperationException)
-                {
-                    // The process can exit after HasExited is checked but before Kill is called.
-                }
                 catch
                 {
-                    // Cleanup failures must not replace the caller's cancellation.
+                    TryTerminateDirectly(process);
                 }
             }
         }
@@ -101,19 +123,63 @@ internal static class ProcessExecution
         {
             // Cleanup failures must not replace the caller's cancellation.
         }
+    }
 
+    private static void TryTerminateDirectly(IProcessHandle process)
+    {
         try
         {
-            await process.WaitForExitAsync(CancellationToken.None);
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: false);
+            }
         }
         catch
         {
             // Cleanup failures must not replace the caller's cancellation.
         }
+    }
 
+    private static async Task ObserveWithinCleanupTimeoutAsync(Func<Task> taskFactory, TimeSpan cleanupTimeout)
+    {
         try
         {
-            await standardErrorTask;
+            await ObserveWithinCleanupTimeoutAsync(taskFactory(), cleanupTimeout);
+        }
+        catch
+        {
+            // Cleanup failures must not replace the caller's cancellation.
+        }
+    }
+
+    private static async Task ObserveWithinCleanupTimeoutAsync(Task task, TimeSpan cleanupTimeout)
+    {
+        if (task.IsCompleted)
+        {
+            await ObserveCompletedTaskAsync(task);
+            return;
+        }
+
+        await Task.WhenAny(task, Task.Delay(cleanupTimeout));
+
+        if (task.IsCompleted)
+        {
+            await ObserveCompletedTaskAsync(task);
+            return;
+        }
+
+        _ = task.ContinueWith(
+            static completedTask => _ = completedTask.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
+    }
+
+    private static async Task ObserveCompletedTaskAsync(Task task)
+    {
+        try
+        {
+            await task;
         }
         catch
         {

@@ -1,0 +1,87 @@
+name: macOS ARM64
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "tools/macos/**"
+      - ".github/workflows/macos-arm64.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-arm64-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  build:
+    name: Test and package unsigned app
+    # GitHub plans to retire macOS 14 on 2026-11-02; update this pinned ARM64 image before then.
+    runs-on: macos-14
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Restore portable projects
+        run: |
+          dotnet restore tests/HanabePhotoManager.Core.Tests/HanabePhotoManager.Core.Tests.csproj
+          dotnet restore tests/HanabePhotoManager.Infrastructure.Tests/HanabePhotoManager.Infrastructure.Tests.csproj
+          dotnet restore tests/HanabePhotoManager.Desktop.Core.Tests/HanabePhotoManager.Desktop.Core.Tests.csproj
+          dotnet restore src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj -r osx-arm64
+
+      - name: Test portable projects
+        run: |
+          dotnet test tests/HanabePhotoManager.Core.Tests/HanabePhotoManager.Core.Tests.csproj -c Release --no-restore
+          dotnet test tests/HanabePhotoManager.Infrastructure.Tests/HanabePhotoManager.Infrastructure.Tests.csproj -c Release --no-restore
+          dotnet test tests/HanabePhotoManager.Desktop.Core.Tests/HanabePhotoManager.Desktop.Core.Tests.csproj -c Release --no-restore
+
+      - name: Publish macOS ARM64 host
+        run: |
+          dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj \
+            -c Release -r osx-arm64 --self-contained true \
+            --no-restore -o artifacts/macos/publish
+
+      - name: Build app bundle
+        run: |
+          tools/macos/create-app-bundle.sh \
+            artifacts/macos/publish \
+            artifacts/macos/bundle
+
+      - name: Smoke-test published host
+        run: artifacts/macos/publish/HanabePhotoManager.Desktop --smoke-test
+
+      - name: Create distributable and checksum
+        run: |
+          mkdir -p artifacts/macos/package
+          ditto -c -k --sequesterRsrc --keepParent \
+            "artifacts/macos/bundle/Hanabe Photo Manager.app" \
+            "artifacts/macos/package/HanabePhotoManager-osx-arm64.zip"
+          cd artifacts/macos/package
+          shasum -a 256 HanabePhotoManager-osx-arm64.zip \
+            > HanabePhotoManager-osx-arm64.zip.sha256
+
+      - name: Upload unsigned macOS ARM64 package
+        uses: actions/upload-artifact@v7
+        with:
+          name: hanabe-photo-manager-osx-arm64
+          path: |
+            artifacts/macos/package/HanabePhotoManager-osx-arm64.zip
+            artifacts/macos/package/HanabePhotoManager-osx-arm64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14

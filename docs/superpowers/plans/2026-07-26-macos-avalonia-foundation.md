@@ -12,7 +12,7 @@
 
 - Preserve `src/HanabePhotoManager.App` as the Windows WPF client.
 - Target Apple Silicon only with runtime identifier `osx-arm64`.
-- Set the minimum supported operating system to macOS 11 Big Sur.
+- Set the minimum supported operating system to macOS 14 Sonoma, matching the current .NET 8 support matrix.
 - Publish self-contained, unsigned artifacts; do not add signing, notarization, or App Store steps.
 - Keep Core free of UI and operating-system APIs.
 - Platform failures must be explicit; file deletion must never silently become permanent deletion.
@@ -461,7 +461,7 @@ git commit -m "feat: compose macOS desktop services"
 
 **Interfaces:**
 - Produces: bundle id `com.hanabe.photomanager`
-- Produces: minimum system `11.0`
+- Produces: minimum system `14.0`
 - Produces: executable name `HanabePhotoManager.Desktop`
 
 - [ ] **Step 1: Write metadata tests**
@@ -469,10 +469,13 @@ git commit -m "feat: compose macOS desktop services"
 Read `Info.plist` using `XDocument` and assert:
 
 ```csharp
-values["CFBundleIdentifier"].Should().Be("com.hanabe.photomanager");
-values["CFBundleExecutable"].Should().Be("HanabePhotoManager.Desktop");
-values["LSMinimumSystemVersion"].Should().Be("11.0");
-values["NSHighResolutionCapable"].Should().Be("true");
+values["CFBundleIdentifier"].Value.Should().Be("com.hanabe.photomanager");
+values["CFBundleExecutable"].Value.Should().Be("HanabePhotoManager.Desktop");
+values["CFBundleDisplayName"].Value.Should().Be("Hanabe Photo Manager");
+values["CFBundleName"].Value.Should().Be("Hanabe Photos");
+values["CFBundleName"].Value.Length.Should().BeLessOrEqualTo(15);
+values["LSMinimumSystemVersion"].Value.Should().Be("14.0");
+values["NSHighResolutionCapable"].Name.LocalName.Should().Be("true");
 ```
 
 - [ ] **Step 2: Verify the metadata test fails**
@@ -564,7 +567,7 @@ dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj 
   -o artifacts/macos/publish
 ```
 
-Run the bundle script, execute the app host with a `--smoke-test` argument that exits zero before creating a window, zip the `.app` with `ditto`, generate SHA-256 using `shasum -a 256`, and upload the zip plus checksum. Pin released major versions of GitHub actions; do not use floating branch names.
+Run the bundle script, execute `"artifacts/macos/bundle/Hanabe Photo Manager.app/Contents/MacOS/HanabePhotoManager.Desktop" --smoke-test` so the generated bundle itself is exercised, zip the `.app` with `ditto`, generate SHA-256 using `shasum -a 256`, and upload the zip plus checksum. Pin released major versions of GitHub actions; do not use floating branch names.
 
 Do not run Infrastructure tests in the phase 1 macOS job. Infrastructure
 currently contains Windows DPAPI, `kernel32` file-handle operations, and
@@ -646,7 +649,7 @@ Push the implementation branch, manually run `macos-arm64.yml`, and require a gr
 
 - [ ] **Step 5: Run the real-device smoke matrix**
 
-On an M1 or later Mac running macOS 11 or later:
+On an M1 or later Mac running macOS 14 or later:
 
 1. Verify the checksum.
 2. Extract the application.

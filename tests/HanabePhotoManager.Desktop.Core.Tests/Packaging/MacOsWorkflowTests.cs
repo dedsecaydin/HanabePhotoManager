@@ -27,7 +27,12 @@ public sealed class MacOsWorkflowTests
         AssertContains(commands, @"-r\s+osx-arm64");
         AssertContains(commands, @"--self-contained\s+true");
         AssertContains(commands, @"create-app-bundle\.sh");
-        AssertContains(commands, @"HanabePhotoManager\.Desktop\s+--smoke-test");
+        AssertContains(
+            commands,
+            @"""artifacts/macos/bundle/Hanabe Photo Manager\.app/Contents/MacOS/HanabePhotoManager\.Desktop""\s+--smoke-test");
+        commands.Should().NotMatchRegex(
+            @"artifacts/macos/publish/HanabePhotoManager\.Desktop\s+--smoke-test",
+            "the smoke test must exercise the executable inside the generated app bundle");
         AssertContains(commands, @"ditto\s+-c\s+-k");
         AssertContains(commands, @"shasum\s+-a\s+256");
         AssertContains(workflow, @"actions/upload-artifact@v\d+");

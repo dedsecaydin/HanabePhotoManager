@@ -61,8 +61,8 @@ jobs:
             artifacts/macos/publish \
             artifacts/macos/bundle
 
-      - name: Smoke-test published host
-        run: artifacts/macos/publish/HanabePhotoManager.Desktop --smoke-test
+      - name: Smoke-test bundled host
+        run: '"artifacts/macos/bundle/Hanabe Photo Manager.app/Contents/MacOS/HanabePhotoManager.Desktop" --smoke-test'
 
       - name: Create distributable and checksum
         run: |

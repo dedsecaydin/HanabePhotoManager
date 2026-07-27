@@ -18,7 +18,12 @@ public sealed class BundleMetadataTests
 
         values["CFBundleIdentifier"].Value.Should().Be("com.hanabe.photomanager");
         values["CFBundleExecutable"].Value.Should().Be("HanabePhotoManager.Desktop");
-        values["LSMinimumSystemVersion"].Value.Should().Be("11.0");
+        values["CFBundleDisplayName"].Value.Should().Be("Hanabe Photo Manager");
+        values["CFBundleName"].Value.Should().Be("Hanabe Photos");
+        values["CFBundleName"].Value.Length.Should().BeLessOrEqualTo(
+            15,
+            "macOS requires CFBundleName to be no longer than 15 characters");
+        values["LSMinimumSystemVersion"].Value.Should().Be("14.0");
         values["NSHighResolutionCapable"].Name.LocalName.Should().Be("true");
     }
 

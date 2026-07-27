@@ -8,7 +8,7 @@
 
 - 处理器：Apple Silicon，M1 及后续芯片。
 - 运行时标识：`osx-arm64`。
-- 最低系统：macOS 11 Big Sur。
+- 最低系统：macOS 14 Sonoma（与 .NET 8 当前官方支持矩阵一致）。
 - 部署方式：self-contained。
 - 交付格式：未签名 `.app`、未签名 `.dmg`、SHA-256 校验值和首次启动说明。
 - 暂不包含 Apple Developer 签名、公证和 App Store 发布。
@@ -121,7 +121,7 @@ GitHub Actions 产出：
 
 满足以下条件后，macOS 迁移视为完成：
 
-- `osx-arm64` 应用可在 macOS 11 或更新系统、M1 或更新芯片上启动。
+- `osx-arm64` 应用可在 macOS 14 或更新系统、M1 或更新芯片上启动。
 - 约定的完整功能范围通过自动化与人工验收。
 - 文件删除只进入系统废纸篓，导入与编辑操作不会静默丢失数据。
 - macOS 原生依赖、模型、地图和资源全部包含在应用包中。

@@ -10,6 +10,7 @@
 - [System Shape](#system-shape)
 - [Project Responsibilities](#project-responsibilities)
 - [Dependency Rules](#dependency-rules)
+- [Composition Roots](#composition-roots)
 - [MVVM Boundaries](#mvvm-boundaries)
 - [Theme and Resource Architecture](#theme-and-resource-architecture)
 - [Directory Responsibilities](#directory-responsibilities)
@@ -18,7 +19,7 @@
 
 ## System Shape
 
-Hanabe Photo Manager is a Windows-only WPF application on .NET 8. `HanabePhotoManager.sln` contains three production projects and three corresponding xUnit projects. `Directory.Build.props` enables nullable reference types, implicit usings, C# 12, deterministic output, and warnings as errors across the solution.
+Hanabe Photo Manager is a .NET 8 desktop application with two clients: the existing full Windows WPF application and a phase 1 Avalonia foundation published only for Apple silicon macOS. `HanabePhotoManager.sln` contains five production projects and four xUnit test projects. `Directory.Build.props` enables nullable reference types, implicit usings, C# 12, deterministic output, and warnings as errors across the solution.
 
 ```text
 WPF Views / Windows
@@ -30,7 +31,13 @@ HanabePhotoManager.Core
 HanabePhotoManager.Infrastructure
 ```
 
-The App composition root references both Core and Infrastructure. Core does not reference either outer project. Infrastructure references Core and implements its external-facing contracts.
+The diagram above is the Windows path. The phase 1 macOS path is:
+
+```text
+Avalonia Desktop --> Desktop.Core --> Core
+```
+
+The WPF App composition root references Core and Infrastructure. The Avalonia Desktop composition root references Desktop.Core and provides its macOS adapters. In phase 1 Desktop deliberately does not reference Infrastructure; Infrastructure remains behind the Windows regression gate until its Windows-specific implementations are ported.
 
 ## Project Responsibilities
 
@@ -50,18 +57,33 @@ Owns the WPF executable, composition, presentation, user interaction, and deskto
 
 Some current services live in App because they use WPF imaging, Windows shell APIs, UI-facing state, or locally composed ML models. New portable business rules should still be placed in Core; external persistence or provider implementations should be placed in Infrastructure.
 
+### `HanabePhotoManager.Desktop.Core`
+
+Owns cross-platform desktop presentation state, startup validation, and narrow operating-system contracts and deterministic policies used by the Avalonia client. It references Core but contains no Avalonia, WPF, Infrastructure, or operating-system implementation types.
+
+### `HanabePhotoManager.Desktop`
+
+Owns the Avalonia executable, macOS phase 1 composition root, XAML shell, and macOS implementations for app paths, Finder reveal, move-to-Trash, and process execution. Its checked-in publish and bundle path is `osx-arm64` only. Phase 1 is a native shell foundation rather than feature parity, and this project must not reference Infrastructure until the relevant implementations are portable and covered on macOS.
+
 ### `tests`
 
-Each production project has a matching test project. Test placement follows the production owner: pure policies in Core tests, filesystem/cloud persistence in Infrastructure tests, and ViewModels, WPF resources, application services, and UI-adjacent behavior in App tests.
+The solution has four test projects. Test placement follows the production owner: pure policies in Core tests, filesystem/cloud persistence in Infrastructure tests, ViewModels, WPF resources, application services, and UI-adjacent behavior in App tests, and Desktop.Core policies plus Avalonia Desktop composition, packaging metadata, and workflow semantics in Desktop.Core tests.
 
 ## Dependency Rules
 
-- Allowed: `App → Core`, `App → Infrastructure`, `Infrastructure → Core`.
-- Forbidden: `Core → Infrastructure`, `Core → App`, `Infrastructure → App`.
+- The complete allowed project-reference set is `App -> Core`, `App -> Infrastructure`, `Infrastructure -> Core`, `Desktop.Core -> Core`, and `Desktop -> Desktop.Core`. No other production project-reference direction is allowed.
+- During phase 1, `Desktop -> Infrastructure` is explicitly forbidden.
 - Core interfaces define capabilities when business code must remain independent of storage or providers.
+- Desktop.Core interfaces define desktop operating-system capabilities when presentation state must remain independent of Avalonia and macOS implementations.
 - Do not introduce a new project reference to bypass a misplaced class; relocate or extract the responsibility.
 - Keep provider-specific types out of provider-neutral Core contracts.
-- Keep WPF types out of Core and Infrastructure public APIs unless a documented architectural change explicitly replaces this boundary.
+- Keep WPF and Avalonia types out of Core, Infrastructure, and Desktop.Core public APIs unless a documented architectural change explicitly replaces this boundary.
+
+## Composition Roots
+
+`HanabePhotoManager.App/App.xaml.cs` is the Windows composition root. It constructs the full WPF application from Core contracts and Infrastructure implementations.
+
+`HanabePhotoManager.Desktop/App.axaml.cs`, together with `Composition/DesktopServices.cs`, is the Avalonia composition root. It registers the phase 1 macOS adapters and resolves the shell ViewModel. No other Desktop layer should construct concrete platform services directly, and the phase 1 composition must remain independent of Infrastructure.
 
 ## MVVM Boundaries
 
@@ -92,6 +114,11 @@ Views consume semantic resources and shared component styles; they do not depend
 | `src/HanabePhotoManager.Core/Performance` | Portable loading and progress policies |
 | `src/HanabePhotoManager.Infrastructure/Files` | Durable and verified filesystem operations |
 | `src/HanabePhotoManager.Infrastructure/Cloud` | Cloud provider, cache, queue, index, OAuth, and session implementations |
+| `src/HanabePhotoManager.Desktop.Core/Platform` | Portable desktop OS contracts and deterministic macOS command/path policies |
+| `src/HanabePhotoManager.Desktop.Core/ViewModels` | Cross-platform Avalonia shell state and startup validation |
+| `src/HanabePhotoManager.Desktop/Composition` | Avalonia phase 1 composition root and service registrations |
+| `src/HanabePhotoManager.Desktop/Platform` | macOS path, Finder, Trash, and process adapters |
+| `src/HanabePhotoManager.Desktop/Views` | Avalonia shell views |
 | `src/HanabePhotoManager.App/ViewModels` | General screen and workflow presentation state |
 | `src/HanabePhotoManager.App/Services` | App-composed, UI-facing, imaging, ML, metadata, and Windows services |
 | `src/HanabePhotoManager.App/Cloud` | Cloud page and cloud presentation orchestration |
@@ -125,6 +152,10 @@ Core defines provider-neutral models, stores, authentication contracts, and sche
 ### Theme switching
 
 The user selection reaches `ThemeManager`, which swaps the composed theme dictionary and persists the preference. Existing bindings resolve equivalent resource keys from the new dictionary without ViewModel changes.
+
+### macOS phase 1 startup
+
+The Avalonia executable builds its service provider in the Desktop composition root, resolves macOS adapters and the Desktop.Core shell ViewModel, and then creates the shell. The `--smoke-test` path validates this same startup composition and XAML loading without opening a window. CI publishes `osx-arm64`, creates the `.app`, and executes the host from inside the generated bundle.
 
 ## Architecture Change Rules
 

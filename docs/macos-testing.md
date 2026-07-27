@@ -21,6 +21,7 @@ shasum -a 256 -c HanabePhotoManager-osx-arm64.zip.sha256
 
 Extract the ZIP and drag `Hanabe Photo Manager.app` into `/Applications`.
 The build is self-contained for Apple silicon and is not code-signed or notarized.
+The minimum supported operating system is macOS 14 Sonoma.
 
 ## Automated test scope
 
@@ -67,10 +68,11 @@ and result of each available check.
    `~/Library/Application Support/Hanabe Photo Manager` for durable data and
    `~/Library/Caches/Hanabe Photo Manager` for cache data. No app state should
    appear inside the `.app` bundle or the source/download directory.
-3. **Automated startup smoke:** Confirm the workflow's `Smoke-test published
-   host` step passes. It runs `HanabePhotoManager.Desktop --smoke-test` against
-   the published ARM64 host and validates startup composition and XAML loading
-   without showing a window.
+3. **Automated startup smoke:** Confirm the workflow's `Smoke-test bundled host`
+   step passes. It runs
+   `Hanabe Photo Manager.app/Contents/MacOS/HanabePhotoManager.Desktop --smoke-test`
+   against the executable inside the generated ARM64 bundle and validates
+   startup composition and XAML loading without showing a window.
 
 ## Adapter readiness and deferred interaction checks
 

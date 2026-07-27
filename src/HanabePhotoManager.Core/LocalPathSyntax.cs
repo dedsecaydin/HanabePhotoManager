@@ -2,6 +2,12 @@ namespace HanabePhotoManager.Core;
 
 internal static class LocalPathSyntax
 {
+    private static readonly PathIdentityComparisonPolicy IdentityComparisonPolicy = new();
+
+    public static IComparer<string> PathIdentityComparer => IdentityComparisonPolicy;
+
+    public static IEqualityComparer<string> PathIdentityEqualityComparer => IdentityComparisonPolicy;
+
     public static bool IsFullyQualified(string path)
     {
         if (string.IsNullOrEmpty(path))
@@ -92,6 +98,65 @@ internal static class LocalPathSyntax
     private static bool IsAsciiLetter(char value)
     {
         return value is >= 'A' and <= 'Z' or >= 'a' and <= 'z';
+    }
+
+    private sealed class PathIdentityComparisonPolicy : IComparer<string>, IEqualityComparer<string>
+    {
+        public int Compare(string? x, string? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return 0;
+            }
+
+            if (x is null)
+            {
+                return -1;
+            }
+
+            if (y is null)
+            {
+                return 1;
+            }
+
+            return GetComparer(x, y).Compare(x, y);
+        }
+
+        public bool Equals(string? x, string? y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x is null || y is null)
+            {
+                return false;
+            }
+
+            return GetComparer(x, y).Equals(x, y);
+        }
+
+        public int GetHashCode(string value)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+            return IsCaseInsensitiveIdentity(value)
+                ? StringComparer.OrdinalIgnoreCase.GetHashCode(value)
+                : StringComparer.Ordinal.GetHashCode(value);
+        }
+
+        private static StringComparer GetComparer(string first, string second)
+        {
+            return IsCaseInsensitiveIdentity(first) && IsCaseInsensitiveIdentity(second)
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+        }
+
+        private static bool IsCaseInsensitiveIdentity(string path)
+        {
+            var normalized = path.Replace('\\', '/');
+            return HasDriveRoot(normalized) || normalized.StartsWith("//", StringComparison.Ordinal);
+        }
     }
 
     private static string NormalizeFromRoot(string root, string remainder)

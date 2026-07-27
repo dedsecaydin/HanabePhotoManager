@@ -14,12 +14,12 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
         var normalizedFiles = ValidateAndNormalize(files);
         var sortedFiles = normalizedFiles
-            .OrderBy(file => file.PathIdentity, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(file => file.PathIdentity, LocalPathSyntax.PathIdentityComparer)
             .ThenBy(file => file.PathIdentity, StringComparer.Ordinal)
             .ToArray();
         var candidates = sortedFiles.Select(file => _classifier.Classify(file.Source)).ToArray();
         var sidecarIndex = BuildSidecarIndex(sortedFiles);
-        var consumedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var consumedPaths = new HashSet<string>(LocalPathSyntax.PathIdentityEqualityComparer);
         var groups = new List<NormalizedMediaGroup>();
 
         for (var index = 0; index < sortedFiles.Length; index++)
@@ -59,7 +59,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         }
 
         var orderedGroups = groups
-            .OrderBy(group => group.PathIdentity, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.PathIdentity, LocalPathSyntax.PathIdentityComparer)
             .ThenBy(group => group.PathIdentity, StringComparer.Ordinal)
             .Select(group => group.Group)
             .ToArray();
@@ -70,7 +70,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
     private static IReadOnlyList<NormalizedMediaFile> ValidateAndNormalize(IEnumerable<SourceMediaFile> files)
     {
         var normalizedFiles = new List<NormalizedMediaFile>();
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new HashSet<string>(LocalPathSyntax.PathIdentityEqualityComparer);
 
         foreach (var file in files)
         {
@@ -99,7 +99,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
     private static Dictionary<string, IReadOnlyList<NormalizedMediaFile>> BuildSidecarIndex(
         IReadOnlyList<NormalizedMediaFile> files)
     {
-        var index = new Dictionary<string, List<NormalizedMediaFile>>(StringComparer.OrdinalIgnoreCase);
+        var index = new Dictionary<string, List<NormalizedMediaFile>>(LocalPathSyntax.PathIdentityEqualityComparer);
 
         foreach (var file in files)
         {
@@ -122,7 +122,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         return index.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<NormalizedMediaFile>)pair.Value,
-            StringComparer.OrdinalIgnoreCase);
+            LocalPathSyntax.PathIdentityEqualityComparer);
     }
 
     private static void AddSidecar(
@@ -144,10 +144,10 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         IReadOnlyDictionary<string, IReadOnlyList<NormalizedMediaFile>> sidecarIndex,
         ISet<string> consumedPaths)
     {
-        var key = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity).ToUpperInvariant();
-        var sidecars = ConsumeSidecars(primary, key, sidecarIndex, consumedPaths);
+        var stem = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity);
+        var sidecars = ConsumeSidecars(primary, stem, sidecarIndex, consumedPaths);
 
-        return new MediaGroup(key, MediaCategory.Video, primary.Source, sidecars);
+        return new MediaGroup(stem.ToUpperInvariant(), MediaCategory.Video, primary.Source, sidecars);
     }
 
     private static MediaGroup BuildDjiGroup(

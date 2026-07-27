@@ -159,6 +159,69 @@ public sealed class MediaGroupBuilderTests
             .WithMessage($"*{duplicatePath}*");
     }
 
+    [Fact]
+    public void Build_RejectsDuplicateUncPathsThatDifferOnlyByCase()
+    {
+        var duplicatePath = @"\\SERVER\SHARE\CAMERA\PHOTO.JPG";
+        var files = new[]
+        {
+            CreateSource(@"\\server\share\camera\photo.jpg", 1, 1),
+            CreateSource(duplicatePath, 2, 2),
+        };
+
+        var act = () => CreateBuilder().Build(files);
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage($"*{duplicatePath}*");
+    }
+
+    [Fact]
+    public void Build_AllowsCaseDistinctPosixPaths()
+    {
+        var uppercase = CreateSource("/photos/A.JPG", 1, 1);
+        var lowercase = CreateSource("/photos/a.JPG", 2, 2);
+
+        var groups = CreateBuilder().Build(new[] { uppercase, lowercase });
+
+        groups.Select(group => group.Primary).Should().Equal(uppercase, lowercase);
+    }
+
+    [Fact]
+    public void Build_ConsumesCaseDistinctPosixPathsIndependently()
+    {
+        var uppercase = CreateSource("/photos/A.JPG", 1, 1);
+        var lowercase = CreateSource("/photos/a.JPG", 2, 2);
+
+        var groups = CreateBuilder().Build(new[] { uppercase, lowercase });
+
+        groups.Should().HaveCount(2);
+        groups.Select(group => group.Primary).Should().Contain(uppercase).And.Contain(lowercase);
+    }
+
+    [Fact]
+    public void Build_GroupsCaseDistinctPosixVideoSidecarsWithTheirMatchingPrimaries()
+    {
+        var uppercasePrimary = CreateSource("/photos/C0001.MP4", 900, 1);
+        var uppercaseSidecar = CreateSource("/photos/C0001M01.XML", 10, 2);
+        var lowercasePrimary = CreateSource("/photos/c0001.mp4", 800, 3);
+        var lowercaseSidecar = CreateSource("/photos/c0001m02.xml", 20, 4);
+
+        var groups = CreateBuilder().Build(new[]
+        {
+            lowercaseSidecar,
+            uppercasePrimary,
+            lowercasePrimary,
+            uppercaseSidecar,
+        });
+
+        groups.Should().HaveCount(2);
+        groups.Single(group => ReferenceEquals(group.Primary, uppercasePrimary)).Sidecars
+            .Should().Equal(uppercaseSidecar);
+        groups.Single(group => ReferenceEquals(group.Primary, lowercasePrimary)).Sidecars
+            .Should().Equal(lowercaseSidecar);
+        groups.SelectMany(group => group.Sidecars).Should().OnlyHaveUniqueItems();
+    }
+
     [Theory]
     [InlineData(@"D:\camera\.\C0001.MP4")]
     [InlineData(@"D:\camera\temporary\..\C0001.MP4")]

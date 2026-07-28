@@ -10,3 +10,6 @@ outputs/
 TestResults/
 artifacts/
 .artifacts/
+
+# Local Python environments
+**/.venv/

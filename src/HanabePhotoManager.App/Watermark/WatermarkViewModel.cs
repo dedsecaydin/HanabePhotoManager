@@ -28,14 +28,21 @@ public sealed partial class WatermarkViewModel : ObservableObject
 {
     private readonly WatermarkInputDiscovery _discovery = new();
     private readonly WatermarkExportService _exporter = new();
+    private readonly WatermarkFolderBatchService _folderBatchService = new();
+    private IReadOnlyList<WatermarkFolderBatchItem> _folderBatchItems = [];
     private WatermarkQueueItem? _observedSelectedItem;
     private CancellationTokenSource? _cts;
     public ObservableCollection<WatermarkQueueItem> Items { get; } = [];
+    public ObservableCollection<string> FolderSources { get; } = [];
     [ObservableProperty] private WatermarkQueueItem? _selectedItem;
+    [ObservableProperty] private string? _selectedFolderSource;
     [ObservableProperty] private string _watermarkPath = "";
     [ObservableProperty] private string _outputDirectory = "";
+    [ObservableProperty] private string _folderOutputDirectory = "";
     [ObservableProperty] private string _suffix = "_watermarked";
     [ObservableProperty] private bool _recursive = true;
+    [ObservableProperty] private bool _scanSubfolders = true;
+    [ObservableProperty] private bool _isFolderBatchMode;
     [ObservableProperty] private bool _preserveMetadata = true;
     [ObservableProperty] private bool _isTiled;
     [ObservableProperty] private bool _isManualTile;
@@ -50,6 +57,11 @@ public sealed partial class WatermarkViewModel : ObservableObject
     [ObservableProperty] private double _angle = -24;
     [ObservableProperty] private bool _stagger = true;
     [ObservableProperty] private double _progress;
+    [ObservableProperty] private double _folderProgress;
+    [ObservableProperty] private int _folderScanCount;
+    [ObservableProperty] private int _folderSuccessCount;
+    [ObservableProperty] private int _folderFailedCount;
+    [ObservableProperty] private string _folderStatusText = "添加来源文件夹并选择输出根目录。";
     [ObservableProperty] private string _statusText = "添加图片和透明 PNG 水印后即可导出。";
     [ObservableProperty] private BitmapImage? _previewImage;
     [ObservableProperty] private BitmapImage? _watermarkPreviewImage;
@@ -59,6 +71,8 @@ public sealed partial class WatermarkViewModel : ObservableObject
     public bool ShowTileSettings => IsTiled;
     public bool ShowManualTileSettings => IsTiled && IsManualTile;
     public bool CanExport => HasItems && File.Exists(WatermarkPath) && Directory.Exists(OutputDirectory) && !IsBusy;
+    public bool CanScanFolderBatch => FolderSources.Count > 0 && Directory.Exists(FolderOutputDirectory) && !IsBusy;
+    public bool CanStartFolderBatch => FolderSources.Count > 0 && File.Exists(WatermarkPath) && Directory.Exists(FolderOutputDirectory) && !IsBusy;
 
     partial void OnIsTiledChanged(bool value) { OnPropertyChanged(nameof(ShowSignatureSettings)); OnPropertyChanged(nameof(ShowTileSettings)); OnPropertyChanged(nameof(ShowManualTileSettings)); NotifyPreviewSettings(); }
     partial void OnIsManualTileChanged(bool value) { OnPropertyChanged(nameof(ShowManualTileSettings)); NotifyPreviewSettings(); }
@@ -69,9 +83,21 @@ public sealed partial class WatermarkViewModel : ObservableObject
         if (SelectedItem is not null && PathsEqual(SelectedItem.Path, value)) SelectedItem = Items.FirstOrDefault();
         ChangedItems();
         OnPropertyChanged(nameof(CanExport));
+        OnPropertyChanged(nameof(CanStartFolderBatch));
+        StartFolderBatchCommand.NotifyCanExecuteChanged();
     }
     partial void OnOutputDirectoryChanged(string value) => OnPropertyChanged(nameof(CanExport));
-    partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(CanExport));
+    partial void OnFolderOutputDirectoryChanged(string value)
+    {
+        ResetFolderScan();
+        NotifyFolderCommandState();
+    }
+    partial void OnScanSubfoldersChanged(bool value) => ResetFolderScan();
+    partial void OnIsBusyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(CanExport));
+        NotifyFolderCommandState();
+    }
     partial void OnSelectedItemChanged(WatermarkQueueItem? value)
     {
         if (_observedSelectedItem is not null) _observedSelectedItem.PropertyChanged -= SelectedItem_PropertyChanged;
@@ -133,10 +159,36 @@ public sealed partial class WatermarkViewModel : ObservableObject
     }
     [RelayCommand] private void ChooseFolder()
     { using var dialog = new WinForms.FolderBrowserDialog(); if (dialog.ShowDialog() == WinForms.DialogResult.OK) AddInputs([dialog.SelectedPath]); }
+    [RelayCommand] private void ChooseSourceFolder()
+    {
+        using var dialog = new WinForms.FolderBrowserDialog
+        {
+            Description = "选择水印批处理来源文件夹",
+            UseDescriptionForTitle = true,
+        };
+        if (dialog.ShowDialog() == WinForms.DialogResult.OK) AddSourceFolders([dialog.SelectedPath]);
+    }
+    [RelayCommand] private void RemoveSourceFolder()
+    {
+        if (SelectedFolderSource is null) return;
+        FolderSources.Remove(SelectedFolderSource);
+        SelectedFolderSource = FolderSources.FirstOrDefault();
+        ResetFolderScan();
+        NotifyFolderCommandState();
+    }
     [RelayCommand] private void ChooseWatermark()
     { var d = new Microsoft.Win32.OpenFileDialog { Filter = "透明 PNG|*.png" }; if (d.ShowDialog() == true) WatermarkPath = d.FileName; }
     [RelayCommand] private void ChooseOutput()
     { using var d = new WinForms.FolderBrowserDialog(); if (d.ShowDialog() == WinForms.DialogResult.OK) OutputDirectory = d.SelectedPath; }
+    [RelayCommand] private void ChooseFolderOutput()
+    {
+        using var dialog = new WinForms.FolderBrowserDialog
+        {
+            Description = "选择文件夹批处理输出根目录",
+            UseDescriptionForTitle = true,
+        };
+        if (dialog.ShowDialog() == WinForms.DialogResult.OK) FolderOutputDirectory = dialog.SelectedPath;
+    }
     [RelayCommand] private void SelectAll() { foreach (var item in Items) item.IsSelected = true; }
     [RelayCommand] private void RemoveSelected() { foreach (var item in Items.Where(x => x.IsSelected).ToArray()) Items.Remove(item); SelectedItem = Items.FirstOrDefault(); ChangedItems(); }
     [RelayCommand] private void Clear() { Items.Clear(); SelectedItem = null; PreviewImage = null; ChangedItems(); }
@@ -157,6 +209,19 @@ public sealed partial class WatermarkViewModel : ObservableObject
         if (SelectedItem is null && Items.Count > 0) SelectedItem = Items[0];
         StatusText = result.Warnings.Count == 0 ? $"已添加 {Items.Count:N0} 张图片。" : $"已添加 {Items.Count:N0} 张，{result.Warnings.Count} 个路径被跳过。";
         ChangedItems();
+    }
+
+    public void AddSourceFolders(IEnumerable<string> paths)
+    {
+        var known = FolderSources.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var value in paths.Where(path => !string.IsNullOrWhiteSpace(path)))
+        {
+            var path = Path.GetFullPath(value);
+            if (Directory.Exists(path) && known.Add(path)) FolderSources.Add(path);
+        }
+        SelectedFolderSource ??= FolderSources.FirstOrDefault();
+        ResetFolderScan();
+        NotifyFolderCommandState();
     }
 
     public void SetWatermark(string path) { if (string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase)) WatermarkPath = path; else StatusText = "水印必须是 PNG 文件。"; }
@@ -195,6 +260,132 @@ public sealed partial class WatermarkViewModel : ObservableObject
         catch (OperationCanceledException) { StatusText = "已取消；未完成的临时文件已清理。"; }
         catch (Exception ex) { StatusText = ex.Message; }
         finally { IsBusy = false; _cts.Dispose(); _cts = null; }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanScanFolderBatch))]
+    private async Task ScanFoldersAsync()
+    {
+        IsBusy = true;
+        FolderProgress = 0;
+        FolderSuccessCount = 0;
+        FolderFailedCount = 0;
+        _cts = new();
+        try
+        {
+            await ScanFolderItemsAsync(_cts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            FolderStatusText = "扫描已取消。";
+        }
+        catch (Exception ex)
+        {
+            FolderStatusText = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanStartFolderBatch))]
+    private async Task StartFolderBatchAsync()
+    {
+        IsBusy = true;
+        FolderProgress = 0;
+        FolderSuccessCount = 0;
+        FolderFailedCount = 0;
+        _cts = new();
+        try
+        {
+            await ScanFolderItemsAsync(_cts.Token);
+            if (_folderBatchItems.Count == 0)
+            {
+                FolderStatusText = "未扫描到可处理的图片。";
+                return;
+            }
+
+            var options = new WatermarkExportOptions(
+                FolderOutputDirectory,
+                Suffix,
+                PreserveMetadata,
+                IsTiled ? WatermarkMode.Tiled : WatermarkMode.Signature,
+                new(CenterX, CenterY, SizeRatio, Opacity),
+                new(!IsManualTile, Density, HorizontalGap, VerticalGap, Angle, Stagger, Opacity, SizeRatio));
+            var progress = new Progress<WatermarkFolderBatchProgress>(value =>
+            {
+                FolderProgress = value.Total == 0 ? 0 : value.Completed * 100d / value.Total;
+                FolderSuccessCount = value.Success;
+                FolderFailedCount = value.Failed;
+                FolderStatusText = $"正在处理 {value.Completed}/{value.Total} · {value.CurrentFile}";
+            });
+            var result = await _folderBatchService.ProcessAsync(
+                _folderBatchItems,
+                WatermarkPath,
+                options,
+                progress,
+                _cts.Token);
+            FolderProgress = 100;
+            FolderSuccessCount = result.Success;
+            FolderFailedCount = result.Failed;
+            FolderStatusText = $"处理完成：{result.Success} 成功，{result.Failed} 失败。";
+        }
+        catch (OperationCanceledException)
+        {
+            FolderStatusText = $"已取消：{FolderSuccessCount} 成功，{FolderFailedCount} 失败。";
+        }
+        catch (Exception ex)
+        {
+            FolderStatusText = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts.Dispose();
+            _cts = null;
+        }
+    }
+
+    private async Task ScanFolderItemsAsync(CancellationToken token)
+    {
+        FolderStatusText = "正在扫描来源文件夹…";
+        var progress = new Progress<int>(count =>
+        {
+            FolderScanCount = count;
+            FolderStatusText = $"正在扫描：已发现 {count:N0} 张图片。";
+        });
+        var result = await _folderBatchService.ScanAsync(
+            FolderSources,
+            FolderOutputDirectory,
+            ScanSubfolders,
+            token,
+            progress);
+        _folderBatchItems = result.Items
+            .Where(item => !PathsEqual(item.SourcePath, WatermarkPath))
+            .ToArray();
+        FolderScanCount = _folderBatchItems.Count;
+        FolderStatusText = result.Warnings.Count == 0
+            ? $"扫描完成：{FolderScanCount:N0} 张图片。"
+            : $"扫描完成：{FolderScanCount:N0} 张图片，{result.Warnings.Count:N0} 个目录无法读取。";
+    }
+
+    private void ResetFolderScan()
+    {
+        _folderBatchItems = [];
+        FolderScanCount = 0;
+        FolderProgress = 0;
+        FolderSuccessCount = 0;
+        FolderFailedCount = 0;
+    }
+
+    private void NotifyFolderCommandState()
+    {
+        OnPropertyChanged(nameof(CanScanFolderBatch));
+        OnPropertyChanged(nameof(CanStartFolderBatch));
+        ScanFoldersCommand.NotifyCanExecuteChanged();
+        StartFolderBatchCommand.NotifyCanExecuteChanged();
     }
 
     private void ChangedItems() { OnPropertyChanged(nameof(HasItems)); OnPropertyChanged(nameof(CanExport)); }

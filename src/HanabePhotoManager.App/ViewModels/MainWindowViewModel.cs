@@ -65,7 +65,6 @@ public sealed class MainWindowViewModel : ObservableObject
         "FaceSearch",
         "MapPhotos",
         "Compression",
-        "Watermark",
         "BaiduCloud",
         "QuarkCloud",
         "ContestOpen",
@@ -159,10 +158,15 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _previewHasLoaded;
     private bool _isBrowseConditionsExpanded;
     private bool _isInitialized;
+    private bool _isOnboardingVisible;
+    private int _onboardingStep;
     private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.Text;
     private int _previewPage;
     private readonly Dictionary<string, bool> _previewDateExpansion = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressPreviewSectionRefresh;
+    private bool _personFilterOwnsExpansion;
+    private bool _skipPreviewExpansionCaptureOnce;
+    private bool _isCompactBrowseLayout;
     private DateTime _calendarDisplayMonth = new(DateTime.Today.Year, DateTime.Today.Month, 1);
     private DateOnly? _calendarSelectedDate;
     private TransferMode _selectedTransferMode = TransferMode.CopyKeepSource;
@@ -211,7 +215,21 @@ public sealed class MainWindowViewModel : ObservableObject
         PeopleAlbums.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(PeopleAlbumViewModel.SelectedAlbum))
+            {
+                if (PeopleAlbums.SelectedAlbum is not null)
+                {
+                    foreach (var section in VisiblePreviewSections)
+                        _previewDateExpansion[section.Key] = section.IsExpanded;
+                    _personFilterOwnsExpansion = true;
+                }
+                else
+                {
+                    _personFilterOwnsExpansion = false;
+                    _skipPreviewExpansionCaptureOnce = true;
+                }
                 RefreshFilteredCache(resetPage: true);
+                RebuildCalendarDays();
+            }
         };
         FaceSearch = new FaceSearchViewModel(() => LibraryRoot);
         BrowseLibraryCommand = new AsyncRelayCommand(BrowseLibraryAsync, CanRunCommand);
@@ -234,7 +252,11 @@ public sealed class MainWindowViewModel : ObservableObject
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
-        ShowWatermarkCommand = new RelayCommand(() => CurrentPage = "Watermark");
+        ShowWatermarkCommand = new RelayCommand(() =>
+        {
+            Compression.SelectedToolMode = ImageToolMode.Watermark;
+            CurrentPage = "Compression";
+        });
         ShowBaiduCloudCommand = new RelayCommand(() => CurrentPage = "BaiduCloud");
         ShowQuarkCloudCommand = new RelayCommand(() => CurrentPage = "QuarkCloud");
         DeleteSelectedFilesCommand = new RelayCommand(DeleteSelectedFiles, CanDeleteSelectedFiles);
@@ -264,6 +286,12 @@ public sealed class MainWindowViewModel : ObservableObject
         AssignTagToSelectedCommand = new AsyncRelayCommand(AssignTagToSelectedAsync);
         AnalyzeSelectedPhotosCommand = new AsyncRelayCommand(AnalyzeSelectedPhotosAsync);
         AnalyzeCurrentScopeCommand = new AsyncRelayCommand(AnalyzeCurrentScopeAsync);
+        DismissOnboardingCommand = new AsyncRelayCommand(DismissOnboardingAsync);
+        ReplayOnboardingCommand = new RelayCommand(ReplayOnboarding);
+        PreviousOnboardingStepCommand = new RelayCommand(ShowPreviousOnboardingStep);
+        NextOnboardingStepCommand = new AsyncRelayCommand(ShowNextOnboardingStepAsync);
+        StopOnboardingCommand = new AsyncRelayCommand(DismissOnboardingAsync);
+        ContinueOnboardingCommand = new RelayCommand(ContinueOnboarding);
     }
 
     public ObservableCollection<LibraryDateNode> LibraryDates { get; } = [];
@@ -283,6 +311,103 @@ public sealed class MainWindowViewModel : ObservableObject
     public WatermarkViewModel Watermark { get; }
 
     public PhotoViewerViewModel PhotoViewer { get; }
+
+    public IAsyncRelayCommand DismissOnboardingCommand { get; }
+    public IRelayCommand ReplayOnboardingCommand { get; }
+    public IRelayCommand PreviousOnboardingStepCommand { get; }
+    public IAsyncRelayCommand NextOnboardingStepCommand { get; }
+    public IAsyncRelayCommand StopOnboardingCommand { get; }
+    public IRelayCommand ContinueOnboardingCommand { get; }
+
+    public int OnboardingStep
+    {
+        get => _onboardingStep;
+        private set
+        {
+            if (!SetProperty(ref _onboardingStep, Math.Clamp(value, 0, OnboardingStepCount - 1))) return;
+            OnPropertyChanged(nameof(OnboardingTitle));
+            OnPropertyChanged(nameof(OnboardingDescription));
+            OnPropertyChanged(nameof(OnboardingStepText));
+            OnPropertyChanged(nameof(OnboardingProgress));
+            OnPropertyChanged(nameof(OnboardingPrimaryActionText));
+            OnPropertyChanged(nameof(IsFirstOnboardingStep));
+            OnPropertyChanged(nameof(IsLastOnboardingStep));
+            OnPropertyChanged(nameof(CanGoToPreviousOnboardingStep));
+            OnPropertyChanged(nameof(IsOnboardingLibraryStep));
+            OnPropertyChanged(nameof(IsOnboardingSourceStep));
+            OnPropertyChanged(nameof(IsOnboardingImportStep));
+            OnPropertyChanged(nameof(IsOnboardingContinuationChoiceStep));
+            OnPropertyChanged(nameof(ShowStandardOnboardingNavigation));
+            OnPropertyChanged(nameof(IsOnboardingLivePageStep));
+        }
+    }
+
+    public bool IsOnboardingVisible
+    {
+        get => _isOnboardingVisible;
+        private set
+        {
+            if (SetProperty(ref _isOnboardingVisible, value))
+            {
+                OnPropertyChanged(nameof(IsOnboardingImportStep));
+                OnPropertyChanged(nameof(IsOnboardingContinuationChoiceStep));
+                OnPropertyChanged(nameof(IsOnboardingLivePageStep));
+            }
+        }
+    }
+
+    public int OnboardingStepCount => 15;
+    public string OnboardingTitle => OnboardingStep switch
+    {
+        0 => "第一步：设置图库根目录",
+        1 => "第二步：选择来源文件夹",
+        2 => "第三步：分析与导入",
+        3 => "主页：查看照片库概况",
+        4 => "照片图库：浏览与筛选",
+        5 => "人物查找与人物相册",
+        6 => "主要功能介绍完成，要继续吗？",
+        7 => "图片小工具",
+        8 => "批量水印",
+        9 => "地图照片",
+        10 => "投稿项目：开放投稿",
+        11 => "投稿项目：已评选作品",
+        12 => "百度网盘",
+        13 => "夸克网盘",
+        _ => "设置、外观与高级选项"
+    };
+
+    public string OnboardingDescription => OnboardingStep switch
+    {
+        0 => "图库根目录是整理后照片的唯一存放位置。请在本步骤直接选择或更改目录，然后再继续。",
+        1 => "来源文件夹是相机、存储卡或待整理照片所在的位置。请直接选择来源，应用会进入导入页面。",
+        2 => "现在直接操作导入页面。箭头会提示“开始分析与分类”和“手动开始 / 继续导入”；先检查右侧队列，再执行导入。",
+        3 => "主页汇总照片库容量、日期和近期照片，是进入常用工作流的起点。",
+        4 => "照片图库支持按日期、分类、评分、标签和已修状态筛选；双击照片可进入查看器。",
+        5 => "人物查找使用清晰参考人脸搜索相似照片；人物相册在本机扫描聚类，不同模型向量不会混用。",
+        6 => "图库建立、导入、主页、浏览和人物功能已经介绍完毕。你可以先开始使用，也可以继续了解其他工具。",
+        7 => "图片小工具支持批量压缩，以及不限张数的纵向或横向拼图；任务支持取消。",
+        8 => "批量水印支持签名水印和满屏平铺，可预览位置、透明度、旋转角度并批量导出。",
+        9 => "地图照片读取本地照片的位置元数据，在地图上按地点浏览；没有定位的照片会单独列出。",
+        10 => "开放投稿用于准备和管理待提交作品，适合按项目组织照片。",
+        11 => "已评选作品用于整理评选结果，并与开放投稿项目分开管理。",
+        12 => "百度网盘页面用于网页登录与浏览；应用设置中还可配置本地加密保存的授权信息。",
+        13 => "夸克网盘通过独立页面进入；没有公开 API 的能力会明确提示，不会模拟不存在的接口。",
+        _ => "设置集中管理启动、图库、AI、人脸引擎、主题背景和诊断。完成后可从“设置 → 常规”再次打开指南。"
+    };
+
+    public string OnboardingStepText => $"{OnboardingStep + 1} / {OnboardingStepCount}";
+    public int OnboardingProgress => OnboardingStep + 1;
+    public string OnboardingPrimaryActionText => IsLastOnboardingStep ? "完成指南" : "下一步";
+    public bool IsFirstOnboardingStep => OnboardingStep == 0;
+    public bool IsLastOnboardingStep => OnboardingStep == OnboardingStepCount - 1;
+    public bool CanGoToPreviousOnboardingStep => !IsFirstOnboardingStep;
+    public bool IsOnboardingLibraryStep => OnboardingStep == 0;
+    public bool IsOnboardingSourceStep => OnboardingStep == 1;
+    public bool IsOnboardingImportStep => OnboardingStep == 2 && IsOnboardingVisible;
+    public bool IsOnboardingContinuationChoiceStep => OnboardingStep == 6 && IsOnboardingVisible;
+    public bool ShowStandardOnboardingNavigation => !IsOnboardingContinuationChoiceStep;
+    public bool IsOnboardingLivePageStep =>
+        IsOnboardingVisible && OnboardingStep >= 2 && !IsOnboardingContinuationChoiceStep;
 
     public void OpenPhotoViewer(PreviewFileViewModel file)
     {
@@ -481,6 +606,84 @@ public sealed class MainWindowViewModel : ObservableObject
     public IReadOnlyList<string> RatingFilters { get; } =
         ["全部评分", "未评分", "1★", "2★", "3★", "4★", "5★"];
     public IReadOnlyList<InferenceDeviceChoice> InferenceDevices { get; } = [new("auto", "自动"), new("cpu", "CPU")];
+    public IReadOnlyList<FaceEngineChoice> FaceRecognitionEngines { get; } =
+    [
+        new(FaceRecognitionEngineKind.YuNetSFace, "YuNet + SFace（兼容默认）"),
+        new(FaceRecognitionEngineKind.ArcFaceR100, "ArcFace R100（用户模型）")
+    ];
+    public IReadOnlyList<FaceProfileChoice> FaceRecognitionProfiles { get; } =
+    [
+        new(FaceRecognitionProfile.Speed, "速度"),
+        new(FaceRecognitionProfile.Balanced, "均衡"),
+        new(FaceRecognitionProfile.HighAccuracy, "高精度")
+    ];
+    public FaceRecognitionEngineKind FaceRecognitionEngine
+    {
+        get => FaceRecognitionRuntimeOptions.Current.Engine;
+        set
+        {
+            if (value == FaceRecognitionEngineKind.ArcFaceR100 && !IsArcFaceAvailable)
+            {
+                OnPropertyChanged(nameof(ArcFaceAvailabilityReason));
+                return;
+            }
+            FaceRecognitionRuntimeOptions.Current.Engine = value;
+            NotifyFaceSettingsChanged();
+        }
+    }
+    public FaceRecognitionProfile FaceRecognitionProfile
+    {
+        get => FaceRecognitionRuntimeOptions.Current.Profile;
+        set { FaceRecognitionRuntimeOptions.Current.Profile = value; NotifyFaceSettingsChanged(); }
+    }
+    public string ArcFaceDetectorModelPath
+    {
+        get => FaceRecognitionRuntimeOptions.Current.DetectorModelPath ?? string.Empty;
+        set { FaceRecognitionRuntimeOptions.Current.DetectorModelPath = value; NotifyFaceSettingsChanged(); }
+    }
+    public string ArcFaceRecognizerModelPath
+    {
+        get => FaceRecognitionRuntimeOptions.Current.RecognizerModelPath ?? string.Empty;
+        set { FaceRecognitionRuntimeOptions.Current.RecognizerModelPath = value; NotifyFaceSettingsChanged(); }
+    }
+    public bool ArcFaceModelLicenseConfirmed
+    {
+        get => FaceRecognitionRuntimeOptions.Current.ModelLicenseConfirmed;
+        set { FaceRecognitionRuntimeOptions.Current.ModelLicenseConfirmed = value; NotifyFaceSettingsChanged(); }
+    }
+    public string ArcFaceModelLicenseDescription
+    {
+        get => FaceRecognitionRuntimeOptions.Current.ModelLicenseDescription ?? string.Empty;
+        set { FaceRecognitionRuntimeOptions.Current.ModelLicenseDescription = value; NotifyFaceSettingsChanged(); }
+    }
+    public double ArcFaceMatchThreshold
+    {
+        get => FaceRecognitionRuntimeOptions.Current.MatchThreshold;
+        set { FaceRecognitionRuntimeOptions.Current.MatchThreshold = Math.Clamp(value, .2, .9); NotifyFaceSettingsChanged(); }
+    }
+    public bool IsArcFaceAvailable => new FaceRecognitionOptions
+    {
+        Engine = FaceRecognitionEngineKind.ArcFaceR100,
+        DetectorModelPath = ArcFaceDetectorModelPath,
+        RecognizerModelPath = ArcFaceRecognizerModelPath,
+        ModelLicenseConfirmed = ArcFaceModelLicenseConfirmed,
+        ModelLicenseDescription = ArcFaceModelLicenseDescription
+    }.EvaluateAvailability().IsAvailable;
+    public string ArcFaceAvailabilityReason
+    {
+        get
+        {
+            var availability = new FaceRecognitionOptions
+            {
+                Engine = FaceRecognitionEngineKind.ArcFaceR100,
+                DetectorModelPath = ArcFaceDetectorModelPath,
+                RecognizerModelPath = ArcFaceRecognizerModelPath,
+                ModelLicenseConfirmed = ArcFaceModelLicenseConfirmed,
+                ModelLicenseDescription = ArcFaceModelLicenseDescription
+            }.EvaluateAvailability();
+            return availability.IsAvailable ? "ArcFace 已启用；模型向量与 YuNet/SFace 人物库完全隔离。" : availability.Reason;
+        }
+    }
     public IReadOnlyList<int> SemanticLabelCounts { get; } = [1, 2, 3, 4, 5];
     public string DefaultRatingFilter { get => _defaultRatingFilter; set { if (SetProperty(ref _defaultRatingFilter, RatingFilters.Contains(value) ? value : "全部评分")) _ = SaveSettingsAsync(); } }
     public int DefaultPreviewSort { get => _defaultPreviewSort; set { if (SetProperty(ref _defaultPreviewSort, Math.Clamp(value, 0, 8))) _ = SaveSettingsAsync(); } }
@@ -502,6 +705,24 @@ public sealed class MainWindowViewModel : ObservableObject
         : InferenceDevice == "auto" ? "未检测到 GPU Provider；自动模式已回退 CPU。" : "当前固定使用 CPU。";
     public int SemanticMaxLabels { get => MobileClipRuntimeOptions.MaximumLabels; set { MobileClipRuntimeOptions.MaximumLabels = Math.Clamp(value, 1, 5); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
     public double SemanticSimilarityWindow { get => MobileClipRuntimeOptions.SimilarityWindow; set { MobileClipRuntimeOptions.SimilarityWindow = Math.Clamp(value, .02, .30); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
+
+    private void NotifyFaceSettingsChanged()
+    {
+        if (FaceRecognitionRuntimeOptions.Current.Engine == FaceRecognitionEngineKind.ArcFaceR100
+            && !IsArcFaceAvailable)
+            FaceRecognitionRuntimeOptions.Current.Engine = FaceRecognitionEngineKind.YuNetSFace;
+        OnPropertyChanged(nameof(FaceRecognitionEngine));
+        OnPropertyChanged(nameof(FaceRecognitionProfile));
+        OnPropertyChanged(nameof(ArcFaceDetectorModelPath));
+        OnPropertyChanged(nameof(ArcFaceRecognizerModelPath));
+        OnPropertyChanged(nameof(ArcFaceModelLicenseConfirmed));
+        OnPropertyChanged(nameof(ArcFaceModelLicenseDescription));
+        OnPropertyChanged(nameof(ArcFaceMatchThreshold));
+        OnPropertyChanged(nameof(IsArcFaceAvailable));
+        OnPropertyChanged(nameof(ArcFaceAvailabilityReason));
+        PeopleAlbums.RefreshRecognitionStatus();
+        _ = SaveSettingsAsync();
+    }
 
     public IAsyncRelayCommand BrowseLibraryCommand { get; }
 
@@ -601,6 +822,20 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         get => _isBrowseConditionsExpanded;
         set => SetProperty(ref _isBrowseConditionsExpanded, value);
+    }
+
+    public bool IsCompactBrowseLayout
+    {
+        get => _isCompactBrowseLayout;
+        private set => SetProperty(ref _isCompactBrowseLayout, value);
+    }
+
+    public void UpdateResponsiveBrowseLayout(double width, double height)
+    {
+        var compact = width < 1950 || height < 900;
+        if (compact == IsCompactBrowseLayout) return;
+        IsCompactBrowseLayout = compact;
+        if (compact) IsBrowseConditionsExpanded = false;
     }
 
     public string BrowseConditionsSummary =>
@@ -1201,6 +1436,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         var settings = await _settingsStore.LoadAsync().ConfigureAwait(true);
+        IsOnboardingVisible = !settings.HasCompletedOnboarding;
         ResetNavigationItems(settings.NavigationOrder);
         NavigationDisplayMode = settings.NavigationDisplayMode;
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
@@ -1218,6 +1454,16 @@ public sealed class MainWindowViewModel : ObservableObject
             || string.Equals(settings.InferenceDevice, "CPU", StringComparison.OrdinalIgnoreCase) ? "CPU" : "自动（NVIDIA 优先）";
         MobileClipRuntimeOptions.MaximumLabels = Math.Clamp(settings.SemanticMaxLabels, 1, 5);
         MobileClipRuntimeOptions.SimilarityWindow = Math.Clamp(settings.SemanticSimilarityWindow, .02, .30);
+        FaceRecognitionRuntimeOptions.Current = new FaceRecognitionOptions
+        {
+            Engine = settings.FaceRecognitionEngine,
+            Profile = settings.FaceRecognitionProfile,
+            DetectorModelPath = settings.ArcFaceDetectorModelPath,
+            RecognizerModelPath = settings.ArcFaceRecognizerModelPath,
+            ModelLicenseConfirmed = settings.ArcFaceModelLicenseConfirmed,
+            ModelLicenseDescription = settings.ArcFaceModelLicenseDescription,
+            MatchThreshold = Math.Clamp(settings.ArcFaceMatchThreshold, .2, .9)
+        };
         _defaultRatingFilter = RatingFilters.Contains(settings.DefaultRatingFilter) ? settings.DefaultRatingFilter : "全部评分";
         _defaultPreviewSort = settings.DefaultPreviewSort is >= 0 and <= 8 ? settings.DefaultPreviewSort : 0;
         RatingFilter = _defaultRatingFilter;
@@ -1227,6 +1473,15 @@ public sealed class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(InferenceDevice));
         OnPropertyChanged(nameof(SemanticMaxLabels));
         OnPropertyChanged(nameof(SemanticSimilarityWindow));
+        OnPropertyChanged(nameof(FaceRecognitionEngine));
+        OnPropertyChanged(nameof(FaceRecognitionProfile));
+        OnPropertyChanged(nameof(ArcFaceDetectorModelPath));
+        OnPropertyChanged(nameof(ArcFaceRecognizerModelPath));
+        OnPropertyChanged(nameof(ArcFaceModelLicenseConfirmed));
+        OnPropertyChanged(nameof(ArcFaceModelLicenseDescription));
+        OnPropertyChanged(nameof(ArcFaceMatchThreshold));
+        OnPropertyChanged(nameof(IsArcFaceAvailable));
+        OnPropertyChanged(nameof(ArcFaceAvailabilityReason));
         CustomBackgroundPath = PersistExistingAsset(settings.CustomBackgroundPath, "background");
         CustomAppIconPath = PersistExistingAsset(settings.AppIconPath, "avatar");
         try { _launchAtStartup = _startupRegistrationService.IsEnabled(); }
@@ -1250,6 +1505,7 @@ public sealed class MainWindowViewModel : ObservableObject
         RefreshConnectedDevices();
         await RefreshCloudConnectionAsync().ConfigureAwait(true);
         await TagManager.InitializeAsync().ConfigureAwait(true);
+        PeopleAlbums.RefreshRecognitionStatus();
         await PeopleAlbums.InitializeAsync().ConfigureAwait(true);
 
         if (!string.IsNullOrWhiteSpace(LibraryRoot) && Directory.Exists(LibraryRoot))
@@ -1317,14 +1573,29 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void RebuildCalendarDays()
     {
-        var available = FlattenDateNodes(LibraryDates)
+        var availableNodes = FlattenDateNodes(LibraryDates)
             .Where(node => node.Date is not null)
             .GroupBy(node => new DateOnly(node.Date!.Value.Year, node.Date.Value.Month, node.Date.Value.Day))
             .ToDictionary(group => group.Key, group => group.First());
+        if (PeopleAlbums.SelectedAlbum is { } person)
+        {
+            availableNodes = availableNodes
+                .Where(entry => person.PhotoPaths.Any(path => IsPathInside(path, entry.Value.FullPath)))
+                .ToDictionary(entry => entry.Key, entry => entry.Value);
+        }
         var selected = _calendarSelectedDate;
-        var days = BuildCalendarDays(_calendarDisplayMonth.Year, _calendarDisplayMonth.Month, available.Keys, selected);
+        var days = BuildCalendarDays(_calendarDisplayMonth.Year, _calendarDisplayMonth.Month, availableNodes.Keys, selected);
         CalendarDays.Clear();
         foreach (var day in days) CalendarDays.Add(day);
+    }
+
+    private static bool IsPathInside(string filePath, string directoryPath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || string.IsNullOrWhiteSpace(directoryPath)) return false;
+        var directory = Path.GetFullPath(directoryPath)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + Path.DirectorySeparatorChar;
+        return Path.GetFullPath(filePath).StartsWith(directory, StringComparison.OrdinalIgnoreCase);
     }
 
     public static IReadOnlyList<CalendarDayViewModel> BuildCalendarDays(
@@ -2823,7 +3094,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Preview" => "浏览",
         "FaceSearch" => "人物查找",
         "MapPhotos" => "地图照片",
-        "Compression" => "批量压缩",
+        "Compression" => "图片小工具",
         "Watermark" => "批量水印",
         "BaiduCloud" => "百度网盘",
         "QuarkCloud" => "夸克网盘",
@@ -2839,7 +3110,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Preview" => "照片墙、分类筛选、缩略图缩放，专心看内容。",
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
-        "Compression" => "保持原始分辨率，把单张或整批图片压缩到指定大小上限。",
+        "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
         "BaiduCloud" => "百度网盘内嵌浏览器，会话自动保持，登录后直接浏览文件。",
         "QuarkCloud" => "夸克网盘内嵌浏览器，会话自动保持，登录后直接浏览文件。",
@@ -2895,10 +3166,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void RebuildVisiblePreviewSections()
     {
-        foreach (var section in VisiblePreviewSections)
+        if (!_personFilterOwnsExpansion && !_skipPreviewExpansionCaptureOnce)
         {
-            _previewDateExpansion[section.Key] = section.IsExpanded;
+            foreach (var section in VisiblePreviewSections)
+                _previewDateExpansion[section.Key] = section.IsExpanded;
         }
+        _skipPreviewExpansionCaptureOnce = false;
 
         VisiblePreviewSections.Clear();
         var sectionIndex = 0;
@@ -2906,7 +3179,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             var first = group.Key;
             var isSingleSelectedDate = _calendarSelectedDate is not null;
-            var expanded = isSingleSelectedDate || (_previewDateExpansion.TryGetValue(first.Key, out var remembered)
+            var expanded = _personFilterOwnsExpansion || isSingleSelectedDate || (_previewDateExpansion.TryGetValue(first.Key, out var remembered)
                 ? remembered
                 : sectionIndex == 0);
             VisiblePreviewSections.Add(new PreviewDateSectionViewModel(
@@ -3743,19 +4016,19 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private static void AddDayDirectories(List<LibraryDateNode> nodes, string monthDirectory, int year, int month)
     {
-        foreach (var dayDirectory in Directory.EnumerateDirectories(monthDirectory))
+        foreach (var discoveredDirectory in Directory.EnumerateDirectories(monthDirectory).ToArray())
         {
-            var dayName = Path.GetFileName(dayDirectory);
-            var parts = dayName.Split('.');
-            if (parts.Length != 2 || !int.TryParse(parts[0], out _) || !int.TryParse(parts[1], out var day))
+            var dayName = Path.GetFileName(discoveredDirectory);
+            if (!LibraryDateFolderService.TryParseName(dayName, month, out var parsed))
             {
                 continue;
             }
 
             try
             {
-                var date = new LibraryDate(year, month, day);
-                nodes.Add(new LibraryDateNode(FormatDate(date), dayDirectory, date));
+                var effectiveDirectory = LibraryDateFolderService.NormalizeDirectoryName(discoveredDirectory, parsed);
+                var date = new LibraryDate(year, parsed.Month, parsed.Day);
+                nodes.Add(new LibraryDateNode(FormatDate(date), effectiveDirectory, date));
             }
             catch (ArgumentOutOfRangeException)
             {
@@ -3797,6 +4070,73 @@ public sealed class MainWindowViewModel : ObservableObject
         return month is >= 1 and <= 12;
     }
 
+    private async Task DismissOnboardingAsync()
+    {
+        IsOnboardingVisible = false;
+        await _settingsStore.UpdateAsync(settings => settings.HasCompletedOnboarding = true).ConfigureAwait(true);
+    }
+
+    private void ReplayOnboarding()
+    {
+        OnboardingStep = 0;
+        CurrentPage = "Settings";
+        IsOnboardingVisible = true;
+    }
+
+    private void ShowPreviousOnboardingStep()
+    {
+        if (IsFirstOnboardingStep) return;
+        OnboardingStep--;
+        NavigateToOnboardingPage();
+    }
+
+    private async Task ShowNextOnboardingStepAsync()
+    {
+        if (IsLastOnboardingStep)
+        {
+            await DismissOnboardingAsync().ConfigureAwait(true);
+            return;
+        }
+        if (IsOnboardingContinuationChoiceStep) return;
+        OnboardingStep++;
+        NavigateToOnboardingPage();
+    }
+
+    private void ContinueOnboarding()
+    {
+        if (!IsOnboardingContinuationChoiceStep) return;
+        OnboardingStep++;
+        NavigateToOnboardingPage();
+    }
+
+    private void NavigateToOnboardingPage()
+    {
+        if (OnboardingStep == 7)
+            Compression.SelectedToolMode = ImageToolMode.Compression;
+        else if (OnboardingStep == 8)
+        {
+            Compression.SelectedToolMode = ImageToolMode.Watermark;
+            CurrentPage = "Compression";
+            return;
+        }
+        CurrentPage = OnboardingStep switch
+        {
+            0 => "Settings",
+            1 or 2 => "Import",
+            3 => "Home",
+            4 => "Preview",
+            5 => "FaceSearch",
+            7 => "Compression",
+            9 => "MapPhotos",
+            10 => "ContestOpen",
+            11 => "ContestJudged",
+            12 => "BaiduCloud",
+            13 => "QuarkCloud",
+            14 => "Settings",
+            _ => CurrentPage
+        };
+    }
+
     private async Task SaveSettingsAsync()
     {
         if (!_isInitialized)
@@ -3809,6 +4149,7 @@ public sealed class MainWindowViewModel : ObservableObject
             await _settingsStore.UpdateAsync(settings =>
             {
             settings.NavigationOrder = NavigationItems.Select(item => item.Key).ToList();
+            settings.HasCompletedOnboarding = !IsOnboardingVisible;
             settings.NavigationDisplayMode = NavigationDisplayMode;
             settings.LibraryRoot = LibraryRoot;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
@@ -3819,6 +4160,13 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.InferenceDevice = InferenceDevice;
             settings.SemanticMaxLabels = SemanticMaxLabels;
             settings.SemanticSimilarityWindow = SemanticSimilarityWindow;
+            settings.FaceRecognitionEngine = FaceRecognitionEngine;
+            settings.FaceRecognitionProfile = FaceRecognitionProfile;
+            settings.ArcFaceDetectorModelPath = ArcFaceDetectorModelPath;
+            settings.ArcFaceRecognizerModelPath = ArcFaceRecognizerModelPath;
+            settings.ArcFaceModelLicenseConfirmed = ArcFaceModelLicenseConfirmed;
+            settings.ArcFaceModelLicenseDescription = ArcFaceModelLicenseDescription;
+            settings.ArcFaceMatchThreshold = ArcFaceMatchThreshold;
             settings.DefaultRatingFilter = DefaultRatingFilter;
             settings.DefaultPreviewSort = DefaultPreviewSort;
             settings.CustomBackgroundPath = CustomBackgroundPath;
@@ -3866,7 +4214,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void ResetNavigationItems(IEnumerable<string>? storedOrder)
     {
-        var order = NavigationOrderPolicy.Normalize(storedOrder, DefaultNavigationOrder);
+        var order = NavigationOrderPolicy.Normalize(storedOrder, DefaultNavigationOrder)
+            .Where(key => !string.Equals(key, "Watermark", StringComparison.Ordinal));
         NavigationItems.Clear();
         foreach (var key in order)
         {
@@ -3881,8 +4230,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Preview" => new(key, "照片图库", "Icon.Library", ShowPreviewCommand, order),
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
-        "Compression" => new(key, "批量压缩", "Icon.Compression", ShowCompressionCommand, order),
-        "Watermark" => new(key, "批量水印", "Icon.Watermark", ShowWatermarkCommand, order),
+        "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),
         "BaiduCloud" => new(key, "百度网盘", "Icon.BaiduCloud", ShowBaiduCloudCommand, order),
         "QuarkCloud" => new(key, "夸克网盘", "Icon.QuarkCloud", ShowQuarkCloudCommand, order),
         "ContestOpen" => new(key, "投稿项目", "Icon.ContestOpen", ShowContestOpenCommand, order),
@@ -5166,6 +5514,16 @@ public sealed record PreviewSortChoice(int Value, string Label)
 }
 
 public sealed record InferenceDeviceChoice(string Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record FaceEngineChoice(FaceRecognitionEngineKind Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record FaceProfileChoice(FaceRecognitionProfile Value, string Label)
 {
     public override string ToString() => Label;
 }

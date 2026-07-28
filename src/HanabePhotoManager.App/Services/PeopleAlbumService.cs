@@ -1,21 +1,24 @@
 using System.IO;
 using System.Text.Json;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.App.Services;
 
 public sealed class PeopleAlbumService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
-    private const double MatchThreshold = 0.62;
-    private readonly string _storePath;
+    private readonly string? _storePath;
     private readonly ILocalFaceEmbeddingService _embeddingService;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public PeopleAlbumService(string? storePath = null, ILocalFaceEmbeddingService? embeddingService = null)
     {
-        _storePath = storePath ?? Path.Combine(AppDataPaths.Root, "people-albums.json");
+        _storePath = storePath;
         _embeddingService = embeddingService ?? new LocalFaceEmbeddingService();
     }
+
+    public FaceModelIdentity ModelIdentity => _embeddingService.ModelIdentity;
 
     public async Task<PeopleAlbumSnapshot> LoadAsync(CancellationToken cancellationToken = default)
     {
@@ -25,6 +28,12 @@ public sealed class PeopleAlbumService
     }
 
     public async Task<PeopleAlbumSnapshot> ScanAsync(IEnumerable<string> paths, CancellationToken cancellationToken)
+        => await ScanAsync(paths, progress: null, cancellationToken).ConfigureAwait(false);
+
+    public async Task<PeopleAlbumSnapshot> ScanAsync(
+        IEnumerable<string> paths,
+        IProgress<PeopleScanProgress>? progress,
+        CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -38,33 +47,52 @@ public sealed class PeopleAlbumService
             foreach (var album in snapshot.Albums)
                 album.PhotoPaths.RemoveAll(path => rescanned.Contains(Path.GetFullPath(path)));
 
-            foreach (var path in scanPaths)
+            var detectedFaces = 0;
+            const int batchSize = 16;
+            progress?.Report(new PeopleScanProgress(
+                0, scanPaths.Length, 0, snapshot.Albums.Count, CreateProgressAlbums(snapshot.Albums)));
+            for (var batchStart = 0; batchStart < scanPaths.Length; batchStart += batchSize)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                IReadOnlyList<DetectedFace> faces;
-                try { faces = await _embeddingService.DetectAsync(path, cancellationToken).ConfigureAwait(false); }
-                catch (OperationCanceledException) { throw; }
-                catch { continue; }
-
-                foreach (var face in faces)
+                var batch = scanPaths.Skip(batchStart).Take(batchSize).ToArray();
+                var batchFaces = await _embeddingService.DetectBatchAsync(batch, cancellationToken).ConfigureAwait(false);
+                detectedFaces += batchFaces.Count;
+                foreach (var path in batch)
                 {
-                    var album = FindBestAlbum(snapshot.Albums, face.Embedding);
-                    if (album is null)
+                    cancellationToken.ThrowIfCancellationRequested();
+                    foreach (var face in batchFaces.Where(face =>
+                                 string.Equals(face.SourcePath, path, StringComparison.OrdinalIgnoreCase)))
                     {
-                        album = new PersonAlbum
+                        var album = FindBestAlbum(snapshot.Albums, face.Embedding, snapshot.MatchThreshold);
+                        var created = album is null;
+                        if (album is null)
                         {
-                            Id = Guid.NewGuid().ToString("N"),
-                            Name = NextDefaultName(snapshot.Albums),
-                            MatchCentroids = [face.Embedding.ToArray()]
-                        };
-                        snapshot.Albums.Add(album);
+                            album = new PersonAlbum
+                            {
+                                Id = Guid.NewGuid().ToString("N"),
+                                Name = NextDefaultName(snapshot.Albums),
+                                MatchCentroids = [face.Embedding.ToArray()]
+                            };
+                            snapshot.Albums.Add(album);
+                        }
+                        else if (album.MatchCentroids.Count < 8
+                                 && album.MatchCentroids.All(centroid => Cosine(centroid, face.Embedding) < 0.92))
+                        {
+                            album.MatchCentroids.Add(face.Embedding.ToArray());
+                        }
+                        if (!IsRemoved(snapshot, album.Id, path)
+                            && !album.PhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase))
+                            album.PhotoPaths.Add(path);
+                        if (created || string.IsNullOrWhiteSpace(album.CoverPath) || !File.Exists(album.CoverPath))
+                            album.CoverPath = CreateFaceCover(face, album.Id);
                     }
-                    if (!IsRemoved(snapshot, album.Id, path)
-                        && !album.PhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase))
-                        album.PhotoPaths.Add(path);
-                    if (string.IsNullOrWhiteSpace(album.CoverPath) || !File.Exists(album.CoverPath))
-                        album.CoverPath = path;
                 }
+                progress?.Report(new PeopleScanProgress(
+                    Math.Min(batchStart + batch.Length, scanPaths.Length),
+                    scanPaths.Length,
+                    detectedFaces,
+                    snapshot.Albums.Count,
+                    CreateProgressAlbums(snapshot.Albums)));
             }
 
             snapshot.Albums.RemoveAll(album => album.PhotoPaths.Count == 0 && string.IsNullOrWhiteSpace(album.Name));
@@ -126,16 +154,27 @@ public sealed class PeopleAlbumService
 
     private async Task<PeopleAlbumSnapshot> LoadCoreAsync(CancellationToken cancellationToken)
     {
-        if (!File.Exists(_storePath)) return NewSnapshot();
+        var storePath = ResolveStorePath();
+        if (!File.Exists(storePath)) return NewSnapshot();
         try
         {
-            await using var stream = File.OpenRead(_storePath);
+            await using var stream = File.OpenRead(storePath);
             var snapshot = await JsonSerializer.DeserializeAsync<PeopleAlbumSnapshot>(stream, JsonOptions, cancellationToken)
                 .ConfigureAwait(false) ?? NewSnapshot();
             snapshot.Albums ??= [];
             snapshot.RemovedPhotos = snapshot.RemovedPhotos is null
                 ? new(StringComparer.OrdinalIgnoreCase)
                 : new(snapshot.RemovedPhotos, StringComparer.OrdinalIgnoreCase);
+            if (snapshot.Version <= 1 && _embeddingService.ModelIdentity == FaceModelIdentity.YuNetSFaceLegacy)
+            {
+                snapshot.Version = 2;
+                snapshot.ModelIdentity = FaceModelIdentity.YuNetSFaceLegacy.StorageKey;
+                snapshot.MatchThreshold = FaceModelIdentity.YuNetSFaceLegacy.MatchThreshold;
+            }
+            else if (!string.Equals(snapshot.ModelIdentity, _embeddingService.ModelIdentity.StorageKey, StringComparison.Ordinal))
+            {
+                throw new FaceModelMismatchException(snapshot.ModelIdentity, _embeddingService.ModelIdentity.StorageKey);
+            }
             return snapshot;
         }
         catch (JsonException) { return NewSnapshot(); }
@@ -143,28 +182,42 @@ public sealed class PeopleAlbumService
 
     private async Task SaveCoreAsync(PeopleAlbumSnapshot snapshot, CancellationToken cancellationToken)
     {
-        var directory = Path.GetDirectoryName(_storePath);
+        var storePath = ResolveStorePath();
+        var directory = Path.GetDirectoryName(storePath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
-        var temporary = _storePath + ".tmp";
+        var temporary = storePath + ".tmp";
         try
         {
             await using (var stream = File.Create(temporary))
                 await JsonSerializer.SerializeAsync(stream, snapshot, JsonOptions, cancellationToken).ConfigureAwait(false);
-            File.Move(temporary, _storePath, true);
+            File.Move(temporary, storePath, true);
         }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 
-    private static PeopleAlbumSnapshot NewSnapshot() => new()
+    private string ResolveStorePath()
     {
+        if (!string.IsNullOrWhiteSpace(_storePath)) return _storePath;
+        if (_embeddingService.ModelIdentity == FaceModelIdentity.YuNetSFaceLegacy)
+            return Path.Combine(AppDataPaths.Root, "people-albums.json");
+        var safeKey = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(_embeddingService.ModelIdentity.StorageKey))).ToLowerInvariant()[..16];
+        return Path.Combine(AppDataPaths.Root, $"people-albums.{safeKey}.json");
+    }
+
+    private PeopleAlbumSnapshot NewSnapshot() => new()
+    {
+        Version = 2,
+        ModelIdentity = _embeddingService.ModelIdentity.StorageKey,
+        MatchThreshold = _embeddingService.ModelIdentity.MatchThreshold,
         RemovedPhotos = new(StringComparer.OrdinalIgnoreCase)
     };
 
-    private static PersonAlbum? FindBestAlbum(IEnumerable<PersonAlbum> albums, IReadOnlyList<float> embedding) =>
+    private static PersonAlbum? FindBestAlbum(IEnumerable<PersonAlbum> albums, IReadOnlyList<float> embedding, double matchThreshold) =>
         albums.Select(album => (Album: album, Score: album.MatchCentroids.Count == 0
                 ? -1
                 : album.MatchCentroids.Max(centroid => Cosine(centroid, embedding))))
-            .Where(item => item.Score >= MatchThreshold)
+            .Where(item => item.Score >= matchThreshold)
             .OrderByDescending(item => item.Score)
             .Select(item => item.Album)
             .FirstOrDefault();
@@ -196,11 +249,70 @@ public sealed class PeopleAlbumService
         }
         return $"人物 {used.Count + 1}";
     }
+    private static IReadOnlyList<PeopleScanAlbumProgress> CreateProgressAlbums(IEnumerable<PersonAlbum> albums) =>
+        albums.OrderBy(album => album.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(album => new PeopleScanAlbumProgress(
+                album.Id, album.Name, album.CoverPath, album.PhotoPaths.ToArray()))
+            .ToArray();
+
+    private string CreateFaceCover(DetectedFace face, string albumId)
+    {
+        try
+        {
+            using var image = SixLabors.ImageSharp.Image.Load(face.SourcePath);
+            image.Mutate(context => context.AutoOrient());
+            var side = Math.Max(face.Width, face.Height) * 1.5;
+            var centerX = face.X + face.Width / 2d;
+            var centerY = face.Y + face.Height / 2d;
+            var left = Math.Clamp((int)Math.Round(centerX - side / 2), 0, Math.Max(0, image.Width - 1));
+            var top = Math.Clamp((int)Math.Round(centerY - side / 2), 0, Math.Max(0, image.Height - 1));
+            var width = Math.Min((int)Math.Round(side), image.Width - left);
+            var height = Math.Min((int)Math.Round(side), image.Height - top);
+            if (width <= 0 || height <= 0) return face.SourcePath;
+            image.Mutate(context => context.Crop(new SixLabors.ImageSharp.Rectangle(left, top, width, height)));
+            var directory = ResolveCoverDirectory();
+            Directory.CreateDirectory(directory);
+            var coverPath = Path.Combine(directory, $"{albumId}.jpg");
+            image.SaveAsJpeg(coverPath);
+            return coverPath;
+        }
+        catch
+        {
+            return face.SourcePath;
+        }
+    }
+
+    private string ResolveCoverDirectory()
+    {
+        if (!string.IsNullOrWhiteSpace(_storePath))
+            return Path.Combine(Path.GetDirectoryName(Path.GetFullPath(_storePath))!, ".face-covers");
+        var safeKey = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(_embeddingService.ModelIdentity.StorageKey))).ToLowerInvariant()[..16];
+        return Path.Combine(AppDataPaths.Root, "face-covers", safeKey);
+    }
+}
+
+public sealed record PeopleScanProgress(
+    int Processed,
+    int Total,
+    int DetectedFaces,
+    int People,
+    IReadOnlyList<PeopleScanAlbumProgress> Albums);
+
+public sealed record PeopleScanAlbumProgress(
+    string Id,
+    string Name,
+    string CoverPath,
+    IReadOnlyList<string> PhotoPaths)
+{
+    public int PhotoCount => PhotoPaths.Count;
 }
 
 public sealed class PeopleAlbumSnapshot
 {
-    public int Version { get; set; } = 1;
+    public int Version { get; set; } = 2;
+    public string ModelIdentity { get; set; } = string.Empty;
+    public double MatchThreshold { get; set; } = FaceRecognitionDefaults.YuNetSFaceThreshold;
     public List<PersonAlbum> Albums { get; set; } = [];
     public Dictionary<string, List<string>> RemovedPhotos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

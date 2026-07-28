@@ -53,6 +53,21 @@ public sealed class RetouchedMediaIndexTests : IDisposable
         snapshot.StandaloneRetouchedFiles.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Build_MatchesJpegOriginalsAgainstRetouchedFilesInNestedFolders()
+    {
+        var originals = Directory.CreateDirectory(Path.Combine(_date, "JPG生图")).FullName;
+        var nestedRetouched = Directory.CreateDirectory(
+            Path.Combine(_date, "修后", "客户精选", "导出")).FullName;
+        var original = Touch(Path.Combine(originals, "DSC9001.JPG"));
+        var output = Touch(Path.Combine(nestedRetouched, "DSC9001_FINAL.jpg"));
+
+        var snapshot = new RetouchedMediaIndex().Build(_date, [original]);
+
+        snapshot.RetouchedByOriginal[original].Should().Be(output);
+        snapshot.StandaloneRetouchedFiles.Should().BeEmpty();
+    }
+
     private static string Touch(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

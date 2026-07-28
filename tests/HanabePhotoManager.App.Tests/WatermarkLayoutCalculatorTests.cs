@@ -58,6 +58,9 @@ public sealed class WatermarkLayoutCalculatorTests
         Assert.Contains("MouseLeftButtonUp=\"Preview_MouseLeftButtonUp\"", xaml);
         Assert.Contains("Drop=\"Watermark_Drop\"", xaml);
         Assert.Contains("Content=\"导出水印图片\"", xaml);
+        Assert.Contains("Content=\"文件夹批处理\"", xaml);
+        Assert.Contains("Command=\"{Binding StartFolderBatchCommand}\"", xaml);
+        Assert.Contains("ItemsSource=\"{Binding FolderSources}\"", xaml);
     }
 
     private static string FindSourceRoot()

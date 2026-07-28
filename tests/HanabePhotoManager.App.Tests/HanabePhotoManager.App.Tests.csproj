@@ -24,6 +24,7 @@
   <ItemGroup>
     <Content Include="Assets\face-reference.jpg" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\src\HanabePhotoManager.App\Models\Face\face_recognition_sface_2021dec.onnx" Link="Models\Face\face_recognition_sface_2021dec.onnx" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\HanabePhotoManager.App\Models\Face\face_detection_yunet_2023mar.onnx" Link="Models\Face\face_detection_yunet_2023mar.onnx" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\src\HanabePhotoManager.App\Models\Face\haarcascade_frontalface_alt2.xml" Link="Models\Face\haarcascade_frontalface_alt2.xml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

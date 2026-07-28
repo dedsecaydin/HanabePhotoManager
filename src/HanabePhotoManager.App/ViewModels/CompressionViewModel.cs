@@ -12,6 +12,10 @@ public sealed class CompressionViewModel : ObservableObject
     private readonly ImageInputDiscovery _discovery;
     private readonly ImageCompressionPlanner _planner;
     private readonly ImageCompressionService _service;
+    private readonly ImageCollageService _collageService;
+    private ImageToolMode _selectedToolMode = ImageToolMode.Compression;
+    private CollageOrientation _collageOrientation = CollageOrientation.Vertical;
+    private bool _collageLimitOutputSize;
     private string _outputDirectory = string.Empty;
     private string _targetValue = "2";
     private string _targetUnit = "MB";
@@ -25,11 +29,13 @@ public sealed class CompressionViewModel : ObservableObject
     public CompressionViewModel(
         ImageInputDiscovery? discovery = null,
         ImageCompressionPlanner? planner = null,
-        ImageCompressionService? service = null)
+        ImageCompressionService? service = null,
+        ImageCollageService? collageService = null)
     {
         _discovery = discovery ?? new ImageInputDiscovery();
         _planner = planner ?? new ImageCompressionPlanner();
         _service = service ?? new ImageCompressionService();
+        _collageService = collageService ?? new ImageCollageService();
         StartCommand = new AsyncRelayCommand(StartAsync, () => CanStart);
         CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => IsRunning);
         ClearCommand = new RelayCommand(Clear, () => !IsRunning && Items.Count > 0);
@@ -40,6 +46,17 @@ public sealed class CompressionViewModel : ObservableObject
     public ObservableCollection<CompressionItemResult> Results { get; } = [];
     public ObservableCollection<string> Warnings { get; } = [];
     public IReadOnlyList<string> TargetUnits { get; } = ["KB", "MB", "GB"];
+    public IReadOnlyList<ImageToolModeChoice> ToolModes { get; } =
+    [
+        new(ImageToolMode.Compression, "批量压缩"),
+        new(ImageToolMode.Collage, "拼图"),
+        new(ImageToolMode.Watermark, "批量水印")
+    ];
+    public IReadOnlyList<CollageOrientationChoice> CollageOrientations { get; } =
+    [
+        new(CollageOrientation.Vertical, "纵向拼接"),
+        new(CollageOrientation.Horizontal, "横向拼接")
+    ];
     public IReadOnlyList<CompressionTargetChoice> TargetModes { get; } =
     [
         new(CompressionTargetMode.PerImage, "每张图片上限"),
@@ -50,6 +67,38 @@ public sealed class CompressionViewModel : ObservableObject
     public IRelayCommand CancelCommand { get; }
     public IRelayCommand ClearCommand { get; }
     public IRelayCommand<CompressionInputItem> RemoveCommand { get; }
+
+    public ImageToolMode SelectedToolMode
+    {
+        get => _selectedToolMode;
+        set
+        {
+            if (!SetProperty(ref _selectedToolMode, value)) return;
+            OnPropertyChanged(nameof(IsCompressionMode));
+            OnPropertyChanged(nameof(IsCollageMode));
+            OnPropertyChanged(nameof(IsWatermarkMode));
+            OnPropertyChanged(nameof(IsFileOperationMode));
+            StatusText = value == ImageToolMode.Collage ? "按队列顺序拼接图片" : "拖入图片或选择文件夹开始";
+            NotifyAvailability();
+        }
+    }
+    public bool IsCompressionMode => SelectedToolMode == ImageToolMode.Compression;
+    public bool IsCollageMode => SelectedToolMode == ImageToolMode.Collage;
+    public bool IsWatermarkMode => SelectedToolMode == ImageToolMode.Watermark;
+    public bool IsFileOperationMode => !IsWatermarkMode;
+    public CollageOrientation CollageOrientation
+    {
+        get => _collageOrientation;
+        set => SetProperty(ref _collageOrientation, value);
+    }
+    public bool CollageLimitOutputSize
+    {
+        get => _collageLimitOutputSize;
+        set
+        {
+            if (SetProperty(ref _collageLimitOutputSize, value)) NotifyAvailability();
+        }
+    }
 
     public string OutputDirectory
     {
@@ -89,7 +138,10 @@ public sealed class CompressionViewModel : ObservableObject
 
     public long OriginalTotalBytes => Items.Sum(item => item.Length);
     public long OutputTotalBytes => Results.Where(result => result.Status == CompressionItemStatus.Success).Sum(result => result.OutputBytes);
-    public bool CanStart => !IsRunning && Items.Count > 0 && !string.IsNullOrWhiteSpace(OutputDirectory) && TargetBytes > 0;
+    public bool CanStart => !IsRunning
+        && Items.Count > 0
+        && !string.IsNullOrWhiteSpace(OutputDirectory)
+        && (IsCollageMode && !CollageLimitOutputSize || TargetBytes > 0);
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public string CurrentFile { get => _currentFile; private set => SetProperty(ref _currentFile, value); }
     public double ProgressValue { get => _progressValue; private set => SetProperty(ref _progressValue, value); }
@@ -128,19 +180,47 @@ public sealed class CompressionViewModel : ObservableObject
         ProgressValue = 0;
         try
         {
-            var sources = Items.Select(item => new CompressionSource(item.Path, item.Length, 1)).ToArray();
-            var plan = _planner.CreatePlan(sources, TargetMode, TargetBytes);
-            for (var index = 0; index < plan.Count; index++)
+            if (IsCollageMode)
             {
-                _cancellation.Token.ThrowIfCancellationRequested();
-                CurrentFile = Path.GetFileName(plan[index].Source.Path);
-                var result = await _service.CompressAsync(plan[index], new CompressionOptions(OutputDirectory), _cancellation.Token)
-                    .ConfigureAwait(true);
-                Results.Add(result);
-                ProgressValue = (index + 1d) * 100 / plan.Count;
+                var progress = new Progress<CollageProgress>(report =>
+                {
+                    CurrentFile = report.CurrentFile;
+                    ProgressValue = report.Total == 0 ? 0 : report.Processed * 80d / report.Total;
+                });
+                var result = await _collageService.ComposeAsync(
+                    Items.Select(item => item.Path).ToArray(),
+                    new CollageOptions(OutputDirectory, CollageOrientation,
+                        CollageLimitOutputSize ? TargetBytes : null),
+                    progress,
+                    _cancellation.Token).ConfigureAwait(true);
+                Results.Add(new CompressionItemResult(
+                    "拼图",
+                    result.OutputPath,
+                    result.IsSuccess ? CompressionItemStatus.Success : CompressionItemStatus.Unreachable,
+                    OriginalTotalBytes,
+                    result.OutputBytes,
+                    result.Quality,
+                    result.Message));
+                ProgressValue = 100;
                 OnPropertyChanged(nameof(OutputTotalBytes));
+                StatusText = result.Message;
             }
-            StatusText = $"完成：{Results.Count(result => result.Status == CompressionItemStatus.Success)} 成功，{Results.Count(result => result.Status != CompressionItemStatus.Success)} 未输出";
+            else
+            {
+                var sources = Items.Select(item => new CompressionSource(item.Path, item.Length, 1)).ToArray();
+                var plan = _planner.CreatePlan(sources, TargetMode, TargetBytes);
+                for (var index = 0; index < plan.Count; index++)
+                {
+                    _cancellation.Token.ThrowIfCancellationRequested();
+                    CurrentFile = Path.GetFileName(plan[index].Source.Path);
+                    var result = await _service.CompressAsync(plan[index], new CompressionOptions(OutputDirectory), _cancellation.Token)
+                        .ConfigureAwait(true);
+                    Results.Add(result);
+                    ProgressValue = (index + 1d) * 100 / plan.Count;
+                    OnPropertyChanged(nameof(OutputTotalBytes));
+                }
+                StatusText = $"完成：{Results.Count(result => result.Status == CompressionItemStatus.Success)} 成功，{Results.Count(result => result.Status != CompressionItemStatus.Success)} 未输出";
+            }
         }
         catch (OperationCanceledException)
         {
@@ -194,3 +274,12 @@ public sealed record CompressionInputItem(string Path, long Length)
 }
 
 public sealed record CompressionTargetChoice(CompressionTargetMode Value, string Label);
+public enum ImageToolMode
+{
+    Compression,
+    Collage,
+    Watermark
+}
+
+public sealed record ImageToolModeChoice(ImageToolMode Value, string Label);
+public sealed record CollageOrientationChoice(CollageOrientation Value, string Label);

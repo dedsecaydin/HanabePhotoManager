@@ -8,6 +8,15 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class CompressionViewModelTests : IDisposable
 {
+    [Fact]
+    public void ImageTools_ExposeCompressionAndUnlimitedHorizontalOrVerticalCollageModes()
+    {
+        var viewModel = new CompressionViewModel();
+
+        viewModel.ToolModes.Select(mode => mode.Label).Should().Equal("批量压缩", "拼图", "批量水印");
+        viewModel.CollageOrientations.Select(mode => mode.Label).Should().Equal("纵向拼接", "横向拼接");
+        viewModel.CollageLimitOutputSize.Should().BeFalse();
+    }
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"hanabe-compress-vm-{Guid.NewGuid():N}");
 
     [Fact]

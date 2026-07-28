@@ -227,6 +227,7 @@ public partial class MainWindow : Window
 
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
     {
+        _viewModel.UpdateResponsiveBrowseLayout(e.NewSize.Width, e.NewSize.Height);
         ScheduleWindowStateSave();
     }
 

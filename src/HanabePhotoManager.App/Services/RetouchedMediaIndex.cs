@@ -26,7 +26,7 @@ public sealed class RetouchedMediaIndex
             return new RetouchedMediaSnapshot(map, []);
         }
 
-        var outputs = Directory.EnumerateFiles(retouchedDirectory, "*", SearchOption.TopDirectoryOnly)
+        var outputs = Directory.EnumerateFiles(retouchedDirectory, "*", SearchOption.AllDirectories)
             .Where(IsSupported)
             .ToArray();
         var outputsByStem = outputs

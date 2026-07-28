@@ -79,6 +79,8 @@ public sealed class AppSettingsStore
 
 public sealed class AppSettings
 {
+    public bool HasCompletedOnboarding { get; set; }
+
     public List<string> NavigationOrder { get; set; } = [];
 
     public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.Text;
@@ -109,6 +111,13 @@ public sealed class AppSettings
 
     public string ClassificationEngine { get; set; } = PhotoClassifierFactory.OnnxMode;
     public string InferenceDevice { get; set; } = "auto";
+    public FaceRecognitionEngineKind FaceRecognitionEngine { get; set; } = FaceRecognitionEngineKind.YuNetSFace;
+    public FaceRecognitionProfile FaceRecognitionProfile { get; set; } = FaceRecognitionProfile.Balanced;
+    public string? ArcFaceDetectorModelPath { get; set; }
+    public string? ArcFaceRecognizerModelPath { get; set; }
+    public bool ArcFaceModelLicenseConfirmed { get; set; }
+    public string? ArcFaceModelLicenseDescription { get; set; }
+    public double ArcFaceMatchThreshold { get; set; } = FaceRecognitionDefaults.ArcFaceR100Threshold;
     public int SemanticMaxLabels { get; set; } = 3;
     public double SemanticSimilarityWindow { get; set; } = 0.10;
     public string DefaultRatingFilter { get; set; } = "全部评分";

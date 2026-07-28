@@ -118,6 +118,15 @@ App services scan media, read thumbnails/EXIF, maintain app settings and metadat
 
 App services load bundled ONNX/OpenCV assets for classification, face embedding, clustering, and search. Checkpoint or metadata services persist resumable state. ViewModels present analysis progress and results; model files and third-party notices remain under `App/Models`.
 
+Face recognition uses two isolated ONNX Runtime pipelines. The default
+YuNet + SFace identity retains the version-1 people-album migration path.
+ArcFace R100 is opt-in and accepts only user-supplied detector and recognizer
+paths after an explicit license confirmation; no ArcFace weights are bundled
+or downloaded. People-album snapshots persist engine, model fingerprint,
+embedding version, and threshold identity. A mismatched identity is rejected,
+and non-default engines use separate storage files, so vectors from different
+models can never be compared or merged.
+
 ### Cloud
 
 Core defines provider-neutral models, stores, authentication contracts, and scheduling policy. Infrastructure supplies persistent stores and provider implementations. The cloud App module composes these capabilities into navigation and transfer states. Credentials and sessions must remain outside source control and logs.

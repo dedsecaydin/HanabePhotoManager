@@ -1,4 +1,5 @@
 using FluentAssertions;
+using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.ViewModels;
 using HanabePhotoManager.Core.Imports;
 using System.IO;
@@ -121,6 +122,75 @@ public sealed class PreviewPerformanceTests
         xaml.Should().NotContain("Text=\"修图进度\"");
         xaml.Should().Contain("PeopleAlbums.Albums");
         xaml.Should().Contain("PeopleAlbums.ScanCommand");
+    }
+
+    [Fact]
+    public void PreviewWall_ShowsTheLiveFilteredItemCountAtTheBottom()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        xaml.Should().Contain("FilteredPreviewCount, Mode=OneWay");
+        xaml.Should().Contain("StringFormat=共 {0} 项");
+        xaml.Should().NotContain("<Border DockPanel.Dock=\"Bottom\" Padding=\"12,8\" Margin=\"0,10,0,0\" CornerRadius=\"10\"");
+    }
+
+    [Fact]
+    public void SelectingAPerson_ExpandsAllMatchingDateGroupsAndClearingRestoresTheirState()
+    {
+        var viewModel = new MainWindowViewModel();
+        var firstPath = Path.GetFullPath(@"C:\photos\7月\07.01\JPG生图\first.jpg");
+        var secondPath = Path.GetFullPath(@"C:\photos\7月\07.02\JPG生图\second.jpg");
+        viewModel.PreviewFiles.Add(new PreviewFileViewModel(
+            "first.jpg", "JPG生图", firstPath, "1 KB", ".jpg", null));
+        viewModel.PreviewFiles.Add(new PreviewFileViewModel(
+            "second.jpg", "JPG生图", secondPath, "1 KB", ".jpg", null));
+        viewModel.LibraryDates.Add(new LibraryDateNode("07.01", @"C:\photos\7月\07.01", new LibraryDate(2026, 7, 1)));
+        viewModel.LibraryDates.Add(new LibraryDateNode("07.02", @"C:\photos\7月\07.02", new LibraryDate(2026, 7, 2)));
+        viewModel.LibraryDates.Add(new LibraryDateNode("07.03", @"C:\photos\7月\07.03", new LibraryDate(2026, 7, 3)));
+        viewModel.CurrentPreviewCategory = "JPG生图";
+        viewModel.VisiblePreviewSections.Should().HaveCount(2);
+        viewModel.VisiblePreviewSections[0].IsExpanded = true;
+        viewModel.VisiblePreviewSections[1].IsExpanded = false;
+        var person = new PersonAlbumItemViewModel(
+            new PersonAlbum { Id = "person", Name = "A", PhotoPaths = [firstPath, secondPath] },
+            new PeopleAlbumService(Path.Combine(Path.GetTempPath(), $"people-{Guid.NewGuid():N}.json")),
+            _ => { });
+
+        viewModel.PeopleAlbums.SelectedAlbum = person;
+
+        viewModel.VisiblePreviewSections.Should().OnlyContain(section => section.IsExpanded);
+        viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 1)).IsAvailable.Should().BeTrue();
+        viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 2)).IsAvailable.Should().BeTrue();
+        viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 3)).IsAvailable.Should().BeFalse();
+        viewModel.PeopleAlbums.SelectedAlbum = null;
+        viewModel.VisiblePreviewSections.Select(section => section.IsExpanded).Should().Equal(true, false);
+    }
+
+    [Fact]
+    public void CompactBrowseLayout_KeepsThePhotoWallVisible()
+    {
+        var viewModel = new MainWindowViewModel { IsBrowseConditionsExpanded = true };
+
+        viewModel.UpdateResponsiveBrowseLayout(1280, 760);
+
+        viewModel.IsCompactBrowseLayout.Should().BeTrue();
+        viewModel.IsBrowseConditionsExpanded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void BrowseSummary_IsCompactAndThumbnailControlsLiveAtTheSidebarBottom()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        xaml.Should().Contain("x:Name=\"BrowseSummaryCard\"");
+        xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
+        xaml.Should().Contain("DockPanel.Dock=\"Bottom\"");
+        xaml.Should().Contain("Text=\"{Binding ThumbnailSize, StringFormat={}{0:N0}px}\"");
+        xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
+        xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Margin=\"0,10,14,4\" Visibility=");
+        xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Padding=\"12,9\" Margin=\"0,10,14,0\" CornerRadius");
     }
 
     [Fact]

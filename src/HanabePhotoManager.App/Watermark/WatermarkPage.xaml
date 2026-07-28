@@ -1,27 +1,256 @@
+<?xml version="1.0" encoding="utf-8"?>
 <UserControl x:Class="HanabePhotoManager.App.Watermark.WatermarkPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:wm="clr-namespace:HanabePhotoManager.App.Watermark" AllowDrop="True" Drop="Page_Drop" DragOver="Page_DragOver">
-  <UserControl.Resources><BooleanToVisibilityConverter x:Key="BoolToVis"/><wm:BooleanNotConverter x:Key="InverseBoolConverter"/><DataTemplate x:Key="WatermarkButtonTextTemplate"><TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" TextOptions.TextFormattingMode="Display"/></DataTemplate></UserControl.Resources>
-  <Grid Background="{DynamicResource Brush.Background.Canvas}"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-    <StackPanel Margin="0,0,0,16"><TextBlock Text="批量水印" Style="{DynamicResource Layout.PageTitle}"/><TextBlock Text="添加透明 PNG 签名或铺满水印，并保持原始格式、分辨率与长宽比。" Style="{DynamicResource Status.Description}"/></StackPanel>
-    <Grid Grid.Row="1"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="16"/><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="330"/></Grid.ColumnDefinitions>
-      <Border Style="{DynamicResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel><TextBlock Text="批量导入图片" Style="{DynamicResource Layout.SectionTitle}"/><UniformGrid Columns="2" Margin="-4,10,-4,10"><Button Content="批量选择图片" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseImagesCommand}"/><Button Content="导入文件夹" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseFolderCommand}"/></UniformGrid><CheckBox Content="包含子文件夹" Style="{DynamicResource Selection.CheckBox}" IsChecked="{Binding Recursive}"/><TextBlock Text="可批量选择，也可将图片或文件夹直接拖入。" Style="{DynamicResource Status.Description}"/></StackPanel><ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" Margin="0,8" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}"><ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><CheckBox IsChecked="{Binding IsSelected}"/><TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0" TextTrimming="CharacterEllipsis"/><TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{DynamicResource Brush.Status.Success}"/></Grid></DataTemplate></ListBox.ItemTemplate></ListBox><UniformGrid Grid.Row="2" Columns="3"><Button Content="全选" Style="{DynamicResource Button.Toolbar}" Command="{Binding SelectAllCommand}"/><Button Content="移除" Style="{DynamicResource Button.Toolbar}" Command="{Binding RemoveSelectedCommand}"/><Button Content="清空" Style="{DynamicResource Button.Toolbar}" Command="{Binding ClearCommand}"/></UniformGrid></Grid></Border>
-      <Border Grid.Column="2" Style="{DynamicResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition/><RowDefinition Height="Auto"/></Grid.RowDefinitions><Border x:Name="PreviewSurface" Background="{DynamicResource Brush.Viewer.Canvas}" CornerRadius="{DynamicResource Radius.Card}" ClipToBounds="True" MouseLeftButtonDown="Preview_MouseLeftButtonDown" MouseMove="Preview_MouseMove" MouseLeftButtonUp="Preview_MouseLeftButtonUp"><Grid><Image Source="{Binding PreviewImage}" Stretch="Uniform"/><Image Source="{Binding WatermarkPreviewImage}" Stretch="Uniform" Width="{Binding PreviewWatermarkWidth}" Opacity="{Binding PreviewOpacity}" HorizontalAlignment="{Binding PreviewHorizontalAlignment}" VerticalAlignment="{Binding PreviewVerticalAlignment}" Margin="20" IsHitTestVisible="False" Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}"/><Rectangle Opacity="{Binding PreviewOpacity}" IsHitTestVisible="False" Visibility="{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}"><Rectangle.Fill><ImageBrush ImageSource="{Binding WatermarkPreviewImage}" TileMode="Tile" Viewport="{Binding PreviewTileViewport}" ViewportUnits="RelativeToBoundingBox" Stretch="Uniform"><ImageBrush.RelativeTransform><RotateTransform CenterX=".5" CenterY=".5" Angle="{Binding PreviewTileAngle}"/></ImageBrush.RelativeTransform></ImageBrush></Rectangle.Fill></Rectangle><TextBlock Text="选择或拖入图片后实时预览" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}"><Setter Property="Visibility" Value="Visible"/><Style.Triggers><DataTrigger Binding="{Binding HasItems}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></Grid></Border><TextBlock Grid.Row="1" Text="在预览中单击或拖动确定相对位置。" Style="{DynamicResource Status.Description}" HorizontalAlignment="Center"/></Grid></Border>
-      <Border Grid.Column="4" Style="{DynamicResource Card.Default}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><StackPanel AllowDrop="True" DragOver="Watermark_DragOver" Drop="Watermark_Drop"><TextBlock Text="水印设置" Style="{DynamicResource Layout.SectionTitle}"/><Button Content="选择或拖入透明 PNG 水印" ContentTemplate="{StaticResource WatermarkButtonTextTemplate}" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseWatermarkCommand}" HorizontalAlignment="Stretch" MinHeight="40"/><TextBlock Text="{Binding WatermarkPath}" Foreground="{DynamicResource Brush.Text.Tertiary}" TextTrimming="CharacterEllipsis" Margin="4"/></StackPanel><TextBlock Text="水印形式" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,14,0,5" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal"><RadioButton Content="单个签名" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsTiled, Converter={StaticResource InverseBoolConverter}}"/><RadioButton Content="多个铺满" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsTiled}" Margin="18,0"/></StackPanel><TextBlock Text="比例大小" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,14,0,0"/><Slider Value="{Binding SizeRatio}" Minimum="0.03" Maximum="0.6"/><TextBlock Text="透明度" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,10,0,0"/><Slider Value="{Binding Opacity}" Minimum="0.05" Maximum="1"/>
-        <StackPanel Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}"><TextBlock Text="快速位置" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,12,0,4" TextWrapping="Wrap"/><UniformGrid Columns="3"><UniformGrid.Resources><Style TargetType="Button" BasedOn="{StaticResource Button.Secondary}"><Setter Property="MinHeight" Value="40"/><Setter Property="Margin" Value="2"/><Setter Property="ContentTemplate" Value="{StaticResource WatermarkButtonTextTemplate}"/></Style></UniformGrid.Resources><Button Content="左上" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.1"/><Button Content="中上" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.1"/><Button Content="右上" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.1"/><Button Content="左中" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.5"/><Button Content="居中" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.5"/><Button Content="右中" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.5"/><Button Content="左下" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.9"/><Button Content="中下" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.9"/><Button Content="右下" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.9"/></UniformGrid></StackPanel>
-        <StackPanel Visibility="{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}"><TextBlock Text="铺满排列" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,12,0,4"/><CheckBox Content="手动精细调节" IsChecked="{Binding IsManualTile}"/><StackPanel Visibility="{Binding ShowManualTileSettings, Converter={StaticResource BoolToVis}}"><TextBlock Text="横向间距"/><Slider Value="{Binding HorizontalGap}" Maximum="1"/><TextBlock Text="纵向间距"/><Slider Value="{Binding VerticalGap}" Maximum="1"/><TextBlock Text="旋转角度"/><Slider Value="{Binding Angle}" Minimum="-90" Maximum="90"/><CheckBox Content="错列排列" IsChecked="{Binding Stagger}"/></StackPanel><StackPanel Visibility="{Binding IsManualTile, Converter={StaticResource InverseBoolConverter}}"><TextBlock Text="自动密度"/><Slider Value="{Binding Density}" Maximum="1"/></StackPanel></StackPanel>
-      </StackPanel></ScrollViewer></Border>
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <wm:BooleanNotConverter x:Key="InverseBoolConverter" />
+    <DataTemplate x:Key="WatermarkButtonTextTemplate">
+      <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" TextOptions.TextFormattingMode="Display" />
+    </DataTemplate>
+  </UserControl.Resources>
+  <Grid Background="{DynamicResource Brush.Background.Canvas}">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <StackPanel Margin="0,0,0,16">
+      <TextBlock Text="添加透明 PNG 签名或铺满水印，并保持原始格式、分辨率与长宽比。" Style="{DynamicResource Status.Description}" />
+      <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+        <RadioButton Content="图片列表" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsFolderBatchMode, Converter={StaticResource InverseBoolConverter}}" />
+        <RadioButton Content="文件夹批处理" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsFolderBatchMode}" Margin="18,0,0,0" />
+      </StackPanel>
+    </StackPanel>
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="300" />
+        <ColumnDefinition Width="16" />
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="16" />
+        <ColumnDefinition Width="330" />
+      </Grid.ColumnDefinitions>
+      <Border Style="{DynamicResource Card.Default}" Visibility="{Binding IsFolderBatchMode, Converter={StaticResource InverseBoolConverter}}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="批量导入图片" Style="{DynamicResource Layout.SectionTitle}" />
+            <UniformGrid Columns="2" Margin="-4,10,-4,10">
+              <Button Content="批量选择图片" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseImagesCommand}" />
+              <Button Content="导入文件夹" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseFolderCommand}" />
+            </UniformGrid>
+            <CheckBox Content="包含子文件夹" Style="{DynamicResource Selection.CheckBox}" IsChecked="{Binding Recursive}" />
+            <TextBlock Text="可批量选择，也可将图片或文件夹直接拖入。" Style="{DynamicResource Status.Description}" />
+          </StackPanel>
+          <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" Margin="0,8" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Grid>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="Auto" />
+                  </Grid.ColumnDefinitions>
+                  <CheckBox IsChecked="{Binding IsSelected}" />
+                  <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{DynamicResource Brush.Status.Success}" />
+                </Grid>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <UniformGrid Grid.Row="2" Columns="3">
+            <Button Content="全选" Style="{DynamicResource Button.Toolbar}" Command="{Binding SelectAllCommand}" />
+            <Button Content="移除" Style="{DynamicResource Button.Toolbar}" Command="{Binding RemoveSelectedCommand}" />
+            <Button Content="清空" Style="{DynamicResource Button.Toolbar}" Command="{Binding ClearCommand}" />
+          </UniformGrid>
+        </Grid>
+      </Border>
+      <Border Style="{DynamicResource Card.Default}" Visibility="{Binding IsFolderBatchMode, Converter={StaticResource BoolToVis}}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Text="来源文件夹" Style="{DynamicResource Layout.SectionTitle}" />
+            <UniformGrid Columns="2" Margin="-4,10,-4,10">
+              <Button Content="添加文件夹" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseSourceFolderCommand}" />
+              <Button Content="移除所选" Style="{DynamicResource Button.Secondary}" Command="{Binding RemoveSourceFolderCommand}" />
+            </UniformGrid>
+            <CheckBox Content="扫描子文件夹" Style="{DynamicResource Selection.CheckBox}" IsChecked="{Binding ScanSubfolders}" />
+          </StackPanel>
+          <ListBox Grid.Row="1" ItemsSource="{Binding FolderSources}" SelectedItem="{Binding SelectedFolderSource, Mode=TwoWay}" Margin="0,8" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip="{Binding}" />
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel Grid.Row="2">
+            <Button Content="选择输出根目录" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseFolderOutputCommand}" HorizontalAlignment="Stretch" />
+            <TextBlock Text="{Binding FolderOutputDirectory}" Foreground="{DynamicResource Brush.Text.Tertiary}" TextTrimming="CharacterEllipsis" Margin="4" ToolTip="{Binding FolderOutputDirectory}" />
+            <TextBlock Text="{Binding FolderScanCount, StringFormat=扫描数量：{0:N0}}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="4,8,4,0" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border Grid.Column="2" Style="{DynamicResource Card.Default}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Border x:Name="PreviewSurface" Background="{DynamicResource Brush.Viewer.Canvas}" CornerRadius="{DynamicResource Radius.Card}" ClipToBounds="True" MouseLeftButtonDown="Preview_MouseLeftButtonDown" MouseMove="Preview_MouseMove" MouseLeftButtonUp="Preview_MouseLeftButtonUp">
+            <Grid>
+              <Image Source="{Binding PreviewImage}" Stretch="Uniform" />
+              <Image Source="{Binding WatermarkPreviewImage}" Stretch="Uniform" Width="{Binding PreviewWatermarkWidth}" Opacity="{Binding PreviewOpacity}" HorizontalAlignment="{Binding PreviewHorizontalAlignment}" VerticalAlignment="{Binding PreviewVerticalAlignment}" Margin="20" IsHitTestVisible="False" Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}" />
+              <Rectangle Opacity="{Binding PreviewOpacity}" IsHitTestVisible="False" Visibility="{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}">
+                <Rectangle.Fill>
+                  <ImageBrush ImageSource="{Binding WatermarkPreviewImage}" TileMode="Tile" Viewport="{Binding PreviewTileViewport}" ViewportUnits="RelativeToBoundingBox" Stretch="Uniform">
+                    <ImageBrush.RelativeTransform>
+                      <RotateTransform CenterX=".5" CenterY=".5" Angle="{Binding PreviewTileAngle}" />
+                    </ImageBrush.RelativeTransform>
+                  </ImageBrush>
+                </Rectangle.Fill>
+              </Rectangle>
+              <TextBlock Text="选择或拖入图片后实时预览" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                    <Setter Property="Visibility" Value="Visible" />
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding HasItems}" Value="True">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+            </Grid>
+          </Border>
+          <TextBlock Grid.Row="1" Text="在预览中单击或拖动确定相对位置。" Style="{DynamicResource Status.Description}" HorizontalAlignment="Center" />
+        </Grid>
+      </Border>
+      <Border Grid.Column="4" Style="{DynamicResource Card.Default}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <StackPanel AllowDrop="True" DragOver="Watermark_DragOver" Drop="Watermark_Drop">
+              <TextBlock Text="水印设置" Style="{DynamicResource Layout.SectionTitle}" />
+              <Button Content="选择或拖入透明 PNG 水印" ContentTemplate="{StaticResource WatermarkButtonTextTemplate}" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseWatermarkCommand}" HorizontalAlignment="Stretch" MinHeight="40" />
+              <TextBlock Text="{Binding WatermarkPath}" Foreground="{DynamicResource Brush.Text.Tertiary}" TextTrimming="CharacterEllipsis" Margin="4" />
+            </StackPanel>
+            <TextBlock Text="水印形式" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,14,0,5" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal">
+              <RadioButton Content="单个签名" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsTiled, Converter={StaticResource InverseBoolConverter}}" />
+              <RadioButton Content="多个铺满" Style="{DynamicResource Selection.RadioButton}" IsChecked="{Binding IsTiled}" Margin="18,0" />
+            </StackPanel>
+            <TextBlock Text="比例大小" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,14,0,0" />
+            <Slider Value="{Binding SizeRatio}" Minimum="0.03" Maximum="0.6" />
+            <TextBlock Text="透明度" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,10,0,0" />
+            <Slider Value="{Binding Opacity}" Minimum="0.05" Maximum="1" />
+            <StackPanel Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}">
+              <TextBlock Text="快速位置" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,12,0,4" TextWrapping="Wrap" />
+              <UniformGrid Columns="3">
+                <UniformGrid.Resources>
+                  <Style TargetType="Button" BasedOn="{StaticResource Button.Secondary}">
+                    <Setter Property="MinHeight" Value="40" />
+                    <Setter Property="Margin" Value="2" />
+                    <Setter Property="ContentTemplate" Value="{StaticResource WatermarkButtonTextTemplate}" />
+                  </Style>
+                </UniformGrid.Resources>
+                <Button Content="左上" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.1" />
+                <Button Content="中上" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.1" />
+                <Button Content="右上" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.1" />
+                <Button Content="左中" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.5" />
+                <Button Content="居中" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.5" />
+                <Button Content="右中" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.5" />
+                <Button Content="左下" Command="{Binding PlaceCommand}" CommandParameter="0.1,0.9" />
+                <Button Content="中下" Command="{Binding PlaceCommand}" CommandParameter="0.5,0.9" />
+                <Button Content="右下" Command="{Binding PlaceCommand}" CommandParameter="0.9,0.9" />
+              </UniformGrid>
+            </StackPanel>
+            <StackPanel Visibility="{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}">
+              <TextBlock Text="铺满排列" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,12,0,4" />
+              <CheckBox Content="手动精细调节" IsChecked="{Binding IsManualTile}" />
+              <StackPanel Visibility="{Binding ShowManualTileSettings, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="横向间距" />
+                <Slider Value="{Binding HorizontalGap}" Maximum="1" />
+                <TextBlock Text="纵向间距" />
+                <Slider Value="{Binding VerticalGap}" Maximum="1" />
+                <TextBlock Text="旋转角度" />
+                <Slider Value="{Binding Angle}" Minimum="-90" Maximum="90" />
+                <CheckBox Content="错列排列" IsChecked="{Binding Stagger}" />
+              </StackPanel>
+              <StackPanel Visibility="{Binding IsManualTile, Converter={StaticResource InverseBoolConverter}}">
+                <TextBlock Text="自动密度" />
+                <Slider Value="{Binding Density}" Maximum="1" />
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
       <Border Grid.Column="4" Panel.ZIndex="2" VerticalAlignment="Bottom" Margin="10" Padding="12" CornerRadius="12" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
         <StackPanel>
           <TextBlock Text="单张特别调整" FontWeight="SemiBold" FontSize="14" />
           <TextBlock Text="{Binding SelectedItem.Name}" TextTrimming="CharacterEllipsis" Opacity="0.7" Margin="0,3,0,8" />
           <CheckBox Content="为这张照片使用独立参数" IsChecked="{Binding SelectedItem.UseIndividualSettings, Mode=TwoWay}" />
           <Grid Margin="0,8,0,0" IsEnabled="{Binding SelectedItem.UseIndividualSettings}">
-            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-            <TextBlock Text="大小" VerticalAlignment="Center" /><Slider Margin="48,0,0,0" Minimum="0.03" Maximum="0.6" Value="{Binding SelectedItem.SizeRatio, Mode=TwoWay}" />
-            <TextBlock Grid.Row="1" Text="透明度" VerticalAlignment="Center" /><Slider Grid.Row="1" Margin="48,0,0,0" Minimum="0.05" Maximum="1" Value="{Binding SelectedItem.Opacity, Mode=TwoWay}" />
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="大小" VerticalAlignment="Center" />
+            <Slider Margin="48,0,0,0" Minimum="0.03" Maximum="0.6" Value="{Binding SelectedItem.SizeRatio, Mode=TwoWay}" />
+            <TextBlock Grid.Row="1" Text="透明度" VerticalAlignment="Center" />
+            <Slider Grid.Row="1" Margin="48,0,0,0" Minimum="0.05" Maximum="1" Value="{Binding SelectedItem.Opacity, Mode=TwoWay}" />
           </Grid>
         </StackPanel>
       </Border>
     </Grid>
-    <Border Grid.Row="2" Style="{DynamicResource Toolbar.Container}" Margin="0,16,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><StackPanel><StackPanel Orientation="Horizontal"><Button Content="选择导出目录" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseOutputCommand}"/><TextBlock Text="{Binding OutputDirectory}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="8"/><CheckBox Content="保留 EXIF / GPS / ICC" IsChecked="{Binding PreserveMetadata}" VerticalAlignment="Center" Margin="14,0"/></StackPanel><ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" Margin="4,8"/><TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="4,0"/></StackPanel><StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><Button Content="取消" Style="{DynamicResource Button.Secondary}" Command="{Binding CancelCommand}"/><Button Content="导出水印图片" Style="{DynamicResource Button.Primary}" Command="{Binding ExportCommand}" IsEnabled="{Binding CanExport}"/></StackPanel></Grid></Border>
+    <Border Grid.Row="2" Style="{DynamicResource Toolbar.Container}" Margin="0,16,0,0" Visibility="{Binding IsFolderBatchMode, Converter={StaticResource InverseBoolConverter}}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <Button Content="选择导出目录" Style="{DynamicResource Button.Secondary}" Command="{Binding ChooseOutputCommand}" />
+            <TextBlock Text="{Binding OutputDirectory}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="8" />
+            <CheckBox Content="保留 EXIF / GPS / ICC" IsChecked="{Binding PreserveMetadata}" VerticalAlignment="Center" Margin="14,0" />
+          </StackPanel>
+          <ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" Margin="4,8" />
+          <TextBlock Text="{Binding StatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="4,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="取消" Style="{DynamicResource Button.Secondary}" Command="{Binding CancelCommand}" />
+          <Button Content="导出水印图片" Style="{DynamicResource Button.Primary}" Command="{Binding ExportCommand}" IsEnabled="{Binding CanExport}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Border Grid.Row="2" Style="{DynamicResource Toolbar.Container}" Margin="0,16,0,0" Visibility="{Binding IsFolderBatchMode, Converter={StaticResource BoolToVis}}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding FolderScanCount, StringFormat=扫描 {0:N0}}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="4,0,16,0" />
+            <TextBlock Text="{Binding FolderSuccessCount, StringFormat=成功 {0:N0}}" Foreground="{DynamicResource Brush.Status.Success}" Margin="0,0,16,0" />
+            <TextBlock Text="{Binding FolderFailedCount, StringFormat=失败 {0:N0}}" Foreground="{DynamicResource Brush.Status.Danger}" />
+            <CheckBox Content="保留 EXIF / GPS / ICC" IsChecked="{Binding PreserveMetadata}" VerticalAlignment="Center" Margin="18,0,0,0" />
+          </StackPanel>
+          <ProgressBar Height="6" Value="{Binding FolderProgress}" Maximum="100" Margin="4,8" />
+          <TextBlock Text="{Binding FolderStatusText}" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="4,0" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button Content="扫描" Style="{DynamicResource Button.Secondary}" Command="{Binding ScanFoldersCommand}" IsEnabled="{Binding CanScanFolderBatch}" />
+          <Button Content="取消" Style="{DynamicResource Button.Secondary}" Command="{Binding CancelCommand}" />
+          <Button Content="开始批量处理" Style="{DynamicResource Button.Primary}" Command="{Binding StartFolderBatchCommand}" IsEnabled="{Binding CanStartFolderBatch}" />
+        </StackPanel>
+      </Grid>
+    </Border>
   </Grid>
 </UserControl>

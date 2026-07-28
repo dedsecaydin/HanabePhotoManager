@@ -16,6 +16,13 @@
             <CheckBox Content="恢复上次窗口状态" IsChecked="{Binding RestoreWindowState, Mode=TwoWay}" Margin="0,8"/>
             <TextBlock Text="恢复宽度、高度、位置和最大化状态；不可见位置会自动校正到当前屏幕。" Style="{StaticResource Layout.SettingsHint}"/>
             <TextBlock Text="{Binding WindowStateSummary}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+            <Border Style="{StaticResource Layout.SettingsGroup}" Margin="0,24,0,0">
+              <StackPanel>
+                <TextBlock Text="新手指南" Style="{StaticResource Layout.SectionTitle}"/>
+                <TextBlock Text="重新查看照片库、导入、AI、人物识别和批处理工具的使用方法。" Style="{StaticResource Layout.SettingsHint}" Margin="0,4,0,12"/>
+                <Button Content="再次查看新手指南" Command="{Binding ReplayOnboardingCommand}" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Left"/>
+              </StackPanel>
+            </Border>
           </StackPanel>
         </ScrollViewer>
       </TabItem>
@@ -124,6 +131,20 @@
             <TextBlock Text="性能" Style="{StaticResource Layout.SectionTitle}" Margin="0,14,0,8"/>
             <TextBlock Text="推理设备" Style="{StaticResource Layout.SettingsFieldLabel}"/><ComboBox Style="{StaticResource Input.SettingsComboBox}" ItemsSource="{Binding InferenceDevices}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding InferenceDevice, Mode=TwoWay}"/>
             <TextBlock Text="{Binding InferenceProviderStatus}" Style="{StaticResource Layout.SettingsHint}" Margin="0,8,0,0"/>
+            <TextBlock Text="人脸识别" Style="{StaticResource Layout.SectionTitle}" Margin="0,14,0,8"/>
+            <TextBlock Text="识别引擎" Style="{StaticResource Layout.SettingsFieldLabel}"/>
+            <ComboBox Style="{StaticResource Input.SettingsComboBox}" ItemsSource="{Binding FaceRecognitionEngines}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding FaceRecognitionEngine, Mode=TwoWay}"/>
+            <TextBlock Text="性能模式" Style="{StaticResource Layout.SettingsFieldLabel}" Margin="0,12,0,6"/>
+            <ComboBox Style="{StaticResource Input.SettingsComboBox}" ItemsSource="{Binding FaceRecognitionProfiles}" DisplayMemberPath="Label" SelectedValuePath="Value" SelectedValue="{Binding FaceRecognitionProfile, Mode=TwoWay}"/>
+            <TextBlock Text="ArcFace 检测器 ONNX 路径" Style="{StaticResource Layout.SettingsFieldLabel}" Margin="0,12,0,6"/>
+            <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding ArcFaceDetectorModelPath, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBlock Text="ArcFace R100 识别器 ONNX 路径" Style="{StaticResource Layout.SettingsFieldLabel}" Margin="0,12,0,6"/>
+            <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding ArcFaceRecognizerModelPath, UpdateSourceTrigger=PropertyChanged}"/>
+            <TextBlock Text="匹配阈值（ArcFace 默认 0.45）" Style="{StaticResource Layout.SettingsFieldLabel}" Margin="0,12,0,6"/>
+            <Slider Width="360" HorizontalAlignment="Left" Minimum="0.2" Maximum="0.9" Value="{Binding ArcFaceMatchThreshold, Mode=TwoWay}"/>
+            <CheckBox Content="我确认模型由我提供，且许可允许在本应用中使用" IsChecked="{Binding ArcFaceModelLicenseConfirmed, Mode=TwoWay}" Margin="0,12,0,6"/>
+            <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding ArcFaceModelLicenseDescription, UpdateSourceTrigger=PropertyChanged}" ToolTip="填写模型来源或许可说明"/>
+            <TextBlock Text="{Binding ArcFaceAvailabilityReason}" Style="{StaticResource Layout.SettingsHint}" Margin="0,8,0,0"/>
             <TextBlock Text="存储与诊断" Style="{StaticResource Layout.SectionTitle}" Margin="0,14,0,8"/>
             <TextBlock Text="settings.json、主题、元数据、人物相册、地图缓存与云会话均位于当前 Windows 用户的本机应用数据目录。第一期只读展示，不提供清理、迁移或修改路径。" Style="{StaticResource Layout.SettingsHint}"/>
             <TextBlock Text="快捷键" Style="{StaticResource Layout.SectionTitle}" Margin="0,14,0,8"/>

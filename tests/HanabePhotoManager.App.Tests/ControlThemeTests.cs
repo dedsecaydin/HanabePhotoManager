@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.RegularExpressions;
 using FluentAssertions;
+using HanabePhotoManager.App.Services;
+using HanabePhotoManager.App.ViewModels;
 using Xunit;
 
 namespace HanabePhotoManager.App.Tests;
@@ -231,6 +233,35 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
+    public void ApplicationShell_OffersReplayableFeatureGuideAndFriendlyFaceChoiceLabels()
+    {
+        var settingsXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        var mainXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        settingsXaml.Should().Contain("新手指南");
+        settingsXaml.Should().Contain("ReplayOnboardingCommand");
+        mainXaml.Should().Contain("Hanabe 新手指南");
+        mainXaml.Should().Contain("IsOnboardingVisible");
+        mainXaml.Should().Contain("PreviousOnboardingStepCommand");
+        mainXaml.Should().Contain("NextOnboardingStepCommand");
+        mainXaml.Should().Contain("PlacementTarget=\"{Binding ElementName=OnboardingAnalyzeButton}\"");
+        mainXaml.Should().Contain("PlacementTarget=\"{Binding ElementName=OnboardingImportButton}\"");
+        mainXaml.Should().Contain("选择图库根目录");
+        mainXaml.Should().Contain("选择来源文件夹");
+        mainXaml.Should().Contain("暂时不用介绍了");
+        mainXaml.Should().Contain("请继续给我介绍");
+        mainXaml.Should().Contain("ContinueOnboardingCommand");
+        mainXaml.Should().Contain("StopOnboardingCommand");
+
+        new FaceEngineChoice(FaceRecognitionEngineKind.YuNetSFace, "YuNet + SFace")
+            .ToString().Should().Be("YuNet + SFace");
+        new FaceProfileChoice(FaceRecognitionProfile.Balanced, "均衡")
+            .ToString().Should().Be("均衡");
+    }
+
+    [Fact]
     public void WatermarkPreview_RendersSeparateSignatureAndTiledLayers()
     {
         var watermarkXaml = File.ReadAllText(Path.Combine(
@@ -243,6 +274,17 @@ public sealed class ControlThemeTests
         watermarkXaml.Should().Contain("Visibility=\"{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}\"");
         watermarkXaml.Should().Contain("Visibility=\"{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}\"");
         watermarkXaml.Should().Contain("DataTrigger Binding=\"{Binding HasItems}\" Value=\"True\"");
+    }
+
+    [Fact]
+    public void FaceReferenceContent_IsClippedToItsRoundedFrame()
+    {
+        var mainXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        mainXaml.Should().Contain("x:Name=\"FaceReferenceClipSurface\"");
+        mainXaml.Should().Contain("<Grid.OpacityMask>");
+        mainXaml.Should().Contain("CornerRadius=\"21\"");
     }
 
     private static string FindSourceRoot()

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Hanabe Photo Manager"
+    Manufacturer="Hanabe"
+    Version="$(ProductVersion)"
+    UpgradeCode="{4F4DC23B-3E1D-4C72-92A1-3A5D6F277F54}"
+    Language="2052"
+    Codepage="936"
+    Scope="perMachine"
+    InstallerVersion="500"
+    Compressed="yes">
+
+    <SummaryInformation
+      Description="Hanabe Photo Manager"
+      Manufacturer="Hanabe"
+      Keywords="Hanabe;Photo;Manager" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="!(loc.DowngradeErrorMessage)"
+      Schedule="afterInstallInitialize" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Hanabe Photo Manager" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Hanabe Photo Manager" />
+    </StandardDirectory>
+
+    <Files Include="!(bindpath.Payload)\**" Directory="INSTALLFOLDER">
+      <Exclude Files="!(bindpath.Payload)\HanabePhotoManager.App.exe" />
+      <Exclude Files="!(bindpath.Payload)\e_sqlite3.dll" />
+    </Files>
+
+    <File
+      Source="!(bindpath.Payload)\e_sqlite3.dll"
+      Directory="INSTALLFOLDER"
+      DefaultLanguage="0" />
+
+    <Component Id="ApplicationEntryPoints" Directory="INSTALLFOLDER" Guid="*" Bitness="always64">
+      <File
+        Id="HanabePhotoManagerExe"
+        Source="!(bindpath.Payload)\HanabePhotoManager.App.exe"
+        KeyPath="yes">
+        <Shortcut
+          Id="DesktopShortcut"
+          Directory="DesktopFolder"
+          Name="Hanabe Photo Manager"
+          Description="Hanabe Photo Manager"
+          Advertise="yes"
+          WorkingDirectory="INSTALLFOLDER" />
+        <Shortcut
+          Id="StartMenuShortcut"
+          Directory="ApplicationProgramsFolder"
+          Name="Hanabe Photo Manager"
+          Description="Hanabe Photo Manager"
+          Advertise="yes"
+          WorkingDirectory="INSTALLFOLDER" />
+      </File>
+      <RemoveFolder
+        Id="RemoveApplicationProgramsFolder"
+        Directory="ApplicationProgramsFolder"
+        On="uninstall" />
+    </Component>
+  </Package>
+</Wix>

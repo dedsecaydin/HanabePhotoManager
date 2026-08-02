@@ -1,0 +1,19 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <OutputType>Package</OutputType>
+    <OutputName>HanabePhotoManager-x64</OutputName>
+    <ProductVersion Condition="'$(ProductVersion)' == ''">0.1.0</ProductVersion>
+    <PayloadDir Condition="'$(PayloadDir)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\0.1.0\payload\win-x64</PayloadDir>
+    <DefineConstants>ProductVersion=$(ProductVersion)</DefineConstants>
+    <Cultures>zh-CN</Cultures>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <SuppressSpecificWarnings>1101</SuppressSpecificWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <BindPath Include="$(PayloadDir)" BindName="Payload" />
+  </ItemGroup>
+
+</Project>

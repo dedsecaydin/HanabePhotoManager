@@ -23,7 +23,7 @@
 
 ## Version Check
 
-Inspect the App project, assembly metadata, release notes, and publish script for all version-bearing values. The current script output name includes `v1.0`; treat it as a release parameter that must match the approved version, not an automatically current value. Confirm persisted settings, metadata, queues, indexes, and sessions remain compatible or have a tested migration strategy.
+Select one normalized semantic version such as `0.2.0-alpha.1`. The publish command passes this value to application assembly metadata and uses it as the release directory name. Confirm persisted settings, metadata, queues, indexes, and sessions remain compatible or have a tested migration strategy.
 
 ## Build and Test Gate
 
@@ -38,15 +38,15 @@ All required tests must pass before publishing.
 ## Publish
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools/Publish-Clean.ps1
+powershell -ExecutionPolicy Bypass -File tools/Publish-Clean.ps1 -Version 0.2.0-alpha.1 -OutputRoot artifacts
 ```
 
-This is the formal release path. It publishes the App for `win-x64`, self-contained with ReadyToRun, preserves required WebView2 runtime DLLs, removes only accidental WebView2 user-data inside the verified project output, and produces a ZIP under `artifacts/`. If requirements change, update the script and this document together.
+This is the formal release path. It writes a clean, self-contained ReadyToRun payload to `artifacts/<version>/payload/win-x64`, preserves required WebView2 runtime DLLs, removes only accidental WebView2 user-data inside the verified project output, and records version, source revision, runtime, and checksum inputs in `release-manifest.json`. Output is accepted only under the repository on the D drive. If requirements change, update the script and this document together.
 
 ## Artifact Inspection
 
-- Directory and ZIP names match the approved version.
-- The extracted ZIP starts without a separately installed .NET runtime.
+- The release directory and manifest match the approved version.
+- The published payload starts without a separately installed .NET runtime.
 - Required DLLs, native runtimes, themes, icons, map/model assets, licenses, and notices exist.
 - No source, tests, `.git`, `.artifacts`, logs, browser data, sessions, credentials, settings, or personal media are included.
 - Validate a freshly extracted copy, not only the source publish directory.

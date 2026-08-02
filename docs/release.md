@@ -41,12 +41,30 @@ All required tests must pass before publishing.
 powershell -ExecutionPolicy Bypass -File tools/Publish-Clean.ps1 -Version 0.2.0-alpha.1 -OutputRoot artifacts
 ```
 
-This is the formal release path. It writes a clean, self-contained ReadyToRun payload to `artifacts/<version>/payload/win-x64`, preserves required WebView2 runtime DLLs, removes only accidental WebView2 user-data inside the verified project output, and records version, source revision, runtime, and checksum inputs in `release-manifest.json`. Output is accepted only under the repository on the D drive. If requirements change, update the script and this document together.
+This is the formal release path. It writes a clean, self-contained ReadyToRun payload to `artifacts/<version>/payload/win-x64`, builds the x64 MSI and Burn bundle, and emits the primary `artifacts/<version>/HanabePhotoManager-Setup-x64.exe` artifact with a SHA-256 file and `release-manifest.json`. It preserves required WebView2 runtime DLLs and removes only accidental WebView2 user-data inside the verified project output. Output is accepted only under the repository on the D drive. There is no user-facing portable ZIP for the installed release.
+
+## Local Installation Verification
+
+First review the exact paths and actions without changing the machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/Test-InstalledRelease.ps1 -Version 0.2.0-alpha.1
+```
+
+After reviewing the dry run, open an elevated PowerShell session and execute the installation gate. Add `-PreviousSetupPath <older-setup>` to exercise a real upgrade:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools/Test-InstalledRelease.ps1 -Version 0.2.0-alpha.1 -Execute
+```
+
+The gate installs (or upgrades) the current bundle, requires the common desktop shortcut to resolve exactly to `Program Files\Hanabe Photo Manager\HanabePhotoManager.App.exe`, observes application startup, verifies uninstall preserves a sentinel under the application-data root, and reinstalls the current version so the machine is left ready to use. Logs and JSON evidence stay under `.artifacts/installed-release/<version>/`; the script never removes the photo library or the application-data root.
 
 ## Artifact Inspection
 
 - The release directory and manifest match the approved version.
 - The published payload starts without a separately installed .NET runtime.
+- `HanabePhotoManager-Setup-x64.exe` and its `.sha256` file are present at the release root and the checksum recomputes successfully.
+- The MSI database has the approved product version, stable upgrade code, per-machine scope, and desktop/Start menu shortcuts.
 - Required DLLs, native runtimes, themes, icons, map/model assets, licenses, and notices exist.
 - No source, tests, `.git`, `.artifacts`, logs, browser data, sessions, credentials, settings, or personal media are included.
 - Validate a freshly extracted copy, not only the source publish directory.

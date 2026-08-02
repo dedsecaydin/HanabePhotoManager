@@ -9,6 +9,7 @@ $packageLocalizationPath = Join-Path $repositoryRoot "installer\HanabePhotoManag
 $setupProjectPath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Setup\HanabePhotoManager.Setup.wixproj"
 $bundleSourcePath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Setup\Bundle.wxs"
 $publishScriptPath = Join-Path $repositoryRoot "tools\Publish-Clean.ps1"
+$installedReleaseToolPath = Join-Path $repositoryRoot "tools\Test-InstalledRelease.ps1"
 $failures = [Collections.Generic.List[string]]::new()
 
 function Read-RequiredSource {
@@ -52,6 +53,7 @@ $packageLocalization = Read-RequiredSource $packageLocalizationPath
 $setupProject = Read-RequiredSource $setupProjectPath
 $bundleSource = Read-RequiredSource $bundleSourcePath
 $publishScript = Read-RequiredSource $publishScriptPath
+$installedReleaseTool = Read-RequiredSource $installedReleaseToolPath
 
 Assert-Matches $packageProject '<Project\s+Sdk="WixToolset\.Sdk/5\.[^"]+"' `
     "The MSI must use the SDK-style WiX 5 project restored by MSBuild/NuGet."
@@ -107,6 +109,22 @@ Assert-Matches $publishScript 'HanabePhotoManager-Setup-x64\.exe\.sha256' `
     "Publish-Clean must produce a SHA-256 checksum beside Setup."
 Assert-Matches $publishScript 'HanabePhotoManager\.Setup\.wixproj' `
     "Publish-Clean must orchestrate the Burn project."
+Assert-Matches $installedReleaseTool '\[switch\]\$Execute' `
+    "Installed release verification must default to a non-mutating dry run."
+Assert-Matches $installedReleaseTool '\$expectedInstalledExecutable\s*=\s*Join-Path\s+\$env:ProgramFiles\s+"Hanabe Photo Manager\\HanabePhotoManager\.App\.exe"' `
+    "Installed release verification must require the exact Program Files executable path."
+Assert-Matches $installedReleaseTool 'CommonDesktopDirectory' `
+    "Installed release verification must resolve the stable common desktop shortcut."
+Assert-Matches $installedReleaseTool '\[IO\.Path\]::GetFullPath\(\$shortcut\.TargetPath\)' `
+    "Installed release verification must canonicalize the shortcut target before comparison."
+Assert-Matches $installedReleaseTool 'WaitForExit\(\$ProcessTimeoutSeconds\s*\*\s*1000\)' `
+    "Installer processes must have an explicit timeout."
+Assert-Matches $installedReleaseTool '\$process\.ExitCode\s+-notin\s+@\(0,\s*1641,\s*3010\)' `
+    "Installer verification must handle success and reboot-required exit codes explicitly."
+Assert-Matches $installedReleaseTool 'LocalApplicationData[^\r\n]+HanabePhotoManager' `
+    "Installed release verification must protect the application data root across uninstall."
+Assert-Matches $installedReleaseTool 'probeContentAfterUninstall' `
+    "Installed release verification must confirm its user-data probe survives uninstall."
 
 if ($failures.Count -gt 0) {
     foreach ($failure in $failures) {

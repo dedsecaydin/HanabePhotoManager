@@ -27,6 +27,13 @@ $releaseRoot = Join-Path $output $Version
 $publish = Join-Path $releaseRoot "payload\win-x64"
 $manifestPath = Join-Path $releaseRoot "release-manifest.json"
 $project = Join-Path $root "src\HanabePhotoManager.App\HanabePhotoManager.App.csproj"
+$installerProject = Join-Path $root "installer\HanabePhotoManager.Installer\HanabePhotoManager.Installer.wixproj"
+$setupProject = Join-Path $root "installer\HanabePhotoManager.Setup\HanabePhotoManager.Setup.wixproj"
+$msiBuildOutput = Join-Path $releaseRoot "installer-build"
+$setupBuildOutput = Join-Path $releaseRoot "setup-build"
+$msiArtifact = Join-Path $releaseRoot "HanabePhotoManager-x64.msi"
+$setupArtifact = Join-Path $releaseRoot "HanabePhotoManager-Setup-x64.exe"
+$setupChecksumPath = Join-Path $releaseRoot "HanabePhotoManager-Setup-x64.exe.sha256"
 
 if (Test-Path -LiteralPath $releaseRoot) {
     Remove-Item -LiteralPath $releaseRoot -Recurse -Force
@@ -43,6 +50,29 @@ Get-ChildItem -LiteralPath $publish -Directory -Recurse -Force |
     Sort-Object FullName -Descending |
     Remove-Item -Recurse -Force
 
+$msiVersion = $Version.Split('-')[0]
+& dotnet build $installerProject -c Release "-p:ProductVersion=$msiVersion" "-p:PayloadDir=$publish" "-p:OutputPath=$msiBuildOutput\"
+if ($LASTEXITCODE -ne 0) { throw "MSI build failed: $LASTEXITCODE" }
+
+$builtMsi = Join-Path $msiBuildOutput "zh-CN\HanabePhotoManager-x64.msi"
+if (-not (Test-Path -LiteralPath $builtMsi -PathType Leaf)) {
+    throw "MSI build did not produce the expected artifact: $builtMsi"
+}
+Copy-Item -LiteralPath $builtMsi -Destination $msiArtifact -Force
+
+& dotnet build $setupProject -c Release "-p:BundleVersion=$Version" "-p:MsiPath=$msiArtifact" "-p:OutputPath=$setupBuildOutput\"
+if ($LASTEXITCODE -ne 0) { throw "Setup build failed: $LASTEXITCODE" }
+
+$builtSetup = Join-Path $setupBuildOutput "HanabePhotoManager-Setup-x64.exe"
+if (-not (Test-Path -LiteralPath $builtSetup -PathType Leaf)) {
+    throw "Setup build did not produce the expected artifact: $builtSetup"
+}
+Copy-Item -LiteralPath $builtSetup -Destination $setupArtifact -Force
+
+$setupChecksum = (Get-FileHash -LiteralPath $setupArtifact -Algorithm SHA256).Hash.ToLowerInvariant()
+$msiChecksum = (Get-FileHash -LiteralPath $msiArtifact -Algorithm SHA256).Hash.ToLowerInvariant()
+"$setupChecksum  HanabePhotoManager-Setup-x64.exe" | Set-Content -LiteralPath $setupChecksumPath -Encoding ASCII
+
 $sourceRevision = (& git -C $root rev-parse HEAD 2>$null)
 if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sourceRevision)) {
     $sourceRevision = "unknown"
@@ -54,9 +84,20 @@ $manifest = [ordered]@{
     runtime = "win-x64"
     generatedAtUtc = [DateTime]::UtcNow.ToString("o")
     checksumInputs = @(
-        "payload/win-x64"
+        "HanabePhotoManager-Setup-x64.exe"
+        "HanabePhotoManager-x64.msi"
+    )
+    artifacts = @(
+        [ordered]@{
+            path = "HanabePhotoManager-Setup-x64.exe"
+            sha256 = $setupChecksum
+        }
+        [ordered]@{
+            path = "HanabePhotoManager-x64.msi"
+            sha256 = $msiChecksum
+        }
     )
 }
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
-Write-Host $publish
+Write-Host $setupArtifact

@@ -1,0 +1,17 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <OutputType>Bundle</OutputType>
+    <OutputName>HanabePhotoManager-Setup-x64</OutputName>
+    <BundleVersion Condition="'$(BundleVersion)' == ''">0.1.0</BundleVersion>
+    <MsiPath Condition="'$(MsiPath)' == ''">$(MSBuildThisFileDirectory)..\..\artifacts\0.1.0\HanabePhotoManager-x64.msi</MsiPath>
+    <DefineConstants>BundleVersion=$(BundleVersion);MsiPath=$(MsiPath)</DefineConstants>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.BootstrapperApplications.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

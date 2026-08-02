@@ -221,6 +221,7 @@ public sealed class MainWindowViewModel : ObservableObject
                     foreach (var section in VisiblePreviewSections)
                         _previewDateExpansion[section.Key] = section.IsExpanded;
                     _personFilterOwnsExpansion = true;
+                    ShowLatestPersonDateMonth(PeopleAlbums.SelectedAlbum);
                 }
                 else
                 {
@@ -1556,6 +1557,24 @@ public sealed class MainWindowViewModel : ObservableObject
         _calendarDisplayMonth = _calendarDisplayMonth.AddMonths(offset);
         OnPropertyChanged(nameof(CalendarMonthTitle));
         RebuildCalendarDays();
+    }
+
+    private void ShowLatestPersonDateMonth(PersonAlbumItemViewModel person)
+    {
+        var latest = FlattenDateNodes(LibraryDates)
+            .Where(node => node.Date is not null && person.PhotoPaths.Any(path => IsPathInside(path, node.FullPath)))
+            .Select(node => node.Date!.Value)
+            .OrderBy(date => date.Year)
+            .ThenBy(date => date.Month)
+            .ThenBy(date => date.Day)
+            .LastOrDefault();
+        if (latest == default) return;
+
+        var month = new DateTime(latest.Year, latest.Month, 1);
+        if (_calendarDisplayMonth == month) return;
+
+        _calendarDisplayMonth = month;
+        OnPropertyChanged(nameof(CalendarMonthTitle));
     }
 
     private void SelectCalendarDay(CalendarDayViewModel? day)

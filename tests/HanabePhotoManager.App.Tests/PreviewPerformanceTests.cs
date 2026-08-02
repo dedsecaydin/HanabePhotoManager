@@ -160,6 +160,7 @@ public sealed class PreviewPerformanceTests
         viewModel.PeopleAlbums.SelectedAlbum = person;
 
         viewModel.VisiblePreviewSections.Should().OnlyContain(section => section.IsExpanded);
+        viewModel.CalendarMonthTitle.Should().Be("2026年 7月");
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 1)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 2)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 3)).IsAvailable.Should().BeFalse();

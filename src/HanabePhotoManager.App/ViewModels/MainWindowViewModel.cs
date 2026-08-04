@@ -73,6 +73,11 @@ public sealed class MainWindowViewModel : ObservableObject
         ".mp4", ".mov", ".xml", ".lrf", ".aac"
     ];
 
+    private static readonly HashSet<string> ContentScanExtensions = new(
+        [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
+         ".mp4", ".mov"],
+        StringComparer.OrdinalIgnoreCase);
+
     private static readonly IReadOnlyList<string> DefaultNavigationOrder =
     [
         "Home",
@@ -111,9 +116,11 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly CloudConnectionSettingsService _cloudConnectionService = new();
     private readonly CameraFolderDateResolver _dateResolver = new();
     private readonly MediaGroupBuilder _groupBuilder = new(new MediaClassifier(["ARW", "CR2", "CR3"]));
-    private readonly ImportPlanBuilder _planBuilder = new(new DestinationProbe(new Sha256FileHasher()));
+    private readonly Sha256FileHasher _fileHasher = new();
+    private readonly ImportPlanBuilder _planBuilder;
     private readonly LibraryDirectoryInitializer _directoryInitializer = new();
-    private readonly VerifiedFileTransfer _transfer = new(new Sha256FileHasher());
+    private readonly VerifiedFileTransfer _transfer;
+    private readonly LibraryContentScanner _contentScanner;
     private readonly LocalPersonClusterer _personClusterer = new();
     private readonly LibraryMaintenanceService _libraryMaintenanceService = new();
     private readonly RetouchedMediaIndex _retouchedMediaIndex = new();
@@ -214,6 +221,9 @@ public sealed class MainWindowViewModel : ObservableObject
         IStartupRegistrationService? startupRegistrationService = null,
         LibraryDateSnapshotService? libraryDateSnapshotService = null)
     {
+        _planBuilder = new ImportPlanBuilder(new DestinationProbe(_fileHasher));
+        _transfer = new VerifiedFileTransfer(_fileHasher);
+        _contentScanner = new LibraryContentScanner(_fileHasher);
         _startupRegistrationService = startupRegistrationService ?? new WindowsStartupRegistrationService();
         _wallpaperService = wallpaperService ?? new WindowsWallpaperService();
         _mediaMetadataStore = mediaMetadataStore ?? new MediaMetadataStore();
@@ -2486,6 +2496,18 @@ public sealed class MainWindowViewModel : ObservableObject
 
         try
         {
+            ProgressLabel = "正在扫描图库已有内容…";
+            Dictionary<long, List<string>>? librarySizeMap = null;
+            try
+            {
+                librarySizeMap = await _contentScanner.BuildSizeMapAsync(
+                    LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception) { /* library scan failure is non-fatal; import continues without cross-library dedup */ }
+
+            var sessionImportedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
             var dateGroups = items
                 .Where(item => item.TargetDate is not null)
                 .GroupBy(item => item.TargetDate!.Value)
@@ -2502,6 +2524,8 @@ public sealed class MainWindowViewModel : ObservableObject
                     dateGroup.Select(item => item.ToMediaGroup()).ToArray(),
                     dateGroup.Key,
                     deleteSourcesAfterVerify,
+                    librarySizeMap,
+                    sessionImportedHashes,
                     cancellationToken).ConfigureAwait(true);
 
                 success += result.Success;
@@ -2533,6 +2557,8 @@ public sealed class MainWindowViewModel : ObservableObject
                 ResetPreviewState("预览未加载");
                 StatusMessage = "导入完成。预览已标记为待刷新；进入预览页时再读取缩略图。";
             }
+
+            await AuditLibraryDuplicatesAsync(cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
@@ -2559,7 +2585,13 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private async Task<ImportRunResult> RunImportDateAsync(IReadOnlyList<MediaGroup> groups, LibraryDate date, bool deleteSourcesAfterVerify, CancellationToken cancellationToken)
+    private async Task<ImportRunResult> RunImportDateAsync(
+        IReadOnlyList<MediaGroup> groups,
+        LibraryDate date,
+        bool deleteSourcesAfterVerify,
+        Dictionary<long, List<string>>? librarySizeMap,
+        HashSet<string> sessionImportedHashes,
+        CancellationToken cancellationToken)
     {
         var success = 0;
         var failed = 0;
@@ -2588,6 +2620,32 @@ public sealed class MainWindowViewModel : ObservableObject
                 continue;
             }
 
+            // Cross-library content duplicate check: when the destination is new
+            // (ConflictKind.None) verify the source hash against the library index.
+            if (item.Conflict == ConflictKind.None && librarySizeMap is not null)
+            {
+                var duplicatePath = await _contentScanner.FindContentDuplicateAsync(
+                    item.Group.Primary.FullPath, librarySizeMap, cancellationToken).ConfigureAwait(true);
+
+                if (duplicatePath is not null)
+                {
+                    skipped++;
+                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与图库已有文件内容相同（{Path.GetFileName(duplicatePath)}），已跳过。");
+                    continue;
+                }
+
+                // Also check against files imported earlier in this same session.
+                var sourceHash = await _fileHasher.ComputeSha256Async(
+                    item.Group.Primary.FullPath, cancellationToken).ConfigureAwait(true);
+                if (sessionImportedHashes.Contains(sourceHash))
+                {
+                    skipped++;
+                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与本次导入的其他文件内容相同，已跳过。");
+                    continue;
+                }
+                sessionImportedHashes.Add(sourceHash);
+            }
+
             var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
             if (result.Success)
             {
@@ -2610,6 +2668,53 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         return new ImportRunResult(success, skipped, failed, lines);
+    }
+
+    private async Task AuditLibraryDuplicatesAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(LibraryRoot) || !Directory.Exists(LibraryRoot))
+            return;
+
+        List<List<string>> duplicateGroups;
+        try
+        {
+            duplicateGroups = await _contentScanner.FindAllDuplicatesAsync(
+                LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception) { return; }
+
+        if (duplicateGroups.Count == 0)
+            return;
+
+        var filesToDelete = ShowDuplicateReviewDialog(duplicateGroups);
+        if (filesToDelete is null || filesToDelete.Count == 0)
+            return;
+
+        var deletedCount = 0;
+        foreach (var path in filesToDelete)
+        {
+            try { if (File.Exists(path)) File.Delete(path); deletedCount++; }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        if (deletedCount > 0)
+        {
+            LibraryResequenceService.ResequenceLibrary(LibraryRoot);
+            if (CurrentPage == "Preview")
+                await RefreshLibraryAsync().ConfigureAwait(true);
+            StatusMessage = $"已清理 {deletedCount} 个重复文件，序列已重新排列。";
+        }
+    }
+
+    private static HashSet<string>? ShowDuplicateReviewDialog(List<List<string>> duplicateGroups)
+    {
+        var window = new DuplicateReviewWindow(duplicateGroups)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        return window.ShowDialog() == true ? window.FilesToDelete : null;
     }
 
     private async Task AskForDateRemarksAsync(IReadOnlyList<LibraryDate> dates)

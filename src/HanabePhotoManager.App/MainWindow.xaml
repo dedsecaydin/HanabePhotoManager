@@ -471,6 +471,9 @@
                 <Button Content="选择库根目录" Command="{Binding BrowseLibraryCommand}" />
                 <Button Content="刷新" Command="{Binding RefreshLibraryCommand}" />
               </StackPanel>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
+                <Button Content="扫描重复内容" Command="{Binding ScanLibraryDuplicatesCommand}" />
+              </StackPanel>
             </Grid>
           </Border>
           <Grid>

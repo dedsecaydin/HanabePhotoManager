@@ -275,6 +275,7 @@ public sealed class MainWindowViewModel : ObservableObject
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
+        ScanLibraryDuplicatesCommand = new AsyncRelayCommand(ScanLibraryDuplicatesAsync, CanRunCommand);
         OpenSelectedDateCommand = new RelayCommand(OpenSelectedDate, () => Directory.Exists(SelectedDatePath));
         RefreshDevicesCommand = new RelayCommand(RefreshConnectedDevices);
         InspectDeviceCommand = new RelayCommand<ConnectedDeviceViewModel>(InspectDevice);
@@ -913,6 +914,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand ShowAllDatesCommand { get; }
 
     public IAsyncRelayCommand ResetBrowseConditionsCommand { get; }
+
+    public IAsyncRelayCommand ScanLibraryDuplicatesCommand { get; }
 
     public bool IsBrowseConditionsExpanded
     {
@@ -2787,6 +2790,11 @@ public sealed class MainWindowViewModel : ObservableObject
             Owner = System.Windows.Application.Current.MainWindow
         };
         return window.ShowDialog() == true ? window.FilesToDelete : null;
+    }
+
+    private async Task ScanLibraryDuplicatesAsync()
+    {
+        await AuditLibraryDuplicatesAsync(CancellationToken.None).ConfigureAwait(true);
     }
 
     private async Task AskForDateRemarksAsync(IReadOnlyList<LibraryDate> dates)

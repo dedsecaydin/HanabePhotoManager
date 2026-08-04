@@ -178,6 +178,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private double _windowHeight = 980;
     private bool _isBusy;
     private bool _isProgressIndeterminate;
+    private bool _isDuplicateScanRunning;
     private bool _launchAtStartup;
     private bool _restoreWindowState = true;
     private double? _windowLeft;
@@ -1160,6 +1161,12 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         get => _isProgressIndeterminate;
         set => SetProperty(ref _isProgressIndeterminate, value);
+    }
+
+    public bool IsDuplicateScanRunning
+    {
+        get => _isDuplicateScanRunning;
+        set => SetProperty(ref _isDuplicateScanRunning, value);
     }
 
     public bool IsBusy
@@ -2757,6 +2764,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         IsBusy = true;
         IsProgressIndeterminate = true;
+        IsDuplicateScanRunning = true;
         ProgressValue = 0;
         ProgressLabel = "正在扫描重复内容…";
         StatusMessage = "正在比对文件哈希与视觉指纹，请稍候…";
@@ -2786,6 +2794,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             IsBusy = false;
             IsProgressIndeterminate = false;
+            IsDuplicateScanRunning = false;
         }
 
         var candidates = new List<DuplicateCandidateGroup>();

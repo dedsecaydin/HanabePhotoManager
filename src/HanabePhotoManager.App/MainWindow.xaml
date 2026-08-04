@@ -473,6 +473,10 @@
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
                 <Button Content="扫描重复内容" Command="{Binding ScanLibraryDuplicatesCommand}" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="{Binding IsDuplicateScanRunning, Converter={StaticResource BoolToVis}}">
+                  <ProgressBar Width="120" Height="6" IsIndeterminate="True" />
+                  <TextBlock Text="{Binding ProgressLabel}" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
               </StackPanel>
             </Grid>
           </Border>

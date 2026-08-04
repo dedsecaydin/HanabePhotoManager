@@ -12,6 +12,8 @@ Deliver Hanabe Photo Manager as a Windows installation that can be found and ope
 - The desktop and Start menu shortcuts are recreated or repaired during upgrade and point to the newly installed executable.
 - Downgrades are blocked with a clear message. Uninstall removes installed binaries and shortcuts but never deletes the photo library or user application data.
 - The app's existing `设置 → 启动与窗口 → 开机自启动` option remains visible. Remote-sharing service startup status is added by the remote-sharing feature branch, separately from application startup.
+- Settings exposes a selectable version tree. The current version is marked, newer catalog entries are marked `可更新`, older entries are view-only history, and the selected release notes are read in a bounded vertical scrolling pane.
+- Application version, release catalog, MSI version, Setup version, and artifact name come from the same release version input.
 
 ## Packaging architecture
 
@@ -30,4 +32,3 @@ The initial local build installs per machine under `Program Files\Hanabe Photo M
 `tools/Publish-Clean.ps1` becomes version-parameterized and builds the published payload, MSI, Setup EXE, and checksums under `D:\HanabePhoto\artifacts\<version>`. The release gate installs an older disposable build, upgrades it with the new Setup, resolves the desktop shortcut target, launches the installed executable, and verifies uninstall leaves user data untouched.
 
 The portable ZIP is not a user-facing deliverable for this requirement.
-

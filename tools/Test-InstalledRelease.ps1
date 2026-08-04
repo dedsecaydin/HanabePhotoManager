@@ -68,9 +68,7 @@ function Get-DesktopShortcutTarget {
         throw "Desktop shortcut was not created: $desktopShortcutPath"
     }
 
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($desktopShortcutPath)
-    return [IO.Path]::GetFullPath($shortcut.TargetPath)
+    return [IO.Path]::GetFullPath($desktopShortcutPath)
 }
 
 function Assert-InstalledEntryPoints {
@@ -78,16 +76,31 @@ function Assert-InstalledEntryPoints {
         throw "Installed executable was not found at the required path: $expectedInstalledExecutable"
     }
 
-    $shortcutTarget = Get-DesktopShortcutTarget
-    if (-not $shortcutTarget.Equals([IO.Path]::GetFullPath($expectedInstalledExecutable), [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Desktop shortcut target mismatch. Expected '$expectedInstalledExecutable', actual '$shortcutTarget'."
-    }
-
-    return $shortcutTarget
+    return Get-DesktopShortcutTarget
 }
 
 function Test-InstalledApplicationLaunch {
-    $process = Start-Process -FilePath $expectedInstalledExecutable -PassThru
+    $existingIds = @(Get-Process -Name "HanabePhotoManager.App" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id)
+    Start-Process -FilePath $desktopShortcutPath
+    $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    $process = $null
+    do {
+        Start-Sleep -Milliseconds 250
+        $process = Get-Process -Name "HanabePhotoManager.App" -ErrorAction SilentlyContinue |
+            Where-Object {
+                $_.Id -notin $existingIds -and
+                $_.Path -and
+                $_.Path.Equals($expectedInstalledExecutable, [StringComparison]::OrdinalIgnoreCase)
+            } |
+            Select-Object -First 1
+    } while ($null -eq $process -and [DateTime]::UtcNow -lt $deadline)
+
+    if ($null -eq $process) {
+        throw "Desktop shortcut did not launch the expected Program Files executable: $expectedInstalledExecutable"
+    }
+    if (-not $process.Path.Equals($expectedInstalledExecutable, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Desktop shortcut launched an unexpected executable: $($process.Path)"
+    }
     if ($process.WaitForExit($LaunchObservationSeconds * 1000)) {
         throw "Installed application exited during the $LaunchObservationSeconds second startup observation window."
     }

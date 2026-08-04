@@ -16,6 +16,7 @@
 - Upgrade repairs the desktop and Start menu shortcuts.
 - Uninstall never removes user libraries, settings, credentials, indexes, or caches.
 - Version is supplied once and propagated to all version-bearing outputs.
+- Settings shows the same version in a selectable branch-style release tree with vertically scrollable notes.
 
 ---
 
@@ -89,3 +90,20 @@
 - [ ] Verify application startup setting remains visible; record installed path and shortcut target.
 - [ ] Run Release build/full tests, update release documentation, and commit verified changes.
 
+### Task 5: Version tree and scrolling release notes
+
+**Files:**
+- Create: `src/HanabePhotoManager.App/ReleaseNotes/ReleaseNotesViewModel.cs`
+- Modify: `src/HanabePhotoManager.App/MainWindow.xaml`
+- Modify: `src/HanabePhotoManager.App/ViewModels/MainWindowViewModel.cs`
+- Create: `tests/HanabePhotoManager.App.Tests/ReleaseNotes/ReleaseNotesViewModelTests.cs`
+
+**Interfaces:**
+- Consumes: the canonical application informational version.
+- Produces: `ReleaseNotes.Versions`, `SelectedVersion`, `CurrentVersionLabel`, and selected scrollable notes.
+
+- [ ] Add failing tests for current/newer/history labels, version selection, branch presentation bindings, and the bounded scrolling details pane.
+- [ ] Run focused tests and verify RED because the release-notes module is absent.
+- [ ] Implement the focused view model and Settings presentation without adding state to `MainWindowViewModel` beyond composition.
+- [ ] Verify focused and full App tests GREEN and confirm the displayed current version matches the Setup build input.
+- [ ] Commit the module, integration, and updated release documentation.

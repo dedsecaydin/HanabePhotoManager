@@ -115,8 +115,10 @@ Assert-Matches $installedReleaseTool '\$expectedInstalledExecutable\s*=\s*Join-P
     "Installed release verification must require the exact Program Files executable path."
 Assert-Matches $installedReleaseTool 'CommonDesktopDirectory' `
     "Installed release verification must resolve the stable common desktop shortcut."
-Assert-Matches $installedReleaseTool '\[IO\.Path\]::GetFullPath\(\$shortcut\.TargetPath\)' `
-    "Installed release verification must canonicalize the shortcut target before comparison."
+Assert-Matches $installedReleaseTool 'Start-Process\s+-FilePath\s+\$desktopShortcutPath' `
+    "Installed release verification must launch through the actual desktop shortcut."
+Assert-Matches $installedReleaseTool '\$process\.Path[^\r\n]+\$expectedInstalledExecutable' `
+    "Installed release verification must compare the shortcut-launched process path with Program Files."
 Assert-Matches $installedReleaseTool 'WaitForExit\(\$ProcessTimeoutSeconds\s*\*\s*1000\)' `
     "Installer processes must have an explicit timeout."
 Assert-Matches $installedReleaseTool '\$process\.ExitCode\s+-notin\s+@\(0,\s*1641,\s*3010\)' `

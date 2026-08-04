@@ -188,7 +188,7 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("x:Name=\"BrowseSummaryCard\"");
         xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
         xaml.Should().Contain("DockPanel.Dock=\"Bottom\"");
-        xaml.Should().Contain("Text=\"{Binding ThumbnailSize, StringFormat={}{0:N0}px}\"");
+        xaml.Should().Contain("Text=\"{Binding ZoomableGridTileSize, StringFormat={}{0:N0}px}\"");
         xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
         xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Margin=\"0,10,14,4\" Visibility=");
         xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Padding=\"12,9\" Margin=\"0,10,14,0\" CornerRadius");
@@ -331,10 +331,9 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("Tag=\"PreviewCard\" Margin=\"0,0,14,14\" Padding=\"0\" CornerRadius=\"22\"");
-        xaml.Should().Contain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
-        xaml.Should().Contain("<Border.Background><ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\" /></Border.Background>");
-        xaml.Should().NotContain("<Rectangle>\n                                                  <Shape.Fill>");
+        xaml.Should().Contain("Tag=\"PreviewCard\"");
+        xaml.Should().Contain("<Grid.Background>\n                                              <ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\" />");
+        xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }
 
     private static string FindSourceRoot()

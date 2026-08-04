@@ -169,6 +169,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private DateTimeOffset _operationStartedAt;
     private double _thumbnailSize = 150;
     private double _defaultThumbnailSize = 150;
+    private double _zoomableGridTileSize = 150;
+    private ObservableCollection<GridBreadcrumbViewModel> _gridBreadcrumbs = [];
     private string _defaultRatingFilter = "全部评分";
     private int _defaultPreviewSort;
     private double _glassIntensity = 0.62;
@@ -311,6 +313,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ShowSettingsCommand = new RelayCommand(() => CurrentPage = "Settings");
         ResetNavigationItems(null);
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
+        NavigateGridCategoryCommand = new RelayCommand<string?>(NavigateGridCategory);
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
         OpenQuarkOfficialCommand = new RelayCommand(OpenQuarkOfficial);
         OpenBaiduConsoleCommand = new RelayCommand(OpenBaiduConsole);
@@ -1182,6 +1185,50 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Continuous zoom tile size for the grid browse mode. Range is wider than
+    /// the legacy <see cref="ThumbnailSize"/> so the user can zoom from a dense
+    /// overview up to a large preview while keeping every tile a uniform square.
+    /// </summary>
+    public double ZoomableGridTileSize
+    {
+        get => _zoomableGridTileSize;
+        set
+        {
+            var clamped = Math.Clamp(value, 48, 512);
+            if (!SetProperty(ref _zoomableGridTileSize, clamped))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
+            RefreshPreviewThumbnailsForZoom();
+            if (_isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public bool IsGridTileLargeEnoughForLabels => _zoomableGridTileSize >= 140;
+
+    public ObservableCollection<GridBreadcrumbViewModel> GridBreadcrumbs => _gridBreadcrumbs;
+
+    public bool HasGridBreadcrumb => _gridBreadcrumbs.Count > 1;
+
+    public IRelayCommand<string?> NavigateGridCategoryCommand { get; }
+
+    /// <summary>
+    /// Zooms the grid tile size exponentially. <paramref name="factor"/> is
+    /// applied around 1.0 (e.g. 1.15 for one wheel notch in). The caller is
+    /// responsible for adjusting the scroll offset so the zoom is anchored on
+    /// the pointer.
+    /// </summary>
+    public void AdjustZoomableGridTileSize(double factor)
+    {
+        ZoomableGridTileSize *= factor;
+    }
+
     public double GlassIntensity
     {
         get => _glassIntensity;
@@ -1365,10 +1412,31 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _currentPreviewCategory, value))
             {
+                RebuildGridBreadcrumbs();
                 RefreshFilteredCache(resetPage: true);
                 OnPropertyChanged(nameof(BrowseConditionsSummary));
             }
         }
+    }
+
+    private void RebuildGridBreadcrumbs()
+    {
+        _gridBreadcrumbs.Clear();
+        _gridBreadcrumbs.Add(new GridBreadcrumbViewModel("全部", "全部"));
+        if (!string.Equals(_currentPreviewCategory, "全部", StringComparison.OrdinalIgnoreCase))
+        {
+            _gridBreadcrumbs.Add(new GridBreadcrumbViewModel(_currentPreviewCategory, _currentPreviewCategory));
+        }
+
+        OnPropertyChanged(nameof(GridBreadcrumbs));
+        OnPropertyChanged(nameof(HasGridBreadcrumb));
+    }
+
+    private void NavigateGridCategory(string? key)
+    {
+        CurrentPreviewCategory = string.IsNullOrWhiteSpace(key) || string.Equals(key, "全部", StringComparison.OrdinalIgnoreCase)
+            ? "全部"
+            : key;
     }
 
     private void RefreshFilteredCache(bool resetPage = false)
@@ -1606,8 +1674,12 @@ public sealed class MainWindowViewModel : ObservableObject
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
+        _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
         OnPropertyChanged(nameof(DefaultThumbnailSize));
         OnPropertyChanged(nameof(ThumbnailSize));
+        OnPropertyChanged(nameof(ZoomableGridTileSize));
+        OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
+        RebuildGridBreadcrumbs();
         GlassIntensity = settings.GlassIntensity;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
@@ -3397,7 +3469,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
                 if (IsPreviewPage)
                 {
-                    StartPreviewThumbnailLoading(VisiblePreviewFiles);
+                    StartPreviewThumbnailLoading(VisiblePreviewFiles, ResolveThumbnailDecodeWidth());
                 }
                 else
                 {
@@ -3699,7 +3771,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (IsPreviewPage)
         {
-            StartPreviewThumbnailLoading(VisiblePreviewFiles);
+            StartPreviewThumbnailLoading(VisiblePreviewFiles, ResolveThumbnailDecodeWidth());
         }
     }
 
@@ -3745,18 +3817,52 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null)
+    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null, int decodeWidth = 260)
     {
         CancelPreviewThumbnailLoading();
         var unloaded = (source ?? VisiblePreviewFiles).Where(item => item.Thumbnail is null).ToArray();
         if (unloaded.Length == 0) return;
 
         _previewThumbnailCancellation = new CancellationTokenSource();
-        _ = LoadPreviewThumbnailsAsync(unloaded, _previewThumbnailCancellation.Token);
+        _ = LoadPreviewThumbnailsAsync(unloaded, decodeWidth, _previewThumbnailCancellation.Token);
+    }
+
+    /// <summary>
+    /// Re-evaluates whether current thumbnails are sharp enough for the current
+    /// grid zoom level and reloads higher/lower resolution copies as needed.
+    /// </summary>
+    private void RefreshPreviewThumbnailsForZoom()
+    {
+        if (!IsPreviewPage)
+        {
+            return;
+        }
+
+        CancelPreviewThumbnailLoading();
+        var decodeWidth = ResolveThumbnailDecodeWidth();
+        var reload = VisiblePreviewFiles
+            .Where(item => item.Thumbnail is null || item.LoadedThumbnailDecodeWidth < decodeWidth)
+            .ToArray();
+        if (reload.Length == 0) return;
+
+        _previewThumbnailCancellation = new CancellationTokenSource();
+        _ = LoadPreviewThumbnailsAsync(reload, decodeWidth, _previewThumbnailCancellation.Token);
+    }
+
+    private int ResolveThumbnailDecodeWidth()
+    {
+        return _zoomableGridTileSize switch
+        {
+            <= 96 => 128,
+            <= 180 => 180,
+            <= 260 => 260,
+            _ => 512
+        };
     }
 
     private async Task LoadPreviewThumbnailsAsync(
         IReadOnlyList<PreviewFileViewModel> items,
+        int decodeWidth,
         CancellationToken cancellationToken)
     {
         using var gate = new SemaphoreSlim(PreviewLoadingPolicy.ThumbnailConcurrency);
@@ -3767,13 +3873,18 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
                 entered = true;
-                var thumbnail = await Task.Run(() => TryLoadThumbnail(item.PreviewPath), cancellationToken)
+                var thumbnail = await Task.Run(() => TryLoadThumbnail(item.PreviewPath, decodeWidth), cancellationToken)
                     .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken)
                     .ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
                     item.Thumbnail = thumbnail;
+                    if (thumbnail is not null)
+                    {
+                        item.LoadedThumbnailDecodeWidth = decodeWidth;
+                    }
+
                     TreemapBrowser.UpdateThumbnail(item.FullPath, thumbnail);
                 });
             }
@@ -4225,7 +4336,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _importThumbnailCancellation = null;
     }
 
-    private static ImageSource? TryLoadThumbnail(string path)
+    private static ImageSource? TryLoadThumbnail(string path, int decodeWidth = 260)
     {
         var extension = Path.GetExtension(path);
         if (!ThumbnailCandidateExtensions.Contains(extension))
@@ -4233,14 +4344,15 @@ public sealed class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        // Cache check — keyed on path + mtime + size so edits from other apps invalidate.
-        var cacheKey = TryGetThumbnailCacheKey(path);
+        // Cache check — keyed on path + mtime + size + decode width so edits
+        // from other apps invalidate and each resolution tier is cached separately.
+        var cacheKey = TryGetThumbnailCacheKey(path, decodeWidth);
         if (cacheKey is not null && ThumbnailCache.TryGetValue(cacheKey, out var cached))
         {
             return cached;
         }
 
-        var wpfThumbnail = TryLoadWpfThumbnail(path);
+        var wpfThumbnail = TryLoadWpfThumbnail(path, decodeWidth);
         if (wpfThumbnail is not null)
         {
             if (cacheKey is not null) CacheThumbnail(cacheKey, wpfThumbnail);
@@ -4255,7 +4367,7 @@ public sealed class MainWindowViewModel : ObservableObject
             var pairedJpg = TryFindPairedJpg(path);
             if (pairedJpg is not null)
             {
-                var jpgThumbnail = TryLoadWpfThumbnail(pairedJpg);
+                var jpgThumbnail = TryLoadWpfThumbnail(pairedJpg, decodeWidth);
                 if (jpgThumbnail is not null)
                 {
                     if (cacheKey is not null) CacheThumbnail(cacheKey, jpgThumbnail);
@@ -4268,7 +4380,7 @@ public sealed class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path);
+        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path, decodeWidth);
         if (shellThumbnail is not null && cacheKey is not null)
         {
             CacheThumbnail(cacheKey, shellThumbnail);
@@ -4323,7 +4435,7 @@ public sealed class MainWindowViewModel : ObservableObject
         return null;
     }
 
-    private static string? TryGetThumbnailCacheKey(string path)
+    private static string? TryGetThumbnailCacheKey(string path, int decodeWidth)
     {
         try
         {
@@ -4333,7 +4445,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 return null;
             }
 
-            return $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+            return $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{decodeWidth}";
         }
         catch
         {
@@ -4341,7 +4453,7 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static ImageSource? TryLoadWpfThumbnail(string path)
+    private static ImageSource? TryLoadWpfThumbnail(string path, int decodePixelWidth)
     {
         try
         {
@@ -4349,7 +4461,7 @@ public sealed class MainWindowViewModel : ObservableObject
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-            image.DecodePixelWidth = 260;
+            image.DecodePixelWidth = decodePixelWidth;
             image.UriSource = new Uri(path, UriKind.Absolute);
             image.EndInit();
             image.Freeze();
@@ -4654,6 +4766,7 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.NavigationDisplayMode = NavigationDisplayMode;
             settings.LibraryRoot = LibraryRoot;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
+            settings.ZoomableGridTileSize = ZoomableGridTileSize;
             settings.GlassIntensity = GlassIntensity;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
@@ -6046,6 +6159,8 @@ public sealed record CalendarDayViewModel(
     bool IsCurrentMonth,
     bool IsSelected);
 
+public sealed record GridBreadcrumbViewModel(string? Key, string Label);
+
 public sealed class PreviewDateSectionViewModel : ObservableObject
 {
     private bool _isExpanded;
@@ -6103,6 +6218,12 @@ public sealed partial class PreviewFileViewModel : ObservableObject
     public string SizeText { get; init; }
     public string Extension { get; init; }
     [ObservableProperty] private ImageSource? _thumbnail;
+
+    /// <summary>
+    /// Resolution (decode pixel width) of the currently loaded thumbnail. Used
+    /// by the zoomable grid to decide whether a sharper copy is needed.
+    /// </summary>
+    public int LoadedThumbnailDecodeWidth { get; set; }
 
     [ObservableProperty] private bool _isSelected;
 

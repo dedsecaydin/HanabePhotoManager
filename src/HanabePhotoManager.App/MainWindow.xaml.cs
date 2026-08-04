@@ -27,6 +27,10 @@ public partial class MainWindow : Window
     private System.Windows.Point? _navigationDragStart;
     private NavigationItemViewModel? _navigationDragSource;
     private CancellationTokenSource? _cloudTransitionCts;
+    private bool _isGridPanning;
+    private System.Windows.Point _gridPanStartPoint;
+    private double _gridPanStartVerticalOffset;
+    private double _gridPanStartHorizontalOffset;
 
     public MainWindow()
     {
@@ -273,11 +277,79 @@ public partial class MainWindow : Window
 
     private void PreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
-            _viewModel.AdjustThumbnailSize(e.Delta > 0);
-            e.Handled = true;
+            return;
         }
+
+        var scrollViewer = PreviewPhotoScrollViewer;
+        var pointer = e.GetPosition(scrollViewer);
+        var oldTileSize = _viewModel.ZoomableGridTileSize;
+        const double notchFactor = 1.12;
+        var factor = e.Delta > 0 ? notchFactor : 1.0 / notchFactor;
+        var newTileSize = Math.Clamp(oldTileSize * factor, 48, 512);
+        if (Math.Abs(newTileSize - oldTileSize) < 0.5)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var oldOffset = scrollViewer.VerticalOffset;
+        var contentY = oldOffset + pointer.Y;
+        var scale = newTileSize / oldTileSize;
+        var newOffset = contentY * scale - pointer.Y;
+
+        _viewModel.ZoomableGridTileSize = newTileSize;
+        scrollViewer.UpdateLayout();
+        scrollViewer.ScrollToVerticalOffset(Math.Clamp(newOffset, 0, scrollViewer.ScrollableHeight));
+
+        e.Handled = true;
+    }
+
+    private void PreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle || sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        _isGridPanning = true;
+        _gridPanStartPoint = e.GetPosition(scrollViewer);
+        _gridPanStartVerticalOffset = scrollViewer.VerticalOffset;
+        _gridPanStartHorizontalOffset = scrollViewer.HorizontalOffset;
+        scrollViewer.CaptureMouse();
+        e.Handled = true;
+    }
+
+    private void PreviewScrollViewer_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_isGridPanning || sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        var current = e.GetPosition(scrollViewer);
+        var deltaY = current.Y - _gridPanStartPoint.Y;
+        var deltaX = current.X - _gridPanStartPoint.X;
+        scrollViewer.ScrollToVerticalOffset(Math.Clamp(_gridPanStartVerticalOffset - deltaY, 0, scrollViewer.ScrollableHeight));
+        scrollViewer.ScrollToHorizontalOffset(Math.Clamp(_gridPanStartHorizontalOffset - deltaX, 0, scrollViewer.ScrollableWidth));
+        e.Handled = true;
+    }
+
+    private void PreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Middle || !_isGridPanning)
+        {
+            return;
+        }
+
+        _isGridPanning = false;
+        if (sender is ScrollViewer scrollViewer && scrollViewer.IsMouseCaptured)
+        {
+            scrollViewer.ReleaseMouseCapture();
+        }
+
+        e.Handled = true;
     }
 
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)

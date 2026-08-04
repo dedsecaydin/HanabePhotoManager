@@ -147,6 +147,10 @@ public sealed class AppSettings
 
     public BrowseSnapshot? BrowseSnapshot { get; set; }
 
+    public string BrowseDisplayMode { get; set; } = nameof(global::HanabePhotoManager.App.ViewModels.BrowseDisplayMode.Grid);
+
+    public string TreemapWeightMode { get; set; } = nameof(global::HanabePhotoManager.Core.Browsing.Treemap.TreemapWeightMode.FileSize);
+
     /// <summary>
     /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored
     /// separately as <see cref="BaiduAppSecretProtected"/> (DPAPI-encrypted).

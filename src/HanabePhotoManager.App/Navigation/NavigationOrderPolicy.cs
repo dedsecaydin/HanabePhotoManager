@@ -10,7 +10,13 @@ public static class NavigationOrderPolicy
 
         var allowed = defaults.ToHashSet(StringComparer.Ordinal);
         var result = new List<string>();
-        foreach (var key in stored ?? [])
+        var migrated = (stored ?? []).Select(key =>
+            allowed.Contains("Cloud") &&
+            (string.Equals(key, "BaiduCloud", StringComparison.Ordinal) ||
+             string.Equals(key, "QuarkCloud", StringComparison.Ordinal))
+                ? "Cloud"
+                : key);
+        foreach (var key in migrated)
         {
             if (allowed.Contains(key) && !result.Contains(key, StringComparer.Ordinal))
             {

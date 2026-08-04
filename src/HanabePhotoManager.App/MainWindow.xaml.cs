@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _windowStateSaveTimer;
     private System.Windows.Point? _navigationDragStart;
     private NavigationItemViewModel? _navigationDragSource;
+    private CancellationTokenSource? _cloudTransitionCts;
 
     public MainWindow()
     {
@@ -118,6 +119,10 @@ public partial class MainWindow : Window
         {
             ApplyCustomWindowIcon();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedCloudProvider))
+        {
+            AnimateCloudProvider();
+        }
     }
 
     private void ApplyCustomWindowIcon()
@@ -134,8 +139,7 @@ public partial class MainWindow : Window
             "FaceSearch" => FaceSearchPage,
             "MapPhotos" => MapPageHost,
             "Compression" => CompressionPageHost,
-            "BaiduCloud" => BaiduCloudPageHost,
-            "QuarkCloud" => QuarkCloudPageHost,
+            "Cloud" => CloudPageContainer,
             "Settings" => SettingsPage,
             _ => HomePage
         };
@@ -172,6 +176,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _cloudTransitionCts?.Cancel();
+        _cloudTransitionCts?.Dispose();
         _windowStateSaveTimer.Stop();
         PersistWindowState();
         _viewModel.PropertyChanged -= MainWindowViewModel_PropertyChanged;
@@ -180,6 +186,55 @@ public partial class MainWindow : Window
         BaiduCloudPageHost.Dispose();
         QuarkCloudPageHost.Dispose();
         base.OnClosed(e);
+    }
+
+    private async void AnimateCloudProvider()
+    {
+        _cloudTransitionCts?.Cancel();
+        _cloudTransitionCts?.Dispose();
+        var cancellation = _cloudTransitionCts = new CancellationTokenSource();
+
+        var incoming = _viewModel.SelectedCloudProvider == CloudProviderChoice.Baidu
+            ? BaiduCloudPageHost
+            : QuarkCloudPageHost;
+        var outgoing = ReferenceEquals(incoming, BaiduCloudPageHost)
+            ? QuarkCloudPageHost
+            : BaiduCloudPageHost;
+
+        incoming.Visibility = Visibility.Visible;
+        incoming.BeginAnimation(OpacityProperty, null);
+
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            incoming.Opacity = 1;
+            outgoing.Opacity = 0;
+            outgoing.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        incoming.Opacity = 0;
+        incoming.BeginAnimation(
+            OpacityProperty,
+            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
+            {
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            });
+
+        try
+        {
+            await Task.Delay(TimeSpan.FromMilliseconds(180), cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (!ReferenceEquals(_cloudTransitionCts, cancellation)) return;
+        incoming.BeginAnimation(OpacityProperty, null);
+        incoming.Opacity = 1;
+        outgoing.BeginAnimation(OpacityProperty, null);
+        outgoing.Opacity = 0;
+        outgoing.Visibility = Visibility.Collapsed;
     }
 
     private void FaceReference_DragOver(object sender, System.Windows.DragEventArgs e)

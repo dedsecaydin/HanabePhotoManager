@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark"
+             xmlns:wechat="clr-namespace:HanabePhotoManager.App.WeChat"
              AllowDrop="True" Drop="OnDrop" DragOver="OnDragOver">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -231,6 +232,23 @@
         </Style>
       </Grid.Style>
       <watermark:WatermarkPage DataContext="{Binding DataContext.Watermark, RelativeSource={RelativeSource AncestorType=Window}}"/>
+    </Grid>
+    <Grid Grid.Row="1">
+      <Grid.Style>
+        <Style TargetType="{x:Type Grid}">
+          <Setter Property="Visibility" Value="Collapsed"/>
+          <Setter Property="Opacity" Value="0"/>
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding IsWeChatSendMode}" Value="True">
+              <Setter Property="Visibility" Value="Visible"/>
+              <DataTrigger.EnterActions>
+                <BeginStoryboard><Storyboard><DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/></Storyboard></BeginStoryboard>
+              </DataTrigger.EnterActions>
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Grid.Style>
+      <wechat:WeChatSenderView DataContext="{Binding WeChatSender}"/>
     </Grid>
   </Grid>
 </UserControl>

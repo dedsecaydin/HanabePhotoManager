@@ -35,6 +35,11 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
 
     private void OnDrop(object sender, System.Windows.DragEventArgs e)
     {
-        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] paths) ViewModel?.AddInputs(paths, true);
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths || ViewModel is not { } viewModel)
+            return;
+        if (viewModel.IsWeChatSendMode)
+            viewModel.WeChatSender.AddInputs(paths, true);
+        else
+            viewModel.AddInputs(paths, true);
     }
 }

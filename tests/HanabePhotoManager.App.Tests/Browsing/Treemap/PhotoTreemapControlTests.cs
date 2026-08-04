@@ -21,6 +21,8 @@ public sealed class PhotoTreemapControlTests
 
         var source = File.ReadAllText(ProjectFile("src", "HanabePhotoManager.App", "Browsing", "Treemap", "PhotoTreemapControl.cs"));
         source.Should().Contain("DrawingContext");
+        source.Should().Contain("DrawThumbnail");
+        source.Should().Contain("item.Thumbnail");
         source.Should().NotContain("ItemsControl");
     }
 

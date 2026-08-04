@@ -4,6 +4,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Compression;
+using HanabePhotoManager.App.WeChat;
 
 namespace HanabePhotoManager.App.ViewModels;
 
@@ -36,6 +37,7 @@ public sealed class CompressionViewModel : ObservableObject
         _planner = planner ?? new ImageCompressionPlanner();
         _service = service ?? new ImageCompressionService();
         _collageService = collageService ?? new ImageCollageService();
+        WeChatSender = new WeChatSenderViewModel();
         StartCommand = new AsyncRelayCommand(StartAsync, () => CanStart);
         CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => IsRunning);
         ClearCommand = new RelayCommand(Clear, () => !IsRunning && Items.Count > 0);
@@ -50,7 +52,8 @@ public sealed class CompressionViewModel : ObservableObject
     [
         new(ImageToolMode.Compression, "批量压缩"),
         new(ImageToolMode.Collage, "拼图"),
-        new(ImageToolMode.Watermark, "批量水印")
+        new(ImageToolMode.Watermark, "批量水印"),
+        new(ImageToolMode.WeChatSend, "微信发送")
     ];
     public IReadOnlyList<CollageOrientationChoice> CollageOrientations { get; } =
     [
@@ -77,6 +80,7 @@ public sealed class CompressionViewModel : ObservableObject
             OnPropertyChanged(nameof(IsCompressionMode));
             OnPropertyChanged(nameof(IsCollageMode));
             OnPropertyChanged(nameof(IsWatermarkMode));
+            OnPropertyChanged(nameof(IsWeChatSendMode));
             OnPropertyChanged(nameof(IsFileOperationMode));
             StatusText = value == ImageToolMode.Collage ? "按队列顺序拼接图片" : "拖入图片或选择文件夹开始";
             NotifyAvailability();
@@ -85,7 +89,9 @@ public sealed class CompressionViewModel : ObservableObject
     public bool IsCompressionMode => SelectedToolMode == ImageToolMode.Compression;
     public bool IsCollageMode => SelectedToolMode == ImageToolMode.Collage;
     public bool IsWatermarkMode => SelectedToolMode == ImageToolMode.Watermark;
-    public bool IsFileOperationMode => !IsWatermarkMode;
+    public bool IsWeChatSendMode => SelectedToolMode == ImageToolMode.WeChatSend;
+    public bool IsFileOperationMode => !IsWatermarkMode && !IsWeChatSendMode;
+    public WeChatSenderViewModel WeChatSender { get; }
     public CollageOrientation CollageOrientation
     {
         get => _collageOrientation;
@@ -278,7 +284,8 @@ public enum ImageToolMode
 {
     Compression,
     Collage,
-    Watermark
+    Watermark,
+    WeChatSend
 }
 
 public sealed record ImageToolModeChoice(ImageToolMode Value, string Label);

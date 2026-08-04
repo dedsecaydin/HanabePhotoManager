@@ -23,6 +23,51 @@
                 <Button Content="再次查看新手指南" Command="{Binding ReplayOnboardingCommand}" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Left"/>
               </StackPanel>
             </Border>
+            <Border Style="{StaticResource Layout.SettingsGroup}" Margin="0,16,0,0">
+              <StackPanel>
+                <DockPanel Margin="0,0,0,14">
+                  <TextBlock Text="版本与更新日志" Style="{StaticResource Layout.SectionTitle}"/>
+                  <Border DockPanel.Dock="Right" Padding="10,4" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                    <TextBlock Text="{Binding ReleaseNotes.CurrentVersionLabel}" FontSize="12" FontWeight="SemiBold"/>
+                  </Border>
+                </DockPanel>
+                <Grid MinHeight="250">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="250"/>
+                    <ColumnDefinition Width="1"/>
+                    <ColumnDefinition Width="*"/>
+                  </Grid.ColumnDefinitions>
+                  <ListBox x:Name="ReleaseVersionTree" BorderThickness="0" Background="Transparent" ItemsSource="{Binding ReleaseNotes.Versions}" SelectedItem="{Binding ReleaseNotes.SelectedVersion, Mode=TwoWay}" AutomationProperties.Name="版本更新树">
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <Grid Margin="4,5">
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Text="{Binding BranchGlyph}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center"/>
+                          <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Version}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding DateText}" FontSize="11" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+                          </StackPanel>
+                          <Border Grid.Column="2" Padding="7,2" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding StatusLabel}" FontSize="10" FontWeight="SemiBold"/>
+                          </Border>
+                        </Grid>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                  <Border Grid.Column="1" Background="{DynamicResource Brush.Border.Subtle}"/>
+                  <DockPanel Grid.Column="2" Margin="18,0,0,0">
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding ReleaseNotes.SelectedReleaseTitle}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <ScrollViewer x:Name="ReleaseNotesScrollViewer" VerticalScrollBarVisibility="Auto" MaxHeight="250">
+                      <TextBlock Text="{Binding ReleaseNotes.SelectedReleaseNotes}" TextWrapping="Wrap" LineHeight="24" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+                    </ScrollViewer>
+                  </DockPanel>
+                </Grid>
+              </StackPanel>
+            </Border>
           </StackPanel>
         </ScrollViewer>
       </TabItem>

@@ -280,6 +280,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var radius = ResourceDouble("Radius.Control", 6);
         drawingContext.DrawRoundedRectangle(fill, new MediaPen(border, isSelected ? 2 : 1), rect, radius, radius);
 
+        if (!item.IsContainer && item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+        {
+            DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
+        }
+
         var minimumLabelWidth = ResourceDouble("Size.Control.Default", 36);
         if (rect.Width < minimumLabelWidth || rect.Height < minimumLabelWidth / 2)
         {
@@ -309,6 +314,26 @@ public sealed class PhotoTreemapControl : FrameworkElement
             Trimming = TextTrimming.CharacterEllipsis
         };
         drawingContext.DrawText(formatted, new WpfPoint(rect.X + gap * 2, rect.Y + gap));
+    }
+
+    private static void DrawThumbnail(DrawingContext drawingContext, ImageSource thumbnail, Rect rect, double radius)
+    {
+        if (thumbnail.Width <= 0 || thumbnail.Height <= 0)
+        {
+            return;
+        }
+
+        var scale = Math.Max(rect.Width / thumbnail.Width, rect.Height / thumbnail.Height);
+        var width = thumbnail.Width * scale;
+        var height = thumbnail.Height * scale;
+        var destination = new Rect(
+            rect.X + (rect.Width - width) / 2,
+            rect.Y + (rect.Height - height) / 2,
+            width,
+            height);
+        drawingContext.PushClip(new RectangleGeometry(rect, radius, radius));
+        drawingContext.DrawImage(thumbnail, destination);
+        drawingContext.Pop();
     }
 
     private MediaBrush FindBrush(string key, MediaBrush fallback) =>

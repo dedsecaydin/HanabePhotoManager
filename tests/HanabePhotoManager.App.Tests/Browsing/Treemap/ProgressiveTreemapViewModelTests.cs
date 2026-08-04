@@ -3,12 +3,27 @@ using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.Core.Browsing.Treemap;
 using System.IO;
+using System.Windows.Media;
 using Xunit;
 
 namespace HanabePhotoManager.App.Tests.Browsing.Treemap;
 
 public sealed class ProgressiveTreemapViewModelTests
 {
+    [Fact]
+    public void UpdateThumbnail_RepublishesMatchingMediaItem()
+    {
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero);
+        var generation = viewModel.BeginScan(@"D:\Photos");
+        viewModel.ApplyBatch(generation, Batch(Item(@"D:\Photos\A\one.jpg", "A", 42)));
+        var thumbnail = new DrawingImage();
+        thumbnail.Freeze();
+
+        viewModel.UpdateThumbnail(@"D:\Photos\A\one.jpg", thumbnail);
+
+        viewModel.Items.Single(item => !item.IsContainer).Thumbnail.Should().BeSameAs(thumbnail);
+    }
+
     [Fact]
     public void FirstBatch_IsPublishedImmediatelyAndDeduplicatesPaths()
     {

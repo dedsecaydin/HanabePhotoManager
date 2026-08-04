@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.Core.Browsing.Treemap;
 using System.IO;
+using System.Windows.Media;
 
 namespace HanabePhotoManager.App.Browsing.Treemap;
 
@@ -11,6 +12,8 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
 
     private readonly object _gate = new();
     private readonly Dictionary<string, LibraryDateMediaItem> _mediaByPath =
+        new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, ImageSource> _thumbnailsByPath =
         new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeSpan _refreshInterval;
     private readonly SynchronizationContext? _synchronizationContext;
@@ -116,6 +119,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         {
             _generation++;
             _mediaByPath.Clear();
+            _thumbnailsByPath.Clear();
             _hasPublished = false;
         }
 
@@ -178,6 +182,29 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         IsScanning = false;
         IsPartial = isPartial;
         PublishNow(generation);
+    }
+
+    public void UpdateThumbnail(string fullPath, ImageSource? thumbnail)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
+        lock (_gate)
+        {
+            if (!_mediaByPath.ContainsKey(fullPath))
+            {
+                return;
+            }
+
+            if (thumbnail is null)
+            {
+                _thumbnailsByPath.Remove(fullPath);
+            }
+            else
+            {
+                _thumbnailsByPath[fullPath] = thumbnail;
+            }
+        }
+
+        PublishNow(_generation);
     }
 
     public void ZoomTo(string containerKey)
@@ -245,6 +272,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
     private void PublishNow(int generation)
     {
         LibraryDateMediaItem[] media;
+        Dictionary<string, ImageSource> thumbnails;
         lock (_gate)
         {
             if (generation != _generation)
@@ -255,6 +283,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             media = _mediaByPath.Values
                 .OrderBy(item => item.FullPath, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
+            thumbnails = new Dictionary<string, ImageSource>(_thumbnailsByPath, StringComparer.OrdinalIgnoreCase);
         }
 
         var files = media
@@ -267,7 +296,8 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
                 item.FullPath,
                 item.Length,
                 item.Category,
-                item.Extension))
+                item.Extension,
+                thumbnails.GetValueOrDefault(item.FullPath)))
             .ToArray();
         var categories = files
             .GroupBy(item => item.Category, StringComparer.OrdinalIgnoreCase)

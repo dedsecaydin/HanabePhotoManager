@@ -13,7 +13,7 @@ public sealed class CompressionViewModelTests : IDisposable
     {
         var viewModel = new CompressionViewModel();
 
-        viewModel.ToolModes.Select(mode => mode.Label).Should().Equal("批量压缩", "拼图", "批量水印");
+        viewModel.ToolModes.Select(mode => mode.Label).Should().Equal("批量压缩", "拼图", "批量水印", "微信发送");
         viewModel.CollageOrientations.Select(mode => mode.Label).Should().Equal("纵向拼接", "横向拼接");
         viewModel.CollageLimitOutputSize.Should().BeFalse();
     }

@@ -16,4 +16,13 @@ public sealed class ThemeManagerTests
     {
         ThemeManager.ParsePreference(value).Should().Be(expected);
     }
+
+    [Fact]
+    public void ThemeManager_ExposesOneSharedThemeChangedEvent()
+    {
+        var eventInfo = typeof(ThemeManager).GetEvent("ThemeChanged");
+
+        eventInfo.Should().NotBeNull();
+        eventInfo!.EventHandlerType.Should().Be(typeof(EventHandler<AppTheme>));
+    }
 }

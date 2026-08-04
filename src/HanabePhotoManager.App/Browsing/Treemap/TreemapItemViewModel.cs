@@ -1,5 +1,7 @@
 namespace HanabePhotoManager.App.Browsing.Treemap;
 
+using System.Windows.Media;
+
 public sealed record TreemapItemViewModel(
     string Key,
     string? ParentKey,
@@ -9,7 +11,7 @@ public sealed record TreemapItemViewModel(
     string? FullPath,
     long Length,
     string Category,
-    string Extension);
+    string Extension,
+    ImageSource? Thumbnail = null);
 
 public sealed record TreemapBreadcrumbViewModel(string? Key, string Label);
-

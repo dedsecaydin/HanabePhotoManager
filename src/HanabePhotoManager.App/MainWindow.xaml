@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" SizeChanged="MainWindow_SizeChanged">
+<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:treemap="clr-namespace:HanabePhotoManager.App.Browsing.Treemap" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" SizeChanged="MainWindow_SizeChanged">
   <FrameworkElement.Resources>
     <ResourceDictionary>
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -410,8 +410,7 @@
                       <DataTrigger Binding="{Binding Key}" Value="MapPhotos"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Map}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Compression"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Compress}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Watermark"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Watermark}" /></DataTrigger>
-                      <DataTrigger Binding="{Binding Key}" Value="BaiduCloud"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Cloud}" /></DataTrigger>
-                      <DataTrigger Binding="{Binding Key}" Value="QuarkCloud"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Cloud}" /></DataTrigger>
+                      <DataTrigger Binding="{Binding Key}" Value="Cloud"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Cloud}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="ContestOpen"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Import}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="ContestJudged"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Library}" /></DataTrigger>
                   </DataTemplate.Triggers>
@@ -1070,6 +1069,27 @@
                       </WrapPanel>
                       </StackPanel>
                     </Border>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                      <TextBlock Text="显示方式" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
+                      <ComboBox x:Name="BrowseDisplayModeSelector" Width="126" SelectedValuePath="Value" ItemsSource="{Binding BrowseDisplayModes}" SelectedValue="{Binding BrowseDisplayMode, Mode=TwoWay}" AutomationProperties.Name="浏览显示方式">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding Label}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="面积" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox Width="142" SelectedValuePath="Value" ItemsSource="{Binding TreemapWeightModes}" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" AutomationProperties.Name="树图面积计算方式">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
+                      </StackPanel>
+                      <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
                     <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
                     <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
                       <DockPanel>
@@ -1082,7 +1102,7 @@
                         </StackPanel>
                       </DockPanel>
                     </Border>
-                    <Grid Name="PreviewSelectionSurface" Background="Transparent" PreviewMouseLeftButtonDown="PreviewSelectionSurface_MouseLeftButtonDown" PreviewMouseMove="PreviewSelectionSurface_MouseMove" PreviewMouseLeftButtonUp="PreviewSelectionSurface_MouseLeftButtonUp">
+                    <Grid Name="PreviewSelectionSurface" Background="Transparent" Visibility="{Binding IsGridBrowseMode, Converter={StaticResource BoolToVis}}" PreviewMouseLeftButtonDown="PreviewSelectionSurface_MouseLeftButtonDown" PreviewMouseMove="PreviewSelectionSurface_MouseMove" PreviewMouseLeftButtonUp="PreviewSelectionSurface_MouseLeftButtonUp">
                       <ScrollViewer Name="PreviewPhotoScrollViewer" VerticalScrollBarVisibility="Auto" PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel">
                         <StackPanel>
                           <ItemsControl ItemsSource="{Binding VisiblePreviewSections}">
@@ -1207,6 +1227,21 @@
                         <Rectangle Name="PreviewSelectionRectangle" Visibility="Collapsed" Fill="{DynamicResource Brush.Accent.Subtle}" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="1.5" RadiusX="5" RadiusY="5" />
                       </Canvas>
                     </Grid>
+                    <Border Style="{DynamicResource Card.Default}" Padding="8" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
+                      <DockPanel LastChildFill="True">
+                        <ItemsControl DockPanel.Dock="Top" Margin="4,0,4,8" ItemsSource="{Binding TreemapBrowser.Breadcrumbs}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                              <Button Padding="8,4" Margin="0,0,6,0" Content="{Binding Label}" Command="{Binding DataContext.NavigateTreemapCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Key}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <treemap:PhotoTreemapControl MinHeight="420" ItemsSource="{Binding TreemapBrowser.Items}" RootKey="{Binding TreemapBrowser.CurrentContainerKey}" SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}" OpenItemCommand="{Binding OpenTreemapItemCommand}" ZoomCommand="{Binding ZoomTreemapCommand}" />
+                      </DockPanel>
+                    </Border>
                   </DockPanel>
                 </Border>
               </Grid>
@@ -1369,8 +1404,28 @@
             <map:MapPage x:Name="MapPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding MapPhotos}" Visibility="{Binding DataContext.IsMapPhotosPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <compress:CompressionPage x:Name="CompressionPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Compression}" Visibility="{Binding DataContext.IsCompressionPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <watermark:WatermarkPage x:Name="WatermarkPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Watermark}" Visibility="{Binding DataContext.IsWatermarkPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
-            <cloud:CloudPage x:Name="BaiduCloudPageHost" Style="{StaticResource PageSurface}" InitialUrl="https://pan.baidu.com" IsActive="{Binding DataContext.IsBaiduCloudPage, RelativeSource={RelativeSource AncestorType=Window}}" Visibility="{Binding DataContext.IsBaiduCloudPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
-            <cloud:CloudPage x:Name="QuarkCloudPageHost" Style="{StaticResource PageSurface}" InitialUrl="https://pan.quark.cn" IsActive="{Binding DataContext.IsQuarkCloudPage, RelativeSource={RelativeSource AncestorType=Window}}" Visibility="{Binding DataContext.IsQuarkCloudPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
+            <Grid x:Name="CloudPageContainer" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsCloudPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}">
+              <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+              <Border Grid.Row="0" Style="{DynamicResource Navigation.Segment}" HorizontalAlignment="Left" Margin="0,0,0,12">
+                <StackPanel Orientation="Horizontal" KeyboardNavigation.DirectionalNavigation="Cycle">
+                  <RadioButton Content="百度网盘" GroupName="CloudProvider" Style="{DynamicResource Navigation.SegmentItem}"
+                               IsChecked="{Binding IsBaiduCloudSelected, Mode=OneWay}"
+                               Command="{Binding SelectCloudProviderCommand}"
+                               CommandParameter="{x:Static vm:CloudProviderChoice.Baidu}"/>
+                  <RadioButton Content="夸克网盘" GroupName="CloudProvider" Style="{DynamicResource Navigation.SegmentItem}"
+                               IsChecked="{Binding IsQuarkCloudSelected, Mode=OneWay}"
+                               Command="{Binding SelectCloudProviderCommand}"
+                               CommandParameter="{x:Static vm:CloudProviderChoice.Quark}"/>
+                </StackPanel>
+              </Border>
+              <Grid Grid.Row="1" ClipToBounds="True">
+                <cloud:CloudPage x:Name="BaiduCloudPageHost" InitialUrl="https://pan.baidu.com"
+                                 IsActive="{Binding DataContext.IsBaiduCloudPage, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                <cloud:CloudPage x:Name="QuarkCloudPageHost" InitialUrl="https://pan.quark.cn"
+                                 IsActive="{Binding DataContext.IsQuarkCloudPage, RelativeSource={RelativeSource AncestorType=Window}}"
+                                 Visibility="Collapsed" Opacity="0"/>
+              </Grid>
+            </Grid>
             <contest:ContestOpenPage x:Name="ContestOpenPageHost" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsContestOpenPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <contest:ContestJudgedPage x:Name="ContestJudgedPageHost" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsContestJudgedPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <local:SettingsCenterPage Visibility="{Binding IsSettingsPage, Converter={StaticResource BoolToVis}}" />
@@ -1395,6 +1450,51 @@
                     <ComboBox ItemsSource="{Binding PreviewSortChoices}" SelectedValuePath="Value" SelectedValue="{Binding PreviewSortMode, Mode=TwoWay}">
                       <ComboBox.ItemTemplate><DataTemplate DataType="{x:Type vm:PreviewSortChoice}"><TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate>
                     </ComboBox>
+                  </StackPanel>
+                </Border>
+                <Border Style="{DynamicResource Card.Default}" Padding="18" Margin="0,0,0,14">
+                  <StackPanel>
+                    <DockPanel Margin="0,0,0,14">
+                      <TextBlock Text="版本与更新日志" FontSize="22" FontWeight="SemiBold" />
+                      <Border DockPanel.Dock="Right" Padding="10,4" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                        <TextBlock Text="{Binding ReleaseNotes.CurrentVersionLabel}" FontSize="12" FontWeight="SemiBold" />
+                      </Border>
+                    </DockPanel>
+                    <Grid MinHeight="260">
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="250" />
+                        <ColumnDefinition Width="1" />
+                        <ColumnDefinition Width="*" />
+                      </Grid.ColumnDefinitions>
+                      <ListBox x:Name="ReleaseVersionTree" BorderThickness="0" Background="Transparent" ItemsSource="{Binding ReleaseNotes.Versions}" SelectedItem="{Binding ReleaseNotes.SelectedVersion, Mode=TwoWay}" AutomationProperties.Name="版本更新树">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <Grid Margin="4,5">
+                              <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="28" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                              </Grid.ColumnDefinitions>
+                              <TextBlock Text="{Binding BranchGlyph}" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" />
+                              <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Version}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding DateText}" FontSize="11" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                              </StackPanel>
+                              <Border Grid.Column="2" Padding="7,2" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding StatusLabel}" FontSize="10" FontWeight="SemiBold" />
+                              </Border>
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                      <Border Grid.Column="1" Background="{DynamicResource Brush.Border.Subtle}" />
+                      <DockPanel Grid.Column="2" Margin="18,0,0,0">
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding ReleaseNotes.SelectedReleaseTitle}" FontSize="17" FontWeight="SemiBold" Margin="0,0,0,10" />
+                        <ScrollViewer x:Name="ReleaseNotesScrollViewer" VerticalScrollBarVisibility="Auto" MaxHeight="260">
+                          <TextBlock Text="{Binding ReleaseNotes.SelectedReleaseNotes}" TextWrapping="Wrap" LineHeight="24" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </ScrollViewer>
+                      </DockPanel>
+                    </Grid>
                   </StackPanel>
                 </Border>
                 <Border Style="{DynamicResource Card.Default}" Padding="18" Margin="0,0,0,14">

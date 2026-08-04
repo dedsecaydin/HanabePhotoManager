@@ -9,6 +9,7 @@ public static class ThemeManager
 {
     private static readonly string PreferencePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HanabePhotoManager", "ui-theme.txt");
     public static AppTheme Current { get; private set; } = AppTheme.Light;
+    public static event EventHandler<AppTheme>? ThemeChanged;
     public static AppTheme ParsePreference(string? value) => string.Equals(value?.Trim(), "dark", StringComparison.OrdinalIgnoreCase) ? AppTheme.Dark : AppTheme.Light;
 
     public static void LoadAndApply()
@@ -21,13 +22,20 @@ public static class ThemeManager
 
     public static void Apply(AppTheme theme, bool persist = true)
     {
+        var changed = Current != theme;
         var dictionaries = System.Windows.Application.Current.Resources.MergedDictionaries;
         var existing = dictionaries.FirstOrDefault(dictionary => dictionary.Source?.OriginalString.Contains("Themes/Themes/", StringComparison.OrdinalIgnoreCase) == true);
         var replacement = new ResourceDictionary { Source = new Uri($"/HanabePhotoManager.App;component/Themes/Themes/{theme}.xaml", UriKind.RelativeOrAbsolute) };
         if (existing is null) dictionaries.Insert(0, replacement); else dictionaries[dictionaries.IndexOf(existing)] = replacement;
         Current = theme;
-        if (!persist) return;
-        Directory.CreateDirectory(Path.GetDirectoryName(PreferencePath)!);
-        File.WriteAllText(PreferencePath, theme.ToString());
+        if (persist)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(PreferencePath)!);
+            File.WriteAllText(PreferencePath, theme.ToString());
+        }
+        if (changed)
+        {
+            ThemeChanged?.Invoke(null, theme);
+        }
     }
 }

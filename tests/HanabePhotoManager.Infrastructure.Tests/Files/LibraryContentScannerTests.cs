@@ -2,6 +2,9 @@ using System.Security.Cryptography;
 using FluentAssertions;
 using HanabePhotoManager.Core.Imports;
 using HanabePhotoManager.Infrastructure.Files;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.Infrastructure.Tests.Files;
 
@@ -168,6 +171,85 @@ public sealed class LibraryContentScannerTests : IDisposable
 
         groups.Should().HaveCount(1);
         groups[0].Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task FindVisualDuplicatesAsync_GroupsReencodedCopies()
+    {
+        // Two byte-different but visually identical images (same pixels, different
+        // containers) should be detected as a near-duplicate group, while a clearly
+        // different image should not be grouped with them.
+        var imageExtensions = new HashSet<string>([".png", ".bmp"], StringComparer.OrdinalIgnoreCase);
+        var copyA = Path.Combine(_root, "photo.png");
+        var copyB = Path.Combine(_root, "photo.bmp");
+        var different = Path.Combine(_root, "different.png");
+
+        WriteSplitImage(copyA, vertical: true);
+        WriteSplitImage(copyB, vertical: true);
+        WriteSplitImage(different, vertical: false);
+
+        var groups = await _scanner.FindVisualDuplicatesAsync(_root, imageExtensions, null, default);
+
+        groups.Should().ContainSingle();
+        groups[0].Should().HaveCount(2);
+        groups[0].Should().Contain(copyA).And.Contain(copyB);
+        groups[0].Should().NotContain(different);
+    }
+
+    [Fact]
+    public async Task FindVisualDuplicatesAsync_ReturnsEmptyWhenNoDuplicates()
+    {
+        var imageExtensions = new HashSet<string>([".png"], StringComparer.OrdinalIgnoreCase);
+        var distinctA = Path.Combine(_root, "a.png");
+        var distinctB = Path.Combine(_root, "b.png");
+
+        WriteSplitImage(distinctA, vertical: true);
+        WriteSplitImage(distinctB, vertical: false);
+
+        var groups = await _scanner.FindVisualDuplicatesAsync(_root, imageExtensions, null, default);
+
+        groups.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FindVisualDuplicatesAsync_ExcludesProvidedPaths()
+    {
+        var imageExtensions = new HashSet<string>([".png", ".bmp"], StringComparer.OrdinalIgnoreCase);
+        var copyA = Path.Combine(_root, "photo.png");
+        var copyB = Path.Combine(_root, "photo.bmp");
+
+        WriteSplitImage(copyA, vertical: true);
+        WriteSplitImage(copyB, vertical: true);
+
+        // Excluding copyA should leave too few candidates to form a group.
+        var groups = await _scanner.FindVisualDuplicatesAsync(
+            _root, imageExtensions, new[] { copyA }, default);
+
+        groups.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Writes a 64x64 image split into two halves. When <paramref name="vertical"/>
+    /// is true the left half is white and the right half black; otherwise the top
+    /// half is white and the bottom half black. Saving the same content in two
+    /// different containers yields byte-different files with identical perceptual
+    /// hashes.
+    /// </summary>
+    private static void WriteSplitImage(string path, bool vertical)
+    {
+        using var image = new Image<Rgba32>(64, 64);
+        image.Mutate(ctx =>
+        {
+            var white = new Rgba32(255, 255, 255);
+            var black = new Rgba32(0, 0, 0);
+            for (var y = 0; y < 64; y++)
+            for (var x = 0; x < 64; x++)
+            {
+                var on = vertical ? x < 32 : y < 32;
+                image[x, y] = on ? white : black;
+            }
+        });
+        image.Save(path);
     }
 
     public void Dispose()

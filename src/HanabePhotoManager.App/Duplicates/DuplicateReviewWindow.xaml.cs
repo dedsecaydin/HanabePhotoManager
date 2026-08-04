@@ -12,30 +12,42 @@ public partial class DuplicateReviewWindow : Window
 
     public HashSet<string> FilesToDelete { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public DuplicateReviewWindow(List<List<string>> duplicateGroups)
+    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates)
     {
         InitializeComponent();
-        SummaryText.Text = $"发现 {duplicateGroups.Count} 组重复内容，共 {duplicateGroups.Sum(g => g.Count)} 个文件。" +
+        var totalFiles = candidates.Sum(group => group.Paths.Count);
+        var suspectedCount = candidates.Count(group => group.IsSuspected);
+        SummaryText.Text = $"发现 {candidates.Count} 组重复内容，共 {totalFiles} 个文件。" +
+                           (suspectedCount > 0
+                               ? $"（其中 {suspectedCount} 组为视觉相似，建议人工确认后再删除）"
+                               : string.Empty) +
                            "勾选要删除的文件（取消勾选=保留）。";
-        BuildGroups(duplicateGroups);
+        BuildGroups(candidates);
     }
 
-    private void BuildGroups(List<List<string>> groups)
+    private void BuildGroups(List<DuplicateCandidateGroup> candidates)
     {
-        for (var i = 0; i < groups.Count; i++)
+        for (var i = 0; i < candidates.Count; i++)
         {
-            var group = groups[i];
+            var group = candidates[i];
             var groupPanel = new StackPanel { Margin = new Thickness(0, i > 0 ? 12 : 0, 0, 0) };
+
+            var headerText = $"第 {i + 1} 组 · {group.Paths.Count} 个重复文件";
+            if (group.IsSuspected)
+                headerText += " · 疑似（视觉相似）";
 
             var header = new TextBlock
             {
-                Text = $"第 {i + 1} 组 · {group.Count} 个重复文件",
+                Text = headerText,
                 FontWeight = FontWeights.SemiBold,
-                Margin = new Thickness(0, 0, 0, 4)
+                Margin = new Thickness(0, 0, 0, 4),
+                Foreground = group.IsSuspected
+                    ? System.Windows.Media.Brushes.OrangeRed
+                    : System.Windows.Media.Brushes.Black
             };
             groupPanel.Children.Add(header);
 
-            foreach (var path in group.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
+            foreach (var path in group.Paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
             {
                 var checkbox = new WpfCheckBox
                 {

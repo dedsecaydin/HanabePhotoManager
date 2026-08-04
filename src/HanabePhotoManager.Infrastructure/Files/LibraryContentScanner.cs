@@ -1,6 +1,9 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using HanabePhotoManager.Core.Imports;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.Infrastructure.Files;
 
@@ -167,6 +170,158 @@ public sealed class LibraryContentScanner
         }
 
         return duplicateGroups;
+    }
+
+    /// <summary>
+    /// Maximum Hamming distance between two 64-bit average hashes for the
+    /// corresponding images to be considered visually similar (a near-duplicate).
+    /// </summary>
+    public const int DuplicateHammingThreshold = 8;
+
+    /// <summary>
+    /// Scans the entire library for visually similar images (re-encoded, resized or
+    /// re-compressed copies of the same photo) using a perceptual average hash.
+    /// This catches duplicates that an exact SHA-256 comparison misses. Files whose
+    /// paths appear in <paramref name="excludePaths"/> are skipped so that groups
+    /// already confirmed by an exact content match are not reported twice.
+    /// </summary>
+    public async Task<List<List<string>>> FindVisualDuplicatesAsync(
+        string libraryRoot,
+        IReadOnlySet<string> extensions,
+        IReadOnlyCollection<string>? excludePaths,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
+        ArgumentNullException.ThrowIfNull(extensions);
+
+        // Perceptual hashing only applies to raster images, not video containers.
+        var imageExtensions = new HashSet<string>(extensions, StringComparer.OrdinalIgnoreCase);
+        imageExtensions.Remove(".mp4");
+        imageExtensions.Remove(".mov");
+
+        var paths = EnumerateLibraryFiles(libraryRoot, imageExtensions).ToList();
+        if (excludePaths is not null && excludePaths.Count > 0)
+        {
+            var excluded = new HashSet<string>(excludePaths, StringComparer.OrdinalIgnoreCase);
+            paths.RemoveAll(path => excluded.Contains(path));
+        }
+
+        if (paths.Count < 2)
+            return new List<List<string>>();
+
+        var hashes = new List<(string Path, ulong Hash)>(paths.Count);
+        foreach (var path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                hashes.Add((path, ComputeAverageHash(path)));
+            }
+            catch (FileNotFoundException) { }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            catch (ArgumentException) { }
+            catch (NotSupportedException) { }
+            catch (InvalidImageContentException) { }
+            catch (ImageFormatException) { }
+
+            // Yield periodically so a large library scan stays responsive.
+            if ((hashes.Count & 31) == 0)
+                await Task.Yield();
+        }
+
+        // Bucket by the top 16 bits of the hash so we only compare visually
+        // close candidates instead of doing an O(n^2) scan across the whole library.
+        var buckets = new Dictionary<uint, List<int>>();
+        for (var index = 0; index < hashes.Count; index++)
+        {
+            var key = (uint)(hashes[index].Hash >> 48);
+            if (!buckets.TryGetValue(key, out var list))
+            {
+                list = new List<int>();
+                buckets[key] = list;
+            }
+
+            list.Add(index);
+        }
+
+        var visited = new bool[hashes.Count];
+        var groups = new List<List<string>>();
+        for (var i = 0; i < hashes.Count; i++)
+        {
+            if (visited[i])
+                continue;
+
+            var group = new List<string> { hashes[i].Path };
+            visited[i] = true;
+
+            var top = (int)(hashes[i].Hash >> 48);
+            for (var bucketKey = top - 2; bucketKey <= top + 2; bucketKey++)
+            {
+                if (bucketKey < 0 || !buckets.TryGetValue((uint)bucketKey, out var bucket))
+                    continue;
+
+                foreach (var j in bucket)
+                {
+                    if (visited[j] || j == i)
+                        continue;
+
+                    if (HammingDistance(hashes[i].Hash, hashes[j].Hash) <= DuplicateHammingThreshold)
+                    {
+                        group.Add(hashes[j].Path);
+                        visited[j] = true;
+                    }
+                }
+            }
+
+            if (group.Count >= 2)
+                groups.Add(group);
+        }
+
+        return groups;
+    }
+
+    /// <summary>
+    /// Computes a 64-bit average perceptual hash: resize to 8x8 grayscale, threshold
+    /// each pixel against the mean, and pack the bits. Identical or near-identical
+    /// images produce hashes with a small Hamming distance.
+    /// </summary>
+    private static ulong ComputeAverageHash(string path)
+    {
+        using var image = Image.Load<Rgba32>(path);
+        image.Mutate(ctx => ctx.Resize(8, 8, KnownResamplers.Box).Grayscale());
+
+        var values = new byte[64];
+        long sum = 0;
+        for (var i = 0; i < 64; i++)
+        {
+            var pixel = image[i % 8, i / 8];
+            values[i] = pixel.R;
+            sum += pixel.R;
+        }
+
+        var mean = sum / 64d;
+        ulong hash = 0;
+        for (var i = 0; i < 64; i++)
+        {
+            if (values[i] >= mean)
+                hash |= 1UL << i;
+        }
+
+        return hash;
+    }
+
+    private static int HammingDistance(ulong left, ulong right)
+    {
+        var diff = left ^ right;
+        var count = 0;
+        while (diff != 0)
+        {
+            diff &= diff - 1;
+            count++;
+        }
+
+        return count;
     }
 
     private static IEnumerable<string> EnumerateLibraryFiles(string root, IReadOnlySet<string> extensions)

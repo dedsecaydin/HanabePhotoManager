@@ -2745,24 +2745,64 @@ public sealed class MainWindowViewModel : ObservableObject
         return new ImportRunResult(success, skipped, failed, lines);
     }
 
-    private async Task AuditLibraryDuplicatesAsync(CancellationToken cancellationToken)
+    private async Task AuditLibraryDuplicatesAsync(CancellationToken cancellationToken, bool reportOutcome = false)
     {
         if (string.IsNullOrWhiteSpace(LibraryRoot) || !Directory.Exists(LibraryRoot))
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    "请先在首页选择图库根目录，再扫描重复内容。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
+        }
 
-        List<List<string>> duplicateGroups;
+        IsBusy = true;
+        IsProgressIndeterminate = true;
+        ProgressValue = 0;
+        ProgressLabel = "正在扫描重复内容…";
+        StatusMessage = "正在比对文件哈希与视觉指纹，请稍候…";
+
+        List<List<string>> exactGroups;
+        List<List<string>> visualGroups;
         try
         {
-            duplicateGroups = await _contentScanner.FindAllDuplicatesAsync(
+            exactGroups = await _contentScanner.FindAllDuplicatesAsync(
                 LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+
+            var covered = exactGroups
+                .SelectMany(group => group)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
+                LibraryRoot, ContentScanExtensions, covered, cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException) { return; }
-        catch (Exception) { return; }
-
-        if (duplicateGroups.Count == 0)
+        catch (Exception ex)
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    $"扫描重复内容时出错：{ex.Message}", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
+        }
+        finally
+        {
+            IsBusy = false;
+            IsProgressIndeterminate = false;
+        }
 
-        var filesToDelete = ShowDuplicateReviewDialog(duplicateGroups);
+        var candidates = new List<DuplicateCandidateGroup>();
+        foreach (var group in exactGroups)
+            candidates.Add(new DuplicateCandidateGroup(group, false));
+        foreach (var group in visualGroups)
+            candidates.Add(new DuplicateCandidateGroup(group, true));
+
+        if (candidates.Count == 0)
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    "扫描完成，未发现重复内容。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var filesToDelete = ShowDuplicateReviewDialog(candidates);
         if (filesToDelete is null || filesToDelete.Count == 0)
             return;
 
@@ -2783,9 +2823,9 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static HashSet<string>? ShowDuplicateReviewDialog(List<List<string>> duplicateGroups)
+    private static HashSet<string>? ShowDuplicateReviewDialog(List<DuplicateCandidateGroup> candidates)
     {
-        var window = new DuplicateReviewWindow(duplicateGroups)
+        var window = new DuplicateReviewWindow(candidates)
         {
             Owner = System.Windows.Application.Current.MainWindow
         };
@@ -2794,7 +2834,15 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private async Task ScanLibraryDuplicatesAsync()
     {
-        await AuditLibraryDuplicatesAsync(CancellationToken.None).ConfigureAwait(true);
+        using var cancellation = BeginCancelableTask(ActiveTaskKind.Preview);
+        try
+        {
+            await AuditLibraryDuplicatesAsync(cancellation.Token, reportOutcome: true).ConfigureAwait(true);
+        }
+        finally
+        {
+            EndCancelableTask(cancellation);
+        }
     }
 
     private async Task AskForDateRemarksAsync(IReadOnlyList<LibraryDate> dates)

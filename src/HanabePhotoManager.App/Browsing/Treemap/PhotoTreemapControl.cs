@@ -325,18 +325,18 @@ public sealed class PhotoTreemapControl : FrameworkElement
             DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
         }
 
-        if (item.IsContainer || rect.Width < 24 || rect.Height < 12)
+        if (item.IsContainer || rect.Width < 40 || rect.Height < 20)
         {
             return;
         }
 
         var extension = item.Extension.Length > 0
-            ? (char.ToUpperInvariant(item.Extension[0]) + item.Extension[1..].ToLowerInvariant())
+            ? item.Extension.ToUpperInvariant()
             : string.Empty;
         if (extension.Length == 0) return;
 
+        var fontSize = ResourceDouble("Typography.Caption", 9);
         var textBrush = FindBrush("Brush.Text.Primary", WpfSystemColors.ControlTextBrush);
-        var fontSize = ResourceDouble("Typography.Caption", 10);
         var formatted = new FormattedText(
             extension,
             CultureInfo.CurrentUICulture,
@@ -348,13 +348,21 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 FontStretches.Normal),
             fontSize,
             textBrush,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip)
-        {
-            MaxTextWidth = Math.Max(1, rect.Width - gap * 2),
-            MaxTextHeight = Math.Max(1, rect.Height - gap),
-            Trimming = TextTrimming.CharacterEllipsis
-        };
-        drawingContext.DrawText(formatted, new WpfPoint(rect.X + gap * 2, rect.Y + gap));
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+        var badgeWidth = formatted.Width + 8;
+        var badgeHeight = formatted.Height + 4;
+        var badgeX = rect.Right - badgeWidth - gap;
+        var badgeY = rect.Y + gap;
+
+        var badgeFill = FindBrush("Brush.Surface.Subtle", WpfSystemColors.ControlBrush);
+        drawingContext.DrawRoundedRectangle(
+            badgeFill,
+            null,
+            new Rect(badgeX, badgeY, badgeWidth, badgeHeight),
+            3, 3);
+
+        drawingContext.DrawText(formatted, new WpfPoint(badgeX + 4, badgeY + 2));
     }
 
     private static void DrawThumbnail(DrawingContext drawingContext, ImageSource thumbnail, Rect rect, double radius)

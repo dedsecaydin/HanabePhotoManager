@@ -455,6 +455,10 @@
                     <Setter Property="Padding" Value="24,20,24,18" />
                     <Setter Property="Margin" Value="0" />
                   </DataTrigger>
+                  <DataTrigger Binding="{Binding IsPreviewPage}" Value="True">
+                    <Setter Property="Padding" Value="0,0,0,10" />
+                    <Setter Property="Margin" Value="0,0,0,8" />
+                  </DataTrigger>
                 </Style.Triggers>
               </Style>
             </Border.Style>
@@ -465,7 +469,7 @@
               </Grid.ColumnDefinitions>
               <StackPanel>
                 <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />
-                <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,6,0,0" Text="{Binding PageSubtitle}" />
+                <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="{Binding PageSubtitle}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}">
                 <Button Content="选择库根目录" Command="{Binding BrowseLibraryCommand}" />
@@ -819,18 +823,18 @@
                         IsExpanded="{Binding IsBrowseConditionsExpanded, Mode=TwoWay}" Margin="0,0,0,14">
                 <Expander.HeaderTemplate>
                   <DataTemplate>
-                    <DockPanel MinHeight="46" LastChildFill="True">
+                    <DockPanel MinHeight="46" LastChildFill="True" ClipToBounds="True">
                       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Button Content="重置" Command="{Binding DataContext.ResetBrowseConditionsCommand, RelativeSource={RelativeSource AncestorType=Expander}}" Padding="12,6" Margin="8,0,8,0" />
-                        <Button Content="扫描重复内容" Padding="12,6" Margin="8,0,0,0" Command="{Binding DataContext.ScanLibraryDuplicatesCommand, RelativeSource={RelativeSource AncestorType=Expander}}" />
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="{Binding DataContext.IsDuplicateScanRunning, RelativeSource={RelativeSource AncestorType=Expander}, Converter={StaticResource BoolToVis}}">
-                          <ProgressBar Width="120" Height="6" IsIndeterminate="True" />
-                          <TextBlock Text="{Binding DataContext.ProgressLabel, RelativeSource={RelativeSource AncestorType=Expander}}" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        <Button Content="重置" Command="{Binding DataContext.ResetBrowseConditionsCommand, RelativeSource={RelativeSource AncestorType=Expander}}" Padding="10,5" Margin="6,0,6,0" />
+                        <Button Content="扫描重复" Padding="10,5" Margin="6,0,0,0" Command="{Binding DataContext.ScanLibraryDuplicatesCommand, RelativeSource={RelativeSource AncestorType=Expander}}" />
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding DataContext.IsDuplicateScanRunning, RelativeSource={RelativeSource AncestorType=Expander}, Converter={StaticResource BoolToVis}}">
+                          <ProgressBar Width="100" Height="6" IsIndeterminate="True" />
+                          <TextBlock Text="{Binding DataContext.ProgressLabel, RelativeSource={RelativeSource AncestorType=Expander}}" Margin="6,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
                         </StackPanel>
                       </StackPanel>
-                      <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="浏览条件" FontSize="16" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding DataContext.BrowseConditionsSummary, RelativeSource={RelativeSource AncestorType=Expander}}" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" Margin="0,3,0,0" />
+                      <StackPanel VerticalAlignment="Center" Margin="0,0,6,0">
+                        <TextBlock Text="浏览条件" FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding DataContext.BrowseConditionsSummary, RelativeSource={RelativeSource AncestorType=Expander}}" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" />
                       </StackPanel>
                     </DockPanel>
                   </DataTemplate>

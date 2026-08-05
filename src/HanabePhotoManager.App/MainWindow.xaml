@@ -471,13 +471,6 @@
                 <Button Content="选择库根目录" Command="{Binding BrowseLibraryCommand}" />
                 <Button Content="刷新" Command="{Binding RefreshLibraryCommand}" />
               </StackPanel>
-              <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
-                <Button Content="扫描重复内容" Command="{Binding ScanLibraryDuplicatesCommand}" />
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="{Binding IsDuplicateScanRunning, Converter={StaticResource BoolToVis}}">
-                  <ProgressBar Width="120" Height="6" IsIndeterminate="True" />
-                  <TextBlock Text="{Binding ProgressLabel}" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                </StackPanel>
-              </StackPanel>
             </Grid>
           </Border>
           <Grid>
@@ -829,6 +822,11 @@
                     <DockPanel MinHeight="46" LastChildFill="True">
                       <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Content="重置" Command="{Binding DataContext.ResetBrowseConditionsCommand, RelativeSource={RelativeSource AncestorType=Expander}}" Padding="12,6" Margin="8,0,8,0" />
+                        <Button Content="扫描重复内容" Padding="12,6" Margin="8,0,0,0" Command="{Binding DataContext.ScanLibraryDuplicatesCommand, RelativeSource={RelativeSource AncestorType=Expander}}" />
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0" Visibility="{Binding DataContext.IsDuplicateScanRunning, RelativeSource={RelativeSource AncestorType=Expander}, Converter={StaticResource BoolToVis}}">
+                          <ProgressBar Width="120" Height="6" IsIndeterminate="True" />
+                          <TextBlock Text="{Binding DataContext.ProgressLabel, RelativeSource={RelativeSource AncestorType=Expander}}" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </StackPanel>
                       </StackPanel>
                       <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="浏览条件" FontSize="16" FontWeight="SemiBold" />
@@ -1076,27 +1074,6 @@
                       </WrapPanel>
                       </StackPanel>
                     </Border>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                      <TextBlock Text="显示方式" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
-                      <ComboBox x:Name="BrowseDisplayModeSelector" Width="126" SelectedValuePath="Value" ItemsSource="{Binding BrowseDisplayModes}" SelectedValue="{Binding BrowseDisplayMode, Mode=TwoWay}" AutomationProperties.Name="浏览显示方式">
-                        <ComboBox.ItemTemplate>
-                          <DataTemplate>
-                            <TextBlock Text="{Binding Label}" />
-                          </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                      </ComboBox>
-                      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="面积" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox Width="142" SelectedValuePath="Value" ItemsSource="{Binding TreemapWeightModes}" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" AutomationProperties.Name="树图面积计算方式">
-                          <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                              <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                          </ComboBox.ItemTemplate>
-                        </ComboBox>
-                      </StackPanel>
-                      <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
-                    </StackPanel>
                     <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
                     <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
                       <DockPanel>

@@ -974,27 +974,35 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void EnsureTreemapPopulatedFromPreviewFiles()
     {
-        if (TreemapBrowser.Items.Count > 0 ||
-            PreviewFiles.Count == 0 ||
-            string.IsNullOrWhiteSpace(SelectedDatePath))
+        if (PreviewFiles.Count == 0 || string.IsNullOrWhiteSpace(SelectedDatePath))
         {
             return;
         }
 
-        var generation = TreemapBrowser.BeginScan(SelectedDatePath);
-        var items = PreviewFiles.Select(file => new LibraryDateMediaItem(
-            file.FullPath,
-            file.Name,
-            file.Extension,
-            file.Category,
-            file.Length,
-            DateTime.MinValue)).ToArray();
-        TreemapBrowser.ApplyBatch(generation, new LibraryDateSnapshotBatch(items, items.Length, FromCache: true));
-        foreach (var file in PreviewFiles.Where(file => file.Thumbnail is not null))
+        RepopulateTreemapFrom(FilteredPreviewFiles);
+    }
+
+    private void RepopulateTreemapFrom(IEnumerable<PreviewFileViewModel> source)
+    {
+        var files = source.ToArray();
+        var generation = TreemapBrowser.BeginScan(SelectedDatePath ?? string.Empty);
+        if (files.Length > 0)
         {
-            TreemapBrowser.UpdateThumbnail(file.FullPath, file.Thumbnail);
+            var items = files.Select(file => new LibraryDateMediaItem(
+                file.FullPath, file.Name, file.Extension, file.Category,
+                file.Length, DateTime.MinValue)).ToArray();
+            TreemapBrowser.ApplyBatch(generation, new LibraryDateSnapshotBatch(items, items.Length, FromCache: true));
+            foreach (var file in files.Where(file => file.Thumbnail is not null))
+            {
+                TreemapBrowser.UpdateThumbnail(file.FullPath, file.Thumbnail);
+            }
+            TreemapBrowser.Complete(generation, isPartial: false);
+            StartPreviewThumbnailLoading(files);
         }
-        TreemapBrowser.Complete(generation, isPartial: false);
+        else
+        {
+            TreemapBrowser.Complete(generation, isPartial: false);
+        }
     }
 
     public bool IsCompactBrowseLayout
@@ -1475,6 +1483,10 @@ public sealed class MainWindowViewModel : ObservableObject
         RebuildVisiblePreviewPage();
         OnPropertyChanged(nameof(FilteredPreviewFiles));
         NotifyPreviewCountsChanged();
+        if (IsTreemapBrowseMode)
+        {
+            RepopulateTreemapFrom(_filteredCache);
+        }
     }
 
     private int _previewSort;

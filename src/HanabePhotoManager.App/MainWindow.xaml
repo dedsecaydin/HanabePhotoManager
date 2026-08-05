@@ -1078,6 +1078,27 @@
                       </WrapPanel>
                       </StackPanel>
                     </Border>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                      <TextBlock Text="显示方式" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
+                      <ComboBox x:Name="BrowseDisplayModeSelector" Width="126" SelectedValuePath="Value" ItemsSource="{Binding BrowseDisplayModes}" SelectedValue="{Binding BrowseDisplayMode, Mode=TwoWay}" AutomationProperties.Name="浏览显示方式">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding Label}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
+                        <TextBlock Text="面积" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox Width="142" SelectedValuePath="Value" ItemsSource="{Binding TreemapWeightModes}" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" AutomationProperties.Name="树图面积计算方式">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                              <TextBlock Text="{Binding Label}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
+                      </StackPanel>
+                      <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
+                    </StackPanel>
                     <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
                     <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
                       <DockPanel>

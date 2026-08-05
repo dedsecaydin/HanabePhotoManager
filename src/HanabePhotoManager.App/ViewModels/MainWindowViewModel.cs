@@ -1230,17 +1230,6 @@ public sealed class MainWindowViewModel : ObservableObject
     public IRelayCommand<string?> NavigateGridCategoryCommand { get; }
 
     /// <summary>
-    /// Zooms the grid tile size exponentially. <paramref name="factor"/> is
-    /// applied around 1.0 (e.g. 1.15 for one wheel notch in). The caller is
-    /// responsible for adjusting the scroll offset so the zoom is anchored on
-    /// the pointer.
-    /// </summary>
-    public void AdjustZoomableGridTileSize(double factor)
-    {
-        ZoomableGridTileSize *= factor;
-    }
-
-    /// <summary>
     /// Zoom scale for the treemap browse mode. 1.0 is the default fit; higher
     /// values enlarge every tile proportionally so the user can inspect small
     /// categories or dense areas.
@@ -1250,7 +1239,7 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _treemapZoom;
         set
         {
-            var clamped = Math.Clamp(value, 0.5, 5.0);
+            var clamped = Math.Clamp(value, 0.5, 30.0);
             if (SetProperty(ref _treemapZoom, clamped))
             {
                 if (_isInitialized)
@@ -1259,15 +1248,6 @@ public sealed class MainWindowViewModel : ObservableObject
                 }
             }
         }
-    }
-
-    /// <summary>
-    /// Zooms the treemap scale exponentially. The caller adjusts the scroll
-    /// offset so the zoom is anchored on the pointer.
-    /// </summary>
-    public void AdjustTreemapZoom(double factor)
-    {
-        TreemapZoom *= factor;
     }
 
     public double GlassIntensity

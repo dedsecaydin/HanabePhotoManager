@@ -33,7 +33,7 @@ public partial class MainWindow : Window
     private double _gridPanStartHorizontalOffset;
 
     private const double TreemapZoomMin = 0.5;
-    private const double TreemapZoomMax = 5.0;
+    private const double TreemapZoomMax = 30.0;
     private const double TreemapZoomNotchFactor = 1.12;
 
     public MainWindow()

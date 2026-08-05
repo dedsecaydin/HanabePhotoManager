@@ -16,6 +16,7 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 public sealed class PhotoTreemapControl : FrameworkElement
 {
     private const double MinimumThumbnailArea = 12_000;
+    private const double ViewportPadding = 20;
     private readonly SquarifiedTreemapLayout _layout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
 
@@ -52,11 +53,25 @@ public sealed class PhotoTreemapControl : FrameworkElement
         typeof(ICommand),
         typeof(PhotoTreemapControl));
 
+    internal static readonly DependencyProperty VisibleRectProperty = DependencyProperty.Register(
+        nameof(VisibleRect),
+        typeof(Rect),
+        typeof(PhotoTreemapControl),
+        new FrameworkPropertyMetadata(
+            Rect.Empty,
+            FrameworkPropertyMetadataOptions.AffectsRender));
+
     public PhotoTreemapControl()
     {
         Focusable = true;
         SnapsToDevicePixels = true;
         AutomationProperties.SetName(this, "照片空间树图");
+    }
+
+    internal Rect VisibleRect
+    {
+        get => (Rect)GetValue(VisibleRectProperty);
+        set => SetValue(VisibleRectProperty, value);
     }
 
     public IReadOnlyList<TreemapItemViewModel> ItemsSource
@@ -126,6 +141,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
+        var visibleRect = VisibleRect.IsEmpty
+            ? new Rect(0, 0, ActualWidth, ActualHeight)
+            : VisibleRect;
+        var padded = new Rect(
+            visibleRect.X - ViewportPadding, visibleRect.Y - ViewportPadding,
+            visibleRect.Width + ViewportPadding * 2, visibleRect.Height + ViewportPadding * 2);
+
         var surface = FindBrush("Brush.Background.Canvas", WpfSystemColors.WindowBrush);
         drawingContext.DrawRectangle(surface, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
@@ -133,12 +155,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
         if (RootKey is null)
         {
-            DrawRoot(drawingContext, bounds, regions);
+            DrawRoot(drawingContext, bounds, regions, padded);
         }
         else
         {
             var children = ItemsSource.Where(item => item.ParentKey == RootKey).ToArray();
-            DrawItems(drawingContext, children, bounds, regions, drawContainerHeader: false);
+            DrawItems(drawingContext, children, bounds, regions, drawContainerHeader: false, padded);
         }
 
         _hitRegions = regions;
@@ -193,13 +215,21 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private void DrawRoot(
         DrawingContext drawingContext,
         TreemapBounds bounds,
-        ICollection<TreemapHitRegion> regions)
+        ICollection<TreemapHitRegion> regions,
+        Rect visibleRect)
     {
         var categories = ItemsSource
             .Where(item => item.ParentKey is null && item.IsContainer)
             .ToArray();
         foreach (var categoryTile in CalculateLayout(categories, bounds))
         {
+            var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
+                categoryTile.Bounds.Width, categoryTile.Bounds.Height);
+            if (!visibleRect.IntersectsWith(tileRect))
+            {
+                continue;
+            }
+
             DrawTile(drawingContext, categoryTile.Item, categoryTile.Bounds, true);
             regions.Add(categoryTile);
 
@@ -222,7 +252,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var children = ItemsSource
                 .Where(item => item.ParentKey == categoryTile.Item.Key)
                 .ToArray();
-            DrawItems(drawingContext, children, childBounds, regions, drawContainerHeader: false);
+            DrawItems(drawingContext, children, childBounds, regions, drawContainerHeader: false, visibleRect);
         }
     }
 
@@ -231,10 +261,18 @@ public sealed class PhotoTreemapControl : FrameworkElement
         IReadOnlyList<TreemapItemViewModel> items,
         TreemapBounds bounds,
         ICollection<TreemapHitRegion> regions,
-        bool drawContainerHeader)
+        bool drawContainerHeader,
+        Rect visibleRect)
     {
         foreach (var tile in CalculateLayout(items, bounds))
         {
+            var tileRect = new Rect(tile.Bounds.X, tile.Bounds.Y,
+                tile.Bounds.Width, tile.Bounds.Height);
+            if (!visibleRect.IntersectsWith(tileRect))
+            {
+                continue;
+            }
+
             DrawTile(drawingContext, tile.Item, tile.Bounds, drawContainerHeader);
             regions.Add(tile);
         }

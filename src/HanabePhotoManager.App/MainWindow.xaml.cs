@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         LocationChanged += (_, _) => ScheduleWindowStateSave();
         StateChanged += (_, _) => ScheduleWindowStateSave();
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
+        _viewModel.TreemapRepopulated += OnTreemapRepopulated;
     }
 
     private void PrimaryNavigationItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -381,6 +382,13 @@ public partial class MainWindow : Window
             TreemapScrollViewer.VerticalOffset,
             TreemapScrollViewer.ViewportWidth,
             TreemapScrollViewer.ViewportHeight);
+    }
+
+    private void OnTreemapRepopulated()
+    {
+        UpdateTreemapSize();
+        SyncTreemapVisibleRect();
+        TreemapControl?.InvalidateVisual();
     }
 
     private void TreemapControl_Loaded(object sender, RoutedEventArgs e)

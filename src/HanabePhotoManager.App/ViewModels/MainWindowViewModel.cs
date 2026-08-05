@@ -919,6 +919,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand ScanLibraryDuplicatesCommand { get; }
 
+    public event Action? TreemapRepopulated;
+
     public bool IsBrowseConditionsExpanded
     {
         get => _isBrowseConditionsExpanded;
@@ -1003,6 +1005,8 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             TreemapBrowser.Complete(generation, isPartial: false);
         }
+
+        TreemapRepopulated?.Invoke();
     }
 
     public bool IsCompactBrowseLayout
@@ -6464,6 +6468,7 @@ public sealed class ImportPreviewItemViewModel : ObservableObject
     }
 
     public event Action? SelectionChanged;
+
 
     public MediaGroup Group { get; }
 

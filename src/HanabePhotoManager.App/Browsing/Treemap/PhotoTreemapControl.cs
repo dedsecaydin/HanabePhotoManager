@@ -15,7 +15,7 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 
 public sealed class PhotoTreemapControl : FrameworkElement
 {
-    private const double MinimumThumbnailArea = 12_000;
+    private const double MinimumThumbnailArea = 400;
     private const double ViewportPadding = 20;
     private readonly SquarifiedTreemapLayout _layout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];

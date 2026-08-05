@@ -364,8 +364,8 @@ public partial class MainWindow : Window
         }
 
         var zoom = _viewModel?.TreemapZoom ?? 1.0;
-        TreemapControl.Width = Math.Max(1, TreemapScrollViewer.ViewportWidth * zoom);
-        TreemapControl.Height = Math.Max(1, TreemapScrollViewer.ViewportHeight * zoom);
+        TreemapControl.Width = Math.Max(TreemapScrollViewer.ViewportWidth, TreemapScrollViewer.ViewportWidth * zoom);
+        TreemapControl.Height = Math.Max(TreemapScrollViewer.ViewportHeight, TreemapScrollViewer.ViewportHeight * zoom);
         TreemapControl.InvalidateVisual();
         SyncTreemapVisibleRect();
     }

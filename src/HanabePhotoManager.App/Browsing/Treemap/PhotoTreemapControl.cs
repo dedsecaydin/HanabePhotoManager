@@ -223,6 +223,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
             .ToArray();
         foreach (var categoryTile in CalculateLayout(categories, bounds))
         {
+            regions.Add(categoryTile);
+
             var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
                 categoryTile.Bounds.Width, categoryTile.Bounds.Height);
             if (!visibleRect.IntersectsWith(tileRect))
@@ -231,7 +233,6 @@ public sealed class PhotoTreemapControl : FrameworkElement
             }
 
             DrawTile(drawingContext, categoryTile.Item, categoryTile.Bounds, true);
-            regions.Add(categoryTile);
 
             var headerHeight = Math.Min(
                 ResourceDouble("Size.Control.Compact", 28),
@@ -266,6 +267,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     {
         foreach (var tile in CalculateLayout(items, bounds))
         {
+            regions.Add(tile);
+
             var tileRect = new Rect(tile.Bounds.X, tile.Bounds.Y,
                 tile.Bounds.Width, tile.Bounds.Height);
             if (!visibleRect.IntersectsWith(tileRect))
@@ -274,7 +277,6 @@ public sealed class PhotoTreemapControl : FrameworkElement
             }
 
             DrawTile(drawingContext, tile.Item, tile.Bounds, drawContainerHeader);
-            regions.Add(tile);
         }
     }
 
@@ -322,36 +324,6 @@ public sealed class PhotoTreemapControl : FrameworkElement
         {
             DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
         }
-
-        var minimumLabelWidth = ResourceDouble("Size.Control.Default", 36);
-        if (rect.Width < minimumLabelWidth || rect.Height < minimumLabelWidth / 2)
-        {
-            return;
-        }
-
-        var label = drawContainerHeader && item.IsContainer
-            ? $"{item.Label} · {FormatBytes(item.Length)}"
-            : item.Label;
-        var textBrush = FindBrush("Brush.Text.Primary", WpfSystemColors.ControlTextBrush);
-        var fontSize = ResourceDouble("Typography.Caption", 12);
-        var formatted = new FormattedText(
-            label,
-            CultureInfo.CurrentUICulture,
-            WpfFlowDirection.LeftToRight,
-            new Typeface(
-                TryFindResource("Typography.FontFamily.UI") as MediaFontFamily ?? System.Windows.SystemFonts.MessageFontFamily,
-                FontStyles.Normal,
-                FontWeights.SemiBold,
-                FontStretches.Normal),
-            fontSize,
-            textBrush,
-            VisualTreeHelper.GetDpi(this).PixelsPerDip)
-        {
-            MaxTextWidth = Math.Max(1, rect.Width - gap * 4),
-            MaxTextHeight = Math.Max(1, rect.Height - gap * 2),
-            Trimming = TextTrimming.CharacterEllipsis
-        };
-        drawingContext.DrawText(formatted, new WpfPoint(rect.X + gap * 2, rect.Y + gap));
     }
 
     private static void DrawThumbnail(DrawingContext drawingContext, ImageSource thumbnail, Rect rect, double radius)

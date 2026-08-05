@@ -940,6 +940,7 @@ public sealed class MainWindowViewModel : ObservableObject
             if (value == BrowseDisplayMode.Treemap)
             {
                 EnsureTreemapPopulatedFromPreviewFiles();
+                StartPreviewThumbnailLoading(PreviewFiles);
             }
             if (_isInitialized)
             {

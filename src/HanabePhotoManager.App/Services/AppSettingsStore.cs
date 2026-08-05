@@ -91,6 +91,8 @@ public sealed class AppSettings
 
     public double ZoomableGridTileSize { get; set; } = 150;
 
+    public double TreemapZoom { get; set; } = 1.0;
+
     [System.Text.Json.Serialization.JsonPropertyName("ThumbnailSize")]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public double? LegacyThumbnailSize

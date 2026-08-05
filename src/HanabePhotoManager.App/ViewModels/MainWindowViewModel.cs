@@ -170,6 +170,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private double _thumbnailSize = 150;
     private double _defaultThumbnailSize = 150;
     private double _zoomableGridTileSize = 150;
+    private double _treemapZoom = 1.0;
     private ObservableCollection<GridBreadcrumbViewModel> _gridBreadcrumbs = [];
     private string _defaultRatingFilter = "全部评分";
     private int _defaultPreviewSort;
@@ -1239,6 +1240,36 @@ public sealed class MainWindowViewModel : ObservableObject
         ZoomableGridTileSize *= factor;
     }
 
+    /// <summary>
+    /// Zoom scale for the treemap browse mode. 1.0 is the default fit; higher
+    /// values enlarge every tile proportionally so the user can inspect small
+    /// categories or dense areas.
+    /// </summary>
+    public double TreemapZoom
+    {
+        get => _treemapZoom;
+        set
+        {
+            var clamped = Math.Clamp(value, 0.5, 5.0);
+            if (SetProperty(ref _treemapZoom, clamped))
+            {
+                if (_isInitialized)
+                {
+                    _ = SaveSettingsAsync();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Zooms the treemap scale exponentially. The caller adjusts the scroll
+    /// offset so the zoom is anchored on the pointer.
+    /// </summary>
+    public void AdjustTreemapZoom(double factor)
+    {
+        TreemapZoom *= factor;
+    }
+
     public double GlassIntensity
     {
         get => _glassIntensity;
@@ -1685,9 +1716,11 @@ public sealed class MainWindowViewModel : ObservableObject
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
         _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
+        _treemapZoom = Math.Clamp(settings.TreemapZoom, 0.5, 5.0);
         OnPropertyChanged(nameof(DefaultThumbnailSize));
         OnPropertyChanged(nameof(ThumbnailSize));
         OnPropertyChanged(nameof(ZoomableGridTileSize));
+        OnPropertyChanged(nameof(TreemapZoom));
         OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
         RebuildGridBreadcrumbs();
         GlassIntensity = settings.GlassIntensity;
@@ -4832,6 +4865,7 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.LibraryRoot = LibraryRoot;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
             settings.ZoomableGridTileSize = ZoomableGridTileSize;
+            settings.TreemapZoom = TreemapZoom;
             settings.GlassIntensity = GlassIntensity;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;

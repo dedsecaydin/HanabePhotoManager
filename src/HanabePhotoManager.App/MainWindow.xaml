@@ -1189,9 +1189,11 @@
                                             </ContextMenu>
                                           </FrameworkElement.ContextMenu>
                                           <Grid>
-                                            <Grid.Background>
-                                              <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
-                                            </Grid.Background>
+                                            <Border Name="ThumbnailClip" CornerRadius="14" ClipToBounds="True">
+                                              <Border.Background>
+                                                <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
+                                              </Border.Background>
+                                            </Border>
                                             <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
                                             <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Padding="6,3" CornerRadius="8">
                                               <FrameworkElement.Style>
@@ -1270,7 +1272,9 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <treemap:PhotoTreemapControl MinHeight="420" ItemsSource="{Binding TreemapBrowser.Items}" RootKey="{Binding TreemapBrowser.CurrentContainerKey}" SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}" OpenItemCommand="{Binding OpenTreemapItemCommand}" ZoomCommand="{Binding ZoomTreemapCommand}" />
+                        <ScrollViewer Name="TreemapScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SizeChanged="TreemapScrollViewer_SizeChanged" PreviewMouseWheel="TreemapScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
+                          <treemap:PhotoTreemapControl x:Name="TreemapControl" MinHeight="420" ItemsSource="{Binding TreemapBrowser.Items}" RootKey="{Binding TreemapBrowser.CurrentContainerKey}" SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}" OpenItemCommand="{Binding OpenTreemapItemCommand}" ZoomCommand="{Binding ZoomTreemapCommand}" />
+                        </ScrollViewer>
                       </DockPanel>
                     </Border>
                   </DockPanel>

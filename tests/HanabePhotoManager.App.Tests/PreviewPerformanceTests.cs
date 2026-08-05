@@ -332,7 +332,9 @@ public sealed class PreviewPerformanceTests
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("Tag=\"PreviewCard\"");
-        xaml.Should().Contain("<Grid.Background>\n                                              <ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\" />");
+        xaml.Should().Contain("Name=\"ThumbnailClip\"");
+        xaml.Should().Contain("CornerRadius=\"14\" ClipToBounds=\"True\"");
+        xaml.Should().Contain("ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\"");
         xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }
 

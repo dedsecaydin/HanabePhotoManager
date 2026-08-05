@@ -306,6 +306,59 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void TreemapScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            return;
+        }
+
+        var scrollViewer = TreemapScrollViewer;
+        var pointer = e.GetPosition(scrollViewer);
+        var oldZoom = _viewModel.TreemapZoom;
+        const double notchFactor = 1.12;
+        var factor = e.Delta > 0 ? notchFactor : 1.0 / notchFactor;
+        var newZoom = Math.Clamp(oldZoom * factor, 0.5, 5.0);
+        if (Math.Abs(newZoom - oldZoom) < 0.01)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var oldOffsetX = scrollViewer.HorizontalOffset;
+        var oldOffsetY = scrollViewer.VerticalOffset;
+        var contentX = oldOffsetX + pointer.X;
+        var contentY = oldOffsetY + pointer.Y;
+        var scale = newZoom / oldZoom;
+        var newOffsetX = contentX * scale - pointer.X;
+        var newOffsetY = contentY * scale - pointer.Y;
+
+        _viewModel.TreemapZoom = newZoom;
+        UpdateTreemapSize();
+        scrollViewer.UpdateLayout();
+        scrollViewer.ScrollToHorizontalOffset(Math.Clamp(newOffsetX, 0, scrollViewer.ScrollableWidth));
+        scrollViewer.ScrollToVerticalOffset(Math.Clamp(newOffsetY, 0, scrollViewer.ScrollableHeight));
+
+        e.Handled = true;
+    }
+
+    private void TreemapScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        UpdateTreemapSize();
+    }
+
+    private void UpdateTreemapSize()
+    {
+        if (TreemapControl is null || TreemapScrollViewer is null)
+        {
+            return;
+        }
+
+        var zoom = _viewModel?.TreemapZoom ?? 1.0;
+        TreemapControl.Width = Math.Max(1, TreemapScrollViewer.ViewportWidth * zoom);
+        TreemapControl.Height = Math.Max(1, TreemapScrollViewer.ViewportHeight * zoom);
+    }
+
     private void PreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Middle || sender is not ScrollViewer scrollViewer)

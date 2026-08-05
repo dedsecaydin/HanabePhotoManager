@@ -32,6 +32,10 @@ public partial class MainWindow : Window
     private double _gridPanStartVerticalOffset;
     private double _gridPanStartHorizontalOffset;
 
+    private const double TreemapZoomMin = 0.5;
+    private const double TreemapZoomMax = 5.0;
+    private const double TreemapZoomNotchFactor = 1.12;
+
     public MainWindow()
     {
         _rubberBandAutoScrollTimer = new DispatcherTimer(DispatcherPriority.Input)
@@ -316,9 +320,8 @@ public partial class MainWindow : Window
         var scrollViewer = TreemapScrollViewer;
         var pointer = e.GetPosition(scrollViewer);
         var oldZoom = _viewModel.TreemapZoom;
-        const double notchFactor = 1.12;
-        var factor = e.Delta > 0 ? notchFactor : 1.0 / notchFactor;
-        var newZoom = Math.Clamp(oldZoom * factor, 0.5, 5.0);
+        var factor = e.Delta > 0 ? TreemapZoomNotchFactor : 1.0 / TreemapZoomNotchFactor;
+        var newZoom = Math.Clamp(oldZoom * factor, TreemapZoomMin, TreemapZoomMax);
         if (Math.Abs(newZoom - oldZoom) < 0.01)
         {
             e.Handled = true;
@@ -347,6 +350,11 @@ public partial class MainWindow : Window
         UpdateTreemapSize();
     }
 
+    private void TreemapScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        SyncTreemapVisibleRect();
+    }
+
     private void UpdateTreemapSize()
     {
         if (TreemapControl is null || TreemapScrollViewer is null)
@@ -357,6 +365,28 @@ public partial class MainWindow : Window
         var zoom = _viewModel?.TreemapZoom ?? 1.0;
         TreemapControl.Width = Math.Max(1, TreemapScrollViewer.ViewportWidth * zoom);
         TreemapControl.Height = Math.Max(1, TreemapScrollViewer.ViewportHeight * zoom);
+        TreemapControl.InvalidateVisual();
+        SyncTreemapVisibleRect();
+    }
+
+    private void SyncTreemapVisibleRect()
+    {
+        if (TreemapControl is null || TreemapScrollViewer is null)
+        {
+            return;
+        }
+
+        TreemapControl.VisibleRect = new Rect(
+            TreemapScrollViewer.HorizontalOffset,
+            TreemapScrollViewer.VerticalOffset,
+            TreemapScrollViewer.ViewportWidth,
+            TreemapScrollViewer.ViewportHeight);
+    }
+
+    private void TreemapControl_Loaded(object sender, RoutedEventArgs e)
+    {
+        UpdateTreemapSize();
+        TreemapControl?.InvalidateVisual();
     }
 
     private void PreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e)

@@ -479,11 +479,17 @@ public sealed class MainWindowViewModel : ObservableObject
     private void OpenTreemapItem(string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
-        var file = PreviewFiles.FirstOrDefault(item =>
+        var file = FilteredPreviewFiles.FirstOrDefault(item =>
             string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
         if (file is null) return;
+        if (!WpfImageExtensions.Contains(Path.GetExtension(file.FullPath))) return;
+
         SelectedPreviewFile = file;
-        OpenPhotoViewer(file);
+        var paths = FilteredPreviewFiles
+            .Select(item => item.PreviewPath)
+            .Where(p => WpfImageExtensions.Contains(Path.GetExtension(p)))
+            .ToArray();
+        PhotoViewer.Open(paths, file.PreviewPath);
     }
 
     public void RemoveDeletedViewerPhoto(string path)

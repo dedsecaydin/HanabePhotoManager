@@ -1599,7 +1599,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         // Retouch filter
         if (PreviewRetouchFilter == "已修")
-            result = result.Where(f => f.IsRetouched);
+            result = result.Where(f => f.IsRetouched && f.Category == "修后");
         else if (PreviewRetouchFilter == "未修")
             result = result.Where(f => !f.IsRetouched);
 

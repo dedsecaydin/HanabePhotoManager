@@ -21,6 +21,20 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
     private int _debugThumbnailCount;
     private int _debugTileCount;
+    private List<string> _visiblePaths = [];
+    private List<string> _visibleWithoutThumbnail = [];
+
+    /// <summary>
+    /// FullPaths of non-container tiles currently intersecting the visible rect,
+    /// ordered by distance from viewport center (closest first).
+    /// Populated during OnRender; read after render completes.
+    /// </summary>
+    internal IReadOnlyList<string> VisibleItemPaths => _visiblePaths;
+
+    /// <summary>
+    /// Subset of VisibleItemPaths whose Thumbnail is still null.
+    /// </summary>
+    internal IReadOnlyList<string> VisibleItemPathsNeedingThumbnail => _visibleWithoutThumbnail;
 
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
         nameof(ItemsSource),
@@ -165,6 +179,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         _debugThumbnailCount = 0;
         _debugTileCount = 0;
+        _visiblePaths = [];
+        _visibleWithoutThumbnail = [];
 
         var regions = new List<TreemapHitRegion>();
         var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
@@ -338,6 +354,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
         {
             _debugTileCount++;
             if (item.Thumbnail is not null) _debugThumbnailCount++;
+        }
+
+        // Collect visible items for viewport-driven loading
+        if (!item.IsContainer && !string.IsNullOrEmpty(item.FullPath))
+        {
+            _visiblePaths.Add(item.FullPath);
+            if (item.Thumbnail is null) _visibleWithoutThumbnail.Add(item.FullPath);
         }
 
         var isSelected = !item.IsContainer &&

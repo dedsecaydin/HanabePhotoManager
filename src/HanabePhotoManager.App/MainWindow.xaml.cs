@@ -42,6 +42,8 @@ public partial class MainWindow : Window
     private const double TreemapZoomMax = 30.0;
     private const double TreemapZoomNotchFactor = 1.12;
 
+    private readonly DispatcherTimer _treemapViewportDebounceTimer;
+
     public MainWindow()
     {
         _rubberBandAutoScrollTimer = new DispatcherTimer(DispatcherPriority.Input)
@@ -49,6 +51,11 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromMilliseconds(24)
         };
         _rubberBandAutoScrollTimer.Tick += RubberBandAutoScrollTimer_Tick;
+        _treemapViewportDebounceTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        _treemapViewportDebounceTimer.Tick += TreemapViewportDebounceTimer_Tick;
         _windowStateSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
         _windowStateSaveTimer.Tick += (_, _) => { _windowStateSaveTimer.Stop(); PersistWindowState(); };
         InitializeComponent();
@@ -360,6 +367,7 @@ public partial class MainWindow : Window
     private void TreemapScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         SyncTreemapVisibleRect();
+        ScheduleTreemapViewportLoad();
     }
 
     private void UpdateTreemapSize()
@@ -374,6 +382,7 @@ public partial class MainWindow : Window
         TreemapControl.Height = Math.Max(TreemapScrollViewer.ViewportHeight, TreemapScrollViewer.ViewportHeight * zoom);
         TreemapControl.InvalidateVisual();
         SyncTreemapVisibleRect();
+        ScheduleTreemapViewportLoad();
     }
 
     private void SyncTreemapVisibleRect()
@@ -395,8 +404,22 @@ public partial class MainWindow : Window
         UpdateTreemapSize();
         SyncTreemapVisibleRect();
         TreemapControl?.InvalidateVisual();
+        ScheduleTreemapViewportLoad();
     }
 
+    private void ScheduleTreemapViewportLoad()
+    {
+        if (_treemapViewportDebounceTimer is null) return;
+        _treemapViewportDebounceTimer.Stop();
+        _treemapViewportDebounceTimer.Start();
+    }
+
+    private void TreemapViewportDebounceTimer_Tick(object? sender, EventArgs e)
+    {
+        _treemapViewportDebounceTimer.Stop();
+        if (TreemapControl is null || !_viewModel.IsTreemapBrowseMode) return;
+        _viewModel.RefreshTreemapViewportLoading(TreemapControl.VisibleItemPathsNeedingThumbnail);
+    }
     private void TreemapControl_Loaded(object sender, RoutedEventArgs e)
     {
         UpdateTreemapSize();
@@ -492,6 +515,7 @@ public partial class MainWindow : Window
                 spaceSvCursor.Cursor = _isSpaceHeld ? System.Windows.Input.Cursors.ScrollAll : System.Windows.Input.Cursors.Arrow;
             }
 
+            ScheduleTreemapViewportLoad();
             e.Handled = true;
             return;
         }
@@ -508,6 +532,7 @@ public partial class MainWindow : Window
             scrollViewer.ReleaseMouseCapture();
         }
 
+        ScheduleTreemapViewportLoad();
         e.Handled = true;
     }
 

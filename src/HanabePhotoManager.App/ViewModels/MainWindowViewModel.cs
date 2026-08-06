@@ -1021,9 +1021,53 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void StartTreemapThumbnailLoading(PreviewFileViewModel[] files)
     {
-        StartPreviewThumbnailLoading(files, 512);
-        // Self-heal: periodically re-check for stragglers
-        _ = SelfHealTreemapThumbnailsAsync(files);
+        // Don't load everything — just kick off viewport-driven loading.
+        // The actual viewport priority loading is triggered by code-behind
+        // after each render via RefreshTreemapViewportLoading().
+        _treemapSourceFiles = files;
+    }
+
+    private PreviewFileViewModel[]? _treemapSourceFiles;
+
+    /// <summary>
+    /// Called by code-behind after each treemap render to load ONLY
+    /// the thumbnails for tiles currently in the visible viewport.
+    /// </summary>
+    internal void RefreshTreemapViewportLoading(IReadOnlyList<string> visiblePathsNeedingThumbnail)
+    {
+        if (!IsTreemapBrowseMode || !IsPreviewPage) return;
+        if (visiblePathsNeedingThumbnail.Count == 0) return;
+        if (_treemapSourceFiles is not { Length: > 0 } source) return;
+
+        // Build a quick lookup from FullPath → PreviewFileViewModel
+        var pathToFile = new Dictionary<string, PreviewFileViewModel>(
+            source.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in source)
+        {
+            pathToFile[file.FullPath] = file;
+        }
+
+        var toLoad = new List<PreviewFileViewModel>(visiblePathsNeedingThumbnail.Count);
+        foreach (var path in visiblePathsNeedingThumbnail)
+        {
+            if (pathToFile.TryGetValue(path, out var file) && file.Thumbnail is null)
+            {
+                toLoad.Add(file);
+            }
+        }
+
+        if (toLoad.Count == 0) return;
+
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] Viewport refresh — {toLoad.Count} visible items need thumbnails");
+
+        // Cancel any OLD viewport-specific loading (but not global loading)
+        CancelPreviewThumbnailLoading();
+        _previewThumbnailCancellation = new CancellationTokenSource();
+        Interlocked.Exchange(ref _treemapLoadActive, 1);
+        _ = LoadPreviewThumbnailsAsync(toLoad, 512, _previewThumbnailCancellation.Token)
+            .ContinueWith(_ => Interlocked.Exchange(ref _treemapLoadActive, 0),
+                TaskScheduler.Default);
     }
 
     private async Task SelfHealTreemapThumbnailsAsync(PreviewFileViewModel[] source)

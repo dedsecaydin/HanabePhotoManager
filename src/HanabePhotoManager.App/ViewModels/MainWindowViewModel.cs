@@ -949,7 +949,6 @@ public sealed class MainWindowViewModel : ObservableObject
             if (value == BrowseDisplayMode.Treemap)
             {
                 EnsureTreemapPopulatedFromPreviewFiles();
-                StartPreviewThumbnailLoading(PreviewFiles, 512);
             }
             if (_isInitialized)
             {
@@ -1009,7 +1008,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 TreemapBrowser.UpdateThumbnail(file.FullPath, file.Thumbnail);
             }
             TreemapBrowser.Complete(generation, isPartial: false);
-            StartPreviewThumbnailLoading(files, 512);
+            StartTreemapThumbnailLoading(files);
         }
         else
         {
@@ -1017,6 +1016,39 @@ public sealed class MainWindowViewModel : ObservableObject
         }
 
         TreemapRepopulated?.Invoke();
+    }
+
+    private void StartTreemapThumbnailLoading(PreviewFileViewModel[] files)
+    {
+        StartPreviewThumbnailLoading(files, 512);
+        // Self-heal: periodically re-check for stragglers
+        _ = SelfHealTreemapThumbnailsAsync(files);
+    }
+
+    private async Task SelfHealTreemapThumbnailsAsync(PreviewFileViewModel[] source)
+    {
+        try
+        {
+            await Task.Delay(4000).ConfigureAwait(false);
+            for (var round = 0; round < 10 && IsPreviewPage && IsTreemapBrowseMode; round++)
+            {
+                if (_previewThumbnailCancellation is null ||
+                    _previewThumbnailCancellation.IsCancellationRequested)
+                {
+                    break;
+                }
+
+                var unloaded = source.Where(item => item.Thumbnail is null).ToArray();
+                if (unloaded.Length == 0) break;
+
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Self-heal round {round}: {unloaded.Length} stragglers, restarting");
+                StartPreviewThumbnailLoading(unloaded, 512);
+
+                await Task.Delay(5000, _previewThumbnailCancellation.Token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { }
     }
 
     public bool IsCompactBrowseLayout
@@ -3809,11 +3841,21 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void RebuildVisiblePreviewPage()
     {
-        CancelPreviewThumbnailLoading();
-        var oldItems = VisiblePreviewFiles.ToArray();
-        foreach (var item in oldItems.Where(item => !HomePreviewFiles.Contains(item)))
+        // Don't cancel treemap loading when rebuilding the grid page
+        if (!IsTreemapBrowseMode)
         {
-            item.Thumbnail = null;
+            CancelPreviewThumbnailLoading();
+        }
+
+        var oldItems = VisiblePreviewFiles.ToArray();
+
+        // Don't clear thumbnails if the treemap is using them
+        if (!IsTreemapBrowseMode)
+        {
+            foreach (var item in oldItems.Where(item => !HomePreviewFiles.Contains(item)))
+            {
+                item.Thumbnail = null;
+            }
         }
 
         RebuildVisiblePreviewSections();

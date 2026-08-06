@@ -32,6 +32,12 @@ public partial class MainWindow : Window
     private double _gridPanStartVerticalOffset;
     private double _gridPanStartHorizontalOffset;
 
+    private bool _isSpaceHeld;
+    private bool _isSpacePanning;
+    private System.Windows.Point _spacePanStartPoint;
+    private double _spacePanStartVerticalOffset;
+    private double _spacePanStartHorizontalOffset;
+
     private const double TreemapZoomMin = 0.5;
     private const double TreemapZoomMax = 30.0;
     private const double TreemapZoomNotchFactor = 1.12;
@@ -399,7 +405,28 @@ public partial class MainWindow : Window
 
     private void PreviewScrollViewer_PreviewMouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != MouseButton.Middle || sender is not ScrollViewer scrollViewer)
+        if (sender is not ScrollViewer scrollViewer)
+        {
+            return;
+        }
+
+        // Space + left drag pan for treemap
+        if (_isSpaceHeld && e.ChangedButton == MouseButton.Left &&
+            _viewModel.IsTreemapBrowseMode &&
+            !IsTextInputFocused())
+        {
+            _isSpacePanning = true;
+            _spacePanStartPoint = e.GetPosition(scrollViewer);
+            _spacePanStartVerticalOffset = scrollViewer.VerticalOffset;
+            _spacePanStartHorizontalOffset = scrollViewer.HorizontalOffset;
+            scrollViewer.Cursor = System.Windows.Input.Cursors.ScrollAll;
+            scrollViewer.CaptureMouse();
+            e.Handled = true;
+            return;
+        }
+
+        // Middle-button pan (existing)
+        if (e.ChangedButton != MouseButton.Middle)
         {
             return;
         }
@@ -414,21 +441,62 @@ public partial class MainWindow : Window
 
     private void PreviewScrollViewer_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (!_isGridPanning || sender is not ScrollViewer scrollViewer)
+        if (sender is not ScrollViewer scrollViewer)
         {
             return;
         }
 
-        var current = e.GetPosition(scrollViewer);
-        var deltaY = current.Y - _gridPanStartPoint.Y;
-        var deltaX = current.X - _gridPanStartPoint.X;
-        scrollViewer.ScrollToVerticalOffset(Math.Clamp(_gridPanStartVerticalOffset - deltaY, 0, scrollViewer.ScrollableHeight));
-        scrollViewer.ScrollToHorizontalOffset(Math.Clamp(_gridPanStartHorizontalOffset - deltaX, 0, scrollViewer.ScrollableWidth));
+        // Handle space panning
+        if (_isSpacePanning)
+        {
+            var current = e.GetPosition(scrollViewer);
+            var deltaY = current.Y - _spacePanStartPoint.Y;
+            var deltaX = current.X - _spacePanStartPoint.X;
+            scrollViewer.ScrollToVerticalOffset(Math.Clamp(
+                _spacePanStartVerticalOffset - deltaY, 0, scrollViewer.ScrollableHeight));
+            scrollViewer.ScrollToHorizontalOffset(Math.Clamp(
+                _spacePanStartHorizontalOffset - deltaX, 0, scrollViewer.ScrollableWidth));
+            e.Handled = true;
+            return;
+        }
+
+        // Handle middle-button panning
+        if (!_isGridPanning)
+        {
+            return;
+        }
+
+        var currentM = e.GetPosition(scrollViewer);
+        var deltaYM = currentM.Y - _gridPanStartPoint.Y;
+        var deltaXM = currentM.X - _gridPanStartPoint.X;
+        scrollViewer.ScrollToVerticalOffset(Math.Clamp(
+            _gridPanStartVerticalOffset - deltaYM, 0, scrollViewer.ScrollableHeight));
+        scrollViewer.ScrollToHorizontalOffset(Math.Clamp(
+            _gridPanStartHorizontalOffset - deltaXM, 0, scrollViewer.ScrollableWidth));
         e.Handled = true;
     }
 
     private void PreviewScrollViewer_PreviewMouseUp(object sender, MouseButtonEventArgs e)
     {
+        // Space-pan release
+        if (_isSpacePanning && e.ChangedButton == MouseButton.Left)
+        {
+            _isSpacePanning = false;
+            if (sender is ScrollViewer spaceSv && spaceSv.IsMouseCaptured)
+            {
+                spaceSv.ReleaseMouseCapture();
+            }
+
+            if (sender is ScrollViewer spaceSvCursor)
+            {
+                spaceSvCursor.Cursor = _isSpaceHeld ? System.Windows.Input.Cursors.ScrollAll : System.Windows.Input.Cursors.Arrow;
+            }
+
+            e.Handled = true;
+            return;
+        }
+
+        // Middle-button pan release
         if (e.ChangedButton != MouseButton.Middle || !_isGridPanning)
         {
             return;
@@ -636,6 +704,22 @@ public partial class MainWindow : Window
 
     private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        // Space = enter canvas drag mode (treemap only, not in text fields)
+        if (e.Key == Key.Space &&
+            _viewModel.IsTreemapBrowseMode &&
+            !IsTextInputFocused() &&
+            !e.IsRepeat)
+        {
+            if (!_isSpaceHeld)
+            {
+                _isSpaceHeld = true;
+                TreemapScrollViewer.Cursor = System.Windows.Input.Cursors.ScrollAll;
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         var file = _viewModel.SelectedPreviewFile;
         if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
         {
@@ -691,6 +775,26 @@ public partial class MainWindow : Window
             _viewModel.StatusMessage = $"评分：{file.Name} → {(num == 0 ? "✕ 删除标记" : new string('★', num))}";
             e.Handled = true;
         }
+    }
+
+    private void MainWindow_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Space && _isSpaceHeld)
+        {
+            _isSpaceHeld = false;
+            if (!_isSpacePanning)
+            {
+                TreemapScrollViewer.Cursor = System.Windows.Input.Cursors.Arrow;
+            }
+
+            e.Handled = true;
+        }
+    }
+
+    private static bool IsTextInputFocused()
+    {
+        return Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase ||
+               Keyboard.FocusedElement is System.Windows.Controls.ComboBox;
     }
 
     private void PreviewThumbnail_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

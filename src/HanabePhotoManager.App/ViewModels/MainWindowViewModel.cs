@@ -251,6 +251,13 @@ public sealed class MainWindowViewModel : ObservableObject
         Watermark = new WatermarkViewModel();
         PhotoViewer = new PhotoViewerViewModel();
         TreemapBrowser = new ProgressiveTreemapViewModel();
+        TreemapBrowser.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(TreemapBrowser.Items))
+            {
+                OnPropertyChanged(nameof(CurrentViewItemCount));
+            }
+        };
         ReleaseNotes = new ReleaseNotesViewModel();
         PhotoViewer.PhotoDeleted += RemoveDeletedViewerPhoto;
         PeopleAlbums.PropertyChanged += (_, args) =>
@@ -947,6 +954,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsGridBrowseMode));
             OnPropertyChanged(nameof(IsTreemapBrowseMode));
+            OnPropertyChanged(nameof(CurrentViewItemCount));
             if (value == BrowseDisplayMode.Treemap)
             {
                 EnsureTreemapPopulatedFromPreviewFiles();
@@ -1724,6 +1732,15 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public int FilteredPreviewCount => _filteredCache.Count;
+
+    /// <summary>
+    /// Item count for the bottom-right label.
+    /// In grid mode: total filtered count.
+    /// In treemap mode: only items within the current treemap container level.
+    /// </summary>
+    public int CurrentViewItemCount => IsTreemapBrowseMode
+        ? TreemapBrowser.Items.Count(item => !item.IsContainer)
+        : _filteredCache.Count;
 
     public bool HasPreviousPreviewPage => _previewPage > 0;
 
@@ -3583,6 +3600,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void NotifyPreviewCountsChanged()
     {
         OnPropertyChanged(nameof(FilteredPreviewCount));
+        OnPropertyChanged(nameof(CurrentViewItemCount));
         OnPropertyChanged(nameof(PreviewSummaryText));
         OnPropertyChanged(nameof(HasPreviousPreviewPage));
         OnPropertyChanged(nameof(HasNextPreviewPage));

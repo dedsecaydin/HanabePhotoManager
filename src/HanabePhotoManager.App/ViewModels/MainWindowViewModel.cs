@@ -2233,6 +2233,36 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         }
 
+        // Merge standalone retouched files that exist outside the date directory scan
+        var existingPaths = new HashSet<string>(
+            PreviewFiles.Select(f => f.FullPath), StringComparer.OrdinalIgnoreCase);
+        foreach (var standalonePath in retouchMap.Standalone)
+        {
+            if (!existingPaths.Contains(standalonePath) && System.IO.File.Exists(standalonePath))
+            {
+                var info = new System.IO.FileInfo(standalonePath);
+                var extension = (info.Extension.Length > 1
+                    ? info.Extension.TrimStart('.').ToUpperInvariant()
+                    : Path.GetExtension(standalonePath).TrimStart('.').ToUpperInvariant());
+                var merged = new PreviewFileViewModel(
+                    info.Name,
+                    "修后",
+                    standalonePath,
+                    FormatBytes(info.Length),
+                    extension,
+                    null,
+                    info.Length)
+                {
+                    IsRetouched = true,
+                    RetouchedPath = standalonePath
+                };
+                PreviewFiles.Add(merged);
+                RetouchedFiles.Add(merged);
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Merged standalone retouched file: {standalonePath}");
+            }
+        }
+
         OnPropertyChanged(nameof(HasRetouchedFiles));
         OnPropertyChanged(nameof(RetouchedGroupCount));
         OnPropertyChanged(nameof(TotalPhotoGroupCount));

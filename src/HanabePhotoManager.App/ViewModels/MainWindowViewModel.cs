@@ -320,6 +320,17 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (!string.IsNullOrWhiteSpace(key)) TreemapBrowser.ZoomTo(key);
         });
+        FitTreemapToViewCommand = new RelayCommand(() =>
+        {
+            // Navigate back to root if in a subtree
+            if (TreemapBrowser.CurrentContainerKey is not null)
+            {
+                TreemapBrowser.NavigateToAncestor(null);
+            }
+            // Reset zoom and force overview fit
+            TreemapZoom = 1.0;
+            OnPropertyChanged(nameof(IsTreemapRootOverview));
+        });
         NavigateTreemapCommand = new RelayCommand<string?>(TreemapBrowser.NavigateToAncestor);
         ShowContestOpenCommand = new RelayCommand(() => CurrentPage = "ContestOpen");
         ShowContestJudgedCommand = new RelayCommand(() => CurrentPage = "ContestJudged");
@@ -905,6 +916,7 @@ public sealed class MainWindowViewModel : ObservableObject
     public IRelayCommand DeleteSelectedFilesCommand { get; }
     public IRelayCommand<string> OpenTreemapItemCommand { get; }
     public IRelayCommand<string> ZoomTreemapCommand { get; }
+    public IRelayCommand FitTreemapToViewCommand { get; }
     public IRelayCommand<string?> NavigateTreemapCommand { get; }
     public IRelayCommand ShowContestOpenCommand { get; }
     public IRelayCommand ShowContestJudgedCommand { get; }
@@ -955,6 +967,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsGridBrowseMode));
             OnPropertyChanged(nameof(IsTreemapBrowseMode));
+            OnPropertyChanged(nameof(IsTreemapRootOverview));
             OnPropertyChanged(nameof(CurrentViewItemCount));
             if (value == BrowseDisplayMode.Treemap)
             {
@@ -989,6 +1002,19 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool IsGridBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Grid;
 
     public bool IsTreemapBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Treemap;
+
+    /// <summary>
+    /// True when at the treemap root level with no active filters — should auto-fit
+    /// the entire category overview into the current viewport.
+    /// </summary>
+    public bool IsTreemapRootOverview =>
+        IsTreemapBrowseMode &&
+        TreemapBrowser.CurrentContainerKey is null &&
+        SelectedDatePath is null or "" &&
+        CurrentPreviewCategory is null or "全部" &&
+        PreviewRetouchFilter is null or "全部" &&
+        _selectedFileTypeFilters.Count == 0 &&
+        string.IsNullOrWhiteSpace(_previewSearchText);
 
     private bool _isTreemapBorderless = true;
     public bool IsTreemapBorderless
@@ -3807,6 +3833,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(FilteredPreviewCount));
         OnPropertyChanged(nameof(CurrentViewItemCount));
+        OnPropertyChanged(nameof(IsTreemapRootOverview));
         OnPropertyChanged(nameof(PreviewSummaryText));
         OnPropertyChanged(nameof(HasPreviousPreviewPage));
         OnPropertyChanged(nameof(HasNextPreviewPage));

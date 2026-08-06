@@ -145,6 +145,19 @@ public partial class MainWindow : Window
         {
             AnimateCloudProvider();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.IsTreemapRootOverview))
+        {
+            // Overview mode changed — reset zoom and fit content to view
+            if (_viewModel.IsTreemapRootOverview)
+            {
+                _viewModel.TreemapZoom = 1.0;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    UpdateTreemapSize();
+                    TreemapControl?.RequestFitToView();
+                }), System.Windows.Threading.DispatcherPriority.Render);
+            }
+        }
     }
 
     private void ApplyCustomWindowIcon()
@@ -377,11 +390,23 @@ public partial class MainWindow : Window
             return;
         }
 
+        var isOverview = _viewModel?.IsTreemapRootOverview == true;
         var zoom = _viewModel?.TreemapZoom ?? 1.0;
-        var baseWidth = Math.Max(TreemapScrollViewer.ViewportWidth, TreemapScrollViewer.ViewportWidth * zoom);
-        var baseHeight = Math.Max(TreemapScrollViewer.ViewportHeight, TreemapScrollViewer.ViewportHeight * zoom);
-        TreemapControl.Width = baseWidth;
-        TreemapControl.Height = Math.Max(baseHeight, TreemapControl.ContentHeight);
+
+        if (isOverview)
+        {
+            // Fit all content into the viewport — no scrolling needed
+            TreemapControl.Width = TreemapScrollViewer.ViewportWidth;
+            TreemapControl.Height = TreemapScrollViewer.ViewportHeight;
+        }
+        else
+        {
+            var baseWidth = Math.Max(TreemapScrollViewer.ViewportWidth, TreemapScrollViewer.ViewportWidth * zoom);
+            var baseHeight = Math.Max(TreemapScrollViewer.ViewportHeight, TreemapScrollViewer.ViewportHeight * zoom);
+            TreemapControl.Width = baseWidth;
+            TreemapControl.Height = Math.Max(baseHeight, TreemapControl.ContentHeight);
+        }
+
         TreemapControl.InvalidateVisual();
         SyncTreemapVisibleRect();
         ScheduleTreemapViewportLoad();
@@ -420,6 +445,8 @@ public partial class MainWindow : Window
     {
         _treemapViewportDebounceTimer.Stop();
         if (TreemapControl is null || !_viewModel.IsTreemapBrowseMode) return;
+        // In overview mode, tiles are tiny — don't mass-load thumbnails
+        if (_viewModel.IsTreemapRootOverview) return;
         _viewModel.RefreshTreemapViewportLoading(TreemapControl.VisibleItemPathsNeedingThumbnail);
     }
 

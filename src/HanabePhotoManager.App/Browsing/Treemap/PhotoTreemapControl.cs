@@ -27,6 +27,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private List<string> _visibleWithoutThumbnail = [];
     private double _contentHeight;
 
+    // Overview mode — auto-scale root categories to fit viewport
+    private double _overviewScale = 1.0;
+    private double _overviewOffsetX;
+    private double _overviewOffsetY;
+    private double _rawContentWidth;
+    private double _rawContentHeight;
+
     /// <summary>
     /// Total content height of all items. Used by the code-behind's
     /// UpdateTreemapSize to grow the control beyond the viewport.
@@ -92,6 +99,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
             Rect.Empty,
             FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty IsOverviewModeProperty = DependencyProperty.Register(
+        nameof(IsOverviewMode),
+        typeof(bool),
+        typeof(PhotoTreemapControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public PhotoTreemapControl()
     {
         Focusable = true;
@@ -127,6 +140,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
     {
         get => (bool)GetValue(IsBorderlessProperty);
         set => SetValue(IsBorderlessProperty, value);
+    }
+
+    public bool IsOverviewMode
+    {
+        get => (bool)GetValue(IsOverviewModeProperty);
+        set => SetValue(IsOverviewModeProperty, value);
     }
 
     public ICommand? OpenItemCommand
@@ -202,12 +221,21 @@ public sealed class PhotoTreemapControl : FrameworkElement
         _debugTileCount = 0;
         _visiblePaths = [];
         _visibleWithoutThumbnail = [];
+        _rawContentWidth = 0;
+        _rawContentHeight = 0;
 
+        // In root overview mode the treemap naturally fills the viewport bounds.
+        // Semantic zoom (in DrawTile) handles detail level based on tile pixel size.
         var regions = new List<TreemapHitRegion>();
-        var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
+        var isRootOverview = IsOverviewMode && RootKey is null;
+        var bounds = new TreemapBounds(0, 0, ActualWidth,
+            isRootOverview ? ActualHeight : 100_000);
+
         if (RootKey is null)
         {
-            DrawRoot(drawingContext, bounds, regions, padded);
+            DrawRoot(drawingContext, bounds, regions,
+                isRootOverview ? new Rect(0, 0, ActualWidth, ActualHeight) : padded,
+                computeOnly: false);
         }
         else
         {
@@ -219,6 +247,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
         }
 
         _hitRegions = regions;
+        _contentHeight = _rawContentHeight;
 
         if (DebugOverlay)
         {
@@ -226,16 +255,27 @@ public sealed class PhotoTreemapControl : FrameworkElement
             System.Diagnostics.Trace.WriteLine(
                 $"[Treemap-DEBUG] drawn={_debugTileCount} thumbs={_debugThumbnailCount} " +
                 $"items={ItemsSource.Count} cats={catCount} " +
+                $"overviewScale={_overviewScale:F3} " +
                 $"viewport=({visibleRect.X:F0},{visibleRect.Y:F0})-({visibleRect.Width:F0}x{visibleRect.Height:F0}) " +
                 $"canvas={ActualWidth:F0}x{ActualHeight:F0}");
         }
+
+        // Post-render: notify that render completed (for overview fit requests)
+        if (_pendingFitToView)
+        {
+            _pendingFitToView = false;
+            System.Diagnostics.Trace.WriteLine(
+                $"[Treemap] Fit-to-view applied — bounds={_rawContentWidth:F0}x{_rawContentHeight:F0}");
+        }
     }
+
+    private bool _pendingFitToView;
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
     {
         base.OnMouseLeftButtonDown(e);
         Focus();
-        var point = e.GetPosition(this);
+        var point = ToContentCoordinates(e.GetPosition(this));
         var item = FindItemAt(_hitRegions, point.X, point.Y);
         if (item is null)
         {
@@ -281,7 +321,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
         DrawingContext drawingContext,
         TreemapBounds bounds,
         ICollection<TreemapHitRegion> regions,
-        Rect visibleRect)
+        Rect visibleRect,
+        bool computeOnly = false)
     {
         var categories = ItemsSource
             .Where(item => item.ParentKey is null && item.IsContainer)
@@ -292,10 +333,16 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
             var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
                 categoryTile.Bounds.Width, categoryTile.Bounds.Height);
-            if (!visibleRect.IntersectsWith(tileRect))
-            {
-                continue;
-            }
+
+            // Track raw content bounds
+            var right = categoryTile.Bounds.X + categoryTile.Bounds.Width;
+            var bottom = categoryTile.Bounds.Y + categoryTile.Bounds.Height;
+            if (right > _rawContentWidth) _rawContentWidth = right;
+            if (bottom > _rawContentHeight) _rawContentHeight = bottom;
+
+            if (computeOnly) continue;
+
+            if (!visibleRect.IntersectsWith(tileRect)) continue;
 
             DrawTile(drawingContext, categoryTile.Item, categoryTile.Bounds, true);
 
@@ -467,12 +514,17 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var isSelected = !item.IsContainer &&
             string.Equals(item.FullPath, SelectedPath, StringComparison.OrdinalIgnoreCase);
 
+        // Semantic zoom: skip detail below minimum screen size
+        var minScreenDim = Math.Min(rect.Width, rect.Height);
+        var showThumbnail = minScreenDim >= 4;
+        var showBadge = minScreenDim >= 48;
+
         // In justified/borderless mode, skip background fill for non-container tiles
         // so images flow seamlessly edge-to-edge
         if (!item.IsContainer && IsBorderless)
         {
             // No background fill — just draw image and extension badge
-            if (item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+            if (item.Thumbnail is not null && showThumbnail)
             {
                 DrawThumbnail(drawingContext, item.Thumbnail, rect, 0);
             }
@@ -483,8 +535,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 drawingContext.DrawRectangle(null, new MediaPen(selBorder, 2), rect);
             }
 
-            // Extension badge
-            DrawExtensionBadge(drawingContext, item, rect, gap);
+            // Extension badge — only at sufficient screen size
+            if (showBadge) DrawExtensionBadge(drawingContext, item, rect, gap);
             return;
         }
 
@@ -554,17 +606,16 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return; // Container tiles don't need extension badges
         }
 
-        if (!item.IsContainer && item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+        if (!item.IsContainer && item.Thumbnail is not null && showThumbnail)
         {
             DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
         }
 
-        if (item.IsContainer || rect.Width < 40 || rect.Height < 20)
+        // Only show badge at sufficient screen size
+        if (!item.IsContainer && showBadge)
         {
-            return;
+            DrawExtensionBadge(drawingContext, item, rect, gap);
         }
-
-        DrawExtensionBadge(drawingContext, item, rect, gap);
 
         if (DebugOverlay && !item.IsContainer)
         {
@@ -639,6 +690,39 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
     private double ResourceDouble(string key, double fallback) =>
         TryFindResource(key) is double value ? value : fallback;
+
+    /// <summary>
+    /// Reverse the overview scale/offset transform to get native layout coordinates
+    /// from a screen-space mouse position.
+    /// </summary>
+    private WpfPoint ToContentCoordinates(WpfPoint screenPoint)
+    {
+        if (IsOverviewMode && _overviewScale > 0 && _overviewScale < 1.0)
+        {
+            return new WpfPoint(
+                (screenPoint.X - _overviewOffsetX) / _overviewScale,
+                (screenPoint.Y - _overviewOffsetY) / _overviewScale);
+        }
+        return screenPoint;
+    }
+
+    /// <summary>
+    /// Force the next render to compute and apply overview fit-to-view scaling.
+    /// Called externally when the user clicks "Fit All" or resets filters.
+    /// </summary>
+    internal void RequestFitToView()
+    {
+        _pendingFitToView = true;
+        _overviewScale = 1.0;
+        _overviewOffsetX = 0;
+        _overviewOffsetY = 0;
+        InvalidateVisual();
+    }
+
+    /// <summary>
+    /// Raw content width computed during the last root render pass (before fitting).
+    /// </summary>
+    internal double RawContentWidth => _rawContentWidth;
 
     internal static string FormatBytes(long bytes)
     {

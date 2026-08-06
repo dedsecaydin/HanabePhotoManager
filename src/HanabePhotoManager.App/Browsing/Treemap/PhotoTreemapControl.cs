@@ -16,8 +16,11 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 public sealed class PhotoTreemapControl : FrameworkElement
 {
     private const double ViewportPadding = 20;
+    private const bool DebugOverlay = true;
     private readonly SquarifiedTreemapLayout _layout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
+    private int _debugThumbnailCount;
+    private int _debugTileCount;
 
     public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
         nameof(ItemsSource),
@@ -160,6 +163,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var surface = FindBrush("Brush.Background.Canvas", WpfSystemColors.WindowBrush);
         drawingContext.DrawRectangle(surface, null, new Rect(0, 0, ActualWidth, ActualHeight));
 
+        _debugThumbnailCount = 0;
+        _debugTileCount = 0;
+
         var regions = new List<TreemapHitRegion>();
         var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
         if (RootKey is null)
@@ -173,6 +179,16 @@ public sealed class PhotoTreemapControl : FrameworkElement
         }
 
         _hitRegions = regions;
+
+        if (DebugOverlay)
+        {
+            var catCount = ItemsSource.Count(item => item.IsContainer);
+            System.Diagnostics.Trace.WriteLine(
+                $"[Treemap-DEBUG] drawn={_debugTileCount} thumbs={_debugThumbnailCount} " +
+                $"items={ItemsSource.Count} cats={catCount} " +
+                $"viewport=({visibleRect.X:F0},{visibleRect.Y:F0})-({visibleRect.Width:F0}x{visibleRect.Height:F0}) " +
+                $"canvas={ActualWidth:F0}x{ActualHeight:F0}");
+        }
     }
 
     protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e)
@@ -318,6 +334,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
+        if (DebugOverlay && !item.IsContainer)
+        {
+            _debugTileCount++;
+            if (item.Thumbnail is not null) _debugThumbnailCount++;
+        }
+
         var isSelected = !item.IsContainer &&
             string.Equals(item.FullPath, SelectedPath, StringComparison.OrdinalIgnoreCase);
         var fill = item.IsContainer
@@ -425,6 +447,18 @@ public sealed class PhotoTreemapControl : FrameworkElement
             3, 3);
 
         drawingContext.DrawText(formatted, new WpfPoint(badgeX + 4, badgeY + 2));
+
+        if (DebugOverlay && !item.IsContainer)
+        {
+            // Green border = has thumbnail  /  Gray border = no thumbnail
+            var debugBorderColor = item.Thumbnail is not null
+                ? System.Windows.Media.Brushes.LimeGreen
+                : System.Windows.Media.Brushes.Gray;
+            drawingContext.DrawRectangle(
+                null,
+                new MediaPen(debugBorderColor, 1.2),
+                new Rect(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2));
+        }
     }
 
     private static void DrawThumbnail(DrawingContext drawingContext, ImageSource thumbnail, Rect rect, double radius)

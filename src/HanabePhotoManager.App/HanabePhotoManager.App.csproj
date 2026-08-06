@@ -56,7 +56,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.2.0-alpha.2</HanabeVersion>
+    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.2.0-alpha.3</HanabeVersion>
     <Version>$(HanabeVersion)</Version>
     <Product>Hanabe Photo Manager Alpha</Product>
   </PropertyGroup>

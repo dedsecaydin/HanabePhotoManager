@@ -108,6 +108,17 @@ public static class ReleaseNotesCatalog
     public static IReadOnlyList<ReleaseVersionInfo> Versions { get; } =
     [
         new(
+            "0.2.0-alpha.3",
+            new DateOnly(2026, 8, 6),
+            [
+                "持续重构照片图库筛选与空间树图数据流，统一日期、修后目录与文件类型筛选管线。",
+                "新增文件类型多选筛选（RAW/JPG/PNG/视频），PSD 默认排除，支持组合筛选取交集。",
+                "空间树图分类内部引入 Justified Gallery 自动拼贴，根据图片宽高比生成动态矩形。",
+                "优化子树导航、项目数量动态统计和视口优先缩略图加载流程。",
+                "修复修后子文件夹递归扫描、日期切换异步竞态、已修筛选稳定性等问题。",
+                "当前自动拼贴、大图库完整浏览和部分筛选稳定性仍在持续优化。"
+            ]),
+        new(
             "0.2.0-alpha.2",
             new DateOnly(2026, 8, 4),
             [

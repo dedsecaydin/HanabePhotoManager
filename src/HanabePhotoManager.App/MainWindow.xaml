@@ -5,6 +5,7 @@
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
       <local:CategoryEqualsConverter x:Key="CategoryEqualsConverter" />
       <local:CategoryEqualityMultiConverter x:Key="CategoryEqualityMultiConverter" />
+      <local:ExtensionBadgeConverter x:Key="ExtensionBadgeConverter" />
       <DataTemplate x:Key="SidebarFooterContentTemplate">
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -1197,7 +1198,11 @@
                                               </Border.Background>
                                             </Border>
                                             <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
-                                            <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8" Padding="6,3" CornerRadius="8">
+                                            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+                                              <Border Padding="6,3" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                                <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="10" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Primary}" />
+                                              </Border>
+                                              <Border Margin="0,4,0,0" Padding="6,3" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}">
                                               <FrameworkElement.Style>
                                                 <Style TargetType="{x:Type Border}">
                                                   <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
@@ -1221,6 +1226,7 @@
                                                 </FrameworkElement.Style>
                                               </TextBlock>
                                             </Border>
+                                            </StackPanel>
                                             <Border VerticalAlignment="Bottom" Padding="10,6" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.72">
                                               <Border.Style>
                                                 <Style TargetType="{x:Type Border}">

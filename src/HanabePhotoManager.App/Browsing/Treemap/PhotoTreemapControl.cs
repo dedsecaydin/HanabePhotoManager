@@ -320,6 +320,59 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var radius = ResourceDouble("Radius.Control", 6);
         drawingContext.DrawRoundedRectangle(fill, new MediaPen(border, isSelected ? 2 : 1), rect, radius, radius);
 
+        // Container header — draw category name at the top
+        if (drawContainerHeader && item.IsContainer && !string.IsNullOrWhiteSpace(item.Label))
+        {
+            var headerHeight = Math.Min(
+                ResourceDouble("Size.Control.Compact", 28),
+                rect.Height * 0.35);
+            if (headerHeight > 8)
+            {
+                var headerRect = new Rect(rect.X, rect.Y, rect.Width, headerHeight);
+                var headerBg = FindBrush("Brush.Surface.Subtle", WpfSystemColors.ControlLightBrush);
+                drawingContext.DrawRectangle(headerBg, null, headerRect);
+                MediaPen? separator = null;
+                try
+                {
+                    separator = new MediaPen(
+                        FindBrush("Brush.Border.Subtle", WpfSystemColors.ControlDarkBrush),
+                        0.7);
+                }
+                catch { }
+                if (separator is not null)
+                {
+                    drawingContext.DrawLine(separator,
+                        new WpfPoint(headerRect.Left, headerRect.Bottom),
+                        new WpfPoint(headerRect.Right, headerRect.Bottom));
+                }
+
+                var headerFontSize = ResourceDouble("Typography.Caption", 10);
+                var headerTextBrush = FindBrush("Brush.Text.Secondary", WpfSystemColors.GrayTextBrush);
+                var headerFormatted = new FormattedText(
+                    item.Label,
+                    CultureInfo.CurrentUICulture,
+                    WpfFlowDirection.LeftToRight,
+                    new Typeface(
+                        TryFindResource("Typography.FontFamily.UI") as MediaFontFamily ?? System.Windows.SystemFonts.MessageFontFamily,
+                        FontStyles.Normal,
+                        FontWeights.Normal,
+                        FontStretches.Normal),
+                    headerFontSize,
+                    headerTextBrush,
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip)
+                {
+                    MaxTextWidth = Math.Max(1, headerRect.Width - 14),
+                    MaxTextHeight = Math.Max(1, headerRect.Height - 4),
+                    Trimming = TextTrimming.CharacterEllipsis
+                };
+                var textX = headerRect.X + 8;
+                var textY = headerRect.Y + (headerRect.Height - headerFormatted.Height) / 2;
+                drawingContext.DrawText(headerFormatted, new WpfPoint(textX, textY));
+            }
+
+            return; // Container tiles don't need extension badges
+        }
+
         if (!item.IsContainer && item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
         {
             DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);

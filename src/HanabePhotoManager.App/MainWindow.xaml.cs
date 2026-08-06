@@ -38,8 +38,8 @@ public partial class MainWindow : Window
     private double _spacePanStartVerticalOffset;
     private double _spacePanStartHorizontalOffset;
 
-    private const double TreemapZoomMin = 0.5;
-    private const double TreemapZoomMax = 30.0;
+    private const double TreemapZoomMin = 0.02;
+    private const double TreemapZoomMax = 8.0;
     private const double TreemapZoomNotchFactor = 1.12;
 
     private readonly DispatcherTimer _treemapViewportDebounceTimer;
@@ -378,10 +378,18 @@ public partial class MainWindow : Window
         }
 
         var zoom = _viewModel?.TreemapZoom ?? 1.0;
-        var baseWidth = Math.Max(TreemapScrollViewer.ViewportWidth, TreemapScrollViewer.ViewportWidth * zoom);
-        var baseHeight = Math.Max(TreemapScrollViewer.ViewportHeight, TreemapScrollViewer.ViewportHeight * zoom);
-        TreemapControl.Width = Math.Max(baseWidth, TreemapControl.ContentWidth);
-        TreemapControl.Height = Math.Max(baseHeight, TreemapControl.ContentHeight);
+
+        // Use LayoutTransform so ScrollViewer sees the scaled size for extent/scroll.
+        // This makes zoom < 1.0 (zoom out) actually shrink the control visually.
+        TreemapControl.LayoutTransform = new ScaleTransform(zoom, zoom);
+
+        // The control's own Width/Height stay at content-native size.
+        // ScrollViewer extent = content * zoom  (via LayoutTransform).
+        var cw = TreemapControl.ContentWidth;
+        var ch = TreemapControl.ContentHeight;
+        TreemapControl.Width = Math.Max(cw, 1);
+        TreemapControl.Height = Math.Max(ch, 1);
+
         TreemapControl.InvalidateVisual();
         SyncTreemapVisibleRect();
         ScheduleTreemapViewportLoad();
@@ -407,7 +415,44 @@ public partial class MainWindow : Window
         SyncTreemapVisibleRect();
         TreemapControl?.InvalidateVisual();
         ScheduleTreemapViewportLoad();
+        // Auto-fit to view so the full content is visible on first open
+        DeferFitTreemapToView();
     }
+
+    /// <summary>
+    /// After the treemap has been laid out, schedule a one-shot fit-to-view.
+    /// The debounce timer fires once the layout has settled (content dimensions
+    /// are known) and the ScrollViewer is ready.
+    /// </summary>
+    private void DeferFitTreemapToView()
+    {
+        _treemapFitPending = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!_treemapFitPending || TreemapControl is null || TreemapScrollViewer is null) return;
+            _treemapFitPending = false;
+
+            var cw = TreemapControl.ContentWidth;
+            var ch = TreemapControl.ContentHeight;
+            if (cw <= 1 || ch <= 1) return;
+
+            var vpW = TreemapScrollViewer.ViewportWidth;
+            var vpH = TreemapScrollViewer.ViewportHeight;
+            var margin = 16.0;
+            var availableW = vpW - margin * 2;
+            var availableH = vpH - margin * 2;
+
+            var fitZoom = Math.Min(1.0, Math.Min(availableW / cw, availableH / ch));
+            fitZoom = Math.Max(fitZoom, 0.02);
+
+            _viewModel.TreemapZoom = fitZoom;
+            UpdateTreemapSize();
+            TreemapScrollViewer.ScrollToHorizontalOffset(0);
+            TreemapScrollViewer.ScrollToVerticalOffset(0);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+
+    private bool _treemapFitPending;
 
     private void ScheduleTreemapViewportLoad()
     {

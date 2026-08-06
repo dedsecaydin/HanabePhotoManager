@@ -1391,7 +1391,7 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _treemapZoom;
         set
         {
-            var clamped = Math.Clamp(value, 0.5, 30.0);
+            var clamped = Math.Clamp(value, 0.02, 8.0);
             if (SetProperty(ref _treemapZoom, clamped))
             {
                 if (_isInitialized)
@@ -1960,7 +1960,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
         _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
-        _treemapZoom = Math.Clamp(settings.TreemapZoom, 0.5, 5.0);
+        _treemapZoom = Math.Clamp(settings.TreemapZoom, 0.02, 8.0);
         OnPropertyChanged(nameof(DefaultThumbnailSize));
         OnPropertyChanged(nameof(ThumbnailSize));
         OnPropertyChanged(nameof(ZoomableGridTileSize));

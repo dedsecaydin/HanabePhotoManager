@@ -420,6 +420,13 @@ public partial class MainWindow : Window
         if (TreemapControl is null || !_viewModel.IsTreemapBrowseMode) return;
         _viewModel.RefreshTreemapViewportLoading(TreemapControl.VisibleItemPathsNeedingThumbnail);
     }
+
+    private void FileTypeFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button btn) return;
+        var typeGroup = btn.Content?.ToString() ?? "全部";
+        _viewModel.ToggleFileTypeFilter(typeGroup);
+    }
     private void TreemapControl_Loaded(object sender, RoutedEventArgs e)
     {
         UpdateTreemapSize();

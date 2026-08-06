@@ -1041,6 +1041,18 @@
                           </Border>
                         </StackPanel>
                         <StackPanel Margin="0,0,16,8">
+                          <TextBlock Text="文件类型" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
+                          <Border Padding="2" CornerRadius="13" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                              <Button x:Name="FileTypeAll" Content="全部" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
+                              <Button x:Name="FileTypeRAW" Content="RAW" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
+                              <Button x:Name="FileTypeJPG" Content="JPG" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
+                              <Button x:Name="FileTypePNG" Content="PNG" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
+                              <Button x:Name="FileTypeVideo" Content="视频" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,16,8">
                           <TextBlock Text="排列方式" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
                           <ComboBox SelectedValuePath="Value" Style="{StaticResource PreviewSortComboBox}" AutomationProperties.Name="照片排列方式" ItemsSource="{Binding PreviewSortChoices}" SelectedValue="{Binding PreviewSortMode, Mode=TwoWay}">
                             <ItemsControl.ItemTemplate>

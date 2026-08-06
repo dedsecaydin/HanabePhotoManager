@@ -157,6 +157,10 @@ public sealed class AppSettings
 
     public bool IsTreemapBorderless { get; set; } = true;
 
+    public bool ShowPsdFiles { get; set; } = false;
+
+    public List<string> SelectedFileTypeFilters { get; set; } = [];
+
     /// <summary>
     /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored
     /// separately as <see cref="BaiduAppSecretProtected"/> (DPAPI-encrypted).

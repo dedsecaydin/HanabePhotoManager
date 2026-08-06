@@ -1618,6 +1618,69 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
+    private static readonly Dictionary<string, string> ExtensionToTypeGroup = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["ARW"] = "RAW", ["CR2"] = "RAW", ["CR3"] = "RAW", ["NEF"] = "RAW",
+        ["NRW"] = "RAW", ["RAF"] = "RAW", ["ORF"] = "RAW", ["RW2"] = "RAW",
+        ["DNG"] = "RAW",
+        ["JPG"] = "JPG", ["JPEG"] = "JPG", ["JPE"] = "JPG",
+        ["PNG"] = "PNG",
+        ["MP4"] = "Video", ["MOV"] = "Video", ["M4V"] = "Video",
+        ["AVI"] = "Video", ["MKV"] = "Video",
+        ["PSD"] = "PSD", ["PSB"] = "PSD",
+    };
+
+    internal static string ResolveFileTypeGroup(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension)) return "Other";
+        var ext = extension.TrimStart('.');
+        return ExtensionToTypeGroup.GetValueOrDefault(ext, "Other");
+    }
+
+    private readonly HashSet<string> _selectedFileTypeFilters = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isShowingPsdFiles;
+
+    public bool IsShowingPsdFiles
+    {
+        get => _isShowingPsdFiles;
+        set
+        {
+            if (SetProperty(ref _isShowingPsdFiles, value) && _isInitialized)
+            {
+                RefreshFilteredCache(resetPage: true);
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public void ToggleFileTypeFilter(string typeGroup)
+    {
+        if (string.Equals(typeGroup, "全部", StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedFileTypeFilters.Clear();
+            RefreshFilteredCache(resetPage: true);
+            return;
+        }
+
+        if (!_selectedFileTypeFilters.Remove(typeGroup))
+        {
+            _selectedFileTypeFilters.Add(typeGroup);
+        }
+
+        RefreshFilteredCache(resetPage: true);
+        OnPropertyChanged(nameof(FileTypeFilterSummary));
+    }
+
+    public bool IsFileTypeFilterActive(string typeGroup)
+    {
+        if (_selectedFileTypeFilters.Count == 0)
+            return string.Equals(typeGroup, "全部", StringComparison.OrdinalIgnoreCase);
+        return _selectedFileTypeFilters.Contains(typeGroup);
+    }
+
+    public string FileTypeFilterSummary =>
+        _selectedFileTypeFilters.Count == 0 ? "全部" : string.Join(" + ", _selectedFileTypeFilters);
+
     private string _previewSearchText = string.Empty;
     public string PreviewSearchText
     {
@@ -1702,15 +1765,44 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         var result = source;
 
+        // Exclude PSD/PSB and other non-media by default
+        if (!IsShowingPsdFiles)
+        {
+            result = result.Where(f =>
+                !string.Equals(f.Extension, "PSD", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(f.Extension, "PSB", StringComparison.OrdinalIgnoreCase));
+        }
+
         // Retouch filter — "已修": only retouched OUTPUT files,
         // not originals that merely have a retouched counterpart.
         // Output files have PreviewPath == FullPath (they are the final version);
         // originals have PreviewPath != FullPath (they point to the retouched copy).
         if (PreviewRetouchFilter == "已修")
-            result = result.Where(f => f.IsRetouched &&
-                string.Equals(f.PreviewPath, f.FullPath, StringComparison.OrdinalIgnoreCase));
+        {
+            result = result.Where(f =>
+            {
+                try
+                {
+                    return f.IsRetouched &&
+                        string.Equals(f.PreviewPath, f.FullPath, StringComparison.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.WriteLine(
+                        $"[Filter] Error checking '已修' for {f.FullPath}: {ex.Message}");
+                    return false;
+                }
+            });
+        }
         else if (PreviewRetouchFilter == "未修")
             result = result.Where(f => !f.IsRetouched);
+
+        // File type filter — multi-select; empty = show all supported types
+        if (_selectedFileTypeFilters.Count > 0)
+        {
+            result = result.Where(f => _selectedFileTypeFilters.Contains(
+                ResolveFileTypeGroup(f.Extension)));
+        }
 
         // Text search
         if (!string.IsNullOrWhiteSpace(PreviewSearchText))
@@ -1909,6 +2001,11 @@ public sealed class MainWindowViewModel : ObservableObject
             ? weightMode
             : TreemapWeightMode.FileSize;
         _isTreemapBorderless = settings.IsTreemapBorderless is not false;
+        _isShowingPsdFiles = settings.ShowPsdFiles is true;
+        if (settings.SelectedFileTypeFilters is { Count: > 0 } savedTypes)
+        {
+            foreach (var t in savedTypes) _selectedFileTypeFilters.Add(t);
+        }
         _persistedBrowseSnapshot = settings.BrowseSnapshot;
         BaiduAppKey = settings.BaiduAppKey ?? string.Empty;
         QuarkClientPath = settings.QuarkClientPath ?? string.Empty;
@@ -5082,6 +5179,8 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.BrowseDisplayMode = BrowseDisplayMode.ToString();
             settings.TreemapWeightMode = TreemapWeightMode.ToString();
             settings.IsTreemapBorderless = IsTreemapBorderless;
+            settings.ShowPsdFiles = IsShowingPsdFiles;
+            settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
             }).ConfigureAwait(false);
         }
         catch (Exception ex)

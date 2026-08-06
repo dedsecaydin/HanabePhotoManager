@@ -162,6 +162,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private CancellationTokenSource? _activeTaskCancellation;
     private CancellationTokenSource? _importThumbnailCancellation;
     private CancellationTokenSource? _previewThumbnailCancellation;
+    private int _treemapLoadActive; // 1 = loading in progress, 0 = idle
     private CancellationTokenSource? _dateLoadCancellation;
     private CancellationTokenSource? _dateCapacityCancellation;
     private int _dateLoadGeneration;
@@ -1029,13 +1030,15 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         try
         {
-            await Task.Delay(4000).ConfigureAwait(false);
+            // Wait for initial batch to finish first
+            await Task.Delay(8000).ConfigureAwait(false);
             for (var round = 0; round < 10 && IsPreviewPage && IsTreemapBrowseMode; round++)
             {
-                if (_previewThumbnailCancellation is null ||
-                    _previewThumbnailCancellation.IsCancellationRequested)
+                // Only heal when pipeline is truly idle — don't interrupt active loading
+                if (Interlocked.CompareExchange(ref _treemapLoadActive, 0, 0) == 1)
                 {
-                    break;
+                    await Task.Delay(3000).ConfigureAwait(false);
+                    continue;
                 }
 
                 var unloaded = source.Where(item => item.Thumbnail is null).ToArray();
@@ -1043,9 +1046,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
                 System.Diagnostics.Trace.WriteLine(
                     $"[Treemap] Self-heal round {round}: {unloaded.Length} stragglers, restarting");
-                StartPreviewThumbnailLoading(unloaded, 512);
+                StartPreviewThumbnailLoading(unloaded, 512, skipCancel: true);
 
-                await Task.Delay(5000, _previewThumbnailCancellation.Token).ConfigureAwait(false);
+                await Task.Delay(10000).ConfigureAwait(false);
             }
         }
         catch (OperationCanceledException) { }
@@ -3968,14 +3971,21 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null, int decodeWidth = 260)
+    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null, int decodeWidth = 260, bool skipCancel = false)
     {
-        CancelPreviewThumbnailLoading();
+        if (!skipCancel)
+        {
+            CancelPreviewThumbnailLoading();
+        }
+
         var unloaded = (source ?? VisiblePreviewFiles).Where(item => item.Thumbnail is null).ToArray();
         if (unloaded.Length == 0) return;
 
         _previewThumbnailCancellation = new CancellationTokenSource();
-        _ = LoadPreviewThumbnailsAsync(unloaded, decodeWidth, _previewThumbnailCancellation.Token);
+        Interlocked.Exchange(ref _treemapLoadActive, 1);
+        _ = LoadPreviewThumbnailsAsync(unloaded, decodeWidth, _previewThumbnailCancellation.Token)
+            .ContinueWith(_ => Interlocked.Exchange(ref _treemapLoadActive, 0),
+                TaskScheduler.Default);
     }
 
     /// <summary>

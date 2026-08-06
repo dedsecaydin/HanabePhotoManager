@@ -26,12 +26,19 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private List<string> _visiblePaths = [];
     private List<string> _visibleWithoutThumbnail = [];
     private double _contentHeight;
+    private double _contentWidth;
 
     /// <summary>
     /// Total content height of all items. Used by the code-behind's
     /// UpdateTreemapSize to grow the control beyond the viewport.
     /// </summary>
     internal double ContentHeight => _contentHeight;
+
+    /// <summary>
+    /// Total content width of all items. Used by the code-behind's
+    /// UpdateTreemapSize to enable horizontal scrolling.
+    /// </summary>
+    internal double ContentWidth => _contentWidth;
 
     /// <summary>
     /// FullPaths of non-container tiles currently intersecting the visible rect,
@@ -286,12 +293,20 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var categories = ItemsSource
             .Where(item => item.ParentKey is null && item.IsContainer)
             .ToArray();
+        double maxRight = 0;
+        double maxBottom = 0;
         foreach (var categoryTile in CalculateLayout(categories, bounds))
         {
             regions.Add(categoryTile);
 
             var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
                 categoryTile.Bounds.Width, categoryTile.Bounds.Height);
+
+            // Track full content bounds for scrolling
+            var right = categoryTile.Bounds.X + categoryTile.Bounds.Width;
+            var bottom = categoryTile.Bounds.Y + categoryTile.Bounds.Height;
+            if (right > maxRight) maxRight = right;
+            if (bottom > maxBottom) maxBottom = bottom;
             if (!visibleRect.IntersectsWith(tileRect))
             {
                 continue;
@@ -341,6 +356,10 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 regions.Add(new TreemapHitRegion(child, tBounds));
             }
         }
+
+        // Update content dimensions for scroll extent
+        if (maxRight > _contentWidth) _contentWidth = maxRight;
+        if (maxBottom > _contentHeight) _contentHeight = maxBottom;
     }
 
     private void DrawItems(
@@ -379,15 +398,22 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var justifiedItems = _galleryLayout.Arrange(childAspects, bounds.Width);
         var gap = ResourceDouble("Spacing.Hairline", 2);
 
-        // Calculate full content height
+        // Calculate full content dimensions
         var totalHeight = 0.0;
+        var maxRight = 0.0;
         if (justifiedItems.Count > 0)
         {
             var last = justifiedItems[^1];
             totalHeight = last.Y + last.Height + gap;
+            foreach (var ji in justifiedItems)
+            {
+                var r = ji.X + ji.Width;
+                if (r > maxRight) maxRight = r;
+            }
         }
 
         _contentHeight = totalHeight;
+        if (maxRight > _contentWidth) _contentWidth = maxRight;
 
         for (var i = 0; i < children.Count && i < justifiedItems.Count; i++)
         {

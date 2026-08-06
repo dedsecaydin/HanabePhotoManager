@@ -1282,7 +1282,7 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <ScrollViewer Name="TreemapScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SizeChanged="TreemapScrollViewer_SizeChanged" ScrollChanged="TreemapScrollViewer_ScrollChanged" PreviewMouseWheel="TreemapScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
+                        <ScrollViewer Name="TreemapScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" CanContentScroll="False" SizeChanged="TreemapScrollViewer_SizeChanged" ScrollChanged="TreemapScrollViewer_ScrollChanged" PreviewMouseWheel="TreemapScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
                           <treemap:PhotoTreemapControl x:Name="TreemapControl" MinHeight="420" Loaded="TreemapControl_Loaded"
                           ItemsSource="{Binding TreemapBrowser.Items}"
                           RootKey="{Binding TreemapBrowser.CurrentContainerKey}"

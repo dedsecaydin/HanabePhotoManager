@@ -15,7 +15,6 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 
 public sealed class PhotoTreemapControl : FrameworkElement
 {
-    private const double MinimumThumbnailArea = 400;
     private const double ViewportPadding = 20;
     private readonly SquarifiedTreemapLayout _layout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
@@ -107,9 +106,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     public static bool ShouldRequestThumbnail(double width, double height) =>
         double.IsFinite(width) &&
         double.IsFinite(height) &&
-        width >= 0 &&
-        height >= 0 &&
-        width * height >= MinimumThumbnailArea;
+        width >= 12 &&
+        height >= 12;
 
     public static TreemapItemViewModel? FindItemAt(
         IReadOnlyList<TreemapHitRegion> regions,
@@ -138,8 +136,19 @@ public sealed class PhotoTreemapControl : FrameworkElement
         if (ActualWidth <= 1 || ActualHeight <= 1 || ItemsSource.Count == 0)
         {
             _hitRegions = [];
+            if (ItemsSource.Count > 0)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] OnRender skipped — Actual={ActualWidth:F0}x{ActualHeight:F0}, Items={ItemsSource.Count}");
+            }
+
             return;
         }
+
+        var totalWithThumbnails = ItemsSource.Count(item => item.Thumbnail is not null);
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] OnRender — {ItemsSource.Count} items, {totalWithThumbnails} with thumbnail, " +
+            $"canvas={ActualWidth:F0}x{ActualHeight:F0}, visible={VisibleRect}");
 
         var visibleRect = VisibleRect.IsEmpty
             ? new Rect(0, 0, ActualWidth, ActualHeight)

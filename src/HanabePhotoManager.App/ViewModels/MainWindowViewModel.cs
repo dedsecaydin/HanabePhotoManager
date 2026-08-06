@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -948,7 +949,7 @@ public sealed class MainWindowViewModel : ObservableObject
             if (value == BrowseDisplayMode.Treemap)
             {
                 EnsureTreemapPopulatedFromPreviewFiles();
-                StartPreviewThumbnailLoading(PreviewFiles);
+                StartPreviewThumbnailLoading(PreviewFiles, 512);
             }
             if (_isInitialized)
             {
@@ -993,6 +994,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private void RepopulateTreemapFrom(IEnumerable<PreviewFileViewModel> source)
     {
         var files = source.ToArray();
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] RepopulateTreemapFrom — {files.Length} files, " +
+            $"with thumbnail: {files.Count(f => f.Thumbnail is not null)}");
         var generation = TreemapBrowser.BeginScan(SelectedDatePath ?? string.Empty);
         if (files.Length > 0)
         {
@@ -1005,7 +1009,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 TreemapBrowser.UpdateThumbnail(file.FullPath, file.Thumbnail);
             }
             TreemapBrowser.Complete(generation, isPartial: false);
-            StartPreviewThumbnailLoading(files);
+            StartPreviewThumbnailLoading(files, 512);
         }
         else
         {
@@ -1597,9 +1601,13 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         var result = source;
 
-        // Retouch filter
+        // Retouch filter — "已修": only retouched OUTPUT files,
+        // not originals that merely have a retouched counterpart.
+        // Output files have PreviewPath == FullPath (they are the final version);
+        // originals have PreviewPath != FullPath (they point to the retouched copy).
         if (PreviewRetouchFilter == "已修")
-            result = result.Where(f => f.IsRetouched && f.Category == "修后");
+            result = result.Where(f => f.IsRetouched &&
+                string.Equals(f.PreviewPath, f.FullPath, StringComparison.OrdinalIgnoreCase));
         else if (PreviewRetouchFilter == "未修")
             result = result.Where(f => !f.IsRetouched);
 
@@ -3966,7 +3974,11 @@ public sealed class MainWindowViewModel : ObservableObject
         int decodeWidth,
         CancellationToken cancellationToken)
     {
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] LoadPreviewThumbnailsAsync — {items.Count} items, decodeWidth={decodeWidth}");
         using var gate = new SemaphoreSlim(PreviewLoadingPolicy.ThumbnailConcurrency);
+        var successCount = 0;
+        var failCount = 0;
         var tasks = items.Select(async item =>
         {
             var entered = false;
@@ -3987,11 +3999,18 @@ public sealed class MainWindowViewModel : ObservableObject
                     }
 
                     TreemapBrowser.UpdateThumbnail(item.FullPath, thumbnail);
+                    if (thumbnail is not null) Interlocked.Increment(ref successCount);
+                    else Interlocked.Increment(ref failCount);
                 });
             }
-            catch (TimeoutException) { }
+            catch (TimeoutException) { Interlocked.Increment(ref failCount); }
             catch (OperationCanceledException) { }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Thumbnail load failed: {item.PreviewPath} — {ex.GetType().Name}: {ex.Message}");
+                Interlocked.Increment(ref failCount);
+            }
             finally
             {
                 if (entered) gate.Release();
@@ -3999,6 +4018,8 @@ public sealed class MainWindowViewModel : ObservableObject
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] Thumbnail load done — success={successCount}, fail={failCount}/{items.Count}");
     }
 
     private void CancelPreviewThumbnailLoading()

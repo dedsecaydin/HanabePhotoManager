@@ -12,6 +12,7 @@ public sealed record TreemapItemViewModel(
     long Length,
     string Category,
     string Extension,
-    ImageSource? Thumbnail = null);
+    ImageSource? Thumbnail = null,
+    double AspectRatio = 1.0);
 
 public sealed record TreemapBreadcrumbViewModel(string? Key, string Label);

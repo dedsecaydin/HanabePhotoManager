@@ -18,6 +18,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private const double ViewportPadding = 20;
     private static readonly bool DebugOverlay = false;
     private readonly SquarifiedTreemapLayout _layout = new();
+    private readonly JustifiedGalleryLayout _galleryLayout = new(
+        targetRowHeight: 180, minAspect: 0.35, maxAspect: 3.5, gap: 1);
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
     private int _debugThumbnailCount;
     private int _debugTileCount;
@@ -298,15 +300,36 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 continue;
             }
 
-            var childBounds = new TreemapBounds(
-                categoryTile.Bounds.X + inset,
-                categoryTile.Bounds.Y + headerHeight,
-                childWidth,
-                childHeight);
             var children = ItemsSource
                 .Where(item => item.ParentKey == categoryTile.Item.Key)
                 .ToArray();
-            DrawItems(drawingContext, children, childBounds, regions, drawContainerHeader: false, visibleRect);
+            if (children.Length == 0) continue;
+
+            // Justified gallery layout for inner category tiles
+            var childAspects = children
+                .Select(c => (aspectRatio: c.AspectRatio, key: (string?)c.Key))
+                .ToArray();
+            var justifiedItems = _galleryLayout.Arrange(childAspects, childWidth);
+
+            var childOffsetX = categoryTile.Bounds.X + inset;
+            var childOffsetY = categoryTile.Bounds.Y + headerHeight;
+            for (var i = 0; i < children.Length && i < justifiedItems.Count; i++)
+            {
+                var child = children[i];
+                var jItem = justifiedItems[i];
+                var globalX = childOffsetX + jItem.X;
+                var globalY = childOffsetY + jItem.Y;
+                var childRect = new Rect(globalX, globalY, jItem.Width, jItem.Height);
+                var tBounds = new TreemapBounds(globalX - inset / 2, globalY - inset / 2,
+                    jItem.Width + inset, jItem.Height + inset);
+
+                if (visibleRect.IntersectsWith(childRect))
+                {
+                    DrawTile(drawingContext, child, tBounds, drawContainerHeader: false);
+                }
+
+                regions.Add(new TreemapHitRegion(child, tBounds));
+            }
         }
     }
 

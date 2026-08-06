@@ -287,17 +287,25 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         }
 
         var files = media
-            .Select(item => new TreemapItemViewModel(
-                item.FullPath,
-                CategoryKey(item.Category),
-                item.Name,
-                WeightMode == TreemapWeightMode.FileSize ? item.Length : 1,
-                false,
-                item.FullPath,
-                item.Length,
-                item.Category,
-                item.Extension,
-                thumbnails.GetValueOrDefault(item.FullPath)))
+            .Select(item =>
+            {
+                var thumb = thumbnails.GetValueOrDefault(item.FullPath);
+                var aspect = thumb is { Width: > 0, Height: > 0 }
+                    ? thumb.Width / thumb.Height
+                    : 1.0;
+                return new TreemapItemViewModel(
+                    item.FullPath,
+                    CategoryKey(item.Category),
+                    item.Name,
+                    WeightMode == TreemapWeightMode.FileSize ? item.Length : 1,
+                    false,
+                    item.FullPath,
+                    item.Length,
+                    item.Category,
+                    item.Extension,
+                    thumb,
+                    aspect);
+            })
             .ToArray();
         var categories = files
             .GroupBy(item => item.Category, StringComparer.OrdinalIgnoreCase)

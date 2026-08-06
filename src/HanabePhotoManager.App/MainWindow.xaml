@@ -1282,10 +1282,6 @@
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Button DockPanel.Dock="Right" Content="适应全部" Padding="8,4" Margin="4,0,0,0"
-                                Command="{Binding FitTreemapToViewCommand}"
-                                ToolTip="将完整空间树图缩放并居中到可视区域"
-                                Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
                         <ScrollViewer Name="TreemapScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SizeChanged="TreemapScrollViewer_SizeChanged" ScrollChanged="TreemapScrollViewer_ScrollChanged" PreviewMouseWheel="TreemapScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
                           <treemap:PhotoTreemapControl x:Name="TreemapControl" MinHeight="420" Loaded="TreemapControl_Loaded"
                           ItemsSource="{Binding TreemapBrowser.Items}"
@@ -1293,8 +1289,7 @@
                           SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}"
                           OpenItemCommand="{Binding OpenTreemapItemCommand}"
                           ZoomCommand="{Binding ZoomTreemapCommand}"
-                          IsBorderless="{Binding IsTreemapBorderless}"
-                          IsOverviewMode="{Binding IsTreemapRootOverview}" />
+                          IsBorderless="{Binding IsTreemapBorderless}" />
                         </ScrollViewer>
                       </DockPanel>
                     </Border>

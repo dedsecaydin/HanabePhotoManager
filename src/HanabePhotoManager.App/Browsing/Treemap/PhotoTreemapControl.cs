@@ -25,6 +25,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private int _debugTileCount;
     private List<string> _visiblePaths = [];
     private List<string> _visibleWithoutThumbnail = [];
+    private double _contentHeight;
+
+    /// <summary>
+    /// Total content height of all items. Used by the code-behind's
+    /// UpdateTreemapSize to grow the control beyond the viewport.
+    /// </summary>
+    internal double ContentHeight => _contentHeight;
 
     /// <summary>
     /// FullPaths of non-container tiles currently intersecting the visible rect,
@@ -205,7 +212,10 @@ public sealed class PhotoTreemapControl : FrameworkElement
         else
         {
             var children = ItemsSource.Where(item => item.ParentKey == RootKey).ToArray();
-            DrawItems(drawingContext, children, bounds, regions, drawContainerHeader: false, padded);
+            if (children.Length > 0)
+            {
+                DrawSubtreeWithJustifiedLayout(drawingContext, children, bounds, regions, padded);
+            }
         }
 
         _hitRegions = regions;
@@ -353,6 +363,62 @@ public sealed class PhotoTreemapControl : FrameworkElement
             }
 
             DrawTile(drawingContext, tile.Item, tile.Bounds, drawContainerHeader);
+        }
+    }
+
+    private void DrawSubtreeWithJustifiedLayout(
+        DrawingContext drawingContext,
+        IReadOnlyList<TreemapItemViewModel> children,
+        TreemapBounds bounds,
+        ICollection<TreemapHitRegion> regions,
+        Rect visibleRect)
+    {
+        var childAspects = children
+            .Select(c => (aspectRatio: c.AspectRatio, key: (string?)c.Key))
+            .ToArray();
+        var justifiedItems = _galleryLayout.Arrange(childAspects, bounds.Width);
+        var gap = ResourceDouble("Spacing.Hairline", 2);
+
+        // Calculate full content height
+        var totalHeight = 0.0;
+        if (justifiedItems.Count > 0)
+        {
+            var last = justifiedItems[^1];
+            totalHeight = last.Y + last.Height + gap;
+        }
+
+        _contentHeight = totalHeight;
+
+        for (var i = 0; i < children.Count && i < justifiedItems.Count; i++)
+        {
+            var child = children[i];
+            var jItem = justifiedItems[i];
+            var childRect = new Rect(jItem.X, jItem.Y, jItem.Width, jItem.Height);
+
+            // Track visible items
+            if (!child.IsContainer && !string.IsNullOrEmpty(child.FullPath))
+            {
+                _visiblePaths.Add(child.FullPath);
+                if (child.Thumbnail is null) _visibleWithoutThumbnail.Add(child.FullPath);
+            }
+
+            var tBounds = new TreemapBounds(
+                jItem.X, jItem.Y,
+                jItem.Width + gap, jItem.Height + gap);
+
+            if (visibleRect.IntersectsWith(childRect))
+            {
+                DrawTile(drawingContext, child, tBounds, drawContainerHeader: false);
+            }
+
+            regions.Add(new TreemapHitRegion(child, tBounds));
+        }
+
+        if (DebugOverlay)
+        {
+            System.Diagnostics.Trace.WriteLine(
+                $"[Treemap] Subtree layout: {children.Count} items, " +
+                $"contentHeight={_contentHeight:F0}, viewportHeight={ActualHeight:F0}");
         }
     }
 

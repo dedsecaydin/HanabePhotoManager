@@ -16,7 +16,7 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 public sealed class PhotoTreemapControl : FrameworkElement
 {
     private const double ViewportPadding = 20;
-    private const bool DebugOverlay = true;
+    private static readonly bool DebugOverlay = false;
     private readonly SquarifiedTreemapLayout _layout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
     private int _debugThumbnailCount;
@@ -58,6 +58,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
             null,
             FrameworkPropertyMetadataOptions.AffectsRender |
             FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    public static readonly DependencyProperty IsBorderlessProperty = DependencyProperty.Register(
+        nameof(IsBorderless),
+        typeof(bool),
+        typeof(PhotoTreemapControl),
+        new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty OpenItemCommandProperty = DependencyProperty.Register(
         nameof(OpenItemCommand),
@@ -106,6 +112,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
     {
         get => (string?)GetValue(SelectedPathProperty);
         set => SetValue(SelectedPathProperty, value);
+    }
+
+    public bool IsBorderless
+    {
+        get => (bool)GetValue(IsBorderlessProperty);
+        set => SetValue(IsBorderlessProperty, value);
     }
 
     public ICommand? OpenItemCommand
@@ -372,7 +384,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
             ? FindBrush("Brush.Border.Focus", WpfSystemColors.HighlightBrush)
             : FindBrush("Brush.Border.Default", WpfSystemColors.ControlDarkBrush);
         var radius = ResourceDouble("Radius.Control", 6);
-        drawingContext.DrawRoundedRectangle(fill, new MediaPen(border, isSelected ? 2 : 1), rect, radius, radius);
+        var drawBorder = !IsBorderless || isSelected;
+        drawingContext.DrawRoundedRectangle(
+            fill,
+            drawBorder ? new MediaPen(border, isSelected ? 2 : 1) : null,
+            rect, radius, radius);
 
         // Container header — draw category name at the top
         if (drawContainerHeader && item.IsContainer && !string.IsNullOrWhiteSpace(item.Label))
@@ -491,7 +507,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
-        var scale = Math.Max(rect.Width / thumbnail.Width, rect.Height / thumbnail.Height);
+        var scale = Math.Min(rect.Width / thumbnail.Width, rect.Height / thumbnail.Height);
         var width = thumbnail.Width * scale;
         var height = thumbnail.Height * scale;
         var destination = new Rect(

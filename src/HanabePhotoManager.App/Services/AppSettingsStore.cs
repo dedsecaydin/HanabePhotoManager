@@ -155,6 +155,8 @@ public sealed class AppSettings
 
     public string TreemapWeightMode { get; set; } = nameof(global::HanabePhotoManager.Core.Browsing.Treemap.TreemapWeightMode.FileSize);
 
+    public bool IsTreemapBorderless { get; set; } = true;
+
     /// <summary>
     /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored
     /// separately as <see cref="BaiduAppSecretProtected"/> (DPAPI-encrypted).

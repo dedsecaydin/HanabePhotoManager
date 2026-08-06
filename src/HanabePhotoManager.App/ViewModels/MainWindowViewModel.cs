@@ -253,7 +253,8 @@ public sealed class MainWindowViewModel : ObservableObject
         TreemapBrowser = new ProgressiveTreemapViewModel();
         TreemapBrowser.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(TreemapBrowser.Items))
+            if (args.PropertyName is nameof(TreemapBrowser.Items)
+                or nameof(TreemapBrowser.CurrentContainerKey))
             {
                 OnPropertyChanged(nameof(CurrentViewItemCount));
             }
@@ -988,6 +989,19 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool IsGridBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Grid;
 
     public bool IsTreemapBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Treemap;
+
+    private bool _isTreemapBorderless = true;
+    public bool IsTreemapBorderless
+    {
+        get => _isTreemapBorderless;
+        set
+        {
+            if (SetProperty(ref _isTreemapBorderless, value) && _isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
 
     private void EnsureTreemapPopulatedFromPreviewFiles()
     {
@@ -1739,7 +1753,10 @@ public sealed class MainWindowViewModel : ObservableObject
     /// In treemap mode: only items within the current treemap container level.
     /// </summary>
     public int CurrentViewItemCount => IsTreemapBrowseMode
-        ? TreemapBrowser.Items.Count(item => !item.IsContainer)
+        ? TreemapBrowser.Items.Count(item =>
+            !item.IsContainer &&
+            (TreemapBrowser.CurrentContainerKey is null ||
+             string.Equals(item.ParentKey, TreemapBrowser.CurrentContainerKey, StringComparison.OrdinalIgnoreCase)))
         : _filteredCache.Count;
 
     public bool HasPreviousPreviewPage => _previewPage > 0;
@@ -1891,6 +1908,7 @@ public sealed class MainWindowViewModel : ObservableObject
         TreemapWeightMode = Enum.TryParse<TreemapWeightMode>(settings.TreemapWeightMode, out var weightMode)
             ? weightMode
             : TreemapWeightMode.FileSize;
+        _isTreemapBorderless = settings.IsTreemapBorderless is not false;
         _persistedBrowseSnapshot = settings.BrowseSnapshot;
         BaiduAppKey = settings.BaiduAppKey ?? string.Empty;
         QuarkClientPath = settings.QuarkClientPath ?? string.Empty;
@@ -5033,6 +5051,7 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.BrowseSnapshot = CaptureBrowseSnapshot();
             settings.BrowseDisplayMode = BrowseDisplayMode.ToString();
             settings.TreemapWeightMode = TreemapWeightMode.ToString();
+            settings.IsTreemapBorderless = IsTreemapBorderless;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)

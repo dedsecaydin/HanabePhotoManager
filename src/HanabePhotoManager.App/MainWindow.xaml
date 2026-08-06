@@ -1271,7 +1271,13 @@
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
                         <ScrollViewer Name="TreemapScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" SizeChanged="TreemapScrollViewer_SizeChanged" ScrollChanged="TreemapScrollViewer_ScrollChanged" PreviewMouseWheel="TreemapScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
-                          <treemap:PhotoTreemapControl x:Name="TreemapControl" MinHeight="420" Loaded="TreemapControl_Loaded" ItemsSource="{Binding TreemapBrowser.Items}" RootKey="{Binding TreemapBrowser.CurrentContainerKey}" SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}" OpenItemCommand="{Binding OpenTreemapItemCommand}" ZoomCommand="{Binding ZoomTreemapCommand}" />
+                          <treemap:PhotoTreemapControl x:Name="TreemapControl" MinHeight="420" Loaded="TreemapControl_Loaded"
+                          ItemsSource="{Binding TreemapBrowser.Items}"
+                          RootKey="{Binding TreemapBrowser.CurrentContainerKey}"
+                          SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}"
+                          OpenItemCommand="{Binding OpenTreemapItemCommand}"
+                          ZoomCommand="{Binding ZoomTreemapCommand}"
+                          IsBorderless="{Binding IsTreemapBorderless}" />
                         </ScrollViewer>
                       </DockPanel>
                     </Border>

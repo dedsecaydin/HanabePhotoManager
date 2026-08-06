@@ -2305,6 +2305,36 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var standalone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var editedFiles = new List<string>();
+
+            // Collect date directories from existing PreviewFiles
+            var dateDirs = new HashSet<string>(
+                before.Select(f =>
+                {
+                    var dir = Path.GetDirectoryName(f.FullPath);
+                    return dir is not null ? Path.GetDirectoryName(dir) : null;
+                }).Where(d => d is not null)!,
+                StringComparer.OrdinalIgnoreCase);
+
+            // Recursively scan "修后" subdirectories under each date directory
+            foreach (var dateDir in dateDirs)
+            {
+                var editedDir = Path.Combine(dateDir, "修后");
+                if (!Directory.Exists(editedDir)) continue;
+                foreach (var file in Directory.EnumerateFiles(
+                    editedDir, "*", new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true,
+                        ReturnSpecialDirectories = false
+                    }))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    standalone.Add(file);
+                    editedFiles.Add(file);
+                }
+            }
+
             // Group by date directory so each date builds exactly one consistent index.
             var byRetouchDir = before
                 .GroupBy(f =>
@@ -2326,7 +2356,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 }
                 standalone.UnionWith(snapshot.StandaloneRetouchedFiles);
             }
-            return (Map: map, Standalone: standalone);
+            return (Map: map, Standalone: standalone, EditedFiles: editedFiles);
         }, cancellationToken).ConfigureAwait(true);
 
         cancellationToken.ThrowIfCancellationRequested();
@@ -2358,33 +2388,36 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         }
 
-        // Merge standalone retouched files that exist outside the date directory scan
+        // Merge standalone retouched files (from index + recursive scan) into PreviewFiles
         var existingPaths = new HashSet<string>(
             PreviewFiles.Select(f => f.FullPath), StringComparer.OrdinalIgnoreCase);
         foreach (var standalonePath in retouchMap.Standalone)
         {
-            if (!existingPaths.Contains(standalonePath) && System.IO.File.Exists(standalonePath))
+            if (!existingPaths.Add(standalonePath) || !System.IO.File.Exists(standalonePath))
+            {
+                continue;
+            }
+
+            try
             {
                 var info = new System.IO.FileInfo(standalonePath);
                 var extension = (info.Extension.Length > 1
                     ? info.Extension.TrimStart('.').ToUpperInvariant()
                     : Path.GetExtension(standalonePath).TrimStart('.').ToUpperInvariant());
                 var merged = new PreviewFileViewModel(
-                    info.Name,
-                    "修后",
-                    standalonePath,
-                    FormatBytes(info.Length),
-                    extension,
-                    null,
-                    info.Length)
+                    info.Name, "修后", standalonePath,
+                    FormatBytes(info.Length), extension, null, info.Length)
                 {
                     IsRetouched = true,
                     RetouchedPath = standalonePath
                 };
                 PreviewFiles.Add(merged);
                 RetouchedFiles.Add(merged);
+            }
+            catch (Exception ex)
+            {
                 System.Diagnostics.Trace.WriteLine(
-                    $"[Treemap] Merged standalone retouched file: {standalonePath}");
+                    $"[Treemap] Failed to merge retouched file {standalonePath}: {ex.Message}");
             }
         }
 

@@ -400,6 +400,28 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         var isSelected = !item.IsContainer &&
             string.Equals(item.FullPath, SelectedPath, StringComparison.OrdinalIgnoreCase);
+
+        // In justified/borderless mode, skip background fill for non-container tiles
+        // so images flow seamlessly edge-to-edge
+        if (!item.IsContainer && IsBorderless)
+        {
+            // No background fill — just draw image and extension badge
+            if (item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+            {
+                DrawThumbnail(drawingContext, item.Thumbnail, rect, 0);
+            }
+
+            if (isSelected)
+            {
+                var selBorder = FindBrush("Brush.Border.Focus", WpfSystemColors.HighlightBrush);
+                drawingContext.DrawRectangle(null, new MediaPen(selBorder, 2), rect);
+            }
+
+            // Extension badge
+            DrawExtensionBadge(drawingContext, item, rect, gap);
+            return;
+        }
+
         var fill = item.IsContainer
             ? FindBrush("Brush.Surface.Default", WpfSystemColors.ControlBrush)
             : FindBrush("Brush.Surface.Subtle", WpfSystemColors.ControlLightBrush);
@@ -476,6 +498,25 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
+        DrawExtensionBadge(drawingContext, item, rect, gap);
+
+        if (DebugOverlay && !item.IsContainer)
+        {
+            // Green border = has thumbnail  /  Gray border = no thumbnail
+            var debugBorderColor = item.Thumbnail is not null
+                ? System.Windows.Media.Brushes.LimeGreen
+                : System.Windows.Media.Brushes.Gray;
+            drawingContext.DrawRectangle(
+                null,
+                new MediaPen(debugBorderColor, 1.2),
+                new Rect(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2));
+        }
+    }
+
+    private void DrawExtensionBadge(DrawingContext drawingContext, TreemapItemViewModel item, Rect rect, double gap)
+    {
+        if (rect.Width < 40 || rect.Height < 20) return;
+
         var extension = item.Extension.Length > 0
             ? item.Extension.ToUpperInvariant()
             : string.Empty;
@@ -502,25 +543,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var badgeY = rect.Y + gap;
 
         var badgeFill = FindBrush("Brush.Surface.Subtle", WpfSystemColors.ControlBrush);
-        drawingContext.DrawRoundedRectangle(
-            badgeFill,
-            null,
-            new Rect(badgeX, badgeY, badgeWidth, badgeHeight),
-            3, 3);
-
+        drawingContext.DrawRoundedRectangle(badgeFill, null,
+            new Rect(badgeX, badgeY, badgeWidth, badgeHeight), 3, 3);
         drawingContext.DrawText(formatted, new WpfPoint(badgeX + 4, badgeY + 2));
-
-        if (DebugOverlay && !item.IsContainer)
-        {
-            // Green border = has thumbnail  /  Gray border = no thumbnail
-            var debugBorderColor = item.Thumbnail is not null
-                ? System.Windows.Media.Brushes.LimeGreen
-                : System.Windows.Media.Brushes.Gray;
-            drawingContext.DrawRectangle(
-                null,
-                new MediaPen(debugBorderColor, 1.2),
-                new Rect(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2));
-        }
     }
 
     private static void DrawThumbnail(DrawingContext drawingContext, ImageSource thumbnail, Rect rect, double radius)
@@ -530,7 +555,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
-        var scale = Math.Min(rect.Width / thumbnail.Width, rect.Height / thumbnail.Height);
+        var scale = Math.Max(rect.Width / thumbnail.Width, rect.Height / thumbnail.Height);
         var width = thumbnail.Width * scale;
         var height = thumbnail.Height * scale;
         var destination = new Rect(

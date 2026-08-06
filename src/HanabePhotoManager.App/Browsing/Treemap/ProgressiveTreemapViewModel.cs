@@ -290,9 +290,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             .Select(item =>
             {
                 var thumb = thumbnails.GetValueOrDefault(item.FullPath);
-                var aspect = thumb is { Width: > 0, Height: > 0 }
-                    ? thumb.Width / thumb.Height
-                    : 1.0;
+                var aspect = ResolveAspectRatio(item.FullPath, thumb);
                 return new TreemapItemViewModel(
                     item.FullPath,
                     CategoryKey(item.Category),
@@ -338,6 +336,25 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             ];
         DiscoveredCount = media.Length;
         LayoutRevision++;
+    }
+
+    private static double ResolveAspectRatio(string fullPath, System.Windows.Media.ImageSource? thumbnail)
+    {
+        // Prefer thumbnail dimensions if available
+        if (thumbnail is { Width: > 0, Height: > 0 })
+        {
+            return thumbnail.Width / thumbnail.Height;
+        }
+
+        // Fast header read for JPEG/PNG
+        var dims = ImageDimensionReader.ReadDimensions(fullPath);
+        if (dims is { width: > 0, height: > 0 })
+        {
+            return (double)dims.Value.width / dims.Value.height;
+        }
+
+        // Sensible default for typical camera photos (3:2)
+        return 1.5;
     }
 
     private void CancelPendingPublish()

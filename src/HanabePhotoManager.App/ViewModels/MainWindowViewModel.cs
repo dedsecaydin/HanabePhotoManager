@@ -1047,6 +1047,34 @@ public sealed class MainWindowViewModel : ObservableObject
         // The actual viewport priority loading is triggered by code-behind
         // after each render via RefreshTreemapViewportLoading().
         _treemapSourceFiles = files;
+        // Kick off background dimension reading for justified gallery
+        _ = LoadTreemapDimensionsAsync(files);
+    }
+
+    private async Task LoadTreemapDimensionsAsync(PreviewFileViewModel[] files)
+    {
+        var batch = new List<(string path, double aspect)>();
+        foreach (var file in files)
+        {
+            var dims = await Task.Run(() => ImageDimensionReader.ReadDimensions(file.FullPath))
+                .ConfigureAwait(false);
+            if (dims is { width: > 0, height: > 0 })
+            {
+                batch.Add((file.FullPath, (double)dims.Value.width / dims.Value.height));
+            }
+
+            // Submit in batches to avoid flooding the UI
+            if (batch.Count >= 32)
+            {
+                TreemapBrowser.SubmitDimensions(batch);
+                batch = [];
+            }
+        }
+
+        if (batch.Count > 0)
+        {
+            TreemapBrowser.SubmitDimensions(batch);
+        }
     }
 
     private PreviewFileViewModel[]? _treemapSourceFiles;

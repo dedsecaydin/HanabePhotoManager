@@ -15,6 +15,8 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, ImageSource> _thumbnailsByPath =
         new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, double> _dimensionsByPath =
+        new(StringComparer.OrdinalIgnoreCase);
     private readonly TimeSpan _refreshInterval;
     private readonly SynchronizationContext? _synchronizationContext;
     private CancellationTokenSource? _pendingPublishCancellation;
@@ -31,6 +33,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
     private bool _isScanning;
     private bool _isPartial;
     private bool _disposed;
+    private int _isPublishing; // 1 = in progress, 0 = idle
 
     public ProgressiveTreemapViewModel(TimeSpan? refreshInterval = null)
     {
@@ -120,6 +123,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             _generation++;
             _mediaByPath.Clear();
             _thumbnailsByPath.Clear();
+            _dimensionsByPath.Clear();
             _hasPublished = false;
         }
 
@@ -269,7 +273,25 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         }
     }
 
-    private void PublishNow(int generation)
+    private void PublishNow(int generation, bool useDimensions = false)
+    {
+        // Prevent recursive re-entry
+        if (Interlocked.CompareExchange(ref _isPublishing, 1, 0) == 1)
+        {
+            return;
+        }
+
+        try
+        {
+            PublishNowCore(generation, useDimensions);
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _isPublishing, 0);
+        }
+    }
+
+    private void PublishNowCore(int generation, bool useDimensions)
     {
         LibraryDateMediaItem[] media;
         Dictionary<string, ImageSource> thumbnails;
@@ -290,7 +312,13 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             .Select(item =>
             {
                 var thumb = thumbnails.GetValueOrDefault(item.FullPath);
-                var aspect = ResolveAspectRatio(item.FullPath, thumb);
+                // Use cached dimension from background reader, or thumbnail, or default
+                var aspect = GetCachedAspectRatio(item.FullPath);
+                if (aspect <= 1.0 && thumb is { Width: > 0, Height: > 0 })
+                {
+                    aspect = thumb.Width / thumb.Height;
+                }
+
                 return new TreemapItemViewModel(
                     item.FullPath,
                     CategoryKey(item.Category),
@@ -340,21 +368,47 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
 
     private static double ResolveAspectRatio(string fullPath, System.Windows.Media.ImageSource? thumbnail)
     {
-        // Prefer thumbnail dimensions if available
+        // Prefer thumbnail dimensions if available (free, local property)
         if (thumbnail is { Width: > 0, Height: > 0 })
         {
             return thumbnail.Width / thumbnail.Height;
         }
 
-        // Fast header read for JPEG/PNG
-        var dims = ImageDimensionReader.ReadDimensions(fullPath);
-        if (dims is { width: > 0, height: > 0 })
+        // Sensible default — background loader will populate real dimensions later
+        return 1.5;
+    }
+
+    /// <summary>
+    /// Submit pre-read dimensions from a background thread.
+    /// Triggers a lightweight re-publish to update layouts.
+    /// </summary>
+    public void SubmitDimensions(IReadOnlyList<(string fullPath, double aspectRatio)> dimensions)
+    {
+        var changed = false;
+        lock (_gate)
         {
-            return (double)dims.Value.width / dims.Value.height;
+            foreach (var (path, aspect) in dimensions)
+            {
+                if (double.IsFinite(aspect) && aspect > 0)
+                {
+                    _dimensionsByPath[path] = aspect;
+                    changed = true;
+                }
+            }
         }
 
-        // Sensible default for typical camera photos (3:2)
-        return 1.5;
+        if (changed && !_disposed && _mediaByPath.Count > 0)
+        {
+            PublishNow(_generation, useDimensions: true);
+        }
+    }
+
+    private double GetCachedAspectRatio(string fullPath)
+    {
+        lock (_gate)
+        {
+            return _dimensionsByPath.TryGetValue(fullPath, out var aspect) ? aspect : 1.5;
+        }
     }
 
     private void CancelPendingPublish()

@@ -99,10 +99,10 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                                          FileMode.CreateNew,
                                          FileAccess.Write,
                                          FileShare.None,
-                                         bufferSize: 1024 * 64,
+                                         bufferSize: 1024 * 1024,
                                          options: FileOptions.Asynchronous | FileOptions.SequentialScan))
                         {
-                            await lease.Stream.CopyToAsync(temporaryStream, 1024 * 64, cancellationToken).ConfigureAwait(false);
+                            await lease.Stream.CopyToAsync(temporaryStream, 1024 * 1024, cancellationToken).ConfigureAwait(false);
                             await temporaryStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                         }
 
@@ -285,7 +285,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
             throw new IOException($"Unable to open source lease. Win32 error {Marshal.GetLastWin32Error()}.");
         }
 
-        return new FileStream(handle, FileAccess.Read, bufferSize: 1024 * 64, isAsync: false);
+        return new FileStream(handle, FileAccess.Read, bufferSize: 1024 * 1024, isAsync: false);
     }
 
     private static void DeleteSourceLeases(IEnumerable<SourceLease> sourceLeases, CancellationToken cancellationToken)

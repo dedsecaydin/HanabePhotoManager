@@ -29,7 +29,7 @@ public sealed class PhotoAnalysisViewModel : ObservableObject
     }
 
     public IReadOnlyList<string> Engines { get; } =
-        [PhotoClassifierFactory.RulesMode, PhotoClassifierFactory.OnnxMode, PhotoClassifierFactory.MobileClipMode];
+        [PhotoClassifierFactory.RulesMode, PhotoClassifierFactory.OnnxMode, PhotoClassifierFactory.MobileClipMode, PhotoClassifierFactory.SigLip2Mode];
 
     public string SelectedEngine
     {

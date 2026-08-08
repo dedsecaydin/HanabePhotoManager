@@ -10,4 +10,5 @@
   <SolidColorBrush x:Key="Brush.Shell.TopBar" Color="{StaticResource Color.Background.Subtle}" Opacity="0.68"/>
   <SolidColorBrush x:Key="Brush.Shell.Summary" Color="{StaticResource Color.Surface.Default}" Opacity="0.62"/>
   <SolidColorBrush x:Key="Brush.Shell.Highlight" Color="{StaticResource Color.Surface.Default}" Opacity="0.82"/>
+  <SolidColorBrush x:Key="Brush.Overlay.Scrim" Color="{StaticResource Color.Overlay.Scrim}"/>
 </ResourceDictionary>

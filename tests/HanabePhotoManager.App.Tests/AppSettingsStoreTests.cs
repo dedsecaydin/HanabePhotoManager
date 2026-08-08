@@ -9,6 +9,42 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class AppSettingsStoreTests
 {
     [Fact]
+    public async Task ImportSources_RoundTripWithoutChangingExistingSettingsShape()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hanabe-settings-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new AppSettingsStore(path);
+            var settings = new AppSettings
+            {
+                LibraryRoot = "library",
+                ImportSources =
+                [
+                    new ImportSourceSettings
+                    {
+                        Path = @"D:\Photos",
+                        IsEnabled = false,
+                        IncludeSubdirectories = true,
+                        AutoWatch = true
+                    }
+                ]
+            };
+
+            await store.SaveAsync(settings);
+            var loaded = await store.LoadAsync();
+
+            loaded.LibraryRoot.Should().Be("library");
+            loaded.ImportSources.Should().ContainSingle();
+            loaded.ImportSources[0].Path.Should().Be(@"D:\Photos");
+            loaded.ImportSources[0].IsEnabled.Should().BeFalse();
+            loaded.ImportSources[0].AutoWatch.Should().BeTrue();
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+    [Fact]
     public async Task NavigationPreferencesSurviveRestart()
     {
         var directory = Path.Combine(Path.GetTempPath(), "hanabe-settings-" + Guid.NewGuid().ToString("N"));

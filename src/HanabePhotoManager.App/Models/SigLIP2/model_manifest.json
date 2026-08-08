@@ -1,0 +1,27 @@
+{
+  "model_id": "google/siglip2-base-patch16-224",
+  "resolved_revision": "75de2d55ec2d0b4efc50b3e9ad70dba96a7b2fa2",
+  "model_file": "siglip2_visual.onnx",
+  "labels_file": "label_embeddings.json",
+  "image_size": 224,
+  "input_name": "pixel_values",
+  "input_shape": [
+    "batch",
+    3,
+    224,
+    224
+  ],
+  "input_dtype": "float32",
+  "output_name": "image_embedding",
+  "output_shape": [
+    "batch",
+    768
+  ],
+  "output_dtype": "float32",
+  "embedding_dimension": 768,
+  "preprocessing": "RGB; shortest-edge resize then center crop; rescale 1/255; mean [0.5,0.5,0.5]; std [0.5,0.5,0.5]",
+  "label_prompt_template": "This is a photo of {label}.",
+  "normalization": "L2 for image and text embeddings",
+  "score_type": "SimilarityScore",
+  "sha256": "33f8046307f02daebbece23dd46f846087ccbbbbf57c4baab2ffe222ef630ca1"
+}

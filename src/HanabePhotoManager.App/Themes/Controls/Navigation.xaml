@@ -55,7 +55,7 @@
             <Border Grid.Column="0" Background="{DynamicResource Brush.Shell.Sidebar}"/>
             <TabPanel Grid.Column="0" IsItemsHost="True" Margin="0,0,0,12" KeyboardNavigation.TabIndex="1"/>
             <Border Grid.Column="1" Background="{DynamicResource Brush.Border.Default}"/>
-            <ContentPresenter Grid.Column="2" ContentSource="SelectedContent" KeyboardNavigation.TabIndex="2"/>
+            <ContentPresenter x:Name="PART_SelectedContentHost" Grid.Column="2" ContentSource="SelectedContent" KeyboardNavigation.TabIndex="2"/>
           </Grid>
         </ControlTemplate>
       </Setter.Value>

@@ -79,6 +79,9 @@ public sealed class AppSettingsStore
 
 public sealed class AppSettings
 {
+    public List<ImportSourceSettings> ImportSources { get; set; } = [];
+    public bool HasCompletedOnboarding { get; set; }
+
     public List<string> NavigationOrder { get; set; } = [];
 
     public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.Text;

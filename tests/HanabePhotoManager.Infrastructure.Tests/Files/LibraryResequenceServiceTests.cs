@@ -144,6 +144,20 @@ public sealed class LibraryResequenceServiceTests : IDisposable
         act.Should().NotThrow();
     }
 
+    [Fact]
+    public void ResequenceLibrary_DoesNotRenameFilesInRetouchedDirectory()
+    {
+        var retouchedDir = Path.Combine(_root, "08月", "08.08", "修后");
+        Directory.CreateDirectory(retouchedDir);
+        var retouched = Path.Combine(retouchedDir, "JK0003.JPG");
+        File.WriteAllText(retouched, "edited");
+
+        LibraryResequenceService.ResequenceLibrary(_root);
+
+        File.Exists(retouched).Should().BeTrue();
+        File.Exists(Path.Combine(retouchedDir, "JK0001.JPG")).Should().BeFalse();
+    }
+
     public void Dispose()
     {
         try { if (Directory.Exists(_root)) Directory.Delete(_root, true); } catch { }

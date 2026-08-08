@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Collections;
+using HanabePhotoManager.App.Duplicates;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ReleaseNotes;
@@ -1005,7 +1006,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void EnsureTreemapPopulatedFromPreviewFiles()
     {
-        if (PreviewFiles.Count == 0 || string.IsNullOrWhiteSpace(SelectedDatePath))
+        if (TreemapBrowser.Items.Count > 0 ||
+            PreviewFiles.Count == 0 ||
+            string.IsNullOrWhiteSpace(SelectedDatePath))
         {
             return;
         }
@@ -2934,7 +2937,7 @@ public sealed class MainWindowViewModel : ObservableObject
             catch (OperationCanceledException) { throw; }
             catch (Exception) { /* library scan failure is non-fatal; import continues without cross-library dedup */ }
 
-            var sessionImportedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var sessionImportedHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
             var dateGroups = items
                 .Where(item => item.TargetDate is not null)
@@ -3018,7 +3021,7 @@ public sealed class MainWindowViewModel : ObservableObject
         LibraryDate date,
         bool deleteSourcesAfterVerify,
         Dictionary<long, List<string>>? librarySizeMap,
-        HashSet<string> sessionImportedHashes,
+        Dictionary<string, string> sessionImportedHashes,
         CancellationToken cancellationToken)
     {
         var success = 0;
@@ -3057,21 +3060,30 @@ public sealed class MainWindowViewModel : ObservableObject
 
                 if (duplicatePath is not null)
                 {
-                    skipped++;
-                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与图库已有文件内容相同（{Path.GetFileName(duplicatePath)}），已跳过。");
-                    continue;
+                    var decision = ShowImportDuplicateDecision(item.Group.Primary.FullPath, duplicatePath);
+                    if (!ImportDuplicateDecisionPolicy.ShouldTransfer(decision))
+                    {
+                        skipped++;
+                        lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与图库已有文件内容相同（{Path.GetFileName(duplicatePath)}），已跳过。");
+                        continue;
+                    }
                 }
 
                 // Also check against files imported earlier in this same session.
                 var sourceHash = await _fileHasher.ComputeSha256Async(
                     item.Group.Primary.FullPath, cancellationToken).ConfigureAwait(true);
-                if (sessionImportedHashes.Contains(sourceHash))
+                if (sessionImportedHashes.TryGetValue(sourceHash, out var sessionDuplicatePath))
                 {
-                    skipped++;
-                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与本次导入的其他文件内容相同，已跳过。");
-                    continue;
+                    var decision = ShowImportDuplicateDecision(item.Group.Primary.FullPath, sessionDuplicatePath);
+                    if (!ImportDuplicateDecisionPolicy.ShouldTransfer(decision))
+                    {
+                        skipped++;
+                        lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与本次导入的其他文件内容相同，已跳过。");
+                        continue;
+                    }
                 }
-                sessionImportedHashes.Add(sourceHash);
+
+                sessionImportedHashes[sourceHash] = item.Files[0].DestinationPath;
             }
 
             var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
@@ -3164,6 +3176,9 @@ public sealed class MainWindowViewModel : ObservableObject
         var deletedCount = 0;
         foreach (var path in filesToDelete)
         {
+            if (RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(LibraryRoot, path))
+                continue;
+
             try { if (File.Exists(path)) File.Delete(path); deletedCount++; }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }
@@ -3178,13 +3193,25 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static HashSet<string>? ShowDuplicateReviewDialog(List<DuplicateCandidateGroup> candidates)
+    private HashSet<string>? ShowDuplicateReviewDialog(List<DuplicateCandidateGroup> candidates)
     {
-        var window = new DuplicateReviewWindow(candidates)
+        var window = new DuplicateReviewWindow(candidates, LibraryRoot)
         {
             Owner = System.Windows.Application.Current.MainWindow
         };
         return window.ShowDialog() == true ? window.FilesToDelete : null;
+    }
+
+    private ImportDuplicateDecision ShowImportDuplicateDecision(string incomingPath, string existingPath)
+    {
+        var window = new ImportDuplicateDecisionWindow(
+            incomingPath,
+            existingPath,
+            RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(LibraryRoot, existingPath))
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        return window.ShowDialog() == true ? window.Decision : ImportDuplicateDecision.Skip;
     }
 
     private async Task ScanLibraryDuplicatesAsync()

@@ -151,8 +151,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     public static bool ShouldRequestThumbnail(double width, double height) =>
         double.IsFinite(width) &&
         double.IsFinite(height) &&
-        width >= 12 &&
-        height >= 12;
+        width >= 120 &&
+        height >= 100;
 
     public static TreemapItemViewModel? FindItemAt(
         IReadOnlyList<TreemapHitRegion> regions,

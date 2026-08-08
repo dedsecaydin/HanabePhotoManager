@@ -160,6 +160,24 @@ public sealed class LibraryContentScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task FindAllDuplicatesAsync_IncludesRetouchedFilesForReadOnlyDetection()
+    {
+        var dateDir = Path.Combine(_root, "08月", "08.08");
+        var retouchedDir = Path.Combine(dateDir, "修后");
+        Directory.CreateDirectory(retouchedDir);
+        var original = Path.Combine(dateDir, "JPG生图", "original.jpg");
+        Directory.CreateDirectory(Path.GetDirectoryName(original)!);
+        var retouched = Path.Combine(retouchedDir, "edited.jpg");
+        await File.WriteAllBytesAsync(original, [1, 2, 3]);
+        await File.WriteAllBytesAsync(retouched, [1, 2, 3]);
+
+        var groups = await _scanner.FindAllDuplicatesAsync(_root, Extensions, default);
+
+        groups.Should().ContainSingle(group => group.Contains(original) && group.Contains(retouched));
+        RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(_root, retouched).Should().BeTrue();
+    }
+
+    [Fact]
     public async Task FindAllDuplicatesAsync_IgnoresFilesWithDifferentSize()
     {
         var data = new byte[] { 1, 2, 3 };

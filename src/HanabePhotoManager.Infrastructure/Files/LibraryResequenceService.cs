@@ -21,7 +21,17 @@ public static class LibraryResequenceService
             foreach (var dateDir in Directory.GetDirectories(monthDir, "*?.??", SearchOption.TopDirectoryOnly))
             {
                 foreach (var categoryDir in Directory.GetDirectories(dateDir, "*", SearchOption.TopDirectoryOnly))
+                {
+                    if (string.Equals(
+                            Path.GetFullPath(categoryDir),
+                            Path.GetFullPath(Path.Combine(dateDir, RetouchedDirectoryPolicy.DirectoryName)),
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
                     ResequenceDirectory(categoryDir);
+                }
             }
         }
     }

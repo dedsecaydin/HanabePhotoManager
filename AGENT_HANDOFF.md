@@ -1,7 +1,7 @@
 # Agent Handoff — Current Project State
 
 > **Purpose:** First-read document for any agent taking over this project.  
-> **Last Updated:** 2026-08-06  
+> **Last Updated:** 2026-08-08
 > **Current Version:** `0.2.0-alpha.3`  
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
@@ -12,7 +12,7 @@
 
 | Item | State |
 |------|-------|
-| Last build | ✅ 0 errors, 0 warnings (Debug, 2026-08-06) |
+| Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-08 18:43 +08:00) |
 | Last pushed commit | `dd1a573` — Revert overview mode |
 | Active area | 照片图库 → 空间树图 (photo library → treemap) |
 | Critical bugs | None known to crash app on normal use |
@@ -33,6 +33,8 @@
 | Borderless mode | ✅ | `IsBorderless` DP, persisted in settings |
 | MapPage WebView2 crash fix | ✅ | try/catch 0x800700AA, deferred retry |
 | Calendar single-date mode | ✅ | `SelectedDate` setter replaces previous |
+| Import exact-duplicate decision | ✅ | SHA-256 after size prefilter; explicit skip/import/Explorer decision with side-by-side thumbnails |
+| Retouched directory write protection | ✅ | `<root>\<month>\<date>\修后` is scan-only; duplicate deletion and resequencing exclude it |
 | Recursive 修后 scan | ✅ | `RecurseSubdirectories=true` in Task.Run |
 | File type badges (grid) | ✅ | `ExtensionBadgeConverter`, dark-bg white text |
 

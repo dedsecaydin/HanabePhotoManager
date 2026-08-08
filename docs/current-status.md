@@ -98,7 +98,8 @@
 | Item | Status |
 |------|--------|
 | MapPage WebView2 crash | Resolved |
-| Duplicate detection | Stable |
+| Duplicate detection | Stable | SHA-256 exact matching after size prefilter; visual hash remains review-only; explicit import decision dialog |
+| Retouched output write protection | Stable | `<root>\<month>\<date>\修后` files remain scan-visible but are disabled in review, filtered before delete, and skipped by resequencing |
 | Cloud provider pages | Stable |
 | Face recognition | Stable |
 | Import flow | Stable |

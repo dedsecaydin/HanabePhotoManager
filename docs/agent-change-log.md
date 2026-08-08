@@ -70,6 +70,21 @@ Multiple sessions implementing treemap features including: Justified Gallery inn
 ### Remaining Issues
 See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 
+## 2026-08-08 — Codex
+
+### Summary
+- Added explicit SHA-256 exact-duplicate import decisions (skip, import anyway, or locate the existing file) with incoming/existing thumbnail comparison.
+- Defined `<library root>\<month>\<date>\修后` as the single read-only retouched-output path policy.
+- Kept retouched files visible to exact and perceptual duplicate scans, while preventing their selection/deletion and excluding them from resequencing.
+- Tightened viewport thumbnail requests to meaningful tile dimensions and restored the preloaded treemap guard.
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror` — 0 warnings, 0 errors.
+- `dotnet test HanabePhotoManager.sln -c Release --no-build` — Core 359/359, Infrastructure 160/160, App 327/327.
+
+### Remaining Issues
+- Manual WPF smoke test of the new modal (including non-raster/video fallback and Explorer activation) remains pending; automated tests cover the decision policy and filesystem protections.
+
 ### Key Architecture Decisions
 - Two-layer layout: SquarifiedTreemap (outer) + JustifiedGallery (inner)
 - Aspect ratio from file headers (ImageDimensionReader), not thumbnail decode

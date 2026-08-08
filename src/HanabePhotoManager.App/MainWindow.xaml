@@ -1112,7 +1112,7 @@
                       </StackPanel>
                       <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
                     </StackPanel>
-                    <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding CurrentViewItemCount, Mode=OneWay, StringFormat=共 {0} 项}" />
+                    <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding CurrentViewItemCount, Mode=OneWay, StringFormat=共 {0} 项}" AutomationProperties.HelpText="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
                     <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
                       <DockPanel>
                         <Border DockPanel.Dock="Right" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}" Padding="8,3" VerticalAlignment="Top" Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="CloseExifPanel_Click">
@@ -1211,11 +1211,11 @@
                                             </Border>
 <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
                                             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
-                                              <Border Padding="8,4" CornerRadius="9" Background="#CC1F2937" BorderBrush="#33000000" BorderThickness="1">
-                                                <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="12" FontWeight="Bold" Foreground="White" />
+                                              <Border Padding="8,4" CornerRadius="9" Background="{DynamicResource Brush.Viewer.Canvas}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                                <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Inverse}" />
                                               </Border>
-                                              <Border Margin="0,5,0,0" Padding="8,4" CornerRadius="9" Background="#CC1F2937" BorderBrush="#33000000" BorderThickness="1">
-                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="White">
+                                              <Border Margin="0,5,0,0" Padding="8,4" CornerRadius="9" Background="{DynamicResource Brush.Viewer.Canvas}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Inverse}">
                                                   <FrameworkElement.Style>
                                                     <Style TargetType="{x:Type TextBlock}">
                                                       <Setter Property="Text" Value="未修" />

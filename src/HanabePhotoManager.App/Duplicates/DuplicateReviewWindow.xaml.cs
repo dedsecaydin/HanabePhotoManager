@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using HanabePhotoManager.Infrastructure.Files;
 using WpfCheckBox = System.Windows.Controls.CheckBox;
 
 namespace HanabePhotoManager.App;
@@ -9,11 +10,13 @@ namespace HanabePhotoManager.App;
 public partial class DuplicateReviewWindow : Window
 {
     private readonly List<DuplicateItem> _items = [];
+    private readonly string _libraryRoot;
 
     public HashSet<string> FilesToDelete { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates)
+    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates, string libraryRoot)
     {
+        _libraryRoot = libraryRoot;
         InitializeComponent();
         var totalFiles = candidates.Sum(group => group.Paths.Count);
         var suspectedCount = candidates.Count(group => group.IsSuspected);
@@ -72,6 +75,17 @@ public partial class DuplicateReviewWindow : Window
                 if (_items.Count == 0 || _items.Last().GroupIndex != i)
                     checkbox.IsChecked = false;
 
+                if (RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(_libraryRoot, path))
+                {
+                    checkbox.IsChecked = false;
+                    checkbox.IsEnabled = false;
+                    info.Inlines.Add(new System.Windows.Documents.Run("  只读保留")
+                    {
+                        FontSize = 11,
+                        Foreground = System.Windows.Media.Brushes.DarkOrange
+                    });
+                }
+
                 groupPanel.Children.Add(checkbox);
                 _items.Add(new DuplicateItem(i, path, checkbox));
             }
@@ -85,7 +99,8 @@ public partial class DuplicateReviewWindow : Window
         FilesToDelete.Clear();
         foreach (var item in _items)
         {
-            if (item.Checkbox.IsChecked == true)
+            if (item.Checkbox.IsChecked == true &&
+                !RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(_libraryRoot, item.Path))
                 FilesToDelete.Add(item.Path);
         }
 

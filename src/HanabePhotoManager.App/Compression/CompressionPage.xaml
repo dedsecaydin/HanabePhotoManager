@@ -193,7 +193,17 @@
           </StackPanel>
         </DockPanel>
         <StackPanel Grid.Row="1" Margin="0,16,0,12">
-          <ProgressBar Height="8" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/>
+          <ProgressBar Height="8" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}">
+            <ProgressBar.Style>
+              <Style TargetType="{x:Type ProgressBar}">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding IsScanning}" Value="True">
+                    <Setter Property="IsIndeterminate" Value="True"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </ProgressBar.Style>
+          </ProgressBar>
           <TextBlock Margin="0,6,0,0" Text="{Binding CurrentFile}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
         </StackPanel>
         <ListBox Grid.Row="2" ItemsSource="{Binding Items}" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}">

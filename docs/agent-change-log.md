@@ -1,5 +1,24 @@
 # Agent Change Log
 
+## 2026-08-09 - Codex (Compression asynchronous input scan and single-instance guard)
+
+### Task
+Prevent the Compression page from blocking the WPF UI while recursively scanning a large network folder, and prevent concurrent application instances from competing for I/O.
+
+### Files Changed
+- `CompressionViewModel.cs`: replaced synchronous `AddInputs` with cancellable `AddInputsAsync`. Directory discovery and file-length metadata reads run in `Task.Run`; UI-bound collections update only after the awaited operation resumes on the WPF context. A newer selection cancels an older scan without allowing the older completion handler to clear the newer scan state.
+- `CompressionPage.xaml(.cs)`: file, folder, and drop input handlers await the asynchronous scan; progress becomes indeterminate while scanning and the existing Cancel button cancels scanning or compression.
+- `App.xaml.cs`: owns the named mutex `HanabePhotoManager.SingleInstance` from startup through application exit. A second launch receives an information dialog and shuts down before loading application services. `OnExit` now releases the mutex only when this process created and owns it, preventing the second instance from throwing `ApplicationException` during shutdown.
+- `CompressionViewModelTests.cs`: added async queue and cancellation regression coverage.
+
+### Verification
+- Focused compression ViewModel tests: 4/4 passed.
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror --artifacts-path .artifacts\\agent-verification`: 0 warnings, 0 errors (2026-08-09 05:21 +08:00).
+- `dotnet test HanabePhotoManager.sln -c Release --no-build --artifacts-path .artifacts\\agent-verification`: Core 365/365, Infrastructure 160/160, App 336/336.
+
+### Remaining Issues
+- Manual WPF validation with the real large SMB library remains required. The current user process was intentionally not stopped or inspected interactively; it continues to run its previously loaded executable until restarted.
+
 ## 2026-08-08 - Codex (Treemap UI-hang mitigation)
 
 ### Task

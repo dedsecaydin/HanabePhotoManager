@@ -1,7 +1,7 @@
 # Agent Handoff — Current Project State
 
 > **Purpose:** First-read document for any agent taking over this project.  
-> **Last Updated:** 2026-08-08
+> **Last Updated:** 2026-08-09
 > **Current Version:** `0.2.0-alpha.3`  
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
@@ -10,11 +10,11 @@
 
 ## Quick Status
 
-> **Latest verification:** Release build completed with 0 warnings / 0 errors at **2026-08-08 20:33 +08:00**; full tests passed (Core 365, Infrastructure 160, App 335). The isolated `.artifacts/agent-verification` output was used because user-running app instances hold the default Release DLLs.
+> **Latest verification:** Release build completed with 0 warnings / 0 errors at **2026-08-09 05:21 +08:00**; full tests passed (Core 365, Infrastructure 160, App 336). The isolated `.artifacts/agent-verification` output was used and did not touch a user-running executable.
 
 | Item | State |
 |------|-------|
-| Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-08 18:53 +08:00) |
+| Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-09 05:21 +08:00) |
 | Last pushed commit | `dd1a573` — Revert overview mode |
 | Active area | 照片图库 → 空间树图 (photo library → treemap) |
 | Critical bugs | None known to crash app on normal use |

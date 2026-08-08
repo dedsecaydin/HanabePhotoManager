@@ -5,12 +5,40 @@
 /// </summary>
 public partial class App : System.Windows.Application
 {
+    private const string SingleInstanceMutexName = "HanabePhotoManager.SingleInstance";
+    private Mutex? _singleInstanceMutex;
+    private bool _ownsSingleInstanceMutex;
+
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
+        _ownsSingleInstanceMutex = createdNew;
+        if (!createdNew)
+        {
+            System.Windows.MessageBox.Show(
+                "Hanabe Photo Manager 已在运行。请关闭现有窗口后再启动。",
+                "Hanabe Photo Manager",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += OnAppDomainUnhandledException;
         Services.ThemeManager.LoadAndApply();
         base.OnStartup(e);
+    }
+
+    protected override void OnExit(System.Windows.ExitEventArgs e)
+    {
+        if (_ownsSingleInstanceMutex)
+            _singleInstanceMutex?.ReleaseMutex();
+
+        _singleInstanceMutex?.Dispose();
+        _singleInstanceMutex = null;
+        _ownsSingleInstanceMutex = false;
+        base.OnExit(e);
     }
 
     private static void OnDispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)

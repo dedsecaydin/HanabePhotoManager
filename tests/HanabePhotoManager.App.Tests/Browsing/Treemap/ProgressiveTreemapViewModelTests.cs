@@ -112,6 +112,28 @@ public sealed class ProgressiveTreemapViewModelTests
     }
 
     [Fact]
+    public async Task ThumbnailUpdates_AreCoalescedIntoOneLayoutPublication()
+    {
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.FromMilliseconds(40));
+        var generation = viewModel.BeginScan(@"D:\Photos");
+        viewModel.ApplyBatch(generation, Batch(
+            Item(@"D:\Photos\a.jpg", "JPG生图", 10),
+            Item(@"D:\Photos\b.jpg", "JPG生图", 20)));
+        var firstRevision = viewModel.LayoutRevision;
+        var thumbnail = new DrawingImage();
+        thumbnail.Freeze();
+
+        viewModel.UpdateThumbnail(@"D:\Photos\a.jpg", thumbnail);
+        viewModel.UpdateThumbnail(@"D:\Photos\b.jpg", thumbnail);
+
+        viewModel.LayoutRevision.Should().Be(firstRevision);
+        await WaitUntilAsync(() => viewModel.LayoutRevision > firstRevision);
+        viewModel.LayoutRevision.Should().Be(firstRevision + 1);
+        viewModel.Items.Where(item => !item.IsContainer)
+            .Should().OnlyContain(item => item.Thumbnail == thumbnail);
+    }
+
+    [Fact]
     public void Complete_PublishesPendingItemsAndPartialState()
     {
         using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.FromMinutes(1));

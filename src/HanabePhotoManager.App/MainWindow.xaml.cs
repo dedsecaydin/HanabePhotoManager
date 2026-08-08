@@ -1070,7 +1070,7 @@ public partial class MainWindow : Window
         while (current is not null)
         {
             if (current is FrameworkElement element && Equals(element.Tag, "PreviewCard")) return element;
-            current = VisualTreeHelper.GetParent(current);
+            current = GetLogicalOrVisualParent(current);
         }
         return null;
     }
@@ -1081,10 +1081,18 @@ public partial class MainWindow : Window
         while (current is not null)
         {
             if (current is T match) return match;
-            current = VisualTreeHelper.GetParent(current);
+            current = GetLogicalOrVisualParent(current);
         }
         return null;
     }
+
+    private static DependencyObject? GetLogicalOrVisualParent(DependencyObject current) =>
+        current switch
+        {
+            System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(current),
+            FrameworkContentElement content => content.Parent,
+            _ => null
+        };
 
     private static IEnumerable<T> FindVisualDescendants<T>(DependencyObject root) where T : DependencyObject
     {

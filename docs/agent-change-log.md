@@ -1,5 +1,25 @@
 # Agent Change Log
 
+## 2026-08-08 - Codex (Treemap UI-hang mitigation)
+
+### Task
+Mitigate UI stalls while scanning and viewing a large treemap without stopping the user-running application.
+
+### Files Changed
+- `ProgressiveTreemapViewModel.cs`: thumbnail arrivals and background image-dimension batches now share the existing 150ms coalesced publication path. The first scan batch, navigation, weight changes, and completion keep their immediate publication behavior; zero-delay test ViewModels remain synchronous.
+- `PhotoTreemapControl.cs`: only viewport-intersecting tiles create hit regions or draw/request thumbnails. Disabled debug telemetry no longer enumerates every treemap item on each render.
+- `MainWindow.xaml.cs`: parent lookup now supports both visual and content elements, preventing `VisualTreeHelper.GetParent` from throwing for `Run`.
+- `App.xaml.cs`: dispatcher and AppDomain unhandled-exception logging and user notification added.
+- Treemap App tests: added coalesced thumbnail-publication and viewport intersection coverage.
+
+### Verification
+- Focused treemap tests: 19/19 passed.
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror --artifacts-path .artifacts\\agent-verification`: 0 warnings, 0 errors (2026-08-08 20:33 +08:00).
+- `dotnet test HanabePhotoManager.sln -c Release --no-build --artifacts-path .artifacts\\agent-verification`: Core 365/365, Infrastructure 160/160, App 335/335.
+
+### Remaining Issues
+- Manual WPF validation on the 11,741-item SMB library remains required before KI-07 can be marked resolved. WebView2 initialization was already guarded by the existing `MapPage_Loaded` try/catch and retry path; no running user process was stopped.
+
 ## 2026-08-08 - Codex (Startup all-library treemap)
 
 ### Task

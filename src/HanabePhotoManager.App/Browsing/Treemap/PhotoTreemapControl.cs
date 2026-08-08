@@ -179,6 +179,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
         width >= 120 &&
         height >= 100;
 
+    public static bool IntersectsViewport(Rect viewport, Rect tile) =>
+        viewport.IntersectsWith(tile);
+
     public static TreemapItemViewModel? FindItemAt(
         IReadOnlyList<TreemapHitRegion> regions,
         double x,
@@ -215,10 +218,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return;
         }
 
-        var totalWithThumbnails = ItemsSource.Count(item => item.Thumbnail is not null);
-        System.Diagnostics.Trace.WriteLine(
+        if (DebugOverlay)
+        {
+            var totalWithThumbnails = ItemsSource.Count(item => item.Thumbnail is not null);
+            System.Diagnostics.Trace.WriteLine(
             $"[Treemap] OnRender — {ItemsSource.Count} items, {totalWithThumbnails} with thumbnail, " +
-            $"canvas={ActualWidth:F0}x{ActualHeight:F0}, visible={VisibleRect}");
+                $"canvas={ActualWidth:F0}x{ActualHeight:F0}, visible={VisibleRect}");
+        }
 
         var visibleRect = VisibleRect.IsEmpty
             ? new Rect(0, 0, ActualWidth, ActualHeight)
@@ -291,12 +297,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var layout = panorama.Items[index];
             var tileBounds = new TreemapBounds(layout.X, layout.Y, layout.Width + gap, layout.Height + gap);
             var tileRect = new Rect(layout.X, layout.Y, layout.Width, layout.Height);
-            if (visibleRect.IntersectsWith(tileRect))
+            if (IntersectsViewport(visibleRect, tileRect))
             {
                 DrawTile(drawingContext, item, tileBounds, drawContainerHeader: false);
+                regions.Add(new TreemapHitRegion(item, tileBounds));
             }
-
-            regions.Add(new TreemapHitRegion(item, tileBounds));
         }
     }
 
@@ -359,8 +364,6 @@ public sealed class PhotoTreemapControl : FrameworkElement
         double maxBottom = 0;
         foreach (var categoryTile in CalculateLayout(categories, bounds))
         {
-            regions.Add(categoryTile);
-
             var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
                 categoryTile.Bounds.Width, categoryTile.Bounds.Height);
 
@@ -369,11 +372,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var bottom = categoryTile.Bounds.Y + categoryTile.Bounds.Height;
             if (right > maxRight) maxRight = right;
             if (bottom > maxBottom) maxBottom = bottom;
-            if (!visibleRect.IntersectsWith(tileRect))
+            if (!IntersectsViewport(visibleRect, tileRect))
             {
                 continue;
             }
 
+            regions.Add(categoryTile);
             DrawTile(drawingContext, categoryTile.Item, categoryTile.Bounds, true);
 
             var headerHeight = Math.Min(
@@ -420,12 +424,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 var tBounds = new TreemapBounds(globalX - inset / 2, globalY - inset / 2,
                     jItem.Width + inset, jItem.Height + inset);
 
-                if (visibleRect.IntersectsWith(childRect))
+                if (IntersectsViewport(visibleRect, childRect))
                 {
                     DrawTile(drawingContext, child, tBounds, drawContainerHeader: false);
+                    regions.Add(new TreemapHitRegion(child, tBounds));
                 }
-
-                regions.Add(new TreemapHitRegion(child, tBounds));
             }
             drawingContext.Pop();
         }
@@ -441,15 +444,14 @@ public sealed class PhotoTreemapControl : FrameworkElement
     {
         foreach (var tile in CalculateLayout(items, bounds))
         {
-            regions.Add(tile);
-
             var tileRect = new Rect(tile.Bounds.X, tile.Bounds.Y,
                 tile.Bounds.Width, tile.Bounds.Height);
-            if (!visibleRect.IntersectsWith(tileRect))
+            if (!IntersectsViewport(visibleRect, tileRect))
             {
                 continue;
             }
 
+            regions.Add(tile);
             DrawTile(drawingContext, tile.Item, tile.Bounds, drawContainerHeader);
         }
     }
@@ -494,12 +496,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 jItem.X, jItem.Y,
                 jItem.Width + gap, jItem.Height + gap);
 
-            if (visibleRect.IntersectsWith(childRect))
+            if (IntersectsViewport(visibleRect, childRect))
             {
                 DrawTile(drawingContext, child, tBounds, drawContainerHeader: false);
+                regions.Add(new TreemapHitRegion(child, tBounds));
             }
-
-            regions.Add(new TreemapHitRegion(child, tBounds));
         }
 
         if (DebugOverlay)

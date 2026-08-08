@@ -208,7 +208,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             }
         }
 
-        PublishNow(_generation);
+        RequestPublication(_generation);
     }
 
     public void ZoomTo(string containerKey)
@@ -252,6 +252,17 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         var cancellation = new CancellationTokenSource();
         _pendingPublishCancellation = cancellation;
         _ = PublishAfterDelayAsync(generation, cancellation.Token);
+    }
+
+    private void RequestPublication(int generation)
+    {
+        if (_refreshInterval == TimeSpan.Zero)
+        {
+            PublishNow(generation);
+            return;
+        }
+
+        SchedulePublish(generation);
     }
 
     private async Task PublishAfterDelayAsync(int generation, CancellationToken cancellationToken)
@@ -411,7 +422,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
 
         if (changed && !_disposed && _mediaByPath.Count > 0)
         {
-            PublishNow(_generation, useDimensions: true);
+            RequestPublication(_generation);
         }
     }
 

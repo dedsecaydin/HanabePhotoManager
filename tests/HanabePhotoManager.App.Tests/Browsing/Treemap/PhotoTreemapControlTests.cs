@@ -23,7 +23,7 @@ public sealed class PhotoTreemapControlTests
         source.Should().Contain("DrawingContext");
         source.Should().Contain("DrawThumbnail");
         source.Should().Contain("item.Thumbnail");
-        source.Should().Contain("visibleRect.IntersectsWith(childRect)");
+        source.Should().Contain("IntersectsViewport(visibleRect, childRect)");
         source.Should().Contain("DrawPanorama");
         source.Should().Contain("PanoramaPhotoLayout.IsActive");
         source.Should().NotContain("Take(80)");
@@ -62,6 +62,15 @@ public sealed class PhotoTreemapControlTests
         PhotoTreemapControl.FindItemAt(regions, 20, 20).Should().Be(child);
         PhotoTreemapControl.FindItemAt(regions, 80, 80).Should().Be(parent);
         PhotoTreemapControl.FindItemAt(regions, 101, 101).Should().BeNull();
+    }
+
+    [Fact]
+    public void ViewportIntersection_RejectsOffscreenTiles()
+    {
+        var viewport = new Rect(100, 100, 50, 50);
+
+        PhotoTreemapControl.IntersectsViewport(viewport, new Rect(110, 110, 20, 20)).Should().BeTrue();
+        PhotoTreemapControl.IntersectsViewport(viewport, new Rect(10, 10, 20, 20)).Should().BeFalse();
     }
 
     [Fact]

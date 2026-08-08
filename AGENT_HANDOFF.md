@@ -10,7 +10,7 @@
 
 ## Quick Status
 
-> **Latest verification:** Release build completed with 0 warnings / 0 errors at **2026-08-08 19:20 +08:00**; full tests passed (Core 365, Infrastructure 160, App 333). The isolated `.artifacts/agent-verification` output was used because user-running app instances hold the default Release DLLs.
+> **Latest verification:** Release build completed with 0 warnings / 0 errors at **2026-08-08 20:33 +08:00**; full tests passed (Core 365, Infrastructure 160, App 335). The isolated `.artifacts/agent-verification` output was used because user-running app instances hold the default Release DLLs.
 
 | Item | State |
 |------|-------|

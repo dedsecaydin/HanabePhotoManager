@@ -84,6 +84,15 @@
 | `TreemapWeightMode` | Stable | Saved in settings |
 | `TreemapZoom` | Stable | Reset on overview trigger |
 
+## 2026-08-08 Treemap Performance Update
+
+| Concern | Status | Notes |
+|---|---|---|
+| Justified-gallery aspect refresh | Implemented-Unverified | Background header dimensions republish on the UI context; layout tests pass. |
+| Viewport thumbnail pipeline | Implemented-Unverified | Debounced visible paths use a generation-safe bounded queue rather than cancellation/restart. |
+| Root overview | Implemented-Unverified | Root control uses viewport dimensions, Squarified category fill, and semantic detail thresholds. |
+| Large-library manual QA | Pending | Required for 6217+ scrolling and 11739-item responsiveness. |
+
 ## Performance
 
 | Concern | Status | Notes |

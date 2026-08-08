@@ -164,6 +164,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private CancellationTokenSource? _importThumbnailCancellation;
     private CancellationTokenSource? _previewThumbnailCancellation;
     private int _treemapLoadActive; // 1 = loading in progress, 0 = idle
+    private int _treemapLoadGeneration;
+    private readonly HashSet<string> _pendingTreemapThumbnailPaths = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _dateLoadCancellation;
     private CancellationTokenSource? _dateCapacityCancellation;
     private int _dateLoadGeneration;
@@ -1056,27 +1058,19 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private async Task LoadTreemapDimensionsAsync(PreviewFileViewModel[] files)
     {
-        var batch = new List<(string path, double aspect)>();
-        foreach (var file in files)
+        foreach (var fileBatch in files.Chunk(32))
         {
-            var dims = await Task.Run(() => ImageDimensionReader.ReadDimensions(file.FullPath))
+            var dimensions = await Task.Run(() => fileBatch
+                .Select(file => (file.FullPath, dimensions: ImageDimensionReader.ReadDimensions(file.FullPath)))
+                .Where(result => result.dimensions is { width: > 0, height: > 0 })
+                .Select(result => (result.FullPath,
+                    (double)result.dimensions!.Value.width / result.dimensions.Value.height))
+                .ToArray())
                 .ConfigureAwait(false);
-            if (dims is { width: > 0, height: > 0 })
+            if (dimensions.Length > 0)
             {
-                batch.Add((file.FullPath, (double)dims.Value.width / dims.Value.height));
+                TreemapBrowser.SubmitDimensions(dimensions);
             }
-
-            // Submit in batches to avoid flooding the UI
-            if (batch.Count >= 32)
-            {
-                TreemapBrowser.SubmitDimensions(batch);
-                batch = [];
-            }
-        }
-
-        if (batch.Count > 0)
-        {
-            TreemapBrowser.SubmitDimensions(batch);
         }
     }
 
@@ -1111,16 +1105,65 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (toLoad.Count == 0) return;
 
-        System.Diagnostics.Trace.WriteLine(
-            $"[Treemap] Viewport refresh — {toLoad.Count} visible items need thumbnails");
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            foreach (var file in toLoad)
+            {
+                _pendingTreemapThumbnailPaths.Add(file.FullPath);
+            }
+        }
 
-        // Cancel any OLD viewport-specific loading (but not global loading)
-        CancelPreviewThumbnailLoading();
-        _previewThumbnailCancellation = new CancellationTokenSource();
-        Interlocked.Exchange(ref _treemapLoadActive, 1);
-        _ = LoadPreviewThumbnailsAsync(toLoad, 512, _previewThumbnailCancellation.Token)
-            .ContinueWith(_ => Interlocked.Exchange(ref _treemapLoadActive, 0),
-                TaskScheduler.Default);
+        DrainTreemapThumbnailQueue();
+    }
+
+    private void DrainTreemapThumbnailQueue()
+    {
+        if (Interlocked.CompareExchange(ref _treemapLoadActive, 1, 0) != 0 ||
+            _treemapSourceFiles is not { Length: > 0 } source)
+        {
+            return;
+        }
+
+        var lookup = source.ToDictionary(file => file.FullPath, StringComparer.OrdinalIgnoreCase);
+        PreviewFileViewModel[] batch;
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            var queued = _pendingTreemapThumbnailPaths
+                .Select(path => lookup.GetValueOrDefault(path))
+                .Where(file => file is { Thumbnail: null })
+                .Select(file => file!)
+                .ToArray();
+            batch = queued
+                .Take(PreviewLoadingPolicy.ThumbnailConcurrency * 8)
+                .ToArray();
+            _pendingTreemapThumbnailPaths.Clear();
+            foreach (var file in queued.Skip(batch.Length))
+            {
+                _pendingTreemapThumbnailPaths.Add(file.FullPath);
+            }
+        }
+
+        if (batch.Length == 0)
+        {
+            Interlocked.Exchange(ref _treemapLoadActive, 0);
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _treemapLoadGeneration);
+        _previewThumbnailCancellation ??= new CancellationTokenSource();
+        _ = LoadPreviewThumbnailsAsync(batch, 512, _previewThumbnailCancellation.Token)
+            .ContinueWith(_ => CompleteTreemapThumbnailBatch(generation), TaskScheduler.Default);
+    }
+
+    private void CompleteTreemapThumbnailBatch(int generation)
+    {
+        if (generation != Volatile.Read(ref _treemapLoadGeneration))
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _treemapLoadActive, 0);
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(DrainTreemapThumbnailQueue);
     }
 
     private async Task SelfHealTreemapThumbnailsAsync(PreviewFileViewModel[] source)
@@ -4371,6 +4414,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void CancelPreviewThumbnailLoading()
     {
+        Interlocked.Increment(ref _treemapLoadGeneration);
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            _pendingTreemapThumbnailPaths.Clear();
+        }
+        Interlocked.Exchange(ref _treemapLoadActive, 0);
         _previewThumbnailCancellation?.Cancel();
         _previewThumbnailCancellation?.Dispose();
         _previewThumbnailCancellation = null;

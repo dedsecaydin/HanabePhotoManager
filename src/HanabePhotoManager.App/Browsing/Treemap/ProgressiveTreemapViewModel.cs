@@ -384,6 +384,14 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SubmitDimensions(IReadOnlyList<(string fullPath, double aspectRatio)> dimensions)
     {
+        ArgumentNullException.ThrowIfNull(dimensions);
+        if (_synchronizationContext is not null &&
+            !ReferenceEquals(SynchronizationContext.Current, _synchronizationContext))
+        {
+            _synchronizationContext.Post(_ => SubmitDimensions(dimensions), null);
+            return;
+        }
+
         var changed = false;
         lock (_gate)
         {
@@ -391,8 +399,12 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             {
                 if (double.IsFinite(aspect) && aspect > 0)
                 {
-                    _dimensionsByPath[path] = aspect;
-                    changed = true;
+                    if (!_dimensionsByPath.TryGetValue(path, out var current) ||
+                        Math.Abs(current - aspect) > 0.0001)
+                    {
+                        _dimensionsByPath[path] = aspect;
+                        changed = true;
+                    }
                 }
             }
         }

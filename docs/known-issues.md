@@ -129,6 +129,13 @@
 
 ---
 
+## 2026-08-08 Automated Verification Update
+
+- **KI-01:** The viewport loader no longer cancels and restarts on every debounce. It queues visible paths in bounded batches and ignores stale completion callbacks. Automated treemap tests pass; manual 6217+ library confirmation remains pending.
+- **KI-03 / KI-04:** Header dimensions now republish treemap state on the UI context, and the justified-layout tests cover aspect-proportional rows and sparse final rows. Manual visual inspection remains pending.
+- **KI-07:** Dimension reads are batched in background work and UI-bound publication is marshalled to the captured synchronization context. Automated verification passes; a 11739-item manual responsiveness run remains pending.
+- **KI-08:** No behavior changed; the existing guarded predicate remains in place. A real-library `已修` filter regression is still pending.
+
 ## Verification Checklist
 
 For each issue marked "Fix Attempted", verify the following before marking "Resolved":

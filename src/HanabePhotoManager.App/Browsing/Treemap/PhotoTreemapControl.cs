@@ -209,6 +209,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
         _debugTileCount = 0;
         _visiblePaths = [];
         _visibleWithoutThumbnail = [];
+        _contentWidth = ActualWidth;
+        _contentHeight = ActualHeight;
 
         var regions = new List<TreemapHitRegion>();
         var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
@@ -325,10 +327,22 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 continue;
             }
 
+            // At root level the category tree is an overview.  Sampling keeps
+            // the overview responsive while category navigation renders every
+            // file with the full justified layout.
             var children = ItemsSource
                 .Where(item => item.ParentKey == categoryTile.Item.Key)
+                .Take(80)
                 .ToArray();
             if (children.Length == 0) continue;
+
+            // Semantic zoom: very small category cells stay as labelled area
+            // summaries.  Rendering photo strips there is both illegible and
+            // needlessly schedules thumbnail work.
+            if (childWidth < 160 || childHeight < 120)
+            {
+                continue;
+            }
 
             // Justified gallery layout for inner category tiles
             var childAspects = children
@@ -338,6 +352,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
             var childOffsetX = categoryTile.Bounds.X + inset;
             var childOffsetY = categoryTile.Bounds.Y + headerHeight;
+            drawingContext.PushClip(new RectangleGeometry(
+                new Rect(childOffsetX, childOffsetY, childWidth, childHeight)));
             for (var i = 0; i < children.Length && i < justifiedItems.Count; i++)
             {
                 var child = children[i];
@@ -355,11 +371,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
                 regions.Add(new TreemapHitRegion(child, tBounds));
             }
+            drawingContext.Pop();
         }
-
-        // Update content dimensions for scroll extent
-        if (maxRight > _contentWidth) _contentWidth = maxRight;
-        if (maxBottom > _contentHeight) _contentHeight = maxBottom;
     }
 
     private void DrawItems(
@@ -420,13 +433,6 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var child = children[i];
             var jItem = justifiedItems[i];
             var childRect = new Rect(jItem.X, jItem.Y, jItem.Width, jItem.Height);
-
-            // Track visible items
-            if (!child.IsContainer && !string.IsNullOrEmpty(child.FullPath))
-            {
-                _visiblePaths.Add(child.FullPath);
-                if (child.Thumbnail is null) _visibleWithoutThumbnail.Add(child.FullPath);
-            }
 
             var tBounds = new TreemapBounds(
                 jItem.X, jItem.Y,

@@ -385,8 +385,9 @@ public partial class MainWindow : Window
 
         // The control's own Width/Height stay at content-native size.
         // ScrollViewer extent = content * zoom  (via LayoutTransform).
-        var cw = TreemapControl.ContentWidth;
-        var ch = TreemapControl.ContentHeight;
+        var isRootOverview = _viewModel?.TreemapBrowser.CurrentContainerKey is null;
+        var cw = isRootOverview ? TreemapScrollViewer.ViewportWidth : TreemapControl.ContentWidth;
+        var ch = isRootOverview ? TreemapScrollViewer.ViewportHeight : TreemapControl.ContentHeight;
         TreemapControl.Width = Math.Max(cw, 1);
         TreemapControl.Height = Math.Max(ch, 1);
 
@@ -415,8 +416,11 @@ public partial class MainWindow : Window
         SyncTreemapVisibleRect();
         TreemapControl?.InvalidateVisual();
         ScheduleTreemapViewportLoad();
-        // Auto-fit to view so the full content is visible on first open
-        DeferFitTreemapToView();
+        // Root already uses viewport bounds; subtrees retain their content fit.
+        if (_viewModel?.TreemapBrowser.CurrentContainerKey is not null)
+        {
+            DeferFitTreemapToView();
+        }
     }
 
     /// <summary>

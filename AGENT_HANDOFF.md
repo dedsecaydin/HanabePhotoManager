@@ -12,7 +12,7 @@
 
 | Item | State |
 |------|-------|
-| Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-08 18:43 +08:00) |
+| Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-08 18:53 +08:00) |
 | Last pushed commit | `dd1a573` — Revert overview mode |
 | Active area | 照片图库 → 空间树图 (photo library → treemap) |
 | Critical bugs | None known to crash app on normal use |

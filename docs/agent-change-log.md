@@ -7,6 +7,25 @@
 
 ---
 
+## 2026-08-08 — Codex (Treemap performance and layout)
+
+### Task
+Optimize photo-library treemap layout and viewport thumbnail performance without changing import or retouched-output protection behavior.
+
+### Files Changed
+- `PhotoTreemapControl.cs` — viewport-sized root overview, semantic-detail threshold/sample cap, clipped category content, and true visible subtree thumbnail paths.
+- `ProgressiveTreemapViewModel.cs` — background dimension publication returns to the captured UI context and skips identical dimensions.
+- `MainWindow.xaml.cs` — root uses ScrollViewer viewport bounds; content-fit remains subtree-only.
+- `MainWindowViewModel.cs` — background header reads use batches; viewport requests use a generation-safe bounded queue instead of cancel/restart.
+- Added `JustifiedGalleryLayoutTests.cs`; expanded treemap view-model and control tests.
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror` — 0 warnings, 0 errors (2026-08-08 18:53 +08:00).
+- `dotnet test HanabePhotoManager.sln -c Release --no-build` — Core 361/361, Infrastructure 160/160, App 328/328.
+
+### Remaining Issues
+- Automated tests cover layout and pipeline contracts. Manual WPF QA with a 6217+ / 11739-item real library, including the `已修` filter, remains required before marking KI-01/KI-03/KI-07/KI-08 resolved.
+
 ## 2026-08-06 — WorkBuddy (Documentation Pass)
 
 ### Task

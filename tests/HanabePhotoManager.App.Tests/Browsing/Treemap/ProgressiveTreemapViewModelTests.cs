@@ -126,6 +126,20 @@ public sealed class ProgressiveTreemapViewModelTests
         viewModel.Items.Where(item => !item.IsContainer).Should().HaveCount(2);
     }
 
+    [Fact]
+    public void SubmitDimensions_RepublishesItemsWithNewAspectRatios()
+    {
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero);
+        var generation = viewModel.BeginScan(@"D:\Photos");
+        viewModel.ApplyBatch(generation, Batch(Item(@"D:\Photos\wide.jpg", "JPG生图", 10)));
+        var beforeRevision = viewModel.LayoutRevision;
+
+        viewModel.SubmitDimensions([(@"D:\Photos\wide.jpg", 2.5)]);
+
+        viewModel.Items.Single(item => !item.IsContainer).AspectRatio.Should().Be(2.5);
+        viewModel.LayoutRevision.Should().BeGreaterThan(beforeRevision);
+    }
+
     private static LibraryDateSnapshotBatch Batch(params LibraryDateMediaItem[] items) =>
         new(items, items.Length, false);
 

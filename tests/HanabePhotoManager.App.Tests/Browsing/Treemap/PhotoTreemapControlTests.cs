@@ -23,6 +23,8 @@ public sealed class PhotoTreemapControlTests
         source.Should().Contain("DrawingContext");
         source.Should().Contain("DrawThumbnail");
         source.Should().Contain("item.Thumbnail");
+        source.Should().Contain("visibleRect.IntersectsWith(childRect)");
+        source.Should().Contain("Take(80)");
         source.Should().NotContain("ItemsControl");
     }
 

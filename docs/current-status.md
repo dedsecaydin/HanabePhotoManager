@@ -29,6 +29,7 @@
 | Grid view | Stable | Zoomable, square tiles, UniformToFill, progressive thumbnails |
 | Timeline view | Stable | |
 | List view | Stable | |
+| Startup browse state | Implemented-Unverified | Opens Browse in Space Treemap with neutral all-library filters; root scan streams files asynchronously. Real 11,741-item startup QA pending. |
 | Item count (bottom-right) | Implemented-Unverified | `CurrentViewItemCount` — subtree-aware. May not track all edge cases. |
 | Top bar item count | Implemented-Unverified | `PreviewSummaryText` — same data source as bottom count |
 

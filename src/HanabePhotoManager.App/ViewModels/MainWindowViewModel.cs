@@ -144,9 +144,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _targetDateText = "--";
     private string _backgroundMode = "平衡玻璃";
     private string _backgroundImageLayout = "填充";
-    private string _currentPage = "Home";
+    private string _currentPage = "Preview";
     private CloudProviderChoice _selectedCloudProvider = CloudProviderChoice.Baidu;
-    private BrowseDisplayMode _browseDisplayMode;
+    private BrowseDisplayMode _browseDisplayMode = BrowseDisplayMode.Treemap;
     private string _currentPreviewCategory = "全部";
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
@@ -1672,7 +1672,7 @@ public sealed class MainWindowViewModel : ObservableObject
         RebuildVisiblePreviewPage();
         OnPropertyChanged(nameof(FilteredPreviewFiles));
         NotifyPreviewCountsChanged();
-        if (IsTreemapBrowseMode)
+        if (IsTreemapBrowseMode && !string.IsNullOrWhiteSpace(SelectedDatePath))
         {
             RepopulateTreemapFrom(_filteredCache);
         }
@@ -2068,9 +2068,7 @@ public sealed class MainWindowViewModel : ObservableObject
         BrowseEntryModeSetting = Enum.TryParse<BrowseEntryMode>(settings.BrowseEntryMode, out var browseMode)
             ? browseMode
             : BrowseEntryMode.SessionRestore;
-        BrowseDisplayMode = Enum.TryParse<BrowseDisplayMode>(settings.BrowseDisplayMode, out var displayMode)
-            ? displayMode
-            : BrowseDisplayMode.Grid;
+        PrepareStartupAllLibraryTreemap();
         TreemapWeightMode = Enum.TryParse<TreemapWeightMode>(settings.TreemapWeightMode, out var weightMode)
             ? weightMode
             : TreemapWeightMode.FileSize;
@@ -2105,6 +2103,28 @@ public sealed class MainWindowViewModel : ObservableObject
 
         _isInitialized = true;
         await SaveSettingsAsync().ConfigureAwait(true);
+    }
+
+    private void PrepareStartupAllLibraryTreemap()
+    {
+        // A fresh application launch always opens the complete library in the
+        // treemap. Later filtering and date navigation still use their normal
+        // state transitions, but no persisted browse filter narrows the initial
+        // root scan.
+        BrowseDisplayMode = BrowseDisplayMode.Treemap;
+        _sessionBrowseSnapshot = null;
+        _persistedBrowseSnapshot = null;
+        _calendarSelectedDate = null;
+        SetProperty(ref _selectedDate, null, nameof(SelectedDate));
+        CurrentPreviewCategory = "全部";
+        PreviewSearchText = string.Empty;
+        PreviewRetouchFilter = "全部";
+        RatingFilter = "全部评分";
+        PreviewSortMode = 0;
+        SmartCategoryFilter = "全部智能类别";
+        _selectedFileTypeFilters.Clear();
+        OnPropertyChanged(nameof(FileTypeFilterSummary));
+        OnPropertyChanged(nameof(BrowseConditionsSummary));
     }
 
     public void AdjustThumbnailSize(bool larger)

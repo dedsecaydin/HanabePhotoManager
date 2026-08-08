@@ -38,13 +38,11 @@ public sealed class BrowseTreemapIntegrationTests
     }
 
     [Fact]
-    public void ViewModel_DefaultsToGridAndSupportsBothWeightModes()
+    public void ViewModel_DefaultsToTreemapAndSupportsBothWeightModes()
     {
         var viewModel = new MainWindowViewModel();
 
-        viewModel.BrowseDisplayMode.Should().Be(BrowseDisplayMode.Grid);
-        viewModel.IsGridBrowseMode.Should().BeTrue();
-        viewModel.BrowseDisplayMode = BrowseDisplayMode.Treemap;
+        viewModel.BrowseDisplayMode.Should().Be(BrowseDisplayMode.Treemap);
         viewModel.IsTreemapBrowseMode.Should().BeTrue();
         viewModel.TreemapBrowser.WeightMode = TreemapWeightMode.PhotoCount;
         viewModel.TreemapBrowser.WeightMode.Should().Be(TreemapWeightMode.PhotoCount);
@@ -73,12 +71,34 @@ public sealed class BrowseTreemapIntegrationTests
     }
 
     [Fact]
-    public void Settings_HaveBackwardCompatibleBrowseModeDefaults()
+    public void Settings_DefaultToTheAllLibraryTreemap()
     {
         var settings = new AppSettings();
 
-        settings.BrowseDisplayMode.Should().Be(nameof(BrowseDisplayMode.Grid));
+        settings.BrowseDisplayMode.Should().Be(nameof(BrowseDisplayMode.Treemap));
         settings.TreemapWeightMode.Should().Be(nameof(TreemapWeightMode.FileSize));
+    }
+
+    [Fact]
+    public void Startup_EntersPreviewWithNeutralAllLibraryFiltersBeforeRootScan()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        source.Should().Contain("private string _currentPage = \"Preview\"");
+        source.Should().Contain("BrowseDisplayMode = BrowseDisplayMode.Treemap;");
+        source.Should().Contain("PrepareStartupAllLibraryTreemap();");
+        source.Should().Contain("_selectedFileTypeFilters.Clear();");
+    }
+
+    [Fact]
+    public void FilteringTheDefaultTreemapWithoutALibraryRoot_DoesNotStartAScan()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        var act = () => viewModel.CurrentPreviewCategory = "JPG生图";
+
+        act.Should().NotThrow();
     }
 
     [Fact]

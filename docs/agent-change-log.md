@@ -1,5 +1,23 @@
 # Agent Change Log
 
+## 2026-08-08 - Codex (Startup all-library treemap)
+
+### Task
+Open the application directly on the Browse page in Space Treemap mode and load the complete scanned library without requiring a date selection, display-mode switch, or other manual action.
+
+### Files Changed
+- `MainWindowViewModel.cs`: defaults to the Browse page and Treemap mode; initialization clears persisted date/category/file-type/rating/search/retouch/smart-category filters before the existing asynchronous root scan begins. The root scan continues to stream batches to `TreemapBrowser`, while dimension and thumbnail work remain background/viewport-driven. Added a root-path guard so filtering a new ViewModel cannot start a treemap scan with an empty path.
+- `AppSettingsStore.cs`: new settings default to `Treemap`.
+- `BrowseTreemapIntegrationTests.cs`: verifies startup defaults, neutral all-library initialization contract, settings default, and no-root filtering boundary.
+
+### Verification
+- `dotnet test tests\HanabePhotoManager.App.Tests\HanabePhotoManager.App.Tests.csproj -c Release --filter FullyQualifiedName~BrowseTreemapIntegrationTests --artifacts-path .artifacts\agent-verification`: 9/9 passed.
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror --artifacts-path .artifacts\agent-verification`: 0 warnings, 0 errors (2026-08-08 19:20 +08:00).
+- `dotnet test HanabePhotoManager.sln -c Release --no-build --artifacts-path .artifacts\agent-verification`: Core 365/365, Infrastructure 160/160, App 333/333.
+
+### Remaining Issues
+- Manual WPF QA with the real 11,741-item library remains required for startup responsiveness and the existing treemap issues KI-01, KI-03, KI-07, and KI-14. No user-running process was stopped; the isolated artifacts path avoided locked default Release DLLs.
+
 ## 2026-08-08 - Codex (Treemap semantic panorama)
 
 ### Task

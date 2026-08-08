@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ViewModels;
@@ -385,9 +386,13 @@ public partial class MainWindow : Window
 
         // The control's own Width/Height stay at content-native size.
         // ScrollViewer extent = content * zoom  (via LayoutTransform).
+        var isPanorama = PhotoTreemapControl.IsPanoramaZoom(zoom);
         var isRootOverview = _viewModel?.TreemapBrowser.CurrentContainerKey is null;
-        var cw = isRootOverview ? TreemapScrollViewer.ViewportWidth : TreemapControl.ContentWidth;
-        var ch = isRootOverview ? TreemapScrollViewer.ViewportHeight : TreemapControl.ContentHeight;
+        var panorama = isPanorama
+            ? TreemapControl.GetPanoramaLayout(TreemapScrollViewer.ViewportWidth)
+            : null;
+        var cw = panorama?.ContentWidth ?? (isRootOverview ? TreemapScrollViewer.ViewportWidth : TreemapControl.ContentWidth);
+        var ch = panorama?.ContentHeight ?? (isRootOverview ? TreemapScrollViewer.ViewportHeight : TreemapControl.ContentHeight);
         TreemapControl.Width = Math.Max(cw, 1);
         TreemapControl.Height = Math.Max(ch, 1);
 
@@ -403,11 +408,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        var zoom = Math.Max(_viewModel?.TreemapZoom ?? 1.0, TreemapZoomMin);
         TreemapControl.VisibleRect = new Rect(
-            TreemapScrollViewer.HorizontalOffset,
-            TreemapScrollViewer.VerticalOffset,
-            TreemapScrollViewer.ViewportWidth,
-            TreemapScrollViewer.ViewportHeight);
+            TreemapScrollViewer.HorizontalOffset / zoom,
+            TreemapScrollViewer.VerticalOffset / zoom,
+            TreemapScrollViewer.ViewportWidth / zoom,
+            TreemapScrollViewer.ViewportHeight / zoom);
     }
 
     private void OnTreemapRepopulated()

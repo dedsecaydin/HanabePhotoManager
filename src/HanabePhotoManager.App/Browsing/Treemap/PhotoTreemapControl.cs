@@ -20,6 +20,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private readonly SquarifiedTreemapLayout _layout = new();
     private readonly JustifiedGalleryLayout _galleryLayout = new(
         targetRowHeight: 180, minAspect: 0.35, maxAspect: 3.5, gap: 1);
+    private readonly PanoramaPhotoLayout _panoramaLayout = new();
     private IReadOnlyList<TreemapHitRegion> _hitRegions = [];
     private int _debugThumbnailCount;
     private int _debugTileCount;
@@ -91,6 +92,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
         typeof(ICommand),
         typeof(PhotoTreemapControl));
 
+    public static readonly DependencyProperty ZoomScaleProperty = DependencyProperty.Register(
+        nameof(ZoomScale),
+        typeof(double),
+        typeof(PhotoTreemapControl),
+        new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender));
+
     internal static readonly DependencyProperty VisibleRectProperty = DependencyProperty.Register(
         nameof(VisibleRect),
         typeof(Rect),
@@ -147,6 +154,24 @@ public sealed class PhotoTreemapControl : FrameworkElement
         get => (ICommand?)GetValue(ZoomCommandProperty);
         set => SetValue(ZoomCommandProperty, value);
     }
+
+    /// <summary>
+    /// Current Ctrl+wheel scale. The lowest semantic band renders a dense
+    /// panorama instead of shrinking ordinary treemap cells into noise.
+    /// </summary>
+    public double ZoomScale
+    {
+        get => (double)GetValue(ZoomScaleProperty);
+        set => SetValue(ZoomScaleProperty, value);
+    }
+
+    public static bool IsPanoramaZoom(double zoom) => PanoramaPhotoLayout.IsActive(zoom);
+
+    internal PanoramaLayoutResult GetPanoramaLayout(double viewportWidth) =>
+        _panoramaLayout.Arrange(
+            GetPanoramaItems().Select(item => (item.AspectRatio, (string?)item.Key)).ToArray(),
+            viewportWidth,
+            ZoomScale);
 
     public static bool ShouldRequestThumbnail(double width, double height) =>
         double.IsFinite(width) &&
@@ -214,7 +239,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         var regions = new List<TreemapHitRegion>();
         var bounds = new TreemapBounds(0, 0, ActualWidth, ActualHeight);
-        if (RootKey is null)
+        if (IsPanoramaZoom(ZoomScale))
+        {
+            DrawPanorama(drawingContext, regions, padded);
+        }
+        else if (RootKey is null)
         {
             DrawRoot(drawingContext, bounds, regions, padded);
         }
@@ -237,6 +266,37 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 $"items={ItemsSource.Count} cats={catCount} " +
                 $"viewport=({visibleRect.X:F0},{visibleRect.Y:F0})-({visibleRect.Width:F0}x{visibleRect.Height:F0}) " +
                 $"canvas={ActualWidth:F0}x{ActualHeight:F0}");
+        }
+    }
+
+    private IReadOnlyList<TreemapItemViewModel> GetPanoramaItems() =>
+        RootKey is null
+            ? ItemsSource.Where(item => !item.IsContainer).ToArray()
+            : ItemsSource.Where(item => item.ParentKey == RootKey && !item.IsContainer).ToArray();
+
+    private void DrawPanorama(
+        DrawingContext drawingContext,
+        ICollection<TreemapHitRegion> regions,
+        Rect visibleRect)
+    {
+        var photos = GetPanoramaItems();
+        var panorama = GetPanoramaLayout(ActualWidth * ZoomScale);
+        _contentWidth = panorama.ContentWidth;
+        _contentHeight = Math.Max(ActualHeight, panorama.ContentHeight);
+        var gap = ResourceDouble("Spacing.Hairline", 2);
+
+        for (var index = 0; index < photos.Count && index < panorama.Items.Count; index++)
+        {
+            var item = photos[index];
+            var layout = panorama.Items[index];
+            var tileBounds = new TreemapBounds(layout.X, layout.Y, layout.Width + gap, layout.Height + gap);
+            var tileRect = new Rect(layout.X, layout.Y, layout.Width, layout.Height);
+            if (visibleRect.IntersectsWith(tileRect))
+            {
+                DrawTile(drawingContext, item, tileBounds, drawContainerHeader: false);
+            }
+
+            regions.Add(new TreemapHitRegion(item, tileBounds));
         }
     }
 
@@ -327,12 +387,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 continue;
             }
 
-            // At root level the category tree is an overview.  Sampling keeps
-            // the overview responsive while category navigation renders every
-            // file with the full justified layout.
             var children = ItemsSource
                 .Where(item => item.ParentKey == categoryTile.Item.Key)
-                .Take(80)
                 .ToArray();
             if (children.Length == 0) continue;
 
@@ -501,10 +557,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         // In justified/borderless mode, skip background fill for non-container tiles
         // so images flow seamlessly edge-to-edge
-        if (!item.IsContainer && IsBorderless)
+        var isPanorama = IsPanoramaZoom(ZoomScale);
+        if (!item.IsContainer && (IsBorderless || isPanorama))
         {
             // No background fill — just draw image and extension badge
-            if (item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+            if (item.Thumbnail is not null && CanDrawThumbnail(rect, isPanorama))
             {
                 DrawThumbnail(drawingContext, item.Thumbnail, rect, 0);
             }
@@ -516,7 +573,10 @@ public sealed class PhotoTreemapControl : FrameworkElement
             }
 
             // Extension badge
-            DrawExtensionBadge(drawingContext, item, rect, gap);
+            if (!isPanorama)
+            {
+                DrawExtensionBadge(drawingContext, item, rect, gap);
+            }
             return;
         }
 
@@ -586,7 +646,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return; // Container tiles don't need extension badges
         }
 
-        if (!item.IsContainer && item.Thumbnail is not null && ShouldRequestThumbnail(rect.Width, rect.Height))
+        if (!item.IsContainer && item.Thumbnail is not null && CanDrawThumbnail(rect, isPanorama))
         {
             DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
         }
@@ -610,6 +670,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 new Rect(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2));
         }
     }
+
+    private bool CanDrawThumbnail(Rect rect, bool isPanorama) =>
+        isPanorama
+            ? rect.Width * ZoomScale >= 24 && rect.Height * ZoomScale >= 24
+            : ShouldRequestThumbnail(rect.Width, rect.Height);
 
     private void DrawExtensionBadge(DrawingContext drawingContext, TreemapItemViewModel item, Rect rect, double gap)
     {

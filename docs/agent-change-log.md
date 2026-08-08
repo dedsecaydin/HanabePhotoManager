@@ -1,5 +1,26 @@
 # Agent Change Log
 
+## 2026-08-08 - Codex (Treemap semantic panorama)
+
+### Task
+Implement the lowest semantic zoom as an Apple Photos-style panorama without changing import, duplicate detection, retouched-output protection, or normal Justified Gallery behavior.
+
+### Files Changed
+- Added `PanoramaPhotoLayout.cs` and tests: every current-directory photo is arranged in a dense 1px-gap justified wall at `TreemapZoom <= 0.20`; logical canvas dimensions are inverse to zoom, preserving 32px rendered tile height (24px constructor floor).
+- `PhotoTreemapControl.cs`: bound zoom scale, panorama/tree switch, no root `Take(80)` sample, weak panorama chrome, and retained visible-rect-only rendering/loading.
+- `MainWindow.xaml` / `.xaml.cs`: scale binding, viewport-sized panorama extent, and scaled visible-rect coordinates.
+- Expanded Core and App xUnit coverage for all-item layout, 6,217 items, threshold, scale binding, and viewport sizing.
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror --artifacts-path .artifacts/semantic-panorama`: 0 warnings, 0 errors (2026-08-08 19:05 +08:00).
+- `dotnet test HanabePhotoManager.sln -c Release --no-build --artifacts-path .artifacts/semantic-panorama`: Core 365/365, Infrastructure 160/160, App 331/331.
+- Isolated artifacts were needed because a user-running app locks default Release DLLs; no process was stopped.
+
+### Remaining Issues
+- Manual WPF QA with 6217+ / 11739-item libraries is still required before KI-01, KI-03, KI-07, and KI-14 can be marked resolved.
+
+---
+
 > **Purpose:** Append-only record of every agent modification to this project.  
 > **Last Updated:** 2026-08-06  
 > **Rule:** Append new entries at top. Never delete or rewrite history.  

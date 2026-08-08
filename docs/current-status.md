@@ -41,7 +41,7 @@
 | Justified Gallery inner layout | Partial | `JustifiedGalleryLayout.cs` exists. `DrawRoot` uses it with `_galleryLayout.Arrange()`. Real-world testing shows it still resembles fixed grid; whitespace not fully eliminated. |
 | Aspect ratio data | Partial | `ImageDimensionReader` reads JPEG/PNG headers. `ResolveAspectRatio` fallback to 1.5. Background `LoadTreemapDimensionsAsync`. May not refresh layout after dimensions arrive. |
 | Borderless mode | Stable | `IsBorderless` DP, persisted. Skip white bg, zero-radius draw. |
-| Semantic zoom | Planned | Threshold-based detail levels (color block / thumbnail / badge). Root overview reverted. |
+| Semantic zoom | Implemented-Unverified | At zoom ≤ 0.20, `PanoramaPhotoLayout` renders every current-directory photo as a dense justified wall with 24px+ rendered minimum size; normal tree/Justified modes resume above the threshold. Real-library visual QA pending. |
 
 ## Space Treemap — Navigation
 
@@ -51,7 +51,7 @@
 | Breadcrumbs | Stable | `TreemapBrowser.Breadcrumbs` |
 | Space+drag panning | Stable | ScrollViewer offset manipulation |
 | Ctrl+scroll zoom | Stable | 0.5x–30x range |
-| Root overview "fit all" | Planned | Reverted (dd1a573). Needs simpler approach. |
+| Root overview "fit all" | Implemented-Unverified | Panorama mode uses all photos rather than a fixed sample, with logical canvas dimensions inverse to zoom so minimum thumbnails remain recognizable. |
 | "适应全部" button | Reverted | Was in UI, non-functional, removed |
 
 ## Space Treemap — Thumbnail Loading

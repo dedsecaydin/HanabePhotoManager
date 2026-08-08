@@ -24,7 +24,9 @@ public sealed class PhotoTreemapControlTests
         source.Should().Contain("DrawThumbnail");
         source.Should().Contain("item.Thumbnail");
         source.Should().Contain("visibleRect.IntersectsWith(childRect)");
-        source.Should().Contain("Take(80)");
+        source.Should().Contain("DrawPanorama");
+        source.Should().Contain("PanoramaPhotoLayout.IsActive");
+        source.Should().NotContain("Take(80)");
         source.Should().NotContain("ItemsControl");
     }
 
@@ -36,6 +38,14 @@ public sealed class PhotoTreemapControlTests
     public void ThumbnailPolicy_RequiresEnoughRenderedArea(double width, double height, bool expected)
     {
         PhotoTreemapControl.ShouldRequestThumbnail(width, height).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0.20, true)]
+    [InlineData(0.21, false)]
+    public void PanoramaMode_TracksTheMinimumSemanticZoomBand(double zoom, bool expected)
+    {
+        PhotoTreemapControl.IsPanoramaZoom(zoom).Should().Be(expected);
     }
 
     [Fact]

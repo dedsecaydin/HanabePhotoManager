@@ -1,5 +1,12 @@
 # Known Issues
 
+## 2026-08-08 KI-14 update: semantic panorama overview
+
+- **Status:** Fix Attempted; manual real-library visual QA remains required.
+- **Applied:** At `TreemapZoom <= 0.20`, `PanoramaPhotoLayout` places every current-directory photo in a 1px-gap justified wall. Its logical canvas expands inversely to the zoom, keeping rendered thumbnail height at 32px (with a 24px constructor floor).
+- **Performance:** the renderer and thumbnail queue still process only rectangles intersecting the visible viewport.
+- **Automated evidence:** Core tests cover a 6,217-photo all-item layout, minimum rendered size, and the threshold; WPF tests cover scale binding and viewport-coordinate conversion.
+
 > **Purpose:** Track all known bugs, incomplete features, and verification-pending fixes.  
 > **Last Updated:** 2026-08-06  
 > **Current Version:** `0.2.0-alpha.3`  

@@ -1289,6 +1289,7 @@
                           SelectedPath="{Binding SelectedTreemapPath, Mode=TwoWay}"
                           OpenItemCommand="{Binding OpenTreemapItemCommand}"
                           ZoomCommand="{Binding ZoomTreemapCommand}"
+                          ZoomScale="{Binding TreemapZoom}"
                           IsBorderless="{Binding IsTreemapBorderless}" />
                         </ScrollViewer>
                       </DockPanel>

@@ -21,6 +21,7 @@ public sealed class BrowseTreemapIntegrationTests
         xaml.Should().Contain("<treemap:PhotoTreemapControl");
         xaml.Should().Contain("ItemsSource=\"{Binding TreemapBrowser.Items}\"");
         xaml.Should().Contain("SelectedPath=\"{Binding SelectedTreemapPath, Mode=TwoWay}\"");
+        xaml.Should().Contain("ZoomScale=\"{Binding TreemapZoom}\"");
         xaml.Should().Contain("Text=\"{Binding Label}\"");
         xaml.Should().Contain("Visibility=\"{Binding IsGridBrowseMode, Converter={StaticResource BoolToVis}}\"");
         xaml.Should().Contain("Visibility=\"{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}\"");
@@ -78,6 +79,17 @@ public sealed class BrowseTreemapIntegrationTests
 
         settings.BrowseDisplayMode.Should().Be(nameof(BrowseDisplayMode.Grid));
         settings.TreemapWeightMode.Should().Be(nameof(TreemapWeightMode.FileSize));
+    }
+
+    [Fact]
+    public void TreemapSizing_UsesViewportScaledPanoramaAtMinimumZoom()
+    {
+        var source = File.ReadAllText(ProjectFile(
+            "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        source.Should().Contain("GetPanoramaLayout(TreemapScrollViewer.ViewportWidth)");
+        source.Should().Contain("HorizontalOffset / zoom");
+        source.Should().Contain("ViewportWidth / zoom");
     }
 
     private static string ProjectFile(params string[] segments)

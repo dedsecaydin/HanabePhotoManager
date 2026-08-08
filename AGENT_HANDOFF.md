@@ -10,6 +10,8 @@
 
 ## Quick Status
 
+> **Latest verification:** Release build completed with 0 warnings / 0 errors at **2026-08-08 19:05 +08:00**; full tests passed (Core 365, Infrastructure 160, App 331). The isolated `.artifacts/semantic-panorama` output was used because a user-running app holds the default Release DLLs.
+
 | Item | State |
 |------|-------|
 | Last build | ✅ 0 errors, 0 warnings (Release, 2026-08-08 18:53 +08:00) |

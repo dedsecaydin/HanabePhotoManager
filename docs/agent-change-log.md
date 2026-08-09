@@ -249,3 +249,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Enforced the semantic browse candidate boundary in the App ViewModel: deduplicated score-descending Top 50 paths are the only paths emitted to the browse grid and treemap, even if a provider returns more candidates.
 - Added regression coverage for an unordered 75-result provider response and for UNC-root detection.
 - Network library startup now avoids the recursive, mutating empty-date cleanup pass and reuses the completed media scan for the capacity summary, eliminating two redundant full UNC walks while retaining media discovery, tree map, thumbnails, semantic indexing, and normal local-library maintenance.
+# 2026-08-09 - Semantic result guard and UNC tree-map follow-up
+
+- Added a presentation-bound Top 50 guard in `SemanticBrowseRanking`; the browse grid and treemap cannot render an unbounded semantic candidate list if an upstream provider violates its requested limit.
+- Fixed tree-map aspect fallback to use decoded viewport thumbnail dimensions whenever a header dimension is unavailable.
+- UNC tree-map startup no longer opens every image solely to pre-read dimensions; non-visible items retain the existing fallback until their viewport thumbnail supplies a real aspect ratio.
+- Reused the first recursive retouched-output enumeration while building associations, eliminating the duplicate per-date network traversal after startup scan.
+- Added regression coverage for the browse Top 50 boundary, thumbnail-derived aspect ratios, and reuse of pre-enumerated retouched outputs.
+- Replaced per-date full-library rescans in retouch statistics with one pass that aggregates RAW/JPG groups by their owning date directory.

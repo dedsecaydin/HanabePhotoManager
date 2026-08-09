@@ -22,6 +22,9 @@ public static class SemanticBrowseRanking
 
         return source
             .Where(item => ranks.ContainsKey(pathSelector(item)))
-            .OrderBy(item => ranks[pathSelector(item)]);
+            .OrderBy(item => ranks[pathSelector(item)])
+            // Keep the browse grid and treemap bounded even if an upstream
+            // semantic provider returns more candidates than requested.
+            .Take(SemanticSearchViewModel.ResultLimit);
     }
 }

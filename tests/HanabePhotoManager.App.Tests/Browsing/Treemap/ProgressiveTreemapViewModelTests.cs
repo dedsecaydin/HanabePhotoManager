@@ -178,6 +178,23 @@ public sealed class ProgressiveTreemapViewModelTests
         viewModel.LayoutRevision.Should().BeGreaterThan(beforeRevision);
     }
 
+    [Fact]
+    public void UpdateThumbnail_UsesItsDimensionsWhenNoHeaderDimensionsWereRead()
+    {
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero);
+        var generation = viewModel.BeginScan(@"\\Hanabe\拍照");
+        var path = @"\\Hanabe\拍照\7月\07.16\JPG生图\wide.jpg";
+        viewModel.ApplyBatch(generation, Batch(Item(path, "JPG生图", 10)));
+        var pixels = new byte[4 * 200 * 100];
+        var thumbnail = System.Windows.Media.Imaging.BitmapSource.Create(
+            200, 100, 96, 96, System.Windows.Media.PixelFormats.Bgra32, null, pixels, 800);
+        thumbnail.Freeze();
+
+        viewModel.UpdateThumbnail(path, thumbnail);
+
+        viewModel.Items.Single(item => !item.IsContainer).AspectRatio.Should().Be(2);
+    }
+
     private static LibraryDateSnapshotBatch Batch(params LibraryDateMediaItem[] items) =>
         new(items, items.Length, false);
 

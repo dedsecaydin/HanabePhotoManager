@@ -1082,6 +1082,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _treemapDimensionCancellation?.Cancel();
         _treemapDimensionCancellation?.Dispose();
         _treemapDimensionCancellation = new CancellationTokenSource();
+        if (LibraryMaintenanceService.IsNetworkLibraryRoot(SelectedDatePath ?? string.Empty))
+        {
+            // A UNC header pass opens every image before the user can see the
+            // wall. Visible thumbnail dimensions populate progressively instead.
+            return;
+        }
         // Read headers in the background, then publish one coherent aspect-ratio
         // update. Publishing every 1,024 headers repeatedly lays out the entire
         // root tree on a network library and saturates CPU.
@@ -2539,7 +2545,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 if (group.Key is null) continue;
                 var snapshot = _retouchedMediaIndex.Build(
                     group.Key,
-                    group.Where(IsRawOrJpegPreview).Select(file => file.FullPath).ToArray());
+                    group.Where(IsRawOrJpegPreview).Select(file => file.FullPath).ToArray(),
+                    editedFiles.Where(path => path.StartsWith(
+                        Path.Combine(group.Key, "修后") + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase)).ToArray());
                 foreach (var pair in snapshot.RetouchedByOriginal)
                 {
                     map[pair.Key] = pair.Value;
@@ -2698,14 +2707,63 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void RecalcDateNodeStats()
     {
         var flatNodes = FlattenDateNodes(LibraryDates);
+        var datePaths = new HashSet<string>(
+            flatNodes.Where(node => node.Date is not null).Select(node => node.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+        var retouchedPaths = new HashSet<string>(
+            RetouchedFiles.Select(file => file.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+        var groupsByDate = new Dictionary<string, (HashSet<string> Total, HashSet<string> Retouched)>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in PreviewFiles.Where(IsRawOrJpegPreview))
+        {
+            var dateDirectory = TryResolvePreviewDateDirectory(file.FullPath, datePaths);
+            if (dateDirectory is null)
+            {
+                continue;
+            }
+
+            if (!groupsByDate.TryGetValue(dateDirectory, out var groups))
+            {
+                groups = (new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                    new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                groupsByDate[dateDirectory] = groups;
+            }
+
+            var groupKey = Path.GetFileNameWithoutExtension(file.FullPath);
+            groups.Total.Add(groupKey);
+            if (retouchedPaths.Contains(file.FullPath))
+            {
+                groups.Retouched.Add(groupKey);
+            }
+        }
+
         foreach (var node in flatNodes)
         {
-            if (node.Date is null || !Directory.Exists(node.FullPath)) continue;
-            var total = CountPhotoGroups(PreviewFiles.Where(f => f.FullPath.StartsWith(node.FullPath, StringComparison.OrdinalIgnoreCase)));
-            var retouched = CountPhotoGroups(RetouchedFiles.Where(f => f.FullPath.StartsWith(node.FullPath, StringComparison.OrdinalIgnoreCase)));
-            node.TotalFiles = total;
-            node.RetouchedFiles = retouched;
+            if (node.Date is null) continue;
+            var groups = groupsByDate.GetValueOrDefault(node.FullPath);
+            node.TotalFiles = groups.Total?.Count ?? 0;
+            node.RetouchedFiles = groups.Retouched?.Count ?? 0;
         }
+    }
+
+    private static string? TryResolvePreviewDateDirectory(
+        string filePath,
+        IReadOnlySet<string> dateDirectories)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            if (dateDirectories.Contains(directory))
+            {
+                return directory;
+            }
+
+            directory = Path.GetDirectoryName(directory);
+        }
+
+        return null;
     }
 
     private CancellationTokenSource BeginCancelableTask(ActiveTaskKind taskKind)

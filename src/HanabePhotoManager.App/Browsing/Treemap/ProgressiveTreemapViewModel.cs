@@ -329,11 +329,8 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             {
                 var thumb = thumbnails.GetValueOrDefault(item.FullPath);
                 // Use cached dimension from background reader, or thumbnail, or default
-                var aspect = GetCachedAspectRatio(item.FullPath);
-                if (aspect <= 1.0 && thumb is { Width: > 0, Height: > 0 })
-                {
-                    aspect = thumb.Width / thumb.Height;
-                }
+                var aspect = GetCachedAspectRatio(item.FullPath) ??
+                    ResolveAspectRatio(item.FullPath, thumb);
 
                 return new TreemapItemViewModel(
                     item.FullPath,
@@ -432,11 +429,11 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         }
     }
 
-    private double GetCachedAspectRatio(string fullPath)
+    private double? GetCachedAspectRatio(string fullPath)
     {
         lock (_gate)
         {
-            return _dimensionsByPath.TryGetValue(fullPath, out var aspect) ? aspect : 1.5;
+            return _dimensionsByPath.TryGetValue(fullPath, out var aspect) ? aspect : null;
         }
     }
 

@@ -36,6 +36,37 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
+    public void SemanticRanking_NeverExposesMoreThanTheTopFiftyCandidates()
+    {
+        var files = Enumerable.Range(0, 75)
+            .Select(index => new PreviewFileViewModel(
+                $"{index:D2}.jpg", "JPG生图", $@"D:\photos\{index:D2}.jpg", "1 KB", ".jpg", null))
+            .ToArray();
+        var rankedPaths = files.Reverse().Select(file => file.FullPath).ToArray();
+
+        var ranked = SemanticBrowseRanking.Apply(files, file => file.FullPath, rankedPaths).ToArray();
+
+        ranked.Should().HaveCount(SemanticSearchViewModel.ResultLimit);
+        ranked.First().FullPath.Should().Be(@"D:\photos\74.jpg");
+        ranked.Last().FullPath.Should().Be(@"D:\photos\25.jpg");
+    }
+
+    [Fact]
+    public void RebuildRetouchStatistics_DoesNotRescanTheWholeLibraryForEveryDateNode()
+    {
+        var root = FindSourceRoot();
+        var source = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var methodStart = source.IndexOf("private void RecalcDateNodeStats()", StringComparison.Ordinal);
+        var nextMethod = source.IndexOf("private ", methodStart + 1, StringComparison.Ordinal);
+        var method = source[methodStart..nextMethod];
+        var perNodeLoop = method[method.IndexOf("foreach (var node in flatNodes)", StringComparison.Ordinal)..];
+
+        perNodeLoop.Should().NotContain("PreviewFiles.Where(");
+        perNodeLoop.Should().NotContain("RetouchedFiles.Where(");
+    }
+
+    [Fact]
     public void PhotoWalls_UseBoundedCollectionsWhileKeepingAllFeaturesInTemplate()
     {
         var root = FindSourceRoot();

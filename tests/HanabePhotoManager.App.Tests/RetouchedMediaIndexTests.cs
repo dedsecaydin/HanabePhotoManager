@@ -68,6 +68,19 @@ public sealed class RetouchedMediaIndexTests : IDisposable
         snapshot.StandaloneRetouchedFiles.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Build_UsesAlreadyEnumeratedOutputsWithoutRescanningTheNetworkDirectory()
+    {
+        var originals = Directory.CreateDirectory(Path.Combine(_date, "JPG生图")).FullName;
+        var retouched = Directory.CreateDirectory(Path.Combine(_date, "修后")).FullName;
+        var original = Touch(Path.Combine(originals, "DSC9001.JPG"));
+        var output = Touch(Path.Combine(retouched, "DSC9001_FINAL.jpg"));
+
+        var snapshot = new RetouchedMediaIndex().Build(_date, [original], [output]);
+
+        snapshot.RetouchedByOriginal[original].Should().Be(output);
+    }
+
     private static string Touch(string path)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

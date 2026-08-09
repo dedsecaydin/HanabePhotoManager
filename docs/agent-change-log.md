@@ -1,5 +1,16 @@
 # Agent Change Log
 
+## 2026-08-09 - Semantic search integrated into Photo Library
+
+- Moved natural-language semantic search into the Photo Library browse conditions and removed the standalone sidebar destination/page host.
+- The first non-empty query now runs the existing `ClipSemanticSearchService.EnsureIndexAsync` on background work, reports progress, supports cancellation, and then searches without blocking the WPF calling thread.
+- Added `SemanticBrowseRanking` so CLIP-ranked paths are intersected with all existing browse predicates and shown through the existing grid/treemap, viewer, and navigation flows.
+- Clearing the description or resetting browse conditions restores the ordinary photo wall; all-date treemap state is repopulated for both semantic activation and clearing.
+- Reused shared `Card.Subtle`, `Input.TextBox`, `Button.Ghost`, text brushes, and the existing progress bar contract; no page-local colors or control templates were added.
+- Added TDD coverage for automatic indexing order, non-blocking dispatch, result publication/clearing, semantic intersection/ranking, inline XAML contracts, reset behavior, and removal of the navigation item.
+- Fixed the published CLIP runtime contract by declaring `System.Numerics.Tensors` 9.0.0 in Infrastructure; the prior output contained an undeclared DLL that the .NET host would not resolve during ONNX inference.
+- Verification: Release solution build 0 warnings/0 errors; final tests Core 369, Infrastructure 163, App 349 (881 total). A self-contained installed build completed a real one-photo background index and reported “已按语义相关度排序”。
+
 ## 2026-08-09 - All-library treemap startup CPU saturation
 
 - Diagnosed a 13,907-item startup loop in which 64-item scan batches and 32-item dimension batches repeatedly rebuilt the complete immutable treemap; panorama redraws also recalculated the all-photo layout for an unchanged snapshot.

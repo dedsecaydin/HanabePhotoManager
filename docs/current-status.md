@@ -117,7 +117,7 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| Chinese-CLIP semantic search | Implemented-Unverified | Local ONNX Runtime CPU pipeline, SQLite embeddings, Chinese/English vocabulary tokenizer, and dedicated search page are implemented. Requires user-provided matching ONNX exports in LocalApplicationData; online model download verification is pending. |
+| Chinese-CLIP semantic search | Implemented-Unverified | Integrated into Photo Library browse conditions. First query automatically indexes in the background with progress/cancel; ranked candidates feed the existing grid/treemap and remain composable with date, rating, category, retouch, file-type, smart-category, and people filters. The standalone sidebar page was removed. Real-library query QA remains required. |
 
 | Item | Status |
 |------|--------|

@@ -1,5 +1,6 @@
 using FluentAssertions;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.App.Search;
 using HanabePhotoManager.App.ViewModels;
 using HanabePhotoManager.Core.Imports;
 using System.IO;
@@ -9,6 +10,31 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class PreviewPerformanceTests
 {
+    [Fact]
+    public void SemanticRanking_IntersectsExistingFilteredItemsAndKeepsClipOrder()
+    {
+        var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
+        var second = new PreviewFileViewModel("second.jpg", "JPG生图", @"D:\photos\second.jpg", "1 KB", ".jpg", null);
+        var excluded = new PreviewFileViewModel("excluded.jpg", "JPG生图", @"D:\photos\excluded.jpg", "1 KB", ".jpg", null);
+
+        var ranked = SemanticBrowseRanking.Apply(
+            [first, second],
+            item => item.FullPath,
+            [excluded.FullPath, second.FullPath, first.FullPath]);
+
+        ranked.Should().Equal(second, first);
+    }
+
+    [Fact]
+    public void SemanticRanking_WithNoActiveQueryLeavesExistingOrderUntouched()
+    {
+        var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
+        var second = new PreviewFileViewModel("second.jpg", "JPG生图", @"D:\photos\second.jpg", "1 KB", ".jpg", null);
+
+        SemanticBrowseRanking.Apply([first, second], item => item.FullPath, null)
+            .Should().Equal(first, second);
+    }
+
     [Fact]
     public void PhotoWalls_UseBoundedCollectionsWhileKeepingAllFeaturesInTemplate()
     {
@@ -299,11 +325,13 @@ public sealed class PreviewPerformanceTests
             SmartCategoryFilter = "人像",
             IsBrowseConditionsExpanded = true
         };
+        viewModel.SemanticSearch.QueryText = "红色衣服";
 
         await viewModel.ResetBrowseConditionsCommand.ExecuteAsync(null);
 
         viewModel.CurrentPreviewCategory.Should().Be("全部");
         viewModel.PreviewSearchText.Should().BeEmpty();
+        viewModel.SemanticSearch.QueryText.Should().BeEmpty();
         viewModel.PreviewRetouchFilter.Should().Be("全部");
         viewModel.RatingFilter.Should().Be("全部评分");
         viewModel.PreviewSortMode.Should().Be(0);
@@ -323,6 +351,11 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("Content=\"重置\"");
         xaml.Should().Contain("ResetBrowseConditionsCommand");
         xaml.Should().Contain("BrowseConditionsSummary");
+        xaml.Should().Contain("x:Name=\"BrowseSemanticSearchBox\"");
+        xaml.Should().Contain("Text=\"{Binding SemanticSearch.QueryText, UpdateSourceTrigger=PropertyChanged}\"");
+        xaml.Should().Contain("Style=\"{StaticResource Input.TextBox}\"");
+        xaml.Should().Contain("Command=\"{Binding SemanticSearch.CancelCommand}\"");
+        xaml.Should().NotContain("<search:SemanticSearchView");
     }
 
     [Fact]

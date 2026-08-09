@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:treemap="clr-namespace:HanabePhotoManager.App.Browsing.Treemap" xmlns:grid="clr-namespace:HanabePhotoManager.App.Browsing.Grid" xmlns:search="clr-namespace:HanabePhotoManager.App.Search" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" KeyUp="MainWindow_KeyUp" SizeChanged="MainWindow_SizeChanged">
+<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:treemap="clr-namespace:HanabePhotoManager.App.Browsing.Treemap" xmlns:grid="clr-namespace:HanabePhotoManager.App.Browsing.Grid" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" KeyUp="MainWindow_KeyUp" SizeChanged="MainWindow_SizeChanged">
   <FrameworkElement.Resources>
     <ResourceDictionary>
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -408,7 +408,6 @@
                       <DataTrigger Binding="{Binding Key}" Value="Import"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Import}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Preview"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Library}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="FaceSearch"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.FaceSearch}" /></DataTrigger>
-                      <DataTrigger Binding="{Binding Key}" Value="SemanticSearch"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Search}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="MapPhotos"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Map}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Compression"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Compress}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Watermark"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Watermark}" /></DataTrigger>
@@ -1023,6 +1022,40 @@
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
                       </StackPanel>
+                      <Border Style="{DynamicResource Card.Subtle}" Margin="{StaticResource Spacing.Control}">
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                          </Grid.RowDefinitions>
+                          <StackPanel>
+                            <TextBlock Text="语义描述" Style="{DynamicResource Layout.SettingsFieldLabel}" />
+                            <TextBox x:Name="BrowseSemanticSearchBox"
+                                     Style="{StaticResource Input.TextBox}"
+                                     Text="{Binding SemanticSearch.QueryText, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="用自然语言搜索照片"
+                                     ToolTip="例如：红色衣服、海边日落、重庆夜景" />
+                          </StackPanel>
+                          <Button Grid.Column="1"
+                                  Style="{DynamicResource Button.Ghost}"
+                                  Content="取消"
+                                  Command="{Binding SemanticSearch.CancelCommand}"
+                                  Visibility="{Binding SemanticSearch.IsBusy, Converter={StaticResource BoolToVis}}" />
+                          <StackPanel Grid.Row="1" Grid.ColumnSpan="2"
+                                      Visibility="{Binding SemanticSearch.HasActiveQuery, Converter={StaticResource BoolToVis}}">
+                            <ProgressBar Minimum="0" Maximum="100" Height="{StaticResource Spacing.6}"
+                                         Value="{Binding SemanticSearch.ProgressValue, Mode=OneWay}"
+                                         Visibility="{Binding SemanticSearch.IsBusy, Converter={StaticResource BoolToVis}}" />
+                            <TextBlock Text="{Binding SemanticSearch.StatusText}"
+                                       Foreground="{DynamicResource Brush.Text.Secondary}"
+                                       TextWrapping="Wrap" />
+                          </StackPanel>
+                        </Grid>
+                      </Border>
                       <WrapPanel>
                         <StackPanel Width="420" Margin="0,0,20,10">
                           <TextBlock Text="查找文件" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
@@ -1465,7 +1498,6 @@
                 </DockPanel>
               </Border>
             </Grid>
-            <search:SemanticSearchView Style="{StaticResource PageSurface}" DataContext="{Binding SemanticSearch}" Visibility="{Binding IsSemanticSearchPage, Converter={StaticResource BoolToVis}}" />
             <map:MapPage x:Name="MapPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding MapPhotos}" Visibility="{Binding DataContext.IsMapPhotosPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <compress:CompressionPage x:Name="CompressionPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Compression}" Visibility="{Binding DataContext.IsCompressionPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <watermark:WatermarkPage x:Name="WatermarkPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Watermark}" Visibility="{Binding DataContext.IsWatermarkPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />

@@ -10,16 +10,22 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
 {
     private readonly ISemanticSearchService _service;
     private readonly Func<string> _libraryRoot;
+    private readonly TimeSpan _searchDebounce;
     private CancellationTokenSource? _operationCancellation;
+    private bool _indexEnsured;
     private string _queryText = string.Empty;
     private string _statusText = "输入描述即可在本机照片库中查找。";
     private double _progressValue;
     private bool _isBusy;
 
-    public SemanticSearchViewModel(ISemanticSearchService service, Func<string> libraryRoot)
+    public SemanticSearchViewModel(
+        ISemanticSearchService service,
+        Func<string> libraryRoot,
+        TimeSpan? searchDebounce = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _libraryRoot = libraryRoot ?? throw new ArgumentNullException(nameof(libraryRoot));
+        _searchDebounce = searchDebounce ?? TimeSpan.FromMilliseconds(300);
         ReindexCommand = new AsyncRelayCommand(ReindexAsync, CanReindex);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
         OpenResultCommand = new RelayCommand<SearchResultItemViewModel>(item => item?.Open());
@@ -28,18 +34,36 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
     }
 
     public ObservableCollection<SearchResultItemViewModel> Results { get; } = [];
+    public event EventHandler? ResultsChanged;
     public IAsyncRelayCommand ReindexCommand { get; }
     public IRelayCommand CancelCommand { get; }
     public IRelayCommand<SearchResultItemViewModel> OpenResultCommand { get; }
     public IRelayCommand<SearchResultItemViewModel> OpenResultFolderCommand { get; }
-    public string QueryText { get => _queryText; set { if (SetProperty(ref _queryText, value)) _ = DebouncedSearchAsync(value); } }
+    public string QueryText
+    {
+        get => _queryText;
+        set
+        {
+            if (SetProperty(ref _queryText, value ?? string.Empty))
+            {
+                OnPropertyChanged(nameof(HasActiveQuery));
+                _ = DebouncedSearchAsync(_queryText);
+            }
+        }
+    }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public double ProgressValue { get => _progressValue; private set => SetProperty(ref _progressValue, value); }
     public bool IsBusy { get => _isBusy; private set { if (SetProperty(ref _isBusy, value)) { CancelCommand.NotifyCanExecuteChanged(); ReindexCommand.NotifyCanExecuteChanged(); } } }
     public bool HasResults => Results.Count > 0;
+    public bool HasActiveQuery => !string.IsNullOrWhiteSpace(QueryText);
+    public IReadOnlyList<string> RankedResultPaths => Results.Select(result => result.FilePath).ToArray();
     public string ResultSummary => HasResults ? $"找到 {Results.Count:N0} 张相关照片" : "尚未找到结果";
 
-    public void NotifyLibraryRootChanged() => ReindexCommand.NotifyCanExecuteChanged();
+    public void NotifyLibraryRootChanged()
+    {
+        _indexEnsured = false;
+        ReindexCommand.NotifyCanExecuteChanged();
+    }
 
     private async Task DebouncedSearchAsync(string query)
     {
@@ -48,14 +72,27 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
         var cancellation = _operationCancellation = new CancellationTokenSource();
         try
         {
-            await Task.Delay(TimeSpan.FromMilliseconds(300), cancellation.Token).ConfigureAwait(true);
+            await Task.Delay(_searchDebounce, cancellation.Token).ConfigureAwait(true);
             IsBusy = true;
-            var matches = await _service.SearchAsync(query.Trim(), 50, cancellation.Token).ConfigureAwait(true);
+            if (!_indexEnsured)
+            {
+                var progress = new Progress<SemanticIndexStatus>(status =>
+                {
+                    ProgressValue = status.ProgressPercent;
+                    StatusText = status.Message;
+                });
+                await Task.Run(
+                    () => _service.EnsureIndexAsync(_libraryRoot(), progress, cancellation.Token),
+                    cancellation.Token).ConfigureAwait(true);
+                _indexEnsured = true;
+            }
+            var matches = await Task.Run(
+                () => _service.SearchAsync(query.Trim(), 50, cancellation.Token),
+                cancellation.Token).ConfigureAwait(true);
             Results.Clear();
             foreach (var match in matches) Results.Add(new SearchResultItemViewModel(match));
             NotifyResultsChanged();
             StatusText = matches.Count == 0 ? "没找到相关照片，换个描述试试。" : "已按语义相关度排序。";
-            _ = LoadThumbnailsAsync(Results.ToArray());
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Results.Clear(); NotifyResultsChanged(); StatusText = ex.Message; }
@@ -71,7 +108,10 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
         try
         {
             var progress = new Progress<SemanticIndexStatus>(status => { ProgressValue = status.ProgressPercent; StatusText = status.Message; });
-            await _service.EnsureIndexAsync(_libraryRoot(), progress, cancellation.Token).ConfigureAwait(true);
+            await Task.Run(
+                () => _service.EnsureIndexAsync(_libraryRoot(), progress, cancellation.Token),
+                cancellation.Token).ConfigureAwait(true);
+            _indexEnsured = true;
             RefreshStatus();
             if (!string.IsNullOrWhiteSpace(QueryText)) await DebouncedSearchAsync(QueryText).ConfigureAwait(true);
         }
@@ -83,11 +123,12 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
     private bool CanReindex() => !IsBusy && Directory.Exists(_libraryRoot());
     private void Cancel() => _operationCancellation?.Cancel();
     private void RefreshStatus() { var status = _service.GetIndexStatus(); ProgressValue = status.ProgressPercent; StatusText = status.Message; }
-    private void NotifyResultsChanged() { OnPropertyChanged(nameof(HasResults)); OnPropertyChanged(nameof(ResultSummary)); }
-    private static async Task LoadThumbnailsAsync(IReadOnlyList<SearchResultItemViewModel> items)
+    private void NotifyResultsChanged()
     {
-        using var gate = new SemaphoreSlim(4);
-        await Task.WhenAll(items.Select(async item => { await gate.WaitAsync(); try { await item.LoadThumbnailAsync(CancellationToken.None); } finally { gate.Release(); } }));
+        OnPropertyChanged(nameof(HasResults));
+        OnPropertyChanged(nameof(ResultSummary));
+        OnPropertyChanged(nameof(RankedResultPaths));
+        ResultsChanged?.Invoke(this, EventArgs.Empty);
     }
     public void Dispose() { _operationCancellation?.Cancel(); _operationCancellation?.Dispose(); }
 }

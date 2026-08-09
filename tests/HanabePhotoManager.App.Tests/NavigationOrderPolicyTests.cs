@@ -8,6 +8,14 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class NavigationOrderPolicyTests
 {
     [Fact]
+    public void MainNavigation_DoesNotExposeStandaloneSemanticSearch()
+    {
+        var viewModel = new MainWindowViewModel();
+
+        viewModel.NavigationItems.Select(item => item.Key).Should().NotContain("SemanticSearch");
+    }
+
+    [Fact]
     public void Normalize_RemovesUnknownAndDuplicateKeys_ThenAppendsMissingDefaults()
     {
         var result = NavigationOrderPolicy.Normalize(

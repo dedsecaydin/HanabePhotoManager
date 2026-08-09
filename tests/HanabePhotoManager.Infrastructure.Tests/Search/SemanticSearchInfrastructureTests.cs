@@ -2,6 +2,7 @@ using HanabePhotoManager.Core.Search;
 using HanabePhotoManager.Infrastructure.Search;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
+using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace HanabePhotoManager.Infrastructure.Tests.Search;
 
@@ -32,6 +33,14 @@ public sealed class SemanticSearchInfrastructureTests : IDisposable
         var entries = await store.GetAllAsync(CancellationToken.None);
         entries.Should().ContainSingle().Which.FileKey.Should().Be("keep.jpg");
         entries[0].Embedding.Should().Equal(1f, 0f);
+    }
+
+    [Fact]
+    public void ClipRuntime_CanCreateTensorInNet8Process()
+    {
+        var tensor = new DenseTensor<float>(new float[12], [1, 3, 2, 2]);
+
+        tensor.Length.Should().Be(12);
     }
 
     public void Dispose()

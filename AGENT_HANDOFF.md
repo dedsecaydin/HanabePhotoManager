@@ -6,6 +6,13 @@
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
 
+## 2026-08-09 Semantic Search Integration
+
+- Semantic search is now embedded in Photo Library browse conditions; the standalone navigation destination/page host is removed.
+- First query performs cancellable background indexing and then feeds CLIP-ranked paths through the existing browse grid/treemap and filters.
+- Published inference requires the explicit `System.Numerics.Tensors` 9.0.0 dependency now declared by Infrastructure.
+- Final verification for this change: Release build 0 warnings/0 errors; Core 369, Infrastructure 163, App 349 tests passed; installed one-photo semantic smoke query reached “已按语义相关度排序”。
+
 ---
 
 ## Quick Status

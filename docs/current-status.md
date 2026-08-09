@@ -17,10 +17,10 @@
 | Retouch status filter | Implemented-Unverified | "已修" may crash (KI-08). try/catch applied. |
 | File type filter | Implemented-Unverified | RAW/JPG/PNG/Video multi-select chips. PSD excluded. |
 | Rating filter | Stable | |
-| Search | Stable | |
+| Search | Implemented-Unverified | One smart box supports automatic file/path matching and semantic descriptions; semantic candidates progressively appear after each indexed batch. Real-library validation pending. |
 | Smart category | Stable | |
 | Custom tags | Stable | |
-| Manual classification | Stable | |
+| Manual classification | Stable | Assignment remains supported outside the browse-condition surface. |
 
 ## Import (2026-08-09 update)
 
@@ -106,7 +106,7 @@
 
 | Concern | Status | Notes |
 |---------|--------|-------|
-| UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; UNC startup also skips recursive auto-cleanup and reuses media scan capacity statistics to avoid redundant full-network walks. |
+| UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; UNC startup also skips recursive auto-cleanup, reuses media scan capacity statistics, and avoids rebuilding the completed all-library treemap solely to apply neutral filters. |
 | 6217+ items scrolling | Partial | `ContentHeight` → ScrollViewer.ExtentHeight. Unverified at scale. |
 | Bottom items clipped (KI-06) | Partial | Same fix as above. |
 | 10k+ items layout time | Unknown | Not benchmarked. `JustifiedGalleryLayout` is O(n). |

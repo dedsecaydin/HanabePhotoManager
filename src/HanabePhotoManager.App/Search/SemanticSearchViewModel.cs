@@ -14,6 +14,8 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
     private readonly TimeSpan _searchDebounce;
     private CancellationTokenSource? _operationCancellation;
     private bool _indexEnsured;
+    private int _lastPublishedIndexedFiles;
+    private bool _progressiveSearchActive;
     private string _queryText = string.Empty;
     private string _statusText = "输入描述即可在本机照片库中查找。";
     private double _progressValue;
@@ -48,6 +50,8 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
             if (SetProperty(ref _queryText, value ?? string.Empty))
             {
                 OnPropertyChanged(nameof(HasActiveQuery));
+                Results.Clear();
+                NotifyResultsChanged();
                 _ = DebouncedSearchAsync(_queryText);
             }
         }
@@ -77,29 +81,14 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
             IsBusy = true;
             if (!_indexEnsured)
             {
-                var progress = new Progress<SemanticIndexStatus>(status =>
-                {
-                    ProgressValue = status.ProgressPercent;
-                    StatusText = status.Message;
-                });
+                _lastPublishedIndexedFiles = 0;
+                var progress = new Progress<SemanticIndexStatus>(status => UpdateIndexProgress(query, status, cancellation));
                 await Task.Run(
                     () => _service.EnsureIndexAsync(_libraryRoot(), progress, cancellation.Token),
                     cancellation.Token).ConfigureAwait(true);
                 _indexEnsured = true;
             }
-            var matches = await Task.Run(
-                () => _service.SearchAsync(query.Trim(), ResultLimit, cancellation.Token),
-                cancellation.Token).ConfigureAwait(true);
-            var rankedMatches = matches
-                .OrderByDescending(match => match.Score)
-                .ThenBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
-                .GroupBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
-                .Select(group => group.First())
-                .Take(ResultLimit)
-                .ToArray();
-            Results.Clear();
-            foreach (var match in rankedMatches) Results.Add(new SearchResultItemViewModel(match));
-            NotifyResultsChanged();
+            var rankedMatches = await SearchAndPublishAsync(query, cancellation.Token).ConfigureAwait(true);
             StatusText = rankedMatches.Length == 0 ? "没找到相关照片，换个描述试试。" : "已按语义相关度排序。";
         }
         catch (OperationCanceledException) { }
@@ -129,6 +118,40 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
     }
 
     private bool CanReindex() => !IsBusy && Directory.Exists(_libraryRoot());
+    private void UpdateIndexProgress(string query, SemanticIndexStatus status, CancellationTokenSource cancellation)
+    {
+        ProgressValue = status.ProgressPercent;
+        StatusText = status.Message;
+        if (!status.IsIndexing || status.IndexedFiles <= _lastPublishedIndexedFiles || cancellation.IsCancellationRequested) return;
+        _lastPublishedIndexedFiles = status.IndexedFiles;
+        if (_progressiveSearchActive) return;
+        _progressiveSearchActive = true;
+        _ = PublishIndexedBatchAsync(query, cancellation.Token);
+    }
+
+    private async Task PublishIndexedBatchAsync(string query, CancellationToken cancellationToken)
+    {
+        try { await SearchAndPublishAsync(query, cancellationToken).ConfigureAwait(true); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { StatusText = ex.Message; }
+        finally { _progressiveSearchActive = false; }
+    }
+
+    private async Task<SemanticSearchResult[]> SearchAndPublishAsync(string query, CancellationToken cancellationToken)
+    {
+        var matches = await Task.Run(
+            () => _service.SearchAsync(query.Trim(), ResultLimit, cancellationToken),
+            cancellationToken).ConfigureAwait(true);
+        var rankedMatches = matches.OrderByDescending(match => match.Score)
+            .ThenBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First()).Take(ResultLimit).ToArray();
+        Results.Clear();
+        foreach (var match in rankedMatches) Results.Add(new SearchResultItemViewModel(match));
+        NotifyResultsChanged();
+        return rankedMatches;
+    }
+
     private void Cancel() => _operationCancellation?.Cancel();
     private void RefreshStatus() { var status = _service.GetIndexStatus(); ProgressValue = status.ProgressPercent; StatusText = status.Message; }
     private void NotifyResultsChanged()

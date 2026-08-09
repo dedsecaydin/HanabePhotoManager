@@ -1027,21 +1027,32 @@
                           <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                           </Grid.ColumnDefinitions>
                           <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                           </Grid.RowDefinitions>
                           <StackPanel>
-                            <TextBlock Text="语义描述" Style="{DynamicResource Layout.SettingsFieldLabel}" />
-                            <TextBox x:Name="BrowseSemanticSearchBox"
+                            <TextBlock Text="智能搜索" Style="{DynamicResource Layout.SettingsFieldLabel}" />
+                            <TextBox x:Name="BrowseSmartSearchBox"
                                      Style="{StaticResource Input.TextBox}"
-                                     Text="{Binding SemanticSearch.QueryText, UpdateSourceTrigger=PropertyChanged}"
-                                     AutomationProperties.Name="用自然语言搜索照片"
-                                     ToolTip="例如：红色衣服、海边日落、重庆夜景" />
+                                     Text="{Binding UnifiedSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                     AutomationProperties.Name="智能搜索照片"
+                                     ToolTip="输入文件名或路径直接匹配；输入自然描述进行语义搜索。" />
                           </StackPanel>
-                          <Button Grid.Column="1"
+                          <ComboBox Grid.Column="1" Width="116" Height="36" Margin="12,0,0,0"
+                                    ItemsSource="{Binding BrowseSearchModeChoices}"
+                                    SelectedValuePath="Value"
+                                    SelectedValue="{Binding BrowseSearchMode, Mode=TwoWay}"
+                                    AutomationProperties.Name="智能搜索模式">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate><TextBlock Text="{Binding Label}" /></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <Button Grid.Column="2"
                                   Style="{DynamicResource Button.Ghost}"
+                                  Margin="8,0,0,0"
                                   Content="取消"
                                   Command="{Binding SemanticSearch.CancelCommand}"
                                   Visibility="{Binding SemanticSearch.IsBusy, Converter={StaticResource BoolToVis}}" />
@@ -1057,24 +1068,6 @@
                         </Grid>
                       </Border>
                       <WrapPanel>
-                        <StackPanel Width="420" Margin="0,0,20,10">
-                          <TextBlock Text="查找文件" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
-                          <Border Height="38" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
-                            <Grid>
-                              <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="38" />
-                                <ColumnDefinition Width="*" />
-                              </Grid.ColumnDefinitions>
-                              <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Canvas Width="20" Height="20">
-                                  <Ellipse Width="11" Height="11" Canvas.Left="2" Canvas.Top="2" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="1.8" />
-                                  <Path Data="M11,11 L18,18" Stroke="{DynamicResource Brush.Border.Strong}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
-                                </Canvas>
-                              </Viewbox>
-                              <TextBox Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="0,0,12,0" FontSize="13" VerticalContentAlignment="Center" AutomationProperties.Name="按文件名或后缀查找" ToolTip="输入文件名或后缀查找" Text="{Binding PreviewSearchText, UpdateSourceTrigger=PropertyChanged}" />
-                            </Grid>
-                          </Border>
-                        </StackPanel>
                         <StackPanel Margin="0,0,16,8">
                           <TextBlock Text="修图状态" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
                           <Border Padding="2" CornerRadius="13" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
@@ -1111,15 +1104,6 @@
                           <TextBlock Text="评分分类" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
                           <ComboBox MinWidth="130" Height="38" ItemsSource="{Binding RatingFilters}" SelectedItem="{Binding RatingFilter, Mode=TwoWay}" AutomationProperties.Name="按照片评分筛选" />
                         </StackPanel>
-                      </WrapPanel>
-                      <WrapPanel Margin="0,4,0,0">
-                        <TextBlock VerticalAlignment="Center" Margin="2,0,10,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" Text="手动类别" />
-                        <ComboBox Grid.Column="1" Height="36" ItemsSource="{Binding TagManager.AvailableCategories}" SelectedItem="{Binding SelectedManualCategory, Mode=TwoWay}" AutomationProperties.Name="要分配的照片类别" />
-                        <Button Grid.Column="2" Margin="8,0,0,0" Padding="13,0" Content="应用到所选" Command="{Binding AssignCategoryToSelectedCommand}" AutomationProperties.Name="把类别应用到所选照片" />
-                        <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" Text="自定义标签" />
-                        <ComboBox Grid.Column="5" Height="36" ItemsSource="{Binding TagManager.CustomTags}" SelectedItem="{Binding SelectedCustomTag, Mode=TwoWay}" AutomationProperties.Name="要添加的自定义标签" />
-                        <Button Grid.Column="6" Margin="8,0,0,0" Padding="13,0" Content="添加到所选" Command="{Binding AssignTagToSelectedCommand}" AutomationProperties.Name="把标签添加到所选照片" />
-                        <TextBlock Grid.Column="10" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" Text="先勾选照片；未勾选时应用到当前打开的照片" TextWrapping="Wrap" />
                       </WrapPanel>
                       <WrapPanel Margin="0,10,0,0">
                         <TextBlock VerticalAlignment="Center" Margin="2,0,10,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" Text="智能识别" />

@@ -210,7 +210,7 @@ public sealed class ControlThemeTests
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         mainXaml.Should().Contain("x:Name=\"BrowseUnifiedWorkspace\"");
-        mainXaml.Should().Contain("Width=\"420\"");
+        mainXaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
         mainXaml.Split("ItemsSource=\"{Binding PreviewCategoryFilters}\"").Should().HaveCount(2);
         mainXaml.IndexOf("x:Name=\"BrowseUnifiedWorkspace\"", StringComparison.Ordinal)
             .Should().BeLessThan(mainXaml.IndexOf("ItemsSource=\"{Binding PreviewCategoryFilters}\"", StringComparison.Ordinal));

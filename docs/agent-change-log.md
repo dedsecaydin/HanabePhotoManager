@@ -1,5 +1,13 @@
 # Agent Change Log
 
+## 2026-08-09 — Browse smart search and network-library startup memory
+
+- Replaced the separate browse file and semantic search inputs with one tokenized smart-search control. It supports automatic file/path detection plus explicit file/path and semantic modes.
+- Removed the manual-category and custom-tag assignment controls from the browse conditions surface; metadata services and existing data remain intact.
+- Semantic indexing now persists and reports every 100 photos. The browse result set is refreshed after each persisted batch while indexing continues, with a single in-flight incremental query to prevent search fan-out.
+- Avoided rebuilding an already-complete all-library treemap at UNC startup. The existing streaming snapshot is reused until an actual browse filter requires a filtered tree, preventing a redundant all-file dimension pass.
+- Added regression coverage for unified browse search UI and progressive semantic result publication.
+
 ## 2026-08-09 - Semantic search integrated into Photo Library
 
 - Moved natural-language semantic search into the Photo Library browse conditions and removed the standalone sidebar destination/page host.

@@ -318,6 +318,7 @@ public sealed class PreviewPerformanceTests
         var viewModel = new MainWindowViewModel
         {
             CurrentPreviewCategory = "修后",
+            UnifiedSearchText = "IMG_0001.JPG",
             PreviewSearchText = "JK",
             PreviewRetouchFilter = "已修",
             RatingFilter = "5★",
@@ -330,6 +331,7 @@ public sealed class PreviewPerformanceTests
         await viewModel.ResetBrowseConditionsCommand.ExecuteAsync(null);
 
         viewModel.CurrentPreviewCategory.Should().Be("全部");
+        viewModel.UnifiedSearchText.Should().BeEmpty();
         viewModel.PreviewSearchText.Should().BeEmpty();
         viewModel.SemanticSearch.QueryText.Should().BeEmpty();
         viewModel.PreviewRetouchFilter.Should().Be("全部");
@@ -351,11 +353,28 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("Content=\"重置\"");
         xaml.Should().Contain("ResetBrowseConditionsCommand");
         xaml.Should().Contain("BrowseConditionsSummary");
-        xaml.Should().Contain("x:Name=\"BrowseSemanticSearchBox\"");
-        xaml.Should().Contain("Text=\"{Binding SemanticSearch.QueryText, UpdateSourceTrigger=PropertyChanged}\"");
+        xaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
+        xaml.Should().Contain("Text=\"{Binding UnifiedSearchText, UpdateSourceTrigger=PropertyChanged}\"");
+        xaml.Should().Contain("BrowseSearchModeChoices");
         xaml.Should().Contain("Style=\"{StaticResource Input.TextBox}\"");
         xaml.Should().Contain("Command=\"{Binding SemanticSearch.CancelCommand}\"");
         xaml.Should().NotContain("<search:SemanticSearchView");
+    }
+
+    [Fact]
+    public void BrowseConditions_UseOneSmartSearchBoxAndHideManualAssignmentControls()
+    {
+        var viewModel = new MainWindowViewModel();
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        viewModel.BrowseSearchModeChoices.Select(choice => choice.Label)
+            .Should().Contain(["智能", "文件名或路径", "语义描述"]);
+        xaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
+        xaml.Should().NotContain("应用到所选");
+        xaml.Should().NotContain("添加到所选");
+        xaml.Should().NotContain("手动类别");
+        xaml.Should().NotContain("自定义标签");
     }
 
     [Fact]

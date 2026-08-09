@@ -1714,12 +1714,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RebuildVisiblePreviewPage();
         OnPropertyChanged(nameof(FilteredPreviewFiles));
         NotifyPreviewCountsChanged();
-        if (HasLibraryRoot && IsTreemapBrowseMode &&
-            (!string.IsNullOrWhiteSpace(SelectedDatePath) || SemanticSearch.HasActiveQuery))
+        if (HasLibraryRoot && IsTreemapBrowseMode && RequiresTreemapRepopulation())
         {
             RepopulateTreemapFrom(_filteredCache);
         }
     }
+
+    private bool RequiresTreemapRepopulation() =>
+        SemanticSearch.HasActiveQuery ||
+        CurrentPreviewCategory != "全部" ||
+        !string.IsNullOrWhiteSpace(PreviewSearchText) ||
+        PreviewRetouchFilter != "全部" ||
+        _selectedFileTypeFilters.Count > 0 ||
+        SmartCategoryFilter != "全部智能类别" ||
+        RatingFilter != "全部评分" ||
+        PeopleAlbums.SelectedAlbum is not null ||
+        PreviewSortMode != 0;
 
     private int _previewSort;
     public int PreviewSortMode
@@ -1797,6 +1807,39 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string FileTypeFilterSummary =>
         _selectedFileTypeFilters.Count == 0 ? "全部" : string.Join(" + ", _selectedFileTypeFilters);
+
+    public IReadOnlyList<BrowseSearchModeChoice> BrowseSearchModeChoices { get; } =
+    [
+        new(BrowseSearchMode.Auto, "智能"),
+        new(BrowseSearchMode.File, "文件名或路径"),
+        new(BrowseSearchMode.Semantic, "语义描述")
+    ];
+
+    private BrowseSearchMode _browseSearchMode = BrowseSearchMode.Auto;
+    public BrowseSearchMode BrowseSearchMode
+    {
+        get => _browseSearchMode;
+        set
+        {
+            if (SetProperty(ref _browseSearchMode, value))
+            {
+                ApplyUnifiedSearch();
+            }
+        }
+    }
+
+    private string _unifiedSearchText = string.Empty;
+    public string UnifiedSearchText
+    {
+        get => _unifiedSearchText;
+        set
+        {
+            if (SetProperty(ref _unifiedSearchText, value ?? string.Empty))
+            {
+                ApplyUnifiedSearch();
+            }
+        }
+    }
 
     private string _previewSearchText = string.Empty;
     public string PreviewSearchText
@@ -2153,6 +2196,33 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await SaveSettingsAsync().ConfigureAwait(true);
     }
 
+    private void ApplyUnifiedSearch()
+    {
+        var useFileSearch = BrowseSearchMode == BrowseSearchMode.File ||
+            (BrowseSearchMode == BrowseSearchMode.Auto && LooksLikeFileOrPath(UnifiedSearchText));
+        if (useFileSearch)
+        {
+            SemanticSearch.QueryText = string.Empty;
+            PreviewSearchText = UnifiedSearchText;
+        }
+        else
+        {
+            PreviewSearchText = string.Empty;
+            SemanticSearch.QueryText = UnifiedSearchText;
+        }
+
+        OnPropertyChanged(nameof(BrowseConditionsSummary));
+    }
+
+    private bool LooksLikeFileOrPath(string searchText)
+    {
+        var text = searchText.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        if (text.IndexOfAny(['\\', '/', ':']) >= 0 || Path.HasExtension(text)) return true;
+        return PreviewFiles.Any(file => file.Name.Contains(text, StringComparison.OrdinalIgnoreCase) ||
+            file.FullPath.Contains(text, StringComparison.OrdinalIgnoreCase));
+    }
+
     public bool IsImportRunning => IsBusy && _activeTaskKind == ActiveTaskKind.Import;
 
     private void PrepareStartupAllLibraryTreemap()
@@ -2167,6 +2237,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _calendarSelectedDate = null;
         SetProperty(ref _selectedDate, null, nameof(SelectedDate));
         CurrentPreviewCategory = "全部";
+        UnifiedSearchText = string.Empty;
         PreviewSearchText = string.Empty;
         SemanticSearch.QueryText = string.Empty;
         PreviewRetouchFilter = "全部";
@@ -2326,6 +2397,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task ResetBrowseConditionsAsync()
     {
         CurrentPreviewCategory = "全部";
+        UnifiedSearchText = string.Empty;
         PreviewSearchText = string.Empty;
         SemanticSearch.QueryText = string.Empty;
         PreviewRetouchFilter = "全部";
@@ -6744,6 +6816,15 @@ public sealed record PreviewSortChoice(int Value, string Label)
 {
     public override string ToString() => Label;
 }
+
+public enum BrowseSearchMode
+{
+    Auto,
+    File,
+    Semantic
+}
+
+public sealed record BrowseSearchModeChoice(BrowseSearchMode Value, string Label);
 
 public sealed record InferenceDeviceChoice(string Value, string Label)
 {

@@ -6,6 +6,7 @@ namespace HanabePhotoManager.Infrastructure.Search;
 
 public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposable
 {
+    public const int IndexBatchSize = 100;
     private static readonly HashSet<string> ImageExtensions = new([".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"], StringComparer.OrdinalIgnoreCase);
     private readonly ISemanticIndexStore _store;
     private readonly ModelCatalog _catalog;
@@ -37,7 +38,9 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
         var stored = (await _store.GetAllAsync(cancellationToken).ConfigureAwait(false)).ToDictionary(entry => entry.FileKey, StringComparer.OrdinalIgnoreCase);
         SetStatus(new SemanticIndexStatus(files.Length, 0, true, true, "正在建立语义索引…"), progress);
         var indexed = 0;
-        var pending = new List<SemanticIndexEntry>(16);
+        // Persist a complete batch before reporting progress so the newly
+        // indexed photos are immediately searchable by the caller.
+        var pending = new List<SemanticIndexEntry>(IndexBatchSize);
         foreach (var path in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -46,10 +49,18 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
             if (!stored.TryGetValue(path, out var entry) || !string.Equals(entry.Fingerprint, fingerprint, StringComparison.Ordinal))
                 pending.Add(new SemanticIndexEntry(path, fingerprint, info.LastWriteTimeUtc, await EncodeImageAsync(path, cancellationToken).ConfigureAwait(false)));
             indexed++;
-            if (pending.Count == 16) { await _store.UpsertAsync(pending, cancellationToken).ConfigureAwait(false); pending.Clear(); }
+            if (pending.Count == IndexBatchSize)
+            {
+                await _store.UpsertAsync(pending, cancellationToken).ConfigureAwait(false);
+                pending.Clear();
+                SetStatus(new SemanticIndexStatus(files.Length, indexed, true, true, $"正在索引 {indexed:N0}/{files.Length:N0}…"), progress);
+            }
+        }
+        if (pending.Count > 0)
+        {
+            await _store.UpsertAsync(pending, cancellationToken).ConfigureAwait(false);
             SetStatus(new SemanticIndexStatus(files.Length, indexed, true, true, $"正在索引 {indexed:N0}/{files.Length:N0}…"), progress);
         }
-        if (pending.Count > 0) await _store.UpsertAsync(pending, cancellationToken).ConfigureAwait(false);
         await _store.RemoveMissingAsync(files, cancellationToken).ConfigureAwait(false);
         SetStatus(new SemanticIndexStatus(files.Length, files.Length, false, true, $"已建立 {files.Length:N0} 张照片的语义索引。"), progress);
     }

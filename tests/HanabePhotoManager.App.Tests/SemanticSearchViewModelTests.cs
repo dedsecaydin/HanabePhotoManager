@@ -13,12 +13,9 @@ public sealed class SemanticSearchViewModelTests
             [new SemanticSearchResult(@"D:\photos\second.jpg", 0.91),
              new SemanticSearchResult(@"D:\photos\first.jpg", 0.83)]);
         using var viewModel = new SemanticSearchViewModel(service, () => @"D:\photos", TimeSpan.Zero);
-        var resultsChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        viewModel.ResultsChanged += (_, _) => resultsChanged.TrySetResult();
-
         viewModel.QueryText = "红色衣服";
 
-        await resultsChanged.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await WaitUntilAsync(() => viewModel.RankedResultPaths.Count == 2 && !viewModel.IsBusy);
         Assert.Equal(["ensure", "search"], service.Calls);
         Assert.Equal([@"D:\photos\second.jpg", @"D:\photos\first.jpg"], viewModel.RankedResultPaths);
         Assert.False(viewModel.IsBusy);
@@ -72,16 +69,28 @@ public sealed class SemanticSearchViewModelTests
                 .Reverse()
                 .ToArray());
         using var viewModel = new SemanticSearchViewModel(service, () => @"D:\photos", TimeSpan.Zero);
-        var resultsChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        viewModel.ResultsChanged += (_, _) => resultsChanged.TrySetResult();
-
         viewModel.QueryText = "红色";
 
-        await resultsChanged.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await WaitUntilAsync(() => viewModel.RankedResultPaths.Count == 50);
 
         Assert.Equal(50, viewModel.RankedResultPaths.Count);
         Assert.Equal(@"D:\photos\74.jpg", viewModel.RankedResultPaths[0]);
         Assert.Equal(@"D:\photos\25.jpg", viewModel.RankedResultPaths[^1]);
+    }
+
+    [Fact]
+    public async Task FirstQuery_PublishesMatchesAfterEachIndexedBatch()
+    {
+        var service = new ProgressiveSemanticSearchService();
+        using var viewModel = new SemanticSearchViewModel(service, () => @"D:\photos", TimeSpan.Zero);
+
+        viewModel.QueryText = "红色衣服";
+
+        await service.FirstBatchPublished.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        await WaitUntilAsync(() => viewModel.RankedResultPaths.Count == 1);
+
+        Assert.Equal(@"D:\photos\first.jpg", viewModel.RankedResultPaths.Single());
+        Assert.True(viewModel.IsBusy);
     }
 
     private static async Task WaitUntilAsync(Func<bool> predicate)
@@ -126,5 +135,28 @@ public sealed class SemanticSearchViewModelTests
             Task.FromResult<IReadOnlyList<SemanticSearchResult>>([]);
 
         public SemanticIndexStatus GetIndexStatus() => new(0, 0, false, true, "等待搜索");
+    }
+
+    private sealed class ProgressiveSemanticSearchService : ISemanticSearchService
+    {
+        private int _indexed;
+
+        public TaskCompletionSource FirstBatchPublished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async Task EnsureIndexAsync(string libraryRoot, IProgress<SemanticIndexStatus>? progress, CancellationToken cancellationToken)
+        {
+            _indexed = 100;
+            progress?.Report(new SemanticIndexStatus(200, _indexed, true, true, "正在索引 100/200…"));
+            FirstBatchPublished.TrySetResult();
+            await Task.Delay(500, cancellationToken);
+            _indexed = 200;
+            progress?.Report(new SemanticIndexStatus(200, _indexed, false, true, "索引已就绪"));
+        }
+
+        public Task<IReadOnlyList<SemanticSearchResult>> SearchAsync(string query, int limit, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<SemanticSearchResult>>(
+                _indexed >= 100 ? [new SemanticSearchResult(@"D:\photos\first.jpg", 0.9)] : []);
+
+        public SemanticIndexStatus GetIndexStatus() => new(200, _indexed, _indexed < 200, true, "正在索引");
     }
 }

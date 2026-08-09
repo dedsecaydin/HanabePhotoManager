@@ -22,6 +22,14 @@
 | Custom tags | Stable | |
 | Manual classification | Stable | |
 
+## Import (2026-08-09 update)
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Multi-file picker | Implemented-Unverified | New Ctrl/Shift picker uses `OpenFileDialog.Multiselect` and routes every selected path through the existing multi-root analysis flow. Drag-and-drop already accepts all `FileDrop` paths. |
+| Import progress and cancellation | Implemented-Unverified | Import page shows x/N, percentage, progress bar, cancellation and a success/skipped/failed summary. |
+| Exact duplicate import decision | Implemented-Unverified | Existing size prefilter plus SHA-256 now preflights a whole batch and offers skip-all, import-all, or per-item decisions. Retouched output remains read-only. |
+
 ## Photo Library — Display
 
 | Feature | Status | Notes |

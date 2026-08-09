@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Collections;
 using HanabePhotoManager.App.Duplicates;
+using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ReleaseNotes;
@@ -43,7 +44,7 @@ public enum BrowseDisplayMode
     Treemap
 }
 
-public sealed class MainWindowViewModel : ObservableObject
+public sealed partial class MainWindowViewModel : ObservableObject
 {
     private static readonly string[] CategoryFolderNames =
     [
@@ -158,6 +159,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _selectedDeviceSummary = "点击设备组中的磁盘、相机或照片库后，这里会显示文件夹和媒体文件概览。";
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
+    private readonly IImportSourcePicker _importSourcePicker = new WinFormsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
     private int _previewScanVersion;
@@ -295,6 +297,7 @@ public sealed class MainWindowViewModel : ObservableObject
             () => LibraryRoot);
         BrowseLibraryCommand = new AsyncRelayCommand(BrowseLibraryAsync, CanRunCommand);
         BrowseSourceCommand = new AsyncRelayCommand(BrowseSourceAsync, CanRunCommand);
+        BrowseSourceFilesCommand = new AsyncRelayCommand(BrowseSourceFilesAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
@@ -852,6 +855,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand BrowseSourceCommand { get; }
 
+    public IAsyncRelayCommand BrowseSourceFilesCommand { get; }
+
     public IAsyncRelayCommand AnalyzeSourceCommand { get; }
 
     public IAsyncRelayCommand ImportSelectedCommand { get; }
@@ -1389,6 +1394,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _isBusy, value))
             {
+                OnPropertyChanged(nameof(IsImportRunning));
                 NotifyCommandStates();
                 CancelCurrentTaskCommand.NotifyCanExecuteChanged();
             }
@@ -2119,6 +2125,8 @@ public sealed class MainWindowViewModel : ObservableObject
         await SaveSettingsAsync().ConfigureAwait(true);
     }
 
+    public bool IsImportRunning => IsBusy && _activeTaskKind == ActiveTaskKind.Import;
+
     private void PrepareStartupAllLibraryTreemap()
     {
         // A fresh application launch always opens the complete library in the
@@ -2604,6 +2612,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _activeTaskCancellation?.Dispose();
         _activeTaskCancellation = new CancellationTokenSource();
         _activeTaskKind = taskKind;
+        OnPropertyChanged(nameof(IsImportRunning));
         _operationStartedAt = DateTimeOffset.UtcNow;
         CancelCurrentTaskCommand.NotifyCanExecuteChanged();
         return _activeTaskCancellation;
@@ -2616,6 +2625,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _activeTaskCancellation.Dispose();
             _activeTaskCancellation = null;
             _activeTaskKind = ActiveTaskKind.None;
+            OnPropertyChanged(nameof(IsImportRunning));
             CancelCurrentTaskCommand.NotifyCanExecuteChanged();
         }
     }
@@ -3014,7 +3024,20 @@ public sealed class MainWindowViewModel : ObservableObject
             catch (OperationCanceledException) { throw; }
             catch (Exception) { /* library scan failure is non-fatal; import continues without cross-library dedup */ }
 
-            var sessionImportedHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            ProgressLabel = "正在检查重复内容…";
+            var duplicateBatch = await PrepareDuplicateBatchAsync(items, librarySizeMap, cancellationToken).ConfigureAwait(true);
+            var progress = ImportProgress.Create(items.Sum(item => 1 + item.ToMediaGroup().Sidecars.Count));
+            void UpdateProgress(ImportPlanItem item, bool completed)
+            {
+                if (completed)
+                {
+                    progress = progress.Complete(item.Files.Count);
+                }
+
+                var current = completed ? progress.CompletedUnits : Math.Min(progress.CompletedUnits + 1, progress.TotalUnits);
+                ProgressValue = progress.Percentage;
+                ProgressLabel = $"正在导入 {current}/{progress.TotalUnits}（{progress.Percentage:0}%）：{item.Group.GroupKey}";
+            }
 
             var dateGroups = items
                 .Where(item => item.TargetDate is not null)
@@ -3032,8 +3055,9 @@ public sealed class MainWindowViewModel : ObservableObject
                     dateGroup.Select(item => item.ToMediaGroup()).ToArray(),
                     dateGroup.Key,
                     deleteSourcesAfterVerify,
-                    librarySizeMap,
-                    sessionImportedHashes,
+                    duplicateBatch.Matches,
+                    duplicateBatch.Decision,
+                    UpdateProgress,
                     cancellationToken).ConfigureAwait(true);
 
                 success += result.Success;
@@ -3041,7 +3065,6 @@ public sealed class MainWindowViewModel : ObservableObject
                 failed += result.Failed;
                 lines.AddRange(result.Lines);
                 completedDateGroups++;
-                ProgressValue = dateGroups.Length == 0 ? 100 : completedDateGroups * 100d / dateGroups.Length;
             }
 
             ProgressValue = 100;
@@ -3097,8 +3120,9 @@ public sealed class MainWindowViewModel : ObservableObject
         IReadOnlyList<MediaGroup> groups,
         LibraryDate date,
         bool deleteSourcesAfterVerify,
-        Dictionary<long, List<string>>? librarySizeMap,
-        Dictionary<string, string> sessionImportedHashes,
+        IReadOnlyDictionary<string, ImportDuplicateMatch> duplicateMatches,
+        ImportDuplicateBatchDecision duplicateBatchDecision,
+        Action<ImportPlanItem, bool> updateProgress,
         CancellationToken cancellationToken)
     {
         var success = 0;
@@ -3118,69 +3142,48 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             cancellationToken.ThrowIfCancellationRequested();
             var item = plan.Items[index];
-            ProgressLabel = $"正在处理 {date.Month:00}.{date.Day:00} · {index + 1}/{plan.Items.Count}：{item.Group.GroupKey}";
-            ProgressValue = plan.Items.Count == 0 ? 100 : index * 100d / plan.Items.Count;
+            updateProgress(item, false);
 
-            if (item.Conflict == ConflictKind.SameNameDifferentContent)
+            try
             {
-                failed++;
-                lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
-                continue;
-            }
-
-            // Cross-library content duplicate check: when the destination is new
-            // (ConflictKind.None) verify the source hash against the library index.
-            if (item.Conflict == ConflictKind.None && librarySizeMap is not null)
-            {
-                var duplicatePath = await _contentScanner.FindContentDuplicateAsync(
-                    item.Group.Primary.FullPath, librarySizeMap, cancellationToken).ConfigureAwait(true);
-
-                if (duplicatePath is not null)
+                if (item.Conflict == ConflictKind.SameNameDifferentContent)
                 {
-                    var decision = ShowImportDuplicateDecision(item.Group.Primary.FullPath, duplicatePath);
-                    if (!ImportDuplicateDecisionPolicy.ShouldTransfer(decision))
-                    {
-                        skipped++;
-                        lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与图库已有文件内容相同（{Path.GetFileName(duplicatePath)}），已跳过。");
-                        continue;
-                    }
+                    failed++;
+                    lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
+                    continue;
                 }
 
-                // Also check against files imported earlier in this same session.
-                var sourceHash = await _fileHasher.ComputeSha256Async(
-                    item.Group.Primary.FullPath, cancellationToken).ConfigureAwait(true);
-                if (sessionImportedHashes.TryGetValue(sourceHash, out var sessionDuplicatePath))
-                {
-                    var decision = ShowImportDuplicateDecision(item.Group.Primary.FullPath, sessionDuplicatePath);
-                    if (!ImportDuplicateDecisionPolicy.ShouldTransfer(decision))
-                    {
-                        skipped++;
-                        lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与本次导入的其他文件内容相同，已跳过。");
-                        continue;
-                    }
-                }
-
-                sessionImportedHashes[sourceHash] = item.Files[0].DestinationPath;
-            }
-
-            var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
-            if (result.Success)
-            {
-                if (item.Conflict == ConflictKind.Identical)
+                if (duplicateMatches.TryGetValue(item.Group.Primary.FullPath, out var duplicateMatch)
+                    && !ShouldTransferDuplicate(duplicateMatch, duplicateBatchDecision))
                 {
                     skipped++;
-                    lines.Add($"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。");
+                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与 {Path.GetFileName(duplicateMatch.ExistingPath)} 内容相同，已跳过。");
+                    continue;
+                }
+
+                var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
+                if (result.Success)
+                {
+                    if (item.Conflict == ConflictKind.Identical)
+                    {
+                        skipped++;
+                        lines.Add($"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。");
+                    }
+                    else
+                    {
+                        success++;
+                        lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                    }
                 }
                 else
                 {
-                    success++;
-                    lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                    failed++;
+                    lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
                 }
             }
-            else
+            finally
             {
-                failed++;
-                lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
+                updateProgress(item, true);
             }
         }
 

@@ -1,5 +1,26 @@
 # Agent Change Log
 
+## 2026-08-09 — Import multi-select, progress, and batch dedupe
+
+### Summary
+
+- Added a dedicated Ctrl/Shift multi-file source picker (`OpenFileDialog.Multiselect = true`) while retaining the existing multi-path drag-and-drop route.
+- Added an import-only progress surface with x/N, percentage, progress bar, cancellation, and the existing success/skipped/failed report summary.
+- Kept the size-prefilter plus SHA-256 duplicate check, but moved it into a batch preflight and added one unified choice: skip all, import all, or decide each duplicate.
+- Isolated all new import feature behavior in focused Core/App files and a `MainWindowViewModel.Import.cs` partial; no new file exceeds 600 lines.
+
+### Regression root cause
+
+`SourceAutoImportDropTarget_Drop` has accepted all paths in the WPF `FileDrop` array since `5fbfdf1`. The selectable-source route is folder-only: `BrowseSourceAsync` invokes `FolderBrowserDialog`, so it cannot return Ctrl/Shift-selected files. Git history contains no import-source file picker implementation; the folder-only source selection is the effective UI regression, not a SHA-256 failure.
+
+### Verification
+
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror --artifacts-path .artifacts/agent-verification`: 0 warnings, 0 errors.
+- `dotnet test HanabePhotoManager.sln -c Release --no-build --artifacts-path .artifacts/agent-verification`: Core 369/369, Infrastructure 162/162, App 341/341.
+
+### Manual follow-up
+
+- WPF interactive smoke test remains: select 3+ disposable media files, confirm Ctrl/Shift selection, observe progress and cancellation, then re-import an exact duplicate and exercise each batch decision.
 ## 2026-08-09 - Codex (Compression asynchronous input scan and single-instance guard)
 
 ### Task

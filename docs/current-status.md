@@ -106,7 +106,7 @@
 
 | Concern | Status | Notes |
 |---------|--------|-------|
-| UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; published-app CPU smoke test passed 2026-08-09. |
+| UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; UNC startup also skips recursive auto-cleanup and reuses media scan capacity statistics to avoid redundant full-network walks. |
 | 6217+ items scrolling | Partial | `ContentHeight` → ScrollViewer.ExtentHeight. Unverified at scale. |
 | Bottom items clipped (KI-06) | Partial | Same fix as above. |
 | 10k+ items layout time | Unknown | Not benchmarked. `JustifiedGalleryLayout` is O(n). |
@@ -117,7 +117,7 @@
 
 | Feature | Status | Notes |
 |---|---|---|
-| Chinese-CLIP semantic search | Implemented-Unverified | Integrated into Photo Library browse conditions. First query automatically indexes in the background with progress/cancel; ranked candidates feed the existing grid/treemap and remain composable with date, rating, category, retouch, file-type, smart-category, and people filters. The standalone sidebar page was removed. Real-library query QA remains required. |
+| Chinese-CLIP semantic search | Implemented-Unverified | Integrated into Photo Library browse conditions. First query automatically indexes in the background with progress/cancel; the App layer emits only deduplicated score-descending Top 50 candidates to the grid/treemap, and remains composable with date, rating, category, retouch, file-type, smart-category, and people filters. The standalone sidebar page was removed. Real-library query QA remains required. |
 
 | Item | Status |
 |------|--------|

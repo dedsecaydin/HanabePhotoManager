@@ -235,3 +235,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Added independently owned Infrastructure tokenizer, 224px ImageSharp preprocessor, SQLite embedding store, local model catalog, and ONNX CPU semantic search service.
 - Added independent App semantic search ViewModel, result item ViewModel, view, and code-behind; minimally wired a new navigation page without changing treemap behavior.
 - Added Core contract and Infrastructure tokenizer/store tests. Model files remain local-only under LocalApplicationData and are ignored if accidentally placed under the project.
+
+# 2026-08-09 — Semantic browse bound and UNC startup scan
+
+- Enforced the semantic browse candidate boundary in the App ViewModel: deduplicated score-descending Top 50 paths are the only paths emitted to the browse grid and treemap, even if a provider returns more candidates.
+- Added regression coverage for an unordered 75-result provider response and for UNC-root detection.
+- Network library startup now avoids the recursive, mutating empty-date cleanup pass and reuses the completed media scan for the capacity summary, eliminating two redundant full UNC walks while retaining media discovery, tree map, thumbnails, semantic indexing, and normal local-library maintenance.

@@ -8,6 +8,7 @@ namespace HanabePhotoManager.App.Search;
 
 public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
 {
+    public const int ResultLimit = 50;
     private readonly ISemanticSearchService _service;
     private readonly Func<string> _libraryRoot;
     private readonly TimeSpan _searchDebounce;
@@ -87,12 +88,19 @@ public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
                 _indexEnsured = true;
             }
             var matches = await Task.Run(
-                () => _service.SearchAsync(query.Trim(), 50, cancellation.Token),
+                () => _service.SearchAsync(query.Trim(), ResultLimit, cancellation.Token),
                 cancellation.Token).ConfigureAwait(true);
+            var rankedMatches = matches
+                .OrderByDescending(match => match.Score)
+                .ThenBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
+                .GroupBy(match => match.FileKey, StringComparer.OrdinalIgnoreCase)
+                .Select(group => group.First())
+                .Take(ResultLimit)
+                .ToArray();
             Results.Clear();
-            foreach (var match in matches) Results.Add(new SearchResultItemViewModel(match));
+            foreach (var match in rankedMatches) Results.Add(new SearchResultItemViewModel(match));
             NotifyResultsChanged();
-            StatusText = matches.Count == 0 ? "没找到相关照片，换个描述试试。" : "已按语义相关度排序。";
+            StatusText = rankedMatches.Length == 0 ? "没找到相关照片，换个描述试试。" : "已按语义相关度排序。";
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { Results.Clear(); NotifyResultsChanged(); StatusText = ex.Message; }

@@ -61,6 +61,29 @@ public sealed class SemanticSearchViewModelTests
         await service.IndexStarted.Task.WaitAsync(TimeSpan.FromSeconds(2));
     }
 
+    [Fact]
+    public async Task Query_ExposesOnlyTheHighestScoringTopFiftyCandidates()
+    {
+        var service = new RecordingSemanticSearchService(
+            Enumerable.Range(0, 75)
+                .Select(index => new SemanticSearchResult(
+                    $@"D:\photos\{index:D2}.jpg",
+                    index / 100d))
+                .Reverse()
+                .ToArray());
+        using var viewModel = new SemanticSearchViewModel(service, () => @"D:\photos", TimeSpan.Zero);
+        var resultsChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.ResultsChanged += (_, _) => resultsChanged.TrySetResult();
+
+        viewModel.QueryText = "红色";
+
+        await resultsChanged.Task.WaitAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(50, viewModel.RankedResultPaths.Count);
+        Assert.Equal(@"D:\photos\74.jpg", viewModel.RankedResultPaths[0]);
+        Assert.Equal(@"D:\photos\25.jpg", viewModel.RankedResultPaths[^1]);
+    }
+
     private static async Task WaitUntilAsync(Func<bool> predicate)
     {
         var deadline = DateTime.UtcNow.AddSeconds(2);

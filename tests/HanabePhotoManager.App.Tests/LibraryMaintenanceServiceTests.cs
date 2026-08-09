@@ -10,6 +10,13 @@ public sealed class LibraryMaintenanceServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"hanabe-maintenance-{Guid.NewGuid():N}");
 
     [Fact]
+    public void IsNetworkLibraryRoot_RecognizesUncPaths()
+    {
+        LibraryMaintenanceService.IsNetworkLibraryRoot(@"\\Hanabe\拍照").Should().BeTrue();
+        LibraryMaintenanceService.IsNetworkLibraryRoot(@"D:\Photos").Should().BeFalse();
+    }
+
+    [Fact]
     public async Task RemoveEmptyDateDirectoriesAsync_DeletesEmptyDateAndNestedCategoryFolders()
     {
         var emptyDate = CreateDate("07.01");

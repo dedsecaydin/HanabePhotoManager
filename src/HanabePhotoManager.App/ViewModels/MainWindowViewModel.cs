@@ -985,6 +985,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(CurrentViewItemCount));
             if (value == BrowseDisplayMode.Treemap)
             {
+                // The grid section collection may contain an entire date range.
+                // Stop its eager thumbnail loader before the treemap takes over.
+                CancelPreviewThumbnailLoading();
                 EnsureTreemapPopulatedFromPreviewFiles();
             }
             if (_isInitialized)
@@ -1076,38 +1079,41 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // The actual viewport priority loading is triggered by code-behind
         // after each render via RefreshTreemapViewportLoading().
         _treemapSourceFiles = files;
-        // Kick off background dimension reading for justified gallery
-        _ = LoadTreemapDimensionsAsync(files);
+        _treemapDimensionCancellation?.Cancel();
+        _treemapDimensionCancellation?.Dispose();
+        _treemapDimensionCancellation = new CancellationTokenSource();
+        // Read headers in the background, then publish one coherent aspect-ratio
+        // update. Publishing every 1,024 headers repeatedly lays out the entire
+        // root tree on a network library and saturates CPU.
+        _ = LoadTreemapDimensionsAsync(files, _treemapDimensionCancellation.Token);
     }
 
-    private async Task LoadTreemapDimensionsAsync(PreviewFileViewModel[] files)
+    private async Task LoadTreemapDimensionsAsync(
+        PreviewFileViewModel[] files,
+        CancellationToken cancellationToken)
     {
-        var pendingDimensions = new List<(string fullPath, double aspectRatio)>(
-            ProgressiveTreemapViewModel.IncrementalPublicationItemThreshold);
+        var pendingDimensions = new List<(string fullPath, double aspectRatio)>();
         foreach (var fileBatch in files.Chunk(32))
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var dimensions = await Task.Run(() => fileBatch
                 .Select(file => (file.FullPath, dimensions: ImageDimensionReader.ReadDimensions(file.FullPath)))
                 .Where(result => result.dimensions is { width: > 0, height: > 0 })
                 .Select(result => (result.FullPath,
                     (double)result.dimensions!.Value.width / result.dimensions.Value.height))
-                .ToArray())
+                .ToArray(), cancellationToken)
                 .ConfigureAwait(false);
             pendingDimensions.AddRange(dimensions);
-            if (pendingDimensions.Count >= ProgressiveTreemapViewModel.IncrementalPublicationItemThreshold)
-            {
-                TreemapBrowser.SubmitDimensions(pendingDimensions.ToArray());
-                pendingDimensions.Clear();
-            }
         }
 
-        if (pendingDimensions.Count > 0)
+        if (!cancellationToken.IsCancellationRequested && pendingDimensions.Count > 0)
         {
             TreemapBrowser.SubmitDimensions(pendingDimensions);
         }
     }
 
     private PreviewFileViewModel[]? _treemapSourceFiles;
+    private CancellationTokenSource? _treemapDimensionCancellation;
 
     /// <summary>
     /// Called by code-behind after each treemap render to load ONLY
@@ -3559,10 +3565,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var dateSw = System.Diagnostics.Stopwatch.StartNew();
             LibraryDates.Clear();
             ProgressValue = 2;
-            ProgressLabel = "正在清理空日期目录…";
-            var maintenance = await _libraryMaintenanceService
-                .RemoveEmptyDateDirectoriesAsync(LibraryRoot, cancellationToken)
-                .ConfigureAwait(true);
+            var isNetworkLibrary = LibraryMaintenanceService.IsNetworkLibraryRoot(LibraryRoot);
+            var maintenance = new LibraryMaintenanceResult([], []);
+            if (isNetworkLibrary)
+            {
+                // Avoid a destructive all-directory walk before the real scan on a UNC share.
+                // Import workflows still run their normal maintenance; startup remains read-only.
+                ProgressLabel = "网络照片库：跳过启动时空目录清理…";
+            }
+            else
+            {
+                ProgressLabel = "正在清理空日期目录…";
+                maintenance = await _libraryMaintenanceService
+                    .RemoveEmptyDateDirectoriesAsync(LibraryRoot, cancellationToken)
+                    .ConfigureAwait(true);
+            }
             ProgressValue = 5;
             foreach (var node in DiscoverDates(LibraryRoot))
             {
@@ -3580,7 +3597,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             await ApplyStoredMetadataAsync(cancellationToken).ConfigureAwait(true);
             streamSw.Stop();
             var capSw = System.Diagnostics.Stopwatch.StartNew();
-            await RefreshCapacityAsync(LibraryRoot).ConfigureAwait(true);
+            await RefreshCapacityAsync(
+                LibraryRoot,
+                isNetworkLibrary ? PreviewFiles.Sum(file => file.Length) : null).ConfigureAwait(true);
             capSw.Stop();
             _ = RebuildRetouchTrackingAsync().ConfigureAwait(true);
             totalSw.Stop();
@@ -4306,6 +4325,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void RebuildExpandedPreviewFiles()
     {
+        if (IsTreemapBrowseMode)
+        {
+            // The hidden grid must not materialize or decode every file while the
+            // treemap owns thumbnail loading through its viewport queue.
+            VisiblePreviewFiles.Clear();
+            return;
+        }
+
         CancelPreviewThumbnailLoading();
         var oldItems = VisiblePreviewFiles.ToArray();
         VisiblePreviewFiles.Clear();
@@ -4485,6 +4512,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _previewThumbnailCancellation?.Cancel();
         _previewThumbnailCancellation?.Dispose();
         _previewThumbnailCancellation = null;
+        _treemapDimensionCancellation?.Cancel();
+        _treemapDimensionCancellation?.Dispose();
+        _treemapDimensionCancellation = null;
     }
 
     private static PreviewFileViewModel? CreatePreviewFile(string file, string category)
@@ -5098,13 +5128,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return "素材";
     }
 
-    private async Task RefreshCapacityAsync(string selectedPath)
+    private async Task RefreshCapacityAsync(string selectedPath, long? knownMediaSize = null)
     {
         SelectedFolderSize = "计算中…";
         SelectedFolderPercent = "计算中…";
-        var size = await Task.Run(() => Directory.Exists(selectedPath) ? GetDirectorySize(selectedPath) : 0).ConfigureAwait(true);
+        var size = knownMediaSize ?? await Task.Run(
+            () => Directory.Exists(selectedPath) ? GetDirectorySize(selectedPath) : 0).ConfigureAwait(true);
         SelectedFolderSize = FormatBytes(size);
-        SelectedFolderPercent = TryGetVolumePercent(selectedPath, size);
+        SelectedFolderPercent = knownMediaSize is null
+            ? TryGetVolumePercent(selectedPath, size)
+            : "网络库：使用本次媒体扫描统计，未重复遍历全部文件";
     }
 
     private void SelectDateByValue(LibraryDate date)

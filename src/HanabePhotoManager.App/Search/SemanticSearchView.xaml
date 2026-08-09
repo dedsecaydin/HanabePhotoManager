@@ -14,7 +14,7 @@
                Text="{Binding QueryText, UpdateSourceTrigger=PropertyChanged}"
                AutomationProperties.Name="语义搜索描述"
                ToolTip="语义搜索：试试“海边日落”或“红色连衣裙”" />
-      <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" />
+      <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" />
       <TextBlock Margin="0,7,0,0" Opacity="0.74" TextWrapping="Wrap" Text="{Binding StatusText}" />
     </StackPanel>
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">

@@ -19,11 +19,13 @@ using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ReleaseNotes;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.App.Search;
 using HanabePhotoManager.Core.Browsing.Treemap;
 using HanabePhotoManager.App.Watermark;
 using HanabePhotoManager.Core.Imports;
 using HanabePhotoManager.Core.Performance;
 using HanabePhotoManager.Infrastructure.Files;
+using HanabePhotoManager.Infrastructure.Search;
 using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
 
@@ -85,6 +87,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Home",
         "Import",
         "Preview",
+        "SemanticSearch",
         "FaceSearch",
         "MapPhotos",
         "Compression",
@@ -285,6 +288,11 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         };
         FaceSearch = new FaceSearchViewModel(() => LibraryRoot);
+        SemanticSearch = new SemanticSearchViewModel(
+            new ClipSemanticSearchService(
+                new SqliteSemanticIndexStore(Path.Combine(AppDataPaths.Root, "semantic-index.db")),
+                new ModelCatalog()),
+            () => LibraryRoot);
         BrowseLibraryCommand = new AsyncRelayCommand(BrowseLibraryAsync, CanRunCommand);
         BrowseSourceCommand = new AsyncRelayCommand(BrowseSourceAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
@@ -304,6 +312,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ShowImportCommand = new RelayCommand(() => CurrentPage = "Import");
         ShowPreviewCommand = new RelayCommand(() => _ = ShowPreviewAsync());
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
+        ShowSemanticSearchCommand = new RelayCommand(() => CurrentPage = "SemanticSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
         ShowWatermarkCommand = new RelayCommand(() =>
@@ -362,6 +371,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public ObservableCollection<LibraryDateNode> LibraryDates { get; } = [];
 
     public FaceSearchViewModel FaceSearch { get; }
+
+    public SemanticSearchViewModel SemanticSearch { get; }
 
     public TagManagerViewModel TagManager { get; }
 
@@ -895,6 +906,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ShowFaceSearchCommand { get; }
 
+    public IRelayCommand ShowSemanticSearchCommand { get; }
+
     public IRelayCommand ShowMapPhotosCommand { get; }
 
     public IRelayCommand ShowCompressionCommand { get; }
@@ -1240,6 +1253,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(HasLibraryRoot));
                 OnPropertyChanged(nameof(LibraryHealthText));
                 FaceSearch.NotifyLibraryRootChanged();
+                SemanticSearch.NotifyLibraryRootChanged();
                 RefreshConnectedDevices();
                 NotifyCommandStates();
             }
@@ -3957,6 +3971,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsImportPage));
                 OnPropertyChanged(nameof(IsPreviewPage));
                 OnPropertyChanged(nameof(IsFaceSearchPage));
+                OnPropertyChanged(nameof(IsSemanticSearchPage));
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
                 OnPropertyChanged(nameof(IsWatermarkPage));
@@ -3992,6 +4007,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool IsPreviewPage => CurrentPage == "Preview";
 
     public bool IsFaceSearchPage => CurrentPage == "FaceSearch";
+
+    public bool IsSemanticSearchPage => CurrentPage == "SemanticSearch";
 
     public bool IsMapPhotosPage => CurrentPage == "MapPhotos";
 
@@ -4143,6 +4160,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Import" => "导入",
         "Preview" => "浏览",
         "FaceSearch" => "人物查找",
+        "SemanticSearch" => "语义搜索",
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
         "Watermark" => "批量水印",
@@ -4158,6 +4176,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Import" => "把相机文件夹拖进来，它会自动分类、建目录、导入。",
         "Preview" => "照片墙、分类筛选、缩略图缩放，专心看内容。",
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
+        "SemanticSearch" => "使用自然语言描述，在本机照片库中找到相关画面。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
@@ -5386,6 +5405,7 @@ public sealed class MainWindowViewModel : ObservableObject
         "Home" => new(key, "主页", "Icon.Home", ShowHomeCommand, order),
         "Import" => new(key, "导入照片", "Icon.Import", ShowImportCommand, order),
         "Preview" => new(key, "照片图库", "Icon.Library", ShowPreviewCommand, order),
+        "SemanticSearch" => new(key, "语义搜索", "Icon.Search", ShowSemanticSearchCommand, order),
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),

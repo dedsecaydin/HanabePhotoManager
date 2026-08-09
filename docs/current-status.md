@@ -105,6 +105,12 @@
 
 ## Cross-cutting
 
+## Semantic Search
+
+| Feature | Status | Notes |
+|---|---|---|
+| Chinese-CLIP semantic search | Implemented-Unverified | Local ONNX Runtime CPU pipeline, SQLite embeddings, Chinese/English vocabulary tokenizer, and dedicated search page are implemented. Requires user-provided matching ONNX exports in LocalApplicationData; online model download verification is pending. |
+
 | Item | Status |
 |------|--------|
 | MapPage WebView2 crash | Resolved |

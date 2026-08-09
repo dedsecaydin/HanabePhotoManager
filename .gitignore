@@ -13,3 +13,7 @@ artifacts/
 
 # Local Python environments
 **/.venv/
+
+# Local-only semantic-search model exports
+src/HanabePhotoManager.App/Models/ChineseCLIP/
+*.onnx.data

@@ -189,3 +189,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Borderless mode: skip white tile backgrounds, UniformToFill close-fit
 - Recursive 修后 scan in background Task.Run
 - ContentHeight-based ScrollViewer extent for subtree scrolling
+# 2026-08-09 — Semantic search (Chinese-CLIP / ONNX / SQLite)
+
+- Added Core semantic-search contracts and immutable index/query/result/status models.
+- Added independently owned Infrastructure tokenizer, 224px ImageSharp preprocessor, SQLite embedding store, local model catalog, and ONNX CPU semantic search service.
+- Added independent App semantic search ViewModel, result item ViewModel, view, and code-behind; minimally wired a new navigation page without changing treemap behavior.
+- Added Core contract and Infrastructure tokenizer/store tests. Model files remain local-only under LocalApplicationData and are ignored if accidentally placed under the project.

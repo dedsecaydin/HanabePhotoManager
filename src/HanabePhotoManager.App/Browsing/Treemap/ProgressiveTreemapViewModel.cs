@@ -9,6 +9,7 @@ namespace HanabePhotoManager.App.Browsing.Treemap;
 public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
 {
     public static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromMilliseconds(150);
+    public const int IncrementalPublicationItemThreshold = 1024;
 
     private readonly object _gate = new();
     private readonly Dictionary<string, LibraryDateMediaItem> _mediaByPath =
@@ -30,6 +31,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
     private int _discoveredCount;
     private int _layoutRevision;
     private bool _hasPublished;
+    private int _lastPublishedMediaCount;
     private bool _isScanning;
     private bool _isPartial;
     private bool _disposed;
@@ -125,6 +127,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
             _thumbnailsByPath.Clear();
             _dimensionsByPath.Clear();
             _hasPublished = false;
+            _lastPublishedMediaCount = 0;
         }
 
         RootPath = rootPath;
@@ -144,7 +147,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(batch);
 
-        var publishImmediately = false;
+        var publishNow = false;
         lock (_gate)
         {
             if (generation != _generation)
@@ -157,17 +160,19 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
                 _mediaByPath.TryAdd(item.FullPath, item);
             }
 
-            publishImmediately = !_hasPublished && _mediaByPath.Count > 0;
-            _hasPublished |= publishImmediately;
+            var itemCount = _mediaByPath.Count;
+            publishNow = (!_hasPublished && itemCount > 0) ||
+                itemCount - _lastPublishedMediaCount >= IncrementalPublicationItemThreshold;
+            if (publishNow)
+            {
+                _hasPublished = true;
+                _lastPublishedMediaCount = itemCount;
+            }
         }
 
-        if (publishImmediately)
+        if (publishNow)
         {
             PublishNow(generation);
-        }
-        else
-        {
-            SchedulePublish(generation);
         }
     }
 
@@ -374,6 +379,7 @@ public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
                     categories.First(item => item.Key == CurrentContainerKey).Label)
             ];
         DiscoveredCount = media.Length;
+        _lastPublishedMediaCount = media.Length;
         LayoutRevision++;
     }
 

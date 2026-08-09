@@ -26,6 +26,12 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private int _debugTileCount;
     private List<string> _visiblePaths = [];
     private List<string> _visibleWithoutThumbnail = [];
+    private IReadOnlyList<TreemapItemViewModel>? _cachedPanoramaSource;
+    private string? _cachedPanoramaRootKey;
+    private IReadOnlyList<TreemapItemViewModel> _cachedPanoramaItems = [];
+    private double _cachedPanoramaViewportWidth = double.NaN;
+    private double _cachedPanoramaZoom = double.NaN;
+    private PanoramaLayoutResult? _cachedPanoramaLayout;
     private double _contentHeight;
     private double _contentWidth;
 
@@ -167,11 +173,24 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
     public static bool IsPanoramaZoom(double zoom) => PanoramaPhotoLayout.IsActive(zoom);
 
-    internal PanoramaLayoutResult GetPanoramaLayout(double viewportWidth) =>
-        _panoramaLayout.Arrange(
-            GetPanoramaItems().Select(item => (item.AspectRatio, (string?)item.Key)).ToArray(),
+    internal PanoramaLayoutResult GetPanoramaLayout(double viewportWidth)
+    {
+        var photos = GetPanoramaItems();
+        if (_cachedPanoramaLayout is not null &&
+            _cachedPanoramaViewportWidth.Equals(viewportWidth) &&
+            _cachedPanoramaZoom.Equals(ZoomScale))
+        {
+            return _cachedPanoramaLayout;
+        }
+
+        _cachedPanoramaViewportWidth = viewportWidth;
+        _cachedPanoramaZoom = ZoomScale;
+        _cachedPanoramaLayout = _panoramaLayout.Arrange(
+            photos.Select(item => (item.AspectRatio, (string?)item.Key)).ToArray(),
             viewportWidth,
             ZoomScale);
+        return _cachedPanoramaLayout;
+    }
 
     public static bool ShouldRequestThumbnail(double width, double height) =>
         double.IsFinite(width) &&
@@ -275,10 +294,24 @@ public sealed class PhotoTreemapControl : FrameworkElement
         }
     }
 
-    private IReadOnlyList<TreemapItemViewModel> GetPanoramaItems() =>
-        RootKey is null
+    private IReadOnlyList<TreemapItemViewModel> GetPanoramaItems()
+    {
+        if (ReferenceEquals(_cachedPanoramaSource, ItemsSource) &&
+            string.Equals(_cachedPanoramaRootKey, RootKey, StringComparison.Ordinal))
+        {
+            return _cachedPanoramaItems;
+        }
+
+        _cachedPanoramaSource = ItemsSource;
+        _cachedPanoramaRootKey = RootKey;
+        _cachedPanoramaItems = RootKey is null
             ? ItemsSource.Where(item => !item.IsContainer).ToArray()
             : ItemsSource.Where(item => item.ParentKey == RootKey && !item.IsContainer).ToArray();
+        _cachedPanoramaViewportWidth = double.NaN;
+        _cachedPanoramaZoom = double.NaN;
+        _cachedPanoramaLayout = null;
+        return _cachedPanoramaItems;
+    }
 
     private void DrawPanorama(
         DrawingContext drawingContext,

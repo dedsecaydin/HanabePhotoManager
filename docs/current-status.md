@@ -106,7 +106,7 @@
 
 | Concern | Status | Notes |
 |---------|--------|-------|
-| UI hang on large treemap (KI-07) | Fix attempted | Sync `ImageDimensionReader` removed from UI thread. Background batch reading added. |
+| UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; published-app CPU smoke test passed 2026-08-09. |
 | 6217+ items scrolling | Partial | `ContentHeight` → ScrollViewer.ExtentHeight. Unverified at scale. |
 | Bottom items clipped (KI-06) | Partial | Same fix as above. |
 | 10k+ items layout time | Unknown | Not benchmarked. `JustifiedGalleryLayout` is O(n). |

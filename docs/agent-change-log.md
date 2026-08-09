@@ -1,5 +1,13 @@
 # Agent Change Log
 
+## 2026-08-09 - All-library treemap startup CPU saturation
+
+- Diagnosed a 13,907-item startup loop in which 64-item scan batches and 32-item dimension batches repeatedly rebuilt the complete immutable treemap; panorama redraws also recalculated the all-photo layout for an unchanged snapshot.
+- Added `ProgressiveTreemapViewModel.IncrementalPublicationItemThreshold` (1,024): publish the first batch, each threshold crossing, and final completion.
+- Batched dimension submission to the same threshold and cached panorama item and layout snapshots in `PhotoTreemapControl`.
+- Added regression coverage that small scan batches do not trigger a full rebuild.
+- Verification: Release solution build 0 warnings/0 errors; tests Core 369, Infrastructure 162, App 342; self-contained win-x64 published to the standard install directory and passed a 30-second CPU responsiveness smoke test.
+
 ## 2026-08-09 — Import multi-select, progress, and batch dedupe
 
 ### Summary

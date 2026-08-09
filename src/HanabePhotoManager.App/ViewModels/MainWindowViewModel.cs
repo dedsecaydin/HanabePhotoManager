@@ -1076,6 +1076,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task LoadTreemapDimensionsAsync(PreviewFileViewModel[] files)
     {
+        var pendingDimensions = new List<(string fullPath, double aspectRatio)>(
+            ProgressiveTreemapViewModel.IncrementalPublicationItemThreshold);
         foreach (var fileBatch in files.Chunk(32))
         {
             var dimensions = await Task.Run(() => fileBatch
@@ -1085,10 +1087,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     (double)result.dimensions!.Value.width / result.dimensions.Value.height))
                 .ToArray())
                 .ConfigureAwait(false);
-            if (dimensions.Length > 0)
+            pendingDimensions.AddRange(dimensions);
+            if (pendingDimensions.Count >= ProgressiveTreemapViewModel.IncrementalPublicationItemThreshold)
             {
-                TreemapBrowser.SubmitDimensions(dimensions);
+                TreemapBrowser.SubmitDimensions(pendingDimensions.ToArray());
+                pendingDimensions.Clear();
             }
+        }
+
+        if (pendingDimensions.Count > 0)
+        {
+            TreemapBrowser.SubmitDimensions(pendingDimensions);
         }
     }
 

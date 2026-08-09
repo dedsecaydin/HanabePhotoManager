@@ -95,7 +95,7 @@ public sealed class ProgressiveTreemapViewModelTests
     }
 
     [Fact]
-    public async Task LaterBatches_AreCoalescedIntoOneLayoutPublication()
+    public void LaterBatches_ArePublishedWhenTheScanCompletes()
     {
         using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.FromMilliseconds(40));
         var generation = viewModel.BeginScan(@"D:\Photos");
@@ -106,7 +106,7 @@ public sealed class ProgressiveTreemapViewModelTests
         viewModel.ApplyBatch(generation, Batch(Item(@"D:\Photos\c.jpg", "JPG生图", 30)));
 
         viewModel.LayoutRevision.Should().Be(firstRevision);
-        await WaitUntilAsync(() => viewModel.LayoutRevision > firstRevision);
+        viewModel.Complete(generation, isPartial: false);
         viewModel.LayoutRevision.Should().Be(firstRevision + 1);
         viewModel.DiscoveredCount.Should().Be(3);
     }
@@ -146,6 +146,22 @@ public sealed class ProgressiveTreemapViewModelTests
         viewModel.IsScanning.Should().BeFalse();
         viewModel.IsPartial.Should().BeTrue();
         viewModel.Items.Where(item => !item.IsContainer).Should().HaveCount(2);
+    }
+
+    [Fact]
+    public void IncrementalScan_DoesNotRebuildTheFullTreemapForEverySmallBatch()
+    {
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero);
+        var generation = viewModel.BeginScan(@"D:\Photos");
+        viewModel.ApplyBatch(generation, Batch(Item(@"D:\Photos\a.jpg", "JPG生图", 10)));
+        var firstRevision = viewModel.LayoutRevision;
+
+        viewModel.ApplyBatch(generation, Batch(Item(@"D:\Photos\b.jpg", "JPG生图", 20)));
+
+        viewModel.LayoutRevision.Should().Be(firstRevision,
+            "small scan batches must be coalesced instead of rebuilding every accumulated item");
+        viewModel.Complete(generation, isPartial: false);
+        viewModel.LayoutRevision.Should().Be(firstRevision + 1);
     }
 
     [Fact]

@@ -67,11 +67,13 @@
 
 ### KI-07 — UI hang on large treemap open
 
-- **Status:** Fix Attempted
+- **Status:** Resolved (2026-08-09)
 - **Symptom:** App shows "Not Responding" when opening treemap with many items.
 - **Root cause:** `ImageDimensionReader.ReadDimensions()` called synchronously on UI thread in `PublishNow` → `ResolveAspectRatio`. Opening 121+ files = 300-500ms block.
 - **Fix applied:** Removed sync IO from `ResolveAspectRatio`. Added `LoadTreemapDimensionsAsync` (Task.Run, 32/batch). `_isPublishing` mutual exclusion.
-- **Verification:** Not yet tested with 11739 items.
+- **Additional root cause (2026-08-09):** The startup all-library scan published a complete immutable treemap for every 64-item scan batch, and the dimension reader republished it for every 32-item result. At panorama zoom, each redraw also recomputed the layout for every photo. This multiplied all-library work until the process saturated a CPU core.
+- **Resolution:** Incremental scan publication is now bounded to the first batch, each 1,024 newly discovered items, and completion. Dimension results are submitted in the same-sized batches, and unchanged panorama snapshots reuse their calculated layout.
+- **Verification:** A 30-second launch of the self-contained published app was responsive and consumed 0.17 CPU seconds (7 threads); the prior running build measured 97-123% processor time over five samples.
 - **Files:** `ProgressiveTreemapViewModel.cs`, `MainWindowViewModel.cs`
 
 ---

@@ -8,6 +8,45 @@
 > **Tech Stack:** .NET 8 / C# 12 / WPF / CommunityToolkit.Mvvm / xUnit  
 > **References:** [`AGENT_HANDOFF.md`](AGENT_HANDOFF.md), [`docs/architecture.md`](docs/architecture.md), [`docs/workflow.md`](docs/workflow.md), [`docs/design-system.md`](docs/design-system.md)
 
+## HanabePhoto Hermes / Multi-Agent Mandatory Rules
+
+> 本节约束 Hermes 与所有 Agent 的跨 Agent 协作。
+
+### Mandatory Master Guide
+
+任何涉及以下内容的任务开始前：
+
+- HanabePhoto UI / UX
+- Material Design / Design System
+- App Shell / Navigation / Sidebar / Toolbar
+- 动画 / Motion
+- Gallery / Thumbnail / Inspector
+- 页面视觉重构
+- Bug Hunting / QA / Regression
+- Hermes → ChatGPT Desktop → Codex 的跨 Agent 协作
+- 当前版本功能保护
+- 进度阶段与汇报
+
+执行 Agent **必须先读取：**
+
+`docs/HERMES_MASTER_GUIDE.md`
+
+然后再读取与当前任务相关的现有项目文档。
+
+### Source of Truth
+
+始终遵循：
+
+```text
+Current Repository / Runtime
+        >
+Current Tests / Docs
+        >
+Agent Handoff
+        >
+Historical Chat / Agent Memory
+```
+
 ## Project
 
 Hanabe Photo Manager is a Windows photo-management desktop application built with .NET 8, C# 12, WPF, XAML, and CommunityToolkit.Mvvm. The solution separates domain policies (`Core`), external-system implementations (`Infrastructure`), and the WPF application (`App`), with matching xUnit test projects.

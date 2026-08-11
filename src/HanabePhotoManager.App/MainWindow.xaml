@@ -998,7 +998,7 @@
                 </DockPanel>
                 <Border x:Name="BrowseUnifiedWorkspace" Grid.Column="1" CornerRadius="0" Background="Transparent" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,0,0,1" Padding="0,8,0,12">
                   <DockPanel LastChildFill="True">
-                    <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="16,12" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Visibility="{Binding IsBrowseConditionsExpanded, Converter={StaticResource BoolToVis}}">
+                    <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="16,12,16,0" CornerRadius="0" Background="Transparent" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,0,0,1" Visibility="{Binding IsBrowseConditionsExpanded, Converter={StaticResource BoolToVis}}">
                       <StackPanel>
                       <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
                         <TextBlock Text="分类" FontSize="12" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" Margin="0,0,12,0" />

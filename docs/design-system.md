@@ -1,6 +1,6 @@
 # Hanabe Photo Manager Design System
 
-版本：1.0　更新：2026-07-23　状态：项目唯一 UI 规范来源
+版本：1.0　更新：2026-08-11　状态：项目唯一 UI 规范来源
 
 ## Design Principles
 
@@ -21,16 +21,25 @@
 
 ## Tokens
 
-- Color：Background、Surface、Border、Text、Accent、Status 与 Viewer 语义族。
-- Spacing：0、2、4、6、8、12、16、20、24、32、40、48；页面 32，卡片 20，gutter 16/24。
+- Color：Background（Canvas/Subtle/Chrome）、Surface（Default/Subtle/Elevated/Interactive/Selected/Disabled/Overlay）、Border、Text、Accent、Status（含 Subtle）与 Viewer 语义族；Overlay Scrim 独立表达遮罩层。
+- Spacing：0、2、4、6、8、12、16、20、24、32、40、48；页面 32，卡片 20，gutter 16/24。复合 Thickness 必须由共享 Spacing Token 提供。
 - Radius：Small 6、Control 8、Card 12、Dialog 16。
-- Typography：`Segoe UI Variable, Microsoft YaHei UI`；11、12、13、16、20、28；仅 Regular/SemiBold。
+- Typography：`Segoe UI Variable, Microsoft YaHei UI`；Caption 11/16、BodySmall 12/18、Body 13/20、Label 13/18、TitleSmall 16/22、Title 20/28、Display 28/36（字号/行高）；字重仅使用 Regular、Medium、SemiBold、Bold Token。
 - Sizing：控件 36/40，Sidebar 232，内容最大宽度 1440，阅读区 960，图标 12/16/18/20/24。
 - Material：Shell Chrome 可使用低对比半透明材质；普通内容区保持清晰、稳定和高可读性。
-- Gradient：仅允许低饱和环境渐变和重点展示渐变，必须由共享语义 Brush 提供。
 - Shadow：普通内容无阴影或仅有极轻分隔；Floating、Popup 与 Dialog 使用分层阴影；重点展示区域可使用单一强调阴影。
 - Highlight / Glow：高光描边用于材质边缘；发光只用于 Focus、Selected 或特殊状态，且不得成为常规边框。
-- Motion：Fast 150ms、Normal 180ms、Slow 220ms，只允许颜色、透明度、边框与小幅位移。
+- Motion：Fast 150ms、Normal 180ms、Slow 220ms；仅使用 Standard 或 Emphasized easing，且只允许颜色、透明度、边框与小幅位移。
+
+## Material 3 Desktop Adaptation Rules
+
+Material 3 在 HanabePhoto 中是桌面设计体系，不是移动端模板。Shell Chrome（顶部栏、侧边栏、次级摘要）可用共享的轻材质 Brush 和细分隔线建立连续工作区；内容区、图库和表单必须使用稳定、清晰的 Surface 与 Border 层级，优先保证图像和高密度信息可读。
+
+- 保持桌面信息密度：常规控件高度使用 36/40 Token，避免移动端大按钮、巨大圆角和 FAB。
+- 交互反馈使用语义色、边框和轻量透明度变化；不使用大缩放 Hover、弹簧/回弹、玻璃拟态卡片堆叠、彩色渐变或常规发光边框。
+- Focus 永远可见，使用 `Brush.Border.Focus` 或 `Shadow.FocusGlow`；Selected 与 Focus 不能只依赖颜色差异。
+- 普通内容 Surface 不使用阴影；仅 Floating、Popup、Dialog 使用分层 Shadow Token。PhotoViewer 保持独立深色 Canvas，其工具栏与信息栏仍复用共享组件。
+- Light 与 Dark 必须导出完全相同、类型兼容的 Color/Brush/Token/Style 键；每套主题分别维持正文、次要文字、焦点和状态色的可读对比度。
 
 ## Component Library
 
@@ -54,12 +63,12 @@
 
 ## Controlled Visual Effects
 
-- 允许使用半透明背景、背景模糊、柔和渐变、分层阴影、高光描边，以及选中态或焦点态发光。
+- 允许使用半透明背景、分层阴影、高光描边，以及选中态或焦点态发光。
 - 所有效果必须来自统一 Design Tokens、语义 Brush、Effect 或共享组件；页面不得写死颜色、渐变、模糊、阴影、发光、圆角或间距。
 - 普通内容区以清晰、可读和统一为优先，不重复叠加材质和效果。
-- Shell Chrome 只使用轻材质与低对比高光；重点区域只允许少量环境渐变或强调阴影；Popup、Dialog 和 Floating 使用中等阴影。
+- Shell Chrome 只使用轻材质与低对比高光；Popup、Dialog 和 Floating 使用中等阴影。
 - 背景模糊只在技术实现稳定、性能可控且不降低文字对比度时使用；不满足条件时使用 Token 化半透明材质替代。
-- 渐变必须柔和、低饱和并与主题协调；禁止廉价炫彩渐变。
+- 禁止彩色渐变；如确有环境层级需求，必须先在本规范和共享语义 Brush 中定义，并经过 Light/Dark 可读性验证。
 - 发光仅表达 Focus、Selected 或特殊状态，不得作为所有组件的常规描边。
 - Light / Dark 必须暴露同名、同类型资源，并分别验证对比度、层级和可读性。
 - 不得因视觉效果破坏 App Shell 连续性、信息层级、键盘焦点、DPI 表现或运行性能。

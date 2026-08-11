@@ -6,7 +6,7 @@
       </ScrollViewer>
       <Button HorizontalAlignment="Left" VerticalAlignment="Center" Margin="18" Width="44" Height="44" Content="‹" Style="{StaticResource Button.Secondary}" Command="{Binding PreviousCommand}"/>
       <Button HorizontalAlignment="Right" VerticalAlignment="Center" Margin="18" Width="44" Height="44" Content="›" Style="{StaticResource Button.Secondary}" Command="{Binding NextCommand}"/>
-      <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="20" Padding="12,6" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Elevated}"><TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource Brush.Text.Primary}"/></Border>
+      <Border HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="20" Padding="12,6" CornerRadius="8" Background="{DynamicResource Brush.Surface.Elevated}"><TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource Brush.Text.Primary}"/></Border>
     </Grid>
     <Border Grid.Column="1" Padding="24" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1,0,0,0">
       <DockPanel><Button DockPanel.Dock="Top" HorizontalAlignment="Right" Content="关闭  Esc" Style="{StaticResource Button.Toolbar}" Click="Close_Click"/>

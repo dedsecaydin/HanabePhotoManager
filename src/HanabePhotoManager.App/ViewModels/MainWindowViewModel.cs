@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Browsing.Treemap;
+using HanabePhotoManager.App.Albums;
 using HanabePhotoManager.App.Collections;
 using HanabePhotoManager.App.Duplicates;
 using HanabePhotoManager.App.Imports;
@@ -26,6 +27,7 @@ using HanabePhotoManager.App.Watermark;
 using HanabePhotoManager.Core.Imports;
 using HanabePhotoManager.Core.Performance;
 using HanabePhotoManager.Infrastructure.Files;
+using HanabePhotoManager.Infrastructure.Albums;
 using HanabePhotoManager.Infrastructure.Search;
 using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
@@ -88,6 +90,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "Home",
         "Import",
         "Preview",
+        "CustomAlbums",
         "FaceSearch",
         "MapPhotos",
         "Compression",
@@ -256,6 +259,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             () => PreviewFiles.Select(file => file.FullPath));
         Compression = new CompressionViewModel();
         Watermark = new WatermarkViewModel();
+        CustomAlbums = new CustomAlbumsViewModel(
+            new JsonCustomAlbumStore(Path.Combine(AppDataPaths.Root, "custom-albums.json")),
+            new CustomAlbumPhotoScanner());
         PhotoViewer = new PhotoViewerViewModel();
         TreemapBrowser = new ProgressiveTreemapViewModel();
         TreemapBrowser.PropertyChanged += (_, args) =>
@@ -322,6 +328,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ShowHomeCommand = new RelayCommand(() => CurrentPage = "Home");
         ShowImportCommand = new RelayCommand(() => CurrentPage = "Import");
         ShowPreviewCommand = new RelayCommand(() => _ = ShowPreviewAsync());
+        ShowCustomAlbumsCommand = new RelayCommand(() => CurrentPage = "CustomAlbums");
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
@@ -395,6 +402,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public CompressionViewModel Compression { get; }
 
     public WatermarkViewModel Watermark { get; }
+
+    public CustomAlbumsViewModel CustomAlbums { get; }
 
     public PhotoViewerViewModel PhotoViewer { get; }
 
@@ -915,6 +924,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IRelayCommand ShowImportCommand { get; }
 
     public IRelayCommand ShowPreviewCommand { get; }
+
+    public IRelayCommand ShowCustomAlbumsCommand { get; }
 
     public IRelayCommand ShowFaceSearchCommand { get; }
 
@@ -2183,6 +2194,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await TagManager.InitializeAsync().ConfigureAwait(true);
         PeopleAlbums.RefreshRecognitionStatus();
         await PeopleAlbums.InitializeAsync().ConfigureAwait(true);
+        await CustomAlbums.InitializeAsync().ConfigureAwait(true);
 
         if (!string.IsNullOrWhiteSpace(LibraryRoot) && Directory.Exists(LibraryRoot))
         {
@@ -4146,6 +4158,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsHomePage));
                 OnPropertyChanged(nameof(IsImportPage));
                 OnPropertyChanged(nameof(IsPreviewPage));
+                OnPropertyChanged(nameof(IsCustomAlbumsPage));
                 OnPropertyChanged(nameof(IsFaceSearchPage));
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
@@ -4180,6 +4193,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsImportPage => CurrentPage == "Import";
 
     public bool IsPreviewPage => CurrentPage == "Preview";
+
+    public bool IsCustomAlbumsPage => CurrentPage == "CustomAlbums";
 
     public bool IsFaceSearchPage => CurrentPage == "FaceSearch";
 
@@ -4333,6 +4348,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         "Import" => "导入",
         "Preview" => "浏览",
+        "CustomAlbums" => "自定义相册",
         "FaceSearch" => "人物查找",
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
@@ -4348,6 +4364,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         "Import" => "把相机文件夹拖进来，它会自动分类、建目录、导入。",
         "Preview" => "照片墙、分类筛选、缩略图缩放，专心看内容。",
+        "CustomAlbums" => "添加任意文件夹作为虚拟相册；所有管理操作都不会改动磁盘文件。",
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
@@ -5591,6 +5608,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "Home" => new(key, "主页", "Icon.Home", ShowHomeCommand, order),
         "Import" => new(key, "导入照片", "Icon.Import", ShowImportCommand, order),
         "Preview" => new(key, "照片图库", "Icon.Library", ShowPreviewCommand, order),
+        "CustomAlbums" => new(key, "自定义相册", "Icon.Library", ShowCustomAlbumsCommand, order),
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),

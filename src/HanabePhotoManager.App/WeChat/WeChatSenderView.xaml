@@ -46,7 +46,7 @@
             <Button Margin="0,8,0,0" Content="定位目标聊天" Style="{DynamicResource Button.Secondary}"
                     Command="{Binding LocateTargetCommand}"/>
             <Border Margin="0,10,0,0" Padding="10" Background="{DynamicResource Brush.Surface.Subtle}"
-                    CornerRadius="{StaticResource Radius.Control}">
+                    CornerRadius="8">
               <StackPanel>
                 <TextBlock Text="{Binding LocatedTitle, StringFormat=微信标题：{0}}" FontWeight="SemiBold"/>
                 <TextBlock Margin="0,4,0,0" Text="{Binding LocatedTargetType, StringFormat=类型：{0}}"
@@ -57,7 +57,7 @@
                     Command="{Binding ConfirmTargetCommand}"/>
             <Border Margin="0,16,0,0" Padding="12"
                     Background="{DynamicResource Brush.Surface.Subtle}"
-                    CornerRadius="{StaticResource Radius.Control}">
+                    CornerRadius="8">
               <StackPanel>
                 <TextBlock Text="自动定位失败时" FontWeight="SemiBold"/>
                 <TextBlock Margin="0,4,0,10" TextWrapping="Wrap"

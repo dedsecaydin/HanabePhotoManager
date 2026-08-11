@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:treemap="clr-namespace:HanabePhotoManager.App.Browsing.Treemap" xmlns:grid="clr-namespace:HanabePhotoManager.App.Browsing.Grid" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" KeyUp="MainWindow_KeyUp" SizeChanged="MainWindow_SizeChanged">
+<Window x:Class="HanabePhotoManager.App.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels" xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation" xmlns:albums="clr-namespace:HanabePhotoManager.App.Albums" xmlns:cloud="clr-namespace:HanabePhotoManager.App.Cloud" xmlns:contest="clr-namespace:HanabePhotoManager.App.Contest" xmlns:map="clr-namespace:HanabePhotoManager.App.Map" xmlns:compress="clr-namespace:HanabePhotoManager.App.Compression" xmlns:watermark="clr-namespace:HanabePhotoManager.App.Watermark" xmlns:treemap="clr-namespace:HanabePhotoManager.App.Browsing.Treemap" xmlns:grid="clr-namespace:HanabePhotoManager.App.Browsing.Grid" xmlns:local="clr-namespace:HanabePhotoManager.App" Title="Hanabe Photo Manager Alpha" Icon="Assets/HanabeApp.ico" MinWidth="1180" MinHeight="760" WindowStartupLocation="CenterScreen" Background="{DynamicResource Brush.Background.Canvas}" FontFamily="{StaticResource Typography.FontFamily.UI}" UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="ClearType" Width="{Binding WindowWidth, Mode=TwoWay}" Height="{Binding WindowHeight, Mode=TwoWay}" KeyDown="MainWindow_KeyDown" KeyUp="MainWindow_KeyUp" SizeChanged="MainWindow_SizeChanged">
   <FrameworkElement.Resources>
     <ResourceDictionary>
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -52,7 +52,7 @@
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type Button}">
-              <Border Name="Chrome" CornerRadius="{StaticResource Radius.Control}" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}" Padding="{TemplateBinding Control.Padding}">
+              <Border Name="Chrome" CornerRadius="8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}" Padding="{TemplateBinding Control.Padding}">
                 <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True" />
               </Border>
               <ControlTemplate.Triggers>
@@ -290,24 +290,23 @@
       </Style>
       <Style x:Key="PreviewDateHeaderButton" TargetType="{x:Type Button}">
         <Setter Property="FrameworkElement.FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+        <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="Margin" Value="0,0,0,12" />
+        <Setter Property="Margin" Value="0,0,0,10" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type Button}">
-              <Border Name="DateSurface" CornerRadius="20" Padding="14,12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+              <Border Name="DateSurface" CornerRadius="8" Padding="10,8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}">
                 <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
               </Border>
               <ControlTemplate.Triggers>
                 <Trigger Property="UIElement.IsMouseOver" Value="True">
                   <Setter TargetName="DateSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
-                  <Setter TargetName="DateSurface" Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" />
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
-                  <Setter TargetName="DateSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+                  <Setter TargetName="DateSurface" Property="Background" Value="{DynamicResource Brush.Surface.Interactive}" />
                 </Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>
@@ -407,6 +406,7 @@
                       <DataTrigger Binding="{Binding Key}" Value="Home"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Home}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Import"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Import}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Preview"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Library}" /></DataTrigger>
+                      <DataTrigger Binding="{Binding Key}" Value="CustomAlbums"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Library}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="FaceSearch"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.FaceSearch}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="MapPhotos"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Map}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Compression"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Compress}" /></DataTrigger>
@@ -996,12 +996,12 @@
                   </StackPanel>
                   </ScrollViewer>
                 </DockPanel>
-                <Border x:Name="BrowseUnifiedWorkspace" Grid.Column="1" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="16">
+                <Border x:Name="BrowseUnifiedWorkspace" Grid.Column="1" CornerRadius="0" Background="Transparent" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,0,0,1" Padding="0,8,0,12">
                   <DockPanel LastChildFill="True">
-                    <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="14" CornerRadius="18" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Visibility="{Binding IsBrowseConditionsExpanded, Converter={StaticResource BoolToVis}}">
+                    <Border DockPanel.Dock="Top" Margin="0,0,0,12" Padding="16,12" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Visibility="{Binding IsBrowseConditionsExpanded, Converter={StaticResource BoolToVis}}">
                       <StackPanel>
-                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
-                        <TextBlock Text="分类" FontSize="12" Opacity="0.65" VerticalAlignment="Center" Margin="0,0,12,0" />
+                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
+                        <TextBlock Text="分类" FontSize="12" Foreground="{DynamicResource Brush.Text.Tertiary}" VerticalAlignment="Center" Margin="0,0,12,0" />
                         <ItemsControl VerticalAlignment="Center" ItemsSource="{Binding PreviewCategoryFilters}">
                           <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
                           <ItemsControl.ItemTemplate>
@@ -1009,11 +1009,11 @@
                               <Button Margin="0,0,8,0" Padding="0" Content="{Binding}" Command="{Binding DataContext.SetPreviewCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
                                 <Control.Template>
                                   <ControlTemplate TargetType="{x:Type Button}">
-                                    <Border Name="Chip" CornerRadius="14" Padding="14,6" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Cursor="Hand"><ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" TextElement.Foreground="{DynamicResource Brush.Text.Primary}" TextElement.FontSize="13" TextElement.FontWeight="SemiBold" /></Border>
+                                    <Border Name="Chip" CornerRadius="8" Padding="12,5" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Cursor="Hand"><ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Center" TextElement.Foreground="{DynamicResource Brush.Text.Secondary}" TextElement.FontSize="12" TextElement.FontWeight="SemiBold" /></Border>
                                     <ControlTemplate.Triggers>
-                                      <MultiDataTrigger><MultiDataTrigger.Conditions><Condition Value="True"><Condition.Binding><MultiBinding Converter="{StaticResource CategoryEqualityMultiConverter}"><Binding Path="." /><Binding Path="DataContext.CurrentPreviewCategory" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></Condition.Binding></Condition></MultiDataTrigger.Conditions><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" /></MultiDataTrigger>
-                                      <Trigger Property="UIElement.IsMouseOver" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" /></Trigger>
-                                      <Trigger Property="ButtonBase.IsPressed" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" /></Trigger>
+                                      <MultiDataTrigger><MultiDataTrigger.Conditions><Condition Value="True"><Condition.Binding><MultiBinding Converter="{StaticResource CategoryEqualityMultiConverter}"><Binding Path="." /><Binding Path="DataContext.CurrentPreviewCategory" RelativeSource="{RelativeSource AncestorType=Window}" /></MultiBinding></Condition.Binding></Condition></MultiDataTrigger.Conditions><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Accent.Subtle}" /><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" /><Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Text.Primary}" /></MultiDataTrigger>
+                                      <Trigger Property="UIElement.IsMouseOver" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Surface.Interactive}" /><Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Brush.Border.Default}" /><Setter Property="TextElement.Foreground" Value="{DynamicResource Brush.Text.Primary}" /></Trigger>
+                                      <Trigger Property="ButtonBase.IsPressed" Value="True"><Setter TargetName="Chip" Property="Background" Value="{DynamicResource Brush.Surface.Selected}" /></Trigger>
                                     </ControlTemplate.Triggers>
                                   </ControlTemplate>
                                 </Control.Template>
@@ -1022,7 +1022,7 @@
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
                       </StackPanel>
-                      <Border Style="{DynamicResource Card.Subtle}" Margin="{StaticResource Spacing.Control}">
+                      <Border Style="{DynamicResource Card.Subtle}" Margin="0,4,0,12" Padding="14,10">
                         <Grid>
                           <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -1034,14 +1034,14 @@
                             <RowDefinition Height="Auto" />
                           </Grid.RowDefinitions>
                           <StackPanel>
-                            <TextBlock Text="智能搜索" Style="{DynamicResource Layout.SettingsFieldLabel}" />
+                            <TextBlock Text="智能搜索" Style="{DynamicResource Layout.SettingsFieldLabel}" Margin="0,0,0,6" />
                             <TextBox x:Name="BrowseSmartSearchBox"
                                      Style="{StaticResource Input.TextBox}"
                                      Text="{Binding UnifiedSearchText, UpdateSourceTrigger=PropertyChanged}"
                                      AutomationProperties.Name="智能搜索照片"
                                      ToolTip="输入文件名或路径直接匹配；输入自然描述进行语义搜索。" />
                           </StackPanel>
-                          <ComboBox Grid.Column="1" Width="116" Height="36" Margin="12,0,0,0"
+                          <ComboBox Grid.Column="1" Width="120" Height="36" Margin="12,14,0,0"
                                     ItemsSource="{Binding BrowseSearchModeChoices}"
                                     SelectedValuePath="Value"
                                     SelectedValue="{Binding BrowseSearchMode, Mode=TwoWay}"
@@ -1052,7 +1052,7 @@
                           </ComboBox>
                           <Button Grid.Column="2"
                                   Style="{DynamicResource Button.Ghost}"
-                                  Margin="8,0,0,0"
+                                  Margin="8,14,0,0"
                                   Content="取消"
                                   Command="{Binding SemanticSearch.CancelCommand}"
                                   Visibility="{Binding SemanticSearch.IsBusy, Converter={StaticResource BoolToVis}}" />
@@ -1067,10 +1067,10 @@
                           </StackPanel>
                         </Grid>
                       </Border>
-                      <WrapPanel>
-                        <StackPanel Margin="0,0,16,8">
-                          <TextBlock Text="修图状态" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
-                          <Border Padding="2" CornerRadius="13" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                      <WrapPanel Margin="0,4,0,0">
+                        <StackPanel Margin="0,0,20,8">
+                          <TextBlock Text="修图状态" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Margin="2,0,0,6" />
+                          <Border Padding="2" CornerRadius="8" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
                               <Button Content="全部" Tag="全部" CommandParameter="全部" Style="{StaticResource PreviewSegmentButton}" AutomationProperties.Name="显示全部照片" Command="{Binding SetPreviewRetouchFilterCommand}" />
                               <Button Content="已修" Tag="已修" CommandParameter="已修" Style="{StaticResource PreviewSegmentButton}" AutomationProperties.Name="仅显示已修照片" Command="{Binding SetPreviewRetouchFilterCommand}" />
@@ -1078,9 +1078,9 @@
                             </StackPanel>
                           </Border>
                         </StackPanel>
-                        <StackPanel Margin="0,0,16,8">
-                          <TextBlock Text="文件类型" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
-                          <Border Padding="2" CornerRadius="13" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                        <StackPanel Margin="0,0,20,8">
+                          <TextBlock Text="文件类型" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Margin="2,0,0,6" />
+                          <Border Padding="2" CornerRadius="8" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
                               <Button x:Name="FileTypeAll" Content="全部" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
                               <Button x:Name="FileTypeRAW" Content="RAW" Style="{StaticResource PreviewSegmentButton}" Click="FileTypeFilter_Click" />
@@ -1090,8 +1090,8 @@
                             </StackPanel>
                           </Border>
                         </StackPanel>
-                        <StackPanel Margin="0,0,16,8">
-                          <TextBlock Text="排列方式" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
+                        <StackPanel Margin="0,0,20,8">
+                          <TextBlock Text="排列方式" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Margin="2,0,0,6" />
                           <ComboBox SelectedValuePath="Value" Style="{StaticResource PreviewSortComboBox}" AutomationProperties.Name="照片排列方式" ItemsSource="{Binding PreviewSortChoices}" SelectedValue="{Binding PreviewSortMode, Mode=TwoWay}">
                             <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="{x:Type vm:PreviewSortChoice}">
@@ -1100,107 +1100,111 @@
                             </ItemsControl.ItemTemplate>
                           </ComboBox>
                         </StackPanel>
-                        <StackPanel Margin="0,0,16,8">
-                          <TextBlock Text="评分分类" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11.5" FontWeight="SemiBold" Margin="2,0,0,6" />
-                          <ComboBox MinWidth="130" Height="38" ItemsSource="{Binding RatingFilters}" SelectedItem="{Binding RatingFilter, Mode=TwoWay}" AutomationProperties.Name="按照片评分筛选" />
+                        <StackPanel Margin="0,0,20,8">
+                          <TextBlock Text="评分分类" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Margin="2,0,0,6" />
+                          <ComboBox MinWidth="130" Height="36" ItemsSource="{Binding RatingFilters}" SelectedItem="{Binding RatingFilter, Mode=TwoWay}" AutomationProperties.Name="按照片评分筛选" />
                         </StackPanel>
                       </WrapPanel>
-                      <WrapPanel Margin="0,10,0,0">
-                        <TextBlock VerticalAlignment="Center" Margin="2,0,10,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" Text="智能识别" />
-                        <ComboBox Grid.Column="1" Height="36" ItemsSource="{Binding PhotoAnalysis.Engines}" SelectedItem="{Binding PhotoAnalysis.SelectedEngine, Mode=TwoWay}" AutomationProperties.Name="智能识别引擎" />
-                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" Text="智能类别" />
-                        <ComboBox Grid.Column="4" Height="36" ItemsSource="{Binding SmartCategoryFilters}" SelectedItem="{Binding SmartCategoryFilter, Mode=TwoWay}" AutomationProperties.Name="按智能类别筛选" />
-                        <Button Grid.Column="6" Padding="14,0" Content="识别所选" Command="{Binding AnalyzeSelectedPhotosCommand}" AutomationProperties.Name="智能识别所选照片" />
-                        <Button Grid.Column="7" Margin="8,0,0,0" Padding="14,0" Content="识别当前范围" Command="{Binding AnalyzeCurrentScopeCommand}" AutomationProperties.Name="智能识别当前日期或全部照片" />
-                        <Button Grid.Column="8" Margin="8,0,0,0" Padding="12,0" Content="停止" Command="{Binding PhotoAnalysis.CancelCommand}" />
-                        <StackPanel Grid.Column="9" Margin="14,0,0,0" VerticalAlignment="Center">
+                      <DockPanel LastChildFill="True" Margin="0,10,0,0">
+                        <StackPanel DockPanel.Dock="Right" Margin="14,0,0,0" VerticalAlignment="Center">
                           <ProgressBar Height="5" Minimum="0" Maximum="100" Value="{Binding PhotoAnalysis.ProgressValue, Mode=OneWay}" />
-                          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" Text="{Binding PhotoAnalysis.StatusText}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" Text="{Binding PhotoAnalysis.StatusText}" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                      </WrapPanel>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                          <TextBlock VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Text="智能识别" />
+                          <ComboBox Height="36" MinWidth="120" ItemsSource="{Binding PhotoAnalysis.Engines}" SelectedItem="{Binding PhotoAnalysis.SelectedEngine, Mode=TwoWay}" AutomationProperties.Name="智能识别引擎" />
+                          <TextBlock VerticalAlignment="Center" Margin="14,0,10,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" Text="智能类别" />
+                          <ComboBox Height="36" MinWidth="120" ItemsSource="{Binding SmartCategoryFilters}" SelectedItem="{Binding SmartCategoryFilter, Mode=TwoWay}" AutomationProperties.Name="按智能类别筛选" />
+                          <Button Margin="14,0,0,0" Padding="14,0" Content="识别所选" Command="{Binding AnalyzeSelectedPhotosCommand}" AutomationProperties.Name="智能识别所选照片" />
+                          <Button Margin="8,0,0,0" Padding="14,0" Content="识别当前范围" Command="{Binding AnalyzeCurrentScopeCommand}" AutomationProperties.Name="智能识别当前日期或全部照片" />
+                          <Button Margin="8,0,0,0" Padding="12,0" Content="停止" Command="{Binding PhotoAnalysis.CancelCommand}" />
+                        </StackPanel>
+                      </DockPanel>
                       </StackPanel>
                     </Border>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
-                      <TextBlock Text="显示方式" VerticalAlignment="Center" Margin="0,0,8,0" FontWeight="SemiBold" />
-                      <ComboBox x:Name="BrowseDisplayModeSelector" Width="126" SelectedValuePath="Value" ItemsSource="{Binding BrowseDisplayModes}" SelectedValue="{Binding BrowseDisplayMode, Mode=TwoWay}" AutomationProperties.Name="浏览显示方式">
-                        <ComboBox.ItemTemplate>
-                          <DataTemplate>
-                            <TextBlock Text="{Binding Label}" />
-                          </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                      </ComboBox>
-                      <StackPanel Orientation="Horizontal" Margin="12,0,0,0" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
-                        <TextBlock Text="面积" VerticalAlignment="Center" Margin="0,0,8,0" />
-                        <ComboBox Width="142" SelectedValuePath="Value" ItemsSource="{Binding TreemapWeightModes}" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" AutomationProperties.Name="树图面积计算方式">
+                    <DockPanel DockPanel.Dock="Top" LastChildFill="True" Margin="0,0,0,10">
+                      <TextBlock DockPanel.Dock="Right" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
+                      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="显示方式" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" />
+                        <ComboBox x:Name="BrowseDisplayModeSelector" Width="126" SelectedValuePath="Value" ItemsSource="{Binding BrowseDisplayModes}" SelectedValue="{Binding BrowseDisplayMode, Mode=TwoWay}" AutomationProperties.Name="浏览显示方式">
                           <ComboBox.ItemTemplate>
                             <DataTemplate>
                               <TextBlock Text="{Binding Label}" />
                             </DataTemplate>
                           </ComboBox.ItemTemplate>
                         </ComboBox>
+                        <StackPanel Orientation="Horizontal" Margin="16,0,0,0" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}">
+                          <TextBlock Text="面积" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" FontWeight="SemiBold" />
+                          <ComboBox Width="142" SelectedValuePath="Value" ItemsSource="{Binding TreemapWeightModes}" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" AutomationProperties.Name="树图面积计算方式">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate>
+                                <TextBlock Text="{Binding Label}" />
+                              </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                        </StackPanel>
                       </StackPanel>
-                      <TextBlock Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" Text="扫描过程中会持续更新矩形大小" Visibility="{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}" />
-                    </StackPanel>
-                    <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,10,4,0" FontSize="12" FontWeight="SemiBold" Text="{Binding CurrentViewItemCount, Mode=OneWay, StringFormat=共 {0} 项}" AutomationProperties.HelpText="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
-                    <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Padding="12,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
+                    </DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,8,2,0" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Tertiary}" Text="{Binding CurrentViewItemCount, Mode=OneWay, StringFormat=共 {0} 项}" AutomationProperties.HelpText="{Binding FilteredPreviewCount, Mode=OneWay, StringFormat=共 {0} 项}" />
+                    <Border DockPanel.Dock="Bottom" CornerRadius="12" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Padding="14,10" Margin="0,10,0,0" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
                       <DockPanel>
-                        <Border DockPanel.Dock="Right" CornerRadius="8" Background="{DynamicResource Brush.Surface.Subtle}" Padding="8,3" VerticalAlignment="Top" Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="CloseExifPanel_Click">
-                          <TextBlock Text="✕ 关闭" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" FontWeight="SemiBold" />
+                        <Border DockPanel.Dock="Right" CornerRadius="6" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Padding="8,3" VerticalAlignment="Top" Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="CloseExifPanel_Click">
+                          <TextBlock Text="✕ 关闭" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="11" FontWeight="SemiBold" />
                         </Border>
                         <StackPanel>
-                          <TextBlock Text="📷 元数据" FontWeight="SemiBold" FontSize="14" Margin="0,0,0,6" Foreground="{DynamicResource Brush.Text.Primary}" />
-                          <TextBlock Opacity="0.85" FontSize="12" FontFamily="Cascadia Code, Consolas, monospace" TextWrapping="Wrap" LineHeight="20" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding ExifSummary}" />
+                          <TextBlock Text="📷 元数据" FontWeight="SemiBold" FontSize="13" Margin="0,0,0,4" Foreground="{DynamicResource Brush.Text.Primary}" />
+                          <TextBlock Opacity="0.78" FontSize="12" FontFamily="Cascadia Code, Consolas, monospace" TextWrapping="Wrap" LineHeight="20" Foreground="{DynamicResource Brush.Text.Secondary}" Text="{Binding ExifSummary}" />
                         </StackPanel>
                       </DockPanel>
                     </Border>
                     <Grid Name="PreviewSelectionSurface" Background="Transparent" Visibility="{Binding IsGridBrowseMode, Converter={StaticResource BoolToVis}}" PreviewMouseLeftButtonDown="PreviewSelectionSurface_MouseLeftButtonDown" PreviewMouseMove="PreviewSelectionSurface_MouseMove" PreviewMouseLeftButtonUp="PreviewSelectionSurface_MouseLeftButtonUp">
                       <ScrollViewer Name="PreviewPhotoScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
                         <StackPanel>
-                          <ItemsControl Margin="0,0,0,10" ItemsSource="{Binding GridBreadcrumbs}" Visibility="{Binding HasGridBreadcrumb, Converter={StaticResource BoolToVis}}">
+                          <ItemsControl Margin="0,0,0,14" ItemsSource="{Binding GridBreadcrumbs}" Visibility="{Binding HasGridBreadcrumb, Converter={StaticResource BoolToVis}}">
                             <ItemsControl.ItemsPanel>
                               <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                               <DataTemplate>
-                                <Button Padding="8,4" Margin="0,0,6,0" Content="{Binding Label}" Command="{Binding DataContext.NavigateGridCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Key}" />
+                                <Button Padding="10,4" Margin="0,0,6,0" Content="{Binding Label}" Command="{Binding DataContext.NavigateGridCategoryCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding Key}" />
                               </DataTemplate>
                             </ItemsControl.ItemTemplate>
                           </ItemsControl>
                           <ItemsControl ItemsSource="{Binding VisiblePreviewSections}">
                             <ItemsControl.ItemTemplate>
                               <DataTemplate DataType="{x:Type vm:PreviewDateSectionViewModel}">
-                                <StackPanel Margin="0,0,0,14">
+                                <StackPanel Margin="0,0,0,24">
                                   <Button Style="{StaticResource PreviewDateHeaderButton}" Command="{Binding ToggleCommand}" ToolTip="{Binding ToggleLabel}" Visibility="{Binding ShowHeader, Converter={StaticResource BoolToVis}}">
                                     <Grid>
                                       <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="46" />
+                                        <ColumnDefinition Width="44" />
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="34" />
+                                        <ColumnDefinition Width="32" />
                                       </Grid.ColumnDefinitions>
-                                      <Border Width="36" Height="36" CornerRadius="13" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
-                                        <TextBlock Text="日" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="15" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                      <Border Width="32" Height="32" CornerRadius="8" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                        <TextBlock Text="日" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                       </Border>
-                                      <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="18" FontWeight="SemiBold" Text="{Binding Title}" />
-                                        <TextBlock Text="拍摄日期" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" Margin="0,3,0,0" />
+                                      <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="15" FontWeight="SemiBold" Text="{Binding Title}" />
+                                        <TextBlock Text="拍摄日期" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="11" Margin="0,2,0,0" />
                                       </StackPanel>
-                                      <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" Margin="12,0">
+                                      <TextBlock Grid.Column="2" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="12" Margin="12,0">
                                         <Run Text="{Binding Count, Mode=OneWay}" />
                                         <Run Text=" 张照片" />
                                       </TextBlock>
-                                      <TextBlock Grid.Column="3" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="23" FontWeight="Light" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ToggleGlyph}" />
+                                      <TextBlock Grid.Column="3" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="20" FontWeight="Light" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ToggleGlyph}" />
                                     </Grid>
                                   </Button>
                                   <ItemsControl ItemContainerStyle="{StaticResource PreviewItemContainer}" ItemsSource="{Binding Items}" Visibility="{Binding IsExpanded, Converter={StaticResource BoolToVis}}">
                                     <ItemsControl.ItemsPanel>
                                       <ItemsPanelTemplate>
-                                        <grid:UniformSquarePanel TileSize="{Binding DataContext.ZoomableGridTileSize, RelativeSource={RelativeSource AncestorType=Window}}" Spacing="14" IsItemsHost="True" />
+                                        <grid:UniformSquarePanel TileSize="{Binding DataContext.ZoomableGridTileSize, RelativeSource={RelativeSource AncestorType=Window}}" Spacing="10" IsItemsHost="True" />
                                       </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                       <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
-                                        <Border Tag="PreviewCard" Padding="0" CornerRadius="14" ClipToBounds="True" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Cursor="Hand" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
+                                        <Grid Tag="PreviewCard" Cursor="Hand" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
                                           <FrameworkElement.ContextMenu>
                                             <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="14">
                                               <MenuItem Header="🖼  打开" Style="{DynamicResource Menu.Item}" Click="PreviewContextMenu_Open" />
@@ -1232,60 +1236,64 @@
                                               <MenuItem Header="🗑 批量删除选中" Style="{DynamicResource Menu.Item}" Foreground="{DynamicResource Brush.Text.Primary}" Click="PreviewContextMenu_BatchDelete" />
                                             </ContextMenu>
                                           </FrameworkElement.ContextMenu>
-                                          <Grid>
-                                            <Border Name="ThumbnailClip" CornerRadius="14" ClipToBounds="True">
-                                              <Border.Background>
-                                                <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
-                                              </Border.Background>
+                                          <Border Name="ThumbnailClip" Margin="0" CornerRadius="14" ClipToBounds="True">
+                                            <Border.Background>
+                                              <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
+                                            </Border.Background>
+                                          </Border>
+                                          <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
+                                          <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
+                                            <Border Padding="7,3" CornerRadius="6" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.82" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                              <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Primary}" />
                                             </Border>
-<CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
-                                            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
-                                              <Border Padding="8,4" CornerRadius="9" Background="{DynamicResource Brush.Viewer.Canvas}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
-                                                <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="12" FontWeight="Bold" Foreground="{DynamicResource Brush.Text.Inverse}" />
-                                              </Border>
-                                              <Border Margin="0,5,0,0" Padding="8,4" CornerRadius="9" Background="{DynamicResource Brush.Viewer.Canvas}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
-                                                <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Inverse}">
-                                                  <FrameworkElement.Style>
-                                                    <Style TargetType="{x:Type TextBlock}">
-                                                      <Setter Property="Text" Value="未修" />
-                                                      <Style.Triggers>
-                                                        <DataTrigger Value="True" Binding="{Binding IsRetouched}">
-                                                          <Setter Property="Text" Value="已修" />
-                                                        </DataTrigger>
-                                                      </Style.Triggers>
-                                                    </Style>
-                                                  </FrameworkElement.Style>
-                                                </TextBlock>
-                                              </Border>
-                                            </StackPanel>
-                                            <Border VerticalAlignment="Bottom" Padding="10,6" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.72">
-                                              <Border.Style>
-                                                <Style TargetType="{x:Type Border}">
-                                                  <Setter Property="Visibility" Value="Collapsed" />
-                                                  <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding DataContext.IsGridTileLargeEnoughForLabels, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                                      <Setter Property="Visibility" Value="Visible" />
-                                                    </DataTrigger>
-                                                  </Style.Triggers>
-                                                </Style>
-                                              </Border.Style>
-                                              <StackPanel>
-                                                <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="12" Foreground="White" Text="{Binding Name}" ToolTip="{Binding Name}" />
-                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                  <TextBlock Opacity="0.9" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="White" FontWeight="Medium" Text="{Binding Caption}" />
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                  <Border CornerRadius="6" Padding="5,2" Background="{DynamicResource Brush.Surface.Subtle}">
-                                                    <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding SmartCategory}" />
-                                                  </Border>
-                                                  <Border CornerRadius="6" Padding="5,2" Margin="4,0,0,0" Background="{DynamicResource Brush.Surface.Subtle}" Visibility="{Binding HasManualTags, Converter={StaticResource BoolToVis}}">
-                                                    <TextBlock MaxWidth="90" FontSize="10" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding ManualTagsDisplay}" ToolTip="{Binding ManualTagsDisplay}" />
-                                                  </Border>
-                                                </StackPanel>
+                                            <Border Margin="0,4,0,0" Padding="7,3" CornerRadius="6" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.82" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                              <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}">
+                                                <FrameworkElement.Style>
+                                                  <Style TargetType="{x:Type TextBlock}">
+                                                    <Setter Property="Text" Value="未修" />
+                                                    <Style.Triggers>
+                                                      <DataTrigger Value="True" Binding="{Binding IsRetouched}">
+                                                        <Setter Property="Text" Value="已修" />
+                                                      </DataTrigger>
+                                                    </Style.Triggers>
+                                                  </Style>
+                                                </FrameworkElement.Style>
+                                              </TextBlock>
+                                            </Border>
+                                          </StackPanel>
+                                          <Border VerticalAlignment="Bottom" Padding="10,8" CornerRadius="0,0,12,12">
+                                            <Border.Background>
+                                              <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                <GradientStop Color="Transparent" Offset="0" />
+                                                <GradientStop Color="{DynamicResource Color.Viewer.Canvas}" Offset="1" />
+                                              </LinearGradientBrush>
+                                            </Border.Background>
+                                            <Border.Style>
+                                              <Style TargetType="{x:Type Border}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                  <DataTrigger Binding="{Binding DataContext.IsGridTileLargeEnoughForLabels, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                  </DataTrigger>
+                                                </Style.Triggers>
+                                              </Style>
+                                            </Border.Style>
+                                            <StackPanel>
+                                              <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding Name}" ToolTip="{Binding Name}" />
+                                              <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                                <TextBlock Opacity="0.82" FontSize="11" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Primary}" FontWeight="Medium" Text="{Binding Caption}" />
                                               </StackPanel>
-                                            </Border>
-                                          </Grid>
-                                        </Border>
+                                              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <Border CornerRadius="6" Padding="6,2" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.78" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+                                                  <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding SmartCategory}" />
+                                                </Border>
+                                                <Border CornerRadius="6" Padding="6,2" Margin="4,0,0,0" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.78" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Visibility="{Binding HasManualTags, Converter={StaticResource BoolToVis}}">
+                                                  <TextBlock MaxWidth="90" FontSize="10" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding ManualTagsDisplay}" ToolTip="{Binding ManualTagsDisplay}" />
+                                                </Border>
+                                              </StackPanel>
+                                            </StackPanel>
+                                          </Border>
+                                        </Grid>
                                       </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                   </ItemsControl>
@@ -1483,6 +1491,7 @@
               </Border>
             </Grid>
             <map:MapPage x:Name="MapPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding MapPhotos}" Visibility="{Binding DataContext.IsMapPhotosPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
+            <albums:CustomAlbumsPage x:Name="CustomAlbumsPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding CustomAlbums}" Visibility="{Binding DataContext.IsCustomAlbumsPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <compress:CompressionPage x:Name="CompressionPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Compression}" Visibility="{Binding DataContext.IsCompressionPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <watermark:WatermarkPage x:Name="WatermarkPageHost" Style="{StaticResource PageSurface}" DataContext="{Binding Watermark}" Visibility="{Binding DataContext.IsWatermarkPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}" />
             <Grid x:Name="CloudPageContainer" Style="{StaticResource PageSurface}" Visibility="{Binding DataContext.IsCloudPage, Converter={StaticResource BoolToVis}, RelativeSource={RelativeSource AncestorType=Window}}">

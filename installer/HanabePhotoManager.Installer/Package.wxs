@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package
-    Name="Hanabe Photo Manager"
+    Name="照片管理器"
     Manufacturer="Hanabe"
     Version="$(ProductVersion)"
     UpgradeCode="{4F4DC23B-3E1D-4C72-92A1-3A5D6F277F54}"
@@ -12,7 +12,7 @@
     Compressed="yes">
 
     <SummaryInformation
-      Description="Hanabe Photo Manager"
+      Description="照片管理器"
       Manufacturer="Hanabe"
       Keywords="Hanabe;Photo;Manager" />
 
@@ -22,11 +22,11 @@
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
-      <Directory Id="INSTALLFOLDER" Name="Hanabe Photo Manager" />
+      <Directory Id="INSTALLFOLDER" Name="照片管理器" />
     </StandardDirectory>
     <StandardDirectory Id="DesktopFolder" />
     <StandardDirectory Id="ProgramMenuFolder">
-      <Directory Id="ApplicationProgramsFolder" Name="Hanabe Photo Manager" />
+      <Directory Id="ApplicationProgramsFolder" Name="照片管理器" />
     </StandardDirectory>
 
     <Files Include="!(bindpath.Payload)\**" Directory="INSTALLFOLDER">
@@ -47,15 +47,15 @@
         <Shortcut
           Id="DesktopShortcut"
           Directory="DesktopFolder"
-          Name="Hanabe Photo Manager"
-          Description="Hanabe Photo Manager"
+          Name="照片管理器"
+          Description="照片管理器"
           Advertise="yes"
           WorkingDirectory="INSTALLFOLDER" />
         <Shortcut
           Id="StartMenuShortcut"
           Directory="ApplicationProgramsFolder"
-          Name="Hanabe Photo Manager"
-          Description="Hanabe Photo Manager"
+          Name="照片管理器"
+          Description="照片管理器"
           Advertise="yes"
           WorkingDirectory="INSTALLFOLDER" />
       </File>

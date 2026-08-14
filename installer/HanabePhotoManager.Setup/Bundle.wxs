@@ -3,7 +3,7 @@
   xmlns="http://wixtoolset.org/schemas/v4/wxs"
   xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
   <Bundle
-    Name="Hanabe Photo Manager 安装程序"
+    Name="照片管理器 安装程序"
     Manufacturer="Hanabe"
     Version="$(BundleVersion)"
     UpgradeCode="{9C69A347-0E59-420B-812A-70A6304B5B35}">

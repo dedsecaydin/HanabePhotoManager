@@ -6,6 +6,18 @@
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
 
+## 2026-08-14 M3 导入页 + 设置页重新设计（对齐 006/007 mockup）
+
+- 按用户确认的预设计（`sketches/006-m3-import` / `007-m3-settings`）重做两个功能页，仅视觉/布局/交互组织；全程语义 Token；动效 150/180/220ms。
+- **导入页**（`MainWindow.xaml`）：`ImportPage` 由 380+* 两列 → `320/16/*/16/320` 三段布局；左源面板（拖放区/来源/转移方式/人物识别/修后素材拖放/分析+导入，全部命令与 onboarding Popup 绑定保留）· 中队列（目标日期/报告/进度卡/6 分类 section + M3 预览卡）· 右 Inspector（导入设置三行只读开关 + 去重结果三选项只读 + 完成摘要统计卡）。
+- **导入 VM 最小化新增（记录）**：`ImportSuccessCount`/`ImportSkippedCount`/`ImportFailedCount` 三个只读 int + `SetImportSummary`，仅在导入完成/取消赋值、`ImportItems.Clear()` 处复位；未改导入/去重/转移/分类逻辑。
+- **设置页**（`SettingsCenterPage.xaml`+`.cs`）：`TabControl` → 216px 左分区导航（外观/常规/照片库与导入/浏览与AI/云盘与项目/高级）+ 右 M3 分组列表（group header + 分隔线 + 设置行）+ 320px 常驻 Inspector（主题实时预览/数据存储/关于）。**外观分区整合 6 套主题色卡**（配色×明暗，点击 `ThemeManager.Apply` 即时换肤 + 当前高亮）。
+- **功能保留**：设置 6 分区全部功能项照抄（自启/窗口恢复/版本树/照片库/浏览默认值/AI/百度凭据/夸克/推理/人脸引擎/ArcFace/快捷键/安全隐私等）；修复旧死绑定 `LibraryCapacityText`。
+- **主题色卡资源**：新增 `Themes/Colors/Colors.ThemeSwatches.xaml`（18 个 `Brush.ThemeSwatch.*`，合并进 6 套主题入口），页内无 `#hex` 原始色值；设置下拉统一 `Input.SettingsComboBox`。
+- 验证：`dotnet build -c Debug /warnaserror` 与 `-c Release /warnaserror` 均 0 警告 0 错误；`dotnet test` 917 全绿（Core 373 / Infra 164 / App 380）；截图 `.artifacts/m3-import-{light,dark}.png` + `m3-settings-{light,dark}.png` + `m3-settings-violet-dark.png`（`capture-m3-import-settings.ps1`）。
+- 详见 `docs/agent-change-log.md` 2026-08-14「M3 导入页 + 设置页重新设计」条目、`docs/current-status.md`。
+- Next：008 工具/地图页等其余功能页深化；导入页「去重结果」内联到真实去重流程（需 VM 暴露重复计数 + 决策态，行为改动需用户确认）。
+
 ## 2026-08-14 人物页功能补全（合并命令 + 详情照片虚拟化）
 
 - 补上轮遗留技术债第 1、2 项（用户确认先补「合并」）；第 3 项「待确认角标」数据缺失、第 4 项「浏览/人物筛选收敛」本轮未做。

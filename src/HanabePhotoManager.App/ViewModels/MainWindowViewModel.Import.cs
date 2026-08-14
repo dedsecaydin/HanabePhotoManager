@@ -24,6 +24,7 @@ public sealed partial class MainWindowViewModel
         CancelImportThumbnailLoading();
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = $"已选择 {selectedPaths.Length} 个文件，尚未开始分析。";
         ImportActionHint = "已保留 Ctrl/Shift 多选文件；点击“开始分析与分类”后加入同一导入队列。";

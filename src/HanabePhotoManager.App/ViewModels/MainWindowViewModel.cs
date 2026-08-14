@@ -1403,6 +1403,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
         set => SetProperty(ref _importReport, value);
     }
 
+    public int ImportSuccessCount { get; private set; }
+
+    public int ImportSkippedCount { get; private set; }
+
+    public int ImportFailedCount { get; private set; }
+
+    private void SetImportSummary(int success, int skipped, int failed)
+    {
+        ImportSuccessCount = success;
+        ImportSkippedCount = skipped;
+        ImportFailedCount = failed;
+        OnPropertyChanged(nameof(ImportSuccessCount));
+        OnPropertyChanged(nameof(ImportSkippedCount));
+        OnPropertyChanged(nameof(ImportFailedCount));
+    }
+
     public string ProgressLabel
     {
         get => _progressLabel;
@@ -2976,6 +2992,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         CancelImportThumbnailLoading();
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = "来源已选择，尚未开始分析。";
         ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与分类”。";
@@ -3010,6 +3027,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StatusMessage = "正在分析来源，请稍候…";
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         ImportActionHint = "正在分析来源，识别完成后会显示可导入内容。";
         ImportReport = "正在分析文件…";
 
@@ -3138,6 +3156,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             ImportItems.Clear();
             ImportSections.Clear();
+            SetImportSummary(0, 0, 0);
             ImportReport = "已停止分析。";
             ImportActionHint = "来源分析已停止。你可以重新选择来源或重新分析。";
             StatusMessage = "来源分析已停止。";
@@ -3289,6 +3308,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             StatusMessage = "导入流程结束。";
             EndCancelableTask(cancellation);
@@ -3316,6 +3336,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             stopped = true;
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
+            SetImportSummary(success, skipped, failed);
             ImportReport = $"导入已停止：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             StatusMessage = "传输已停止。已完成的文件会保留，未完成的临时文件已尽量清理。";
         }
@@ -5751,6 +5772,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SourceFolder = importRoots.Length == 1 ? importRoots[0] : device.Path;
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = importRoots.Length > 1
             ? $"已选择 {device.Name}，分析时会包含：{string.Join("、", importRoots.Select(Path.GetFileName))}。"

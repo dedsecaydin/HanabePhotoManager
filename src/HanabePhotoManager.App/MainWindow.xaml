@@ -752,31 +752,71 @@
             </ScrollViewer>
             <Grid Name="ImportPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsImportPage, Converter={StaticResource BoolToVis}}">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="380" />
+                <ColumnDefinition Width="320" />
+                <ColumnDefinition Width="16" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="16" />
+                <ColumnDefinition Width="320" />
               </Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                <Border AllowDrop="True" Style="{DynamicResource Card.Default}" Padding="20" Background="{DynamicResource Brush.Surface.Subtle}" Margin="0,0,0,14" DragOver="SourceAutoImportDropTarget_DragOver" Drop="SourceAutoImportDropTarget_Drop">
+
+              <!-- 左：导入源（320px） -->
+              <Border Grid.Column="0" Style="{StaticResource Inspector.Panel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <StackPanel>
-                    <TextBlock Text="拖入相机文件夹" FontSize="24" FontWeight="SemiBold" />
-                    <TextBlock Text="自动读取  自动分类  自动生成 7月\07.14  自动导入" TextWrapping="Wrap" Opacity="0.78" Margin="0,8,0,0" />
-                    <TextBlock Text="无法判断时会停下来让你确认，不会乱放。" TextWrapping="Wrap" Opacity="0.80" Margin="0,12,0,0" />
-                  </StackPanel>
-                </Border>
-                <Border Style="{DynamicResource Card.Default}" Padding="16" Margin="0,0,0,14">
-                  <StackPanel>
-                    <TextBlock Text="来源" FontSize="18" FontWeight="SemiBold" />
-                    <TextBlock TextWrapping="Wrap" Opacity="0.86" Margin="0,6,0,12" Text="{Binding SourceFolder, StringFormat=来源：{0}}" />
-                    <Button Content="选择来源文件夹" Margin="0,0,0,8" Command="{Binding BrowseSourceCommand}" />
-                    <Button Content="选择多个文件" Margin="0,0,0,8" Command="{Binding BrowseSourceFilesCommand}" />
-                    <Border CornerRadius="16" Padding="12" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Margin="0,0,0,8">
-                      <DockPanel>
-                        <TextBlock Text="本地 AI 人物识别" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <CheckBox DockPanel.Dock="Right" VerticalAlignment="Center" IsChecked="{Binding EnablePersonRecognition}" />
-                      </DockPanel>
+                    <Border AllowDrop="True" MinHeight="128" Padding="16,18" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Margin="0,0,0,12" DragOver="SourceAutoImportDropTarget_DragOver" Drop="SourceAutoImportDropTarget_Drop">
+                      <StackPanel VerticalAlignment="Center">
+                        <Viewbox Width="30" Height="30" HorizontalAlignment="Center" Margin="0,0,0,10">
+                          <Path Data="{StaticResource Icon.Import}" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                        </Viewbox>
+                        <TextBlock Text="拖入相机文件夹" FontWeight="SemiBold" FontSize="{StaticResource Typography.Label}" HorizontalAlignment="Center" />
+                        <TextBlock Text="自动读取 · 自动分类 · 自动生成日期目录" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,6,0,0" />
+                      </StackPanel>
                     </Border>
-                    <TextBlock Text="只识别 JPG/JPEG；同名 RAW 自动继承结果，视频完全跳过。照片只在本机处理。" FontSize="12" TextWrapping="Wrap" Opacity="0.78" Margin="0,0,0,10" />
-                    <Button x:Name="OnboardingAnalyzeButton" Content="开始分析与分类" Margin="0,0,0,8" Command="{Binding AnalyzeSourceCommand}" />
+
+                    <Border Padding="14" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="来源" FontWeight="SemiBold" FontSize="{StaticResource Typography.Label}" />
+                        <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+                          <TextBlock Text="{Binding SourceFolder, StringFormat=来源：{0}}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.BodySmall}" />
+                        </Border>
+                        <Grid Margin="0,10,0,0">
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                          <Button Grid.Column="0" Content="选择来源文件夹" Style="{StaticResource Button.Secondary}" Command="{Binding BrowseSourceCommand}" Padding="10,7" />
+                          <Button Grid.Column="2" Content="选择多个文件" Style="{StaticResource Button.Secondary}" Command="{Binding BrowseSourceFilesCommand}" Padding="10,7" />
+                        </Grid>
+                        <TextBlock Text="转移方式" FontWeight="SemiBold" Margin="0,14,0,6" />
+                        <ComboBox SelectedValuePath="Mode" DisplayMemberPath="Display" ItemsSource="{Binding TransferModes}" SelectedValue="{Binding SelectedTransferMode}" />
+                      </StackPanel>
+                    </Border>
+
+                    <Border Padding="12" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Margin="0,0,0,12">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                          <TextBlock Text="本地 AI 人物识别" FontWeight="SemiBold" />
+                          <TextBlock Text="只识别 JPG/JPEG；同名 RAW 自动继承，视频跳过；仅本机处理。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,3,10,0" />
+                        </StackPanel>
+                        <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding EnablePersonRecognition}" />
+                      </Grid>
+                    </Border>
+
+                    <Border Padding="14" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Margin="0,0,0,12">
+                      <StackPanel>
+                        <TextBlock Text="拖入后期 / 素材" FontWeight="SemiBold" Margin="0,0,0,10" />
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                          <Border Grid.Column="0" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" CornerRadius="{StaticResource Radius.Control}" Padding="12,10" AllowDrop="True" Drop="EditedDropTarget_Drop">
+                            <StackPanel><TextBlock Text="修后" FontWeight="SemiBold" /><TextBlock Text="后期完成文件" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" /></StackPanel>
+                          </Border>
+                          <Border Grid.Column="2" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" CornerRadius="{StaticResource Radius.Control}" Padding="12,10" AllowDrop="True" Drop="MaterialDropTarget_Drop">
+                            <StackPanel><TextBlock Text="素材" FontWeight="SemiBold" /><TextBlock Text="项目素材" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" /></StackPanel>
+                          </Border>
+                        </Grid>
+                        <TextBlock Text="无法判断归属时会停下来让你确认，不会乱放。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,10,0,0" />
+                      </StackPanel>
+                    </Border>
+
+                    <Button x:Name="OnboardingAnalyzeButton" Content="开始分析与分类" Style="{StaticResource Button.Secondary}" Command="{Binding AnalyzeSourceCommand}" Margin="0,0,0,8" />
                     <Popup PlacementTarget="{Binding ElementName=OnboardingAnalyzeButton}" Placement="Right" HorizontalOffset="10" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False" IsOpen="{Binding PlacementTarget.DataContext.IsOnboardingImportStep, RelativeSource={RelativeSource Self}, Mode=OneWay}">
                       <Border Background="{DynamicResource Brush.Background.Canvas}" BorderBrush="{DynamicResource Brush.Border.Focus}" BorderThickness="2" CornerRadius="12" Padding="14,10">
                         <StackPanel Orientation="Horizontal">
@@ -785,8 +825,7 @@
                         </StackPanel>
                       </Border>
                     </Popup>
-                    <ComboBox SelectedValuePath="Mode" DisplayMemberPath="Display" Margin="0,0,0,8" ItemsSource="{Binding TransferModes}" SelectedValue="{Binding SelectedTransferMode}" />
-                    <Button x:Name="OnboardingImportButton" Content="手动开始 / 继续导入" Command="{Binding ImportSelectedCommand}" />
+                    <Button x:Name="OnboardingImportButton" Content="手动开始 / 继续导入" Style="{StaticResource Button.Primary}" Command="{Binding ImportSelectedCommand}" />
                     <Popup PlacementTarget="{Binding ElementName=OnboardingImportButton}" Placement="Right" HorizontalOffset="10" AllowsTransparency="True" StaysOpen="True" IsHitTestVisible="False" IsOpen="{Binding PlacementTarget.DataContext.IsOnboardingImportStep, RelativeSource={RelativeSource Self}, Mode=OneWay}">
                       <Border Background="{DynamicResource Brush.Background.Canvas}" BorderBrush="{DynamicResource Brush.Border.Focus}" BorderThickness="2" CornerRadius="12" Padding="14,10">
                         <StackPanel Orientation="Horizontal">
@@ -796,59 +835,46 @@
                       </Border>
                     </Popup>
                   </StackPanel>
-                </Border>
-                <Border Style="{DynamicResource Card.Default}" Padding="16">
-                  <StackPanel>
-                    <TextBlock Text="拖入后期 / 素材" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
-                    <UniformGrid Columns="2">
-                      <Border Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="18" Padding="14" Margin="0,0,8,0" AllowDrop="True" Drop="EditedDropTarget_Drop">
-                        <StackPanel>
-                          <TextBlock Text="修后" FontWeight="SemiBold" />
-                          <TextBlock Text="后期完成文件" FontSize="12" Opacity="0.84" />
-                        </StackPanel>
-                      </Border>
-                      <Border Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" CornerRadius="18" Padding="14" Margin="8,0,0,0" AllowDrop="True" Drop="MaterialDropTarget_Drop">
-                        <StackPanel>
-                          <TextBlock Text="素材" FontWeight="SemiBold" />
-                          <TextBlock Text="项目素材" FontSize="12" Opacity="0.84" />
-                        </StackPanel>
-                      </Border>
-                    </UniformGrid>
-                  </StackPanel>
-                </Border>
-              </StackPanel>
-              <Border Grid.Column="1" Style="{DynamicResource Card.Default}" Padding="18">
+                </ScrollViewer>
+              </Border>
+
+              <!-- 中：导入队列 -->
+              <Border Grid.Column="2" Padding="16" CornerRadius="{StaticResource Radius.Container}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
                 <DockPanel>
                   <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                    <TextBlock Text="导入队列" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="导入队列" FontSize="{StaticResource Typography.Title}" FontWeight="SemiBold" />
                     <TextBlock FontWeight="SemiBold" Opacity="0.88" Margin="0,6,0,0" Text="{Binding TargetDateText}" />
                     <TextBlock TextWrapping="Wrap" Opacity="0.88" Margin="0,6,0,0" Text="{Binding ImportReport}" />
-                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,6,0,0" Text="{Binding ImportActionHint}" />
-                    <Border Margin="0,10,0,0" Padding="10" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}">
-                      <StackPanel>
-                        <DockPanel>
+                    <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Brush.Primary}" Margin="0,6,0,0" Text="{Binding ImportActionHint}" />
+                    <Border Margin="0,10,0,0" Padding="12" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}">
+                      <DockPanel>
+                        <StackPanel>
                           <TextBlock Text="{Binding ProgressLabel}" FontWeight="SemiBold" />
-                          <TextBlock DockPanel.Dock="Right" Text="{Binding ProgressValue, StringFormat={}{0:0}%}" Foreground="{DynamicResource Brush.Text.Secondary}" />
-                        </DockPanel>
-                        <ProgressBar Margin="0,8,0,0" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" />
-                        <Button Content="取消导入" HorizontalAlignment="Right" Margin="0,8,0,0" Style="{DynamicResource Button.Secondary}" Command="{Binding CancelCurrentTaskCommand}" />
-                      </StackPanel>
+                          <ProgressBar Width="240" HorizontalAlignment="Left" Margin="0,8,0,0" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" />
+                        </StackPanel>
+                        <Button DockPanel.Dock="Right" Content="取消导入" Style="{StaticResource Button.Secondary}" Command="{Binding CancelCurrentTaskCommand}" VerticalAlignment="Center" />
+                      </DockPanel>
                     </Border>
                   </StackPanel>
                   <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding ImportSections}">
                       <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:ImportCategorySectionViewModel}">
-                          <Border Margin="0,0,0,14" Padding="16" CornerRadius="24" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
+                          <Border Margin="0,0,0,14" Padding="14" CornerRadius="{StaticResource Radius.Container}" Background="{DynamicResource Brush.Surface.ContainerLow}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
                             <StackPanel>
                               <DockPanel Margin="0,0,0,12">
-                                <Border Width="42" Height="42" CornerRadius="16" Margin="0,0,10,0" Background="{Binding AccentBrush}">
+                                <Border Width="42" Height="42" CornerRadius="{StaticResource Radius.Control}" Margin="0,0,12,0" Background="{Binding AccentBrush}">
                                   <TextBlock FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Icon}" />
                                 </Border>
                                 <StackPanel>
-                                  <TextBlock FontSize="19" FontWeight="SemiBold" Text="{Binding Name}" />
-                                  <TextBlock Opacity="0.86" Text="{Binding Subtitle}" />
-                                  <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0" Text="{Binding RenderHint}" />
+                                  <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" Text="{Binding Name}" VerticalAlignment="Center" />
+                                    <Border Margin="10,0,0,0" Padding="8,2" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHighest}" VerticalAlignment="Center">
+                                      <TextBlock Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Text="{Binding Items.Count, StringFormat={}{0} 项}" />
+                                    </Border>
+                                  </StackPanel>
+                                  <TextBlock Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.BodySmall}" Text="{Binding Subtitle}" />
+                                  <TextBlock Foreground="{DynamicResource Brush.Primary}" FontSize="{StaticResource Typography.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" Text="{Binding RenderHint}" />
                                 </StackPanel>
                               </DockPanel>
                               <ItemsControl ItemsSource="{Binding VisibleItems}">
@@ -859,65 +885,51 @@
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
                                   <DataTemplate DataType="{x:Type vm:ImportPreviewItemViewModel}">
-                                    <Border Width="210" Height="252" Margin="0,0,10,10" CornerRadius="18" ClipToBounds="True" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Background="{DynamicResource Brush.Surface.Subtle}">
-                                      <Grid>
-                                        <Rectangle Fill="{DynamicResource Brush.Accent.Subtle}" />
-                                        <Grid Visibility="{Binding HasNoThumbnail, Converter={StaticResource BoolToVis}}">
-                                          <Rectangle>
+                                    <Border Width="196" Margin="0,0,10,10" CornerRadius="{StaticResource Radius.Control}" ClipToBounds="True" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Background="{DynamicResource Brush.Surface.ContainerLowest}">
+                                      <StackPanel>
+                                        <Grid Height="108" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+                                          <Rectangle Fill="{DynamicResource Brush.Accent.Subtle}" />
+                                          <Grid Visibility="{Binding HasNoThumbnail, Converter={StaticResource BoolToVis}}">
+                                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
+                                              <TextBlock Foreground="{DynamicResource Brush.Primary}" FontSize="26" FontWeight="Black" HorizontalAlignment="Center" Text="{Binding ExtensionBadge}" />
+                                              <TextBlock Text="暂无系统缩略图" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="11" HorizontalAlignment="Center" Margin="0,6,0,0" />
+                                            </StackPanel>
+                                          </Grid>
+                                          <Rectangle Opacity="0.9">
                                             <Shape.Fill>
-                                              <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                                <GradientStop Color="{DynamicResource Color.Background.Canvas}" Offset="0" />
-                                                <GradientStop Color="{DynamicResource Color.Background.Canvas}" Offset="1" />
-                                              </LinearGradientBrush>
+                                              <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
                                             </Shape.Fill>
                                           </Rectangle>
-                                          <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="14">
-                                            <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="30" FontWeight="Black" HorizontalAlignment="Center" Text="{Binding ExtensionBadge}" />
-                                            <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap" Margin="0,10,0,0" MaxWidth="172" Text="{Binding SourceFileName}" />
-                                            <TextBlock Text="暂无系统缩略图" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" HorizontalAlignment="Center" Opacity="0.88" Margin="0,8,0,0" />
-                                          </StackPanel>
+                                          <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="7,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Overlay.Scrim}">
+                                            <TextBlock Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="10" FontWeight="SemiBold" Text="{Binding QueueNumber}" />
+                                          </Border>
+                                          <Border HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,8,0" Padding="7,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Overlay.Scrim}">
+                                            <TextBlock Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="10" FontWeight="SemiBold" Text="{Binding CategoryBadge}" />
+                                          </Border>
                                         </Grid>
-                                        <Rectangle Opacity="0.72">
-                                          <Shape.Fill>
-                                            <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
-                                          </Shape.Fill>
-                                        </Rectangle>
-                                        <Rectangle Fill="{DynamicResource Brush.Accent.Subtle}" />
-                                        <Rectangle>
-                                          <Shape.Fill>
-                                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                              <GradientStop Color="{DynamicResource Color.Background.Canvas}" Offset="0" />
-                                              <GradientStop Color="{DynamicResource Color.Background.Canvas}" Offset="1" />
-                                            </LinearGradientBrush>
-                                          </Shape.Fill>
-                                        </Rectangle>
                                         <StackPanel Margin="12">
-                                          <DockPanel>
-                                            <CheckBox VerticalAlignment="Center" IsChecked="{Binding IsSelected}" />
-                                            <Border DockPanel.Dock="Right" Padding="8,3" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}">
-                                              <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" FontWeight="SemiBold" Text="{Binding CategoryBadge}" />
-                                            </Border>
-                                          </DockPanel>
-                                          <Border HorizontalAlignment="Left" Padding="8,4" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}" Margin="0,72,0,0">
-                                            <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="12" FontWeight="Black" Text="{Binding QueueNumber}" />
+                                          <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                                          <TextBlock Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,2,0,0" TextTrimming="CharacterEllipsis" Text="{Binding SourceFileName}" />
+                                          <TextBlock Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,2,0,0" Text="{Binding SizeText}" />
+                                          <TextBlock Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,1,0,0" Text="{Binding TargetDateText}" />
+                                          <Border HorizontalAlignment="Left" Padding="8,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.TertiaryContainer}" Margin="0,6,0,0" Visibility="{Binding HasPersonLabel, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Foreground="{DynamicResource Brush.OnTertiaryContainer}" FontSize="10.5" FontWeight="SemiBold" Text="{Binding PersonLabel}" />
                                           </Border>
-                                          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="16" FontWeight="Black" TextTrimming="CharacterEllipsis" Margin="0,8,0,0" Text="{Binding Name}" />
-                                          <Border HorizontalAlignment="Left" Padding="8,3" CornerRadius="10" Background="{DynamicResource Brush.Surface.Subtle}" Margin="0,5,0,0" Visibility="{Binding HasPersonLabel, Converter={StaticResource BoolToVis}}">
-                                            <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" FontWeight="SemiBold" Text="{Binding PersonLabel}" />
+                                          <Border HorizontalAlignment="Left" Padding="8,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.PrimaryContainer}" Margin="0,6,0,0" Visibility="{Binding NeedsAttention, Converter={StaticResource BoolToVis}}">
+                                            <TextBlock Foreground="{DynamicResource Brush.OnPrimaryContainer}" FontSize="10.5" FontWeight="SemiBold" Text="需要人工确认" />
                                           </Border>
-                                          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontWeight="SemiBold" Margin="0,3,0,0" Text="{Binding SizeText}" />
-                                          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Opacity="0.92" FontSize="12" Margin="0,2,0,0" Text="{Binding TargetDateText}" />
-                                          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,5,0,0" Text="{Binding SourceFileName}" />
-                                          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Opacity="0.82" FontSize="10.5" TextWrapping="Wrap" Margin="0,4,0,0" MaxHeight="30" Text="{Binding PrimaryPath}" />
-                                          <ComboBox DisplayMemberPath="Display" Margin="0,10,0,0" ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding SelectedCategory}" />
-                                          <TextBlock Text="需要人工确认" Foreground="{DynamicResource Brush.Text.Primary}" Margin="0,6,0,0" Visibility="{Binding NeedsAttention, Converter={StaticResource BoolToVis}}" />
+                                          <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0" VerticalAlignment="Center" IsChecked="{Binding IsSelected}" />
+                                            <ComboBox Grid.Column="1" DisplayMemberPath="Display" Margin="6,0,0,0" ItemsSource="{Binding CategoryChoices}" SelectedItem="{Binding SelectedCategory}" />
+                                          </Grid>
                                         </StackPanel>
-                                      </Grid>
+                                      </StackPanel>
                                     </Border>
                                   </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                               </ItemsControl>
-                              <Button HorizontalAlignment="Left" Padding="16,8" Margin="0,4,0,0" Content="{Binding HiddenCount, StringFormat=继续显示更多（剩余 {0:N0} 张）}" Command="{Binding ShowMoreCommand}" Visibility="{Binding HasHiddenItems, Converter={StaticResource BoolToVis}}" />
+                              <Button HorizontalAlignment="Left" Padding="14,7" Margin="0,4,0,0" Content="{Binding HiddenCount, StringFormat=继续显示更多（剩余 {0:N0} 张）}" Command="{Binding ShowMoreCommand}" Visibility="{Binding HasHiddenItems, Converter={StaticResource BoolToVis}}" Style="{StaticResource Button.Secondary}" />
                             </StackPanel>
                           </Border>
                         </DataTemplate>
@@ -925,6 +937,79 @@
                     </ItemsControl>
                   </ScrollViewer>
                 </DockPanel>
+              </Border>
+
+              <!-- 右：Inspector（320px） -->
+              <Border Grid.Column="4" Style="{StaticResource Inspector.Panel}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                  <StackPanel>
+                    <TextBlock Text="导入设置" Style="{StaticResource Inspector.SectionLabel}" />
+                    <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+                      <StackPanel>
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="精确查重（SHA-256）" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" />
+                            <TextBlock Text="文件大小粗筛 → 流式哈希确认；重复自动跳过" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,2,10,0" />
+                          </StackPanel>
+                          <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="True" IsEnabled="False" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.OutlineVariant}" Margin="0,10" />
+                        <Grid>
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="相似照片审查（感知哈希）" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" />
+                            <TextBlock Text="仅做全库相似度审查，不自动阻止导入" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,2,10,0" />
+                          </StackPanel>
+                          <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="False" IsEnabled="False" />
+                        </Grid>
+                        <Border Height="1" Background="{DynamicResource Brush.OutlineVariant}" Margin="0,10" />
+                        <Grid Opacity="0.72">
+                          <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                          <StackPanel Grid.Column="0">
+                            <TextBlock Text="修后目录只读保护" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" />
+                            <TextBlock Text="«修后» 文件夹永不写入、不可覆盖（铁律，不可关闭）" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,2,10,0" />
+                          </StackPanel>
+                          <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="True" IsEnabled="False" />
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="去重结果" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
+                    <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+                      <StackPanel>
+                        <TextBlock Text="导入时自动检测重复并统一处理" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" />
+                        <RadioButton Content="全部跳过（推荐）" IsChecked="True" IsEnabled="False" Margin="0,8,0,0" />
+                        <RadioButton Content="全部仍导入" IsEnabled="False" Margin="0,4,0,0" />
+                        <RadioButton Content="逐个选择" IsEnabled="False" Margin="0,4,0,0" />
+                        <TextBlock Text="检测到重复时会弹出确认窗口，可统一或逐个处理。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,8,0,0" />
+                      </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="本次导入摘要" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
+                    <Grid Margin="0,8,0,0">
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                      <Border Grid.Column="0" Padding="10,8" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+                        <StackPanel HorizontalAlignment="Center">
+                          <TextBlock HorizontalAlignment="Center" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" Text="{Binding ImportSuccessCount}" />
+                          <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Text="成功" />
+                        </StackPanel>
+                      </Border>
+                      <Border Grid.Column="2" Padding="10,8" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+                        <StackPanel HorizontalAlignment="Center">
+                          <TextBlock HorizontalAlignment="Center" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Tertiary}" Text="{Binding ImportSkippedCount}" />
+                          <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Text="跳过" />
+                        </StackPanel>
+                      </Border>
+                      <Border Grid.Column="4" Padding="10,8" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+                        <StackPanel HorizontalAlignment="Center">
+                          <TextBlock HorizontalAlignment="Center" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Status.Danger}" Text="{Binding ImportFailedCount}" />
+                          <TextBlock HorizontalAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Text="失败" />
+                        </StackPanel>
+                      </Border>
+                    </Grid>
+                  </StackPanel>
+                </ScrollViewer>
               </Border>
             </Grid>
             <Grid Name="PreviewPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">

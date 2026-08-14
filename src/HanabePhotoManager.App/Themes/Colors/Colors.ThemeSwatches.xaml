@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    主题色卡预览（设置页 6 套主题切换 UI 的固定色卡）。
+    颜色与 Colors.<Scheme>.<Mode>.xaml 的 Color.Primary / Color.Secondary / Color.Tertiary 一致；
+    仅供主题选择卡片作为“色卡预览”元数据使用，页面其余部分仍消费语义 Token。
+  -->
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Light.Primary" Color="#4355B9" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Light.Secondary" Color="#5B5D72" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Light.Tertiary" Color="#7A5700" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Dark.Primary" Color="#BCC3FF" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Dark.Secondary" Color="#C4C6DE" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Dynamic.Dark.Tertiary" Color="#FFC34F" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Light.Primary" Color="#1D6B50" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Light.Secondary" Color="#4F6357" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Light.Tertiary" Color="#3E6373" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Dark.Primary" Color="#8CD5B2" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Dark.Secondary" Color="#B5CCBD" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Forest.Dark.Tertiary" Color="#A6CCDE" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Light.Primary" Color="#8B4AA6" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Light.Secondary" Color="#6B5D71" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Light.Tertiary" Color="#006A6A" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Dark.Primary" Color="#E3AEF7" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Dark.Secondary" Color="#D9C2DE" />
+  <SolidColorBrush x:Key="Brush.ThemeSwatch.Violet.Dark.Tertiary" Color="#77D3D3" />
+</ResourceDictionary>

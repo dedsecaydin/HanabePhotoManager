@@ -1,5 +1,40 @@
 # Agent Change Log
 
+## 2026-08-14 — M3 导入页 + 设置页重新设计（对齐 006/007 mockup）
+
+### Task
+按用户确认的预设计（`sketches/006-m3-import` / `007-m3-settings`）重做「导入页」与「设置页」：导入页三段布局（左 320 源面板 + 中队列 + 右 320 Inspector）、设置页左分区导航 + 右 M3 分组列表 + 常驻 Inspector（主题实时预览 + 数据/关于）。铁律：仅改视觉/布局/交互组织，VM/Command/Binding 尽量不动；只用语义 Token；动效 150/180/220ms；禁 Card 套 Card / 粗边框 / 巨大圆角 / 强渐变。
+
+### A. 导入页（`MainWindow.xaml` + `ViewModels/MainWindowViewModel.cs` + `.Import.cs`）
+- **三段布局**：`ImportPage` 由 380px+* 两列改为 `320 / 16 / * / 16 / 320` 五列。左「导入源」`Inspector.Panel`（320px，surface-container-low 大圆角）：相机拖放区（`Icon.Import` 图标 + `SourceAutoImportDropTarget_DragOver/Drop` 原样保留）、来源卡（`SourceFolder` + `BrowseSourceCommand`/`BrowseSourceFilesCommand`）、转移方式 `ComboBox`（`TransferModes`/`SelectedTransferMode` 绑定不动）、本地 AI 人物识别 `CheckBox`（`EnablePersonRecognition`）、修后/素材拖放区（`EditedDropTarget_Drop`/`MaterialDropTarget_Drop`）、`AnalyzeSourceCommand` + `ImportSelectedCommand` + 两个 onboarding Popup（`OnboardingAnalyzeButton`/`OnboardingImportButton` 命名与 PlacementTarget 全保留）。
+- **中队列**：`Surface.ContainerLowest` 大圆角容器，队列头（`TargetDateText`/`ImportReport`/`ImportActionHint`）+ 进度卡（`IsImportRunning`/`ProgressLabel`/`ProgressValue`/`CancelCurrentTaskCommand`）+ 6 分类 section（`ImportSections`，分区头加 `Items.Count` 数量徽章，预览卡 `ImportPreviewItemViewModel` 重排为「缩略图 + 队列号/CategoryBadge scrim 角标 + 名称/文件名/大小/日期 + 人物徽章 tertiary-container + 人工确认徽章 primary-container + 勾选 + 分类下拉」，`ShowMoreCommand`/`HiddenCount`/`HasHiddenItems` 保留）。
+- **右 Inspector（320px，`Inspector.Panel`）**：① 导入设置——精确查重(SHA-256)/相似照片审查(感知哈希)/修后目录只读保护 三行只读开关（`IsEnabled=False`，修后保护行 `Opacity=0.72` 置灰铁律，如实呈现「始终开启/铁律不可关」而不伪造可切换行为）；② 去重结果——三选项（全部跳过推荐/全部仍导入/逐个选择）只读 radio + 说明（实际去重仍走既有 `ImportDuplicateBatchDecisionWindow` 模态，此处仅信息展示不改变流程）；③ 本次导入摘要——成功/跳过/失败三格统计卡。
+- **VM 最小化新增（记录）**：`ImportSuccessCount`/`ImportSkippedCount`/`ImportFailedCount` 三个只读 int + `SetImportSummary(success, skipped, failed)`，在 `RunImportAsync` 完成/取消时赋值、5 处 `ImportItems.Clear()` 复位处 `SetImportSummary(0,0,0)`。仅新增只读属性，未改任何导入/去重/转移/分类逻辑。
+
+### B. 设置页（`SettingsCenterPage.xaml` + `.xaml.cs` + 主题资源）
+- **布局**：`TabControl`（`Navigation.SettingsTabs`）改为 216px 左分区导航（`ListBox`+`List.Default`/`ListItem.Default`，6 分区：外观/常规/照片库与导入/浏览与AI/云盘与项目/高级，`SelectionChanged` code-behind 切换 6 个 `StackPanel` 可见性）+ 右 `ScrollViewer` M3 分组列表（group header=primary 小标题 + outline-variant 分隔线 + `Settings.Group`（surface-container-low 大圆角）+ 设置行（标题/描述 + 控件，`Settings.Divider` 行分隔））+ 320px 常驻 Inspector。
+- **外观分区 6 套主题色卡**：`ThemeCard`（keyed Button，surface-container-lowest 大圆角）+ 6 张色卡（动态色彩/森林绿/紫罗兰 × 浅/深），点击 `ThemeCard_Click` 读 `Tag="Scheme.Mode"` → `ThemeManager.Apply(theme, scheme)`；当前主题高亮（`UpdateThemeIndicators` 用 `Brush.Primary` 描边 + ✓ 角标）+ Inspector 色板/窗口迷你预览随 Token 实时联动（全 DynamicResource）。
+- **Inspector 常驻**：当前主题（6 色板 + 窗口迷你预览 + `CurrentThemeTag`）+ 数据与存储（设置目录 `{x:Static services:AppDataPaths.Root}` + `LibraryHealthText` + `DiscoveredDateCount`）+ 关于（`ReleaseNotes.CurrentVersionLabel` + net8.0-windows + 个人使用）。
+- **保留全部功能项**：开机自启/窗口恢复/`WindowStateSummary`、新手指南 `ReplayOnboardingCommand`、版本树（`ReleaseVersionTree`/`ReleaseNotes.Versions`/`SelectedVersion`/`SelectedReleaseTitle`/`SelectedReleaseNotes`/`CurrentVersionLabel` 完整保留）、`LibraryRoot`/`BrowseLibraryCommand`、浏览默认值（评分/排序/恢复策略/缩略图）、AI 识别（引擎/标签数/相似度窗口）、百度凭据（AppKey/AppSecret/保存/授权/断开）、夸克路径、推理设备、人脸引擎/ArcFace 路径/阈值/许可、快捷键/安全隐私等——全部照抄旧 6 分区，仅改视觉。**顺手修复旧死绑定 `LibraryCapacityText`（VM 已无此属性，静默绑定失败）**：改用 `LibraryHealthText` + `DiscoveredDateCount`。
+- **主题色卡资源**：新增 `Themes/Colors/Colors.ThemeSwatches.xaml`（18 个 `Brush.ThemeSwatch.<Scheme>.<Mode>.<Role>`，色值与 `Colors.<Scheme>.<Mode>.xaml` 的 primary/secondary/tertiary 一致），合并进 6 套主题入口；页面不再写死 `#hex`（满足 `ApplicationXaml_HasNoRawColorsOutsideThemeColorDictionaries` 回归测试）。
+
+### 合规修复（测试驱动）
+- `AppearanceAndCompressionSelectors_UseTheSharedThemedComboBoxTemplate`：设置页所有下拉改用共享 `Input.SettingsComboBox`（`Style` 紧邻 `ItemsSource` 满足断言）。
+- `ApplicationXaml_HasNoRawColorsOutsideThemeColorDictionaries`：主题色卡由页内 `#hex` 改为 `Colors.ThemeSwatches.xaml` 资源引用。
+- code-behind 二义性：`Button`/`Brush` 因 `global using System.Drawing/System.Windows.Forms` 与 WPF 类型冲突，全限定为 `System.Windows.Controls.Button`/`System.Windows.Media.Brush`。
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Debug /warnaserror`：0 警告 / 0 错误。
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror`：0 警告 / 0 错误。
+- `dotnet test HanabePhotoManager.sln -c Debug --no-build`：917 全绿（Core 373 / Infra 164 / App 380）。
+- 截图 `.artifacts/capture-m3-import-settings.ps1`（headless `--screenshot --page Import/Settings`，播种 home-fix-fixture 为 LibraryRoot）：`m3-import-{light,dark}.png` + `m3-settings-{light,dark}.png`（1344×986）+ 切主题 `m3-settings-violet-dark.png`；像素采样确认各主题 surface/primary 正确渲染。
+
+### Notes（诚实记录）
+- 导入页 Inspector 三处（导入设置开关 / 去重结果 / 完成摘要）中，「去重结果」与「导入设置」为**信息展示**（真实去重仍走模态窗、精确查重/相似审查无 VM 开关、修后只读保护为铁律），仅「完成摘要」新增 3 个只读 int 绑定真实计数。未伪造可交互的假开关、未改去重流程。
+- mockup 的「分析报告进度卡常显」「预览卡 Emoji 图标」「inspector 去重缩略图/size·time 摘要」等无对应 VM 数据的装饰项未臆造（用文字/语义 token 呈现）。
+
+---
+
 ## 2026-08-14 — 人物页功能补全：合并命令 + 详情照片虚拟化
 
 ### Task

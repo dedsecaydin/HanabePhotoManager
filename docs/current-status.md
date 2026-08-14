@@ -7,6 +7,25 @@
 
 ---
 
+## M3 导入页 + 设置页重新设计（006/007 mockup）(2026-08-14)
+
+> 按用户确认的预设计 006/007 重做两功能页，仅视觉/布局/交互组织。导入页三段布局、设置页左导航 + 分组列表 + 常驻 Inspector；6 套主题切换整合进外观分区色卡；全程语义 Token；动效 150/180/220ms。
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| 导入页三段布局 | Stable | `ImportPage` 改 `320/16/*/16/320`：左源面板（拖放区/来源/转移方式/人物识别/修后素材拖放/分析+导入按钮，绑定命令全保留）· 中队列（目标日期/报告/进度卡/6 分类 section + 预览卡）· 右 Inspector |
+| 导入页 Inspector | Stable | 导入设置（精确查重/相似审查/修后只读保护三行只读开关，修后置灰铁律）+ 去重结果（三选项只读，实际走既有模态）+ 本次导入摘要（成功/跳过/失败） |
+| 导入 VM 新增 | Stable（最小化） | `ImportSuccessCount`/`ImportSkippedCount`/`ImportFailedCount` 三个只读 int + `SetImportSummary`，导入完成/取消赋值、`ImportItems.Clear()` 处复位；未改导入/去重/转移/分类逻辑 |
+| 设置页布局 | Stable | `TabControl` → 216px 左分区导航（6 分区）+ 右 M3 分组列表（group header + 分隔线 + 设置行）+ 320px 常驻 Inspector（主题预览/数据存储/关于） |
+| 外观 6 套主题色卡 | Stable | 6 张色卡（配色×明暗）`ThemeManager.Apply` 即时换肤 + 当前高亮 + Inspector 色板/窗口预览随 Token 联动；色卡色值入 `Colors.ThemeSwatches.xaml`（非页内写死） |
+| 设置功能保留 | Stable | 6 分区全部功能项照抄（自启/窗口恢复/版本树/照片库/浏览默认值/AI/百度凭据/夸克/推理/人脸/ArcFace/快捷键等）；顺手修复死绑定 `LibraryCapacityText` → `LibraryHealthText`+`DiscoveredDateCount` |
+| 合规 | ✅ | 下拉统一 `Input.SettingsComboBox`；页内无 `#hex`（色卡走共享资源）；code-behind `Button`/`Brush` 二义性全限定 |
+| 验证 | ✅ | Debug+Release build 0 警告 0 错误；`dotnet test` 917 全绿（Core 373 / Infra 164 / App 380）；截图 `m3-import-{light,dark}.png` + `m3-settings-{light,dark}.png` + `m3-settings-violet-dark.png` |
+
+下一阶段建议：008 工具/地图页等其余功能页按同款 M3 排版深化；导入页可进一步把「去重结果」内联到真实去重流程（需 VM 暴露 `DuplicateMatchCount` + 决策态，属行为改动需用户确认）。
+
+---
+
 ## 人物页功能补全 — 合并命令 + 详情照片虚拟化 (2026-08-14)
 
 > 补上轮遗留技术债第 1、2 项（用户确认先补「合并」）。只改人物相关；`MergeAsync` 服务逻辑不改，只加命令层 + UI；全程语义 Token；动效 150/180/220ms。

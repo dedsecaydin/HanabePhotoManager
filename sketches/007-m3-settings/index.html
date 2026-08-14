@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 设置 · M3 浓烈版（预设计 007）</title>
+<style>
+/* ============================================================
+   Variant 007: 设置页（M3 分组设置列表 × 6 主题实时切换）
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector）
+   功能来源 = SettingsCenterPage.xaml（6 个分区）+ MainWindowViewModel 设置属性
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============ 默认主题：动态色彩 · 浅色（M3_DESIGN_FINAL 色值） ============ */
+:root {
+  --primary: #4355B9;
+  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;
+  --on-primary-container: #00105C;
+  --secondary: #5B5D72;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;
+  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;
+  --on-tertiary-container: #271900;
+  --error: #BA1A1A;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
+
+  --surface: #FBF8FF;
+  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;
+  --on-surface-variant: #45464F;
+  --outline: #75767F;
+  --outline-variant: #C5C5CF;
+
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  font-size: 16px;
+}
+
+/* ============ 6 套主题（3 配色 × 明暗，落地按 M3 tonal 规则算，此处为示意值） ============ */
+:root[data-theme="dynamic-dark"] {
+  --primary: #BCC3FF;  --on-primary: #1E2768;
+  --primary-container: #2A3585;  --on-primary-container: #DEE0FF;
+  --secondary: #C4C6DE;  --on-secondary: #2A2B40;
+  --secondary-container: #434459;  --on-secondary-container: #E0E1F9;
+  --tertiary: #FFC34F;  --on-tertiary: #442C00;
+  --tertiary-container: #5E4100;  --on-tertiary-container: #FFDF9E;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121318;  --surface-dim: #121318;
+  --surface-container-lowest: #0D0E12;
+  --surface-container-low: #17181E;
+  --surface-container: #1D1E24;
+  --surface-container-high: #27282F;
+  --surface-container-highest: #32333B;
+  --on-surface: #E3E1E9;  --on-surface-variant: #C6C5D0;
+  --outline: #90919B;  --outline-variant: #45464F;
+  --state-hover: rgba(227, 225, 233, 0.08);
+  --state-pressed: rgba(227, 225, 233, 0.12);
+}
+:root[data-theme="forest-light"] {
+  --primary: #1D6B50;  --on-primary: #FFFFFF;
+  --primary-container: #A8F2CD;  --on-primary-container: #002110;
+  --secondary: #4F6357;  --on-secondary: #FFFFFF;
+  --secondary-container: #D2E8DA;  --on-secondary-container: #0E2018;
+  --tertiary: #3E6373;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #C2E8FB;  --on-tertiary-container: #001F2C;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FCFDF7;  --surface-dim: #DCE3DB;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F6F9F4;
+  --surface-container: #F0F5EE;
+  --surface-container-high: #EAEFE9;
+  --surface-container-highest: #E4EAE3;
+  --on-surface: #1B1D1B;  --on-surface-variant: #444844;
+  --outline: #757A75;  --outline-variant: #C4C9C3;
+  --state-hover: rgba(27, 29, 27, 0.08);
+  --state-pressed: rgba(27, 29, 27, 0.12);
+}
+:root[data-theme="forest-dark"] {
+  --primary: #8CD5B2;  --on-primary: #003420;
+  --primary-container: #004930;  --on-primary-container: #A8F2CD;
+  --secondary: #B5CCBD;  --on-secondary: #21352A;
+  --secondary-container: #374B3F;  --on-secondary-container: #D2E8DA;
+  --tertiary: #A6CCDE;  --on-tertiary: #0A3343;
+  --tertiary-container: #244B5B;  --on-tertiary-container: #C2E8FB;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121412;  --surface-dim: #121412;
+  --surface-container-lowest: #0C0E0C;
+  --surface-container-low: #181B18;
+  --surface-container: #1D201D;
+  --surface-container-high: #272A27;
+  --surface-container-highest: #32352F;
+  --on-surface: #E1E3DE;  --on-surface-variant: #C2C8C2;
+  --outline: #8C928C;  --outline-variant: #434943;
+  --state-hover: rgba(225, 227, 222, 0.08);
+  --state-pressed: rgba(225, 227, 222, 0.12);
+}
+:root[data-theme="violet-light"] {
+  --primary: #8B4AA6;  --on-primary: #FFFFFF;
+  --primary-container: #F7D8FF;  --on-primary-container: #3A0051;
+  --secondary: #6B5D71;  --on-secondary: #FFFFFF;
+  --secondary-container: #F3DFF8;  --on-secondary-container: #271B2B;
+  --tertiary: #006A6A;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #9CF0F0;  --on-tertiary-container: #003737;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FEF7FF;  --surface-dim: #DED8E1;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #FAF2FC;
+  --surface-container: #F5ECF7;
+  --surface-container-high: #EFE6F1;
+  --surface-container-highest: #E9E2EA;
+  --on-surface: #1D1B1E;  --on-surface-variant: #49454E;
+  --outline: #7A757E;  --outline-variant: #CAC4CF;
+  --state-hover: rgba(29, 27, 30, 0.08);
+  --state-pressed: rgba(29, 27, 30, 0.12);
+}
+:root[data-theme="violet-dark"] {
+  --primary: #E3AEF7;  --on-primary: #4B1160;
+  --primary-container: #6F2B89;  --on-primary-container: #F7D8FF;
+  --secondary: #D9C2DE;  --on-secondary: #3A2D3F;
+  --secondary-container: #524359;  --on-secondary-container: #F3DFF8;
+  --tertiary: #77D3D3;  --on-tertiary: #003738;
+  --tertiary-container: #00504F;  --on-tertiary-container: #9CF0F0;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #151316;  --surface-dim: #151316;
+  --surface-container-lowest: #100E11;
+  --surface-container-low: #1B191C;
+  --surface-container: #201E21;
+  --surface-container-high: #2B282C;
+  --surface-container-highest: #343138;
+  --on-surface: #E7E1E8;  --on-surface-variant: #CAC4CF;
+  --outline: #948F98;  --outline-variant: #49454E;
+  --state-hover: rgba(231, 225, 232, 0.08);
+  --state-pressed: rgba(231, 225, 232, 0.12);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+  background: var(--surface-dim);
+  transition: background var(--motion-slow) var(--ease);
+}
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background var(--motion-slow) var(--ease);
+}
+.rail-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-medium);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.rail-logo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%);
+}
+.rail-item {
+  width: 64px;
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant);
+  font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.rail-item.active .rail-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* ===================== Main ===================== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Top app bar */
+.topbar {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  transition: background var(--motion-slow) var(--ease);
+}
+.topbar-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+.search-field {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  color: var(--on-surface-variant);
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.search-field:hover { background: var(--surface-container-highest); }
+.search-field:focus-within {
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.search-field input {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; flex: 1; color: var(--on-surface);
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+
+/* ===================== Content ===================== */
+.content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  transition: background var(--motion-slow) var(--ease);
+}
+
+/* ===================== 通用组件 ===================== */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-small);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip:active { background: var(--state-pressed); }
+.chip.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+.chip.primary { background: var(--primary); color: var(--on-primary); }
+.chip.primary:hover { background: var(--primary); filter: brightness(0.94); }
+
+.btn {
+  border: none; cursor: pointer;
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  transition: transform var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { filter: brightness(0.94); }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-tonal:hover { background: var(--surface-container-highest); }
+.btn-ghost { background: transparent; color: var(--on-surface-variant); }
+.btn-ghost:hover { background: var(--state-hover); }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+
+/* M3 Switch */
+.switch { position: relative; width: 52px; height: 32px; flex: 0 0 auto; cursor: pointer; }
+.switch input { opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 2; }
+.switch .track {
+  position: absolute; inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  border: 2px solid var(--outline);
+  transition: background var(--motion-normal) var(--ease), border-color var(--motion-normal) var(--ease);
+}
+.switch .thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: 16px; height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--outline);
+  transition: transform var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease);
+}
+.switch input:checked + .track { background: var(--primary); border-color: var(--primary); }
+.switch input:checked ~ .thumb { transform: translateX(20px); background: var(--on-primary); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 2px var(--primary-container); }
+
+/* 下拉 */
+.select-wrap { position: relative; display: inline-block; width: 100%; }
+.select-wrap::after {
+  content: '▾'; position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--on-surface-variant); pointer-events: none; font-size: 12px;
+}
+.select {
+  appearance: none; -webkit-appearance: none;
+  width: 100%;
+  background: var(--surface-container-high);
+  border: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  padding: 9px 34px 9px 14px;
+  font-size: 13px; font-weight: 500;
+  font-family: inherit;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.select:hover { background: var(--surface-container-highest); }
+.select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+
+/* 文本输入 */
+.text-input {
+  width: 100%;
+  border: 1px solid var(--outline-variant);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-medium);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--on-surface);
+  transition: border-color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.text-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+.text-input[readonly] { color: var(--on-surface-variant); cursor: default; }
+
+/* 滑块 */
+input[type="range"] { width: 100%; accent-color: var(--primary); height: 20px; cursor: pointer; }
+.range-row { display: flex; align-items: center; gap: 12px; }
+.range-row .rr-val {
+  flex: 0 0 auto; min-width: 44px; text-align: right;
+  font-size: 13px; font-weight: 700; color: var(--primary);
+}
+
+/* ===================== 设置页布局 ===================== */
+.set-layout { display: flex; gap: 14px; flex: 1; min-height: 0; }
+
+/* 左：设置分区导航 */
+.set-nav {
+  width: 216px; flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 4px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.set-nav > * { flex-shrink: 0; }
+.set-nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-extra-large);
+  cursor: pointer;
+  color: var(--on-surface-variant);
+  font-size: 13.5px; font-weight: 600;
+  transition: background var(--motion-normal) var(--ease), color var(--motion-normal) var(--ease);
+}
+.set-nav-item:hover { background: var(--state-hover); }
+.set-nav-item:active { background: var(--state-pressed); }
+.set-nav-item .sn-icon {
+  width: 34px; height: 34px; flex: 0 0 auto;
+  border-radius: var(--radius-medium);
+  background: var(--surface-container-high);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  transition: background var(--motion-normal) var(--ease);
+}
+.set-nav-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.set-nav-item.active .sn-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* 右：设置内容（分组列表） */
+.set-content {
+  flex: 1; min-width: 0; min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.set-section { display: none; flex-direction: column; gap: 6px; }
+.set-section.active { display: flex; }
+.set-section-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.set-section-hint { font-size: 13px; color: var(--on-surface-variant); margin: 2px 0 4px; line-height: 1.5; }
+
+/* M3 分组：group header + 行 */
+.set-group-h {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--primary);
+  margin: 16px 6px 6px;
+  display: flex; align-items: center; gap: 8px;
+}
+.set-group-h::after { content: ''; flex: 1; height: 1px; background: var(--outline-variant); opacity: 0.6; }
+.set-group {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-large);
+  padding: 2px 20px;
+  transition: background var(--motion-slow) var(--ease);
+}
+.set-row {
+  display: flex; align-items: center; gap: 16px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.set-row:last-child { border-bottom: none; }
+.set-row.stack { flex-direction: column; align-items: stretch; gap: 10px; }
+.set-row .sr-label { flex: 1; min-width: 0; }
+.set-row .sr-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.set-row .sr-desc { font-size: 12px; color: var(--on-surface-variant); margin-top: 2px; line-height: 1.5; }
+.set-row .sr-control { flex: 0 0 auto; width: 240px; max-width: 46%; }
+.set-row .sr-control.narrow { width: 168px; }
+.set-row .sr-control.wide { width: 100%; max-width: 100%; }
+
+/* 主题色卡 */
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme-card {
+  border-radius: var(--radius-large);
+  border: 2px solid var(--outline-variant);
+  background: var(--surface-container-lowest);
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color var(--motion-normal) var(--ease), transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+  position: relative;
+}
+.theme-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
+.theme-card.active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-container); }
+.theme-card.active::after {
+  content: '✓';
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--primary); color: var(--on-primary);
+  font-size: 11px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+}
+.tc-swatches { display: flex; gap: 5px; align-items: center; margin-bottom: 9px; }
+.tc-dot { width: 20px; height: 20px; border-radius: var(--radius-full); border: 1px solid rgba(0,0,0,0.10); }
+.tc-sheet {
+  width: 26px; height: 20px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 800;
+  margin-left: auto;
+}
+.tc-name { font-size: 13px; font-weight: 700; }
+.tc-mode { font-size: 11px; color: var(--on-surface-variant); margin-top: 1px; }
+
+/* ===================== Inspector ===================== */
+.inspector {
+  width: 320px; flex: 0 0 auto;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  transition: background var(--motion-slow) var(--ease);
+}
+.inspector > * { flex-shrink: 0; }
+.insp-sec { display: flex; flex-direction: column; gap: 8px; }
+.insp-sec h3 {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+.insp-sec h3 .tag {
+  text-transform: none;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10px; font-weight: 700;
+  padding: 1px 8px; border-radius: var(--radius-full);
+  letter-spacing: 0;
+}
+
+/* 主题实时预览 */
+.palette-row { display: flex; gap: 8px; align-items: center; }
+.palette-row .p-dot {
+  width: 30px; height: 30px;
+  border-radius: var(--radius-full);
+  border: 2px solid rgba(0,0,0,0.06);
+  transition: background var(--motion-slow) var(--ease);
+}
+.palette-row .p-label { font-size: 12px; font-weight: 600; color: var(--on-surface-variant); margin-left: 2px; }
+
+.win-preview {
+  border-radius: var(--radius-large);
+  background: var(--surface-dim);
+  padding: 10px;
+  display: flex; gap: 8px;
+  height: 150px;
+  border: 1px solid var(--outline-variant);
+}
+.win-preview .wp-rail {
+  width: 26px;
+  background: var(--surface-container-lowest);
+  border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 6px 0; gap: 5px;
+}
+.win-preview .wp-rail i { width: 12px; height: 12px; border-radius: 4px; background: var(--surface-container-high); }
+.win-preview .wp-rail i.on { background: var(--primary-container); box-shadow: 0 0 0 2px var(--primary); }
+.win-preview .wp-main { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.win-preview .wp-top {
+  height: 22px;
+  background: var(--surface-container-low);
+  border-radius: 8px;
+}
+.win-preview .wp-grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.win-preview .wp-grid i { border-radius: 6px; }
+.win-preview .wp-grid i:nth-child(1) { background: var(--primary-container); }
+.win-preview .wp-grid i:nth-child(2) { background: var(--secondary-container); }
+.win-preview .wp-grid i:nth-child(3) { background: var(--tertiary-container); }
+.win-preview .wp-grid i:nth-child(4) { background: var(--primary-container); opacity: 0.75; }
+.win-preview .wp-grid i:nth-child(5) { background: var(--surface-container); }
+.win-preview .wp-grid i:nth-child(6) { background: var(--secondary-container); opacity: 0.8; }
+
+.info-block {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-large);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.info-block .ib-row { font-size: 12px; display: flex; justify-content: space-between; gap: 10px; }
+.info-block .ib-row .k { color: var(--on-surface-variant); flex: 0 0 auto; }
+.info-block .ib-row .v { font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.info-block .ib-row .v.mono { font-family: Consolas, monospace; font-size: 11px; }
+
+/* ===================== Status bar ===================== */
+.statusbar {
+  height: 44px;
+  background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px; color: var(--on-surface-variant);
+  gap: 12px;
+}
+.statusbar .progress {
+  height: 6px; width: 180px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden; flex: 0 0 auto;
+}
+.statusbar .progress .fill {
+  height: 100%; width: 100%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 356px; bottom: 28px;
+  width: 56px; height: 56px;
+  border-radius: var(--radius-large);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 6px 16px rgba(67, 85, 185, 0.35);
+  cursor: pointer; border: none;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.fab:hover { box-shadow: 0 8px 24px rgba(67, 85, 185, 0.45); }
+.fab:active { transform: scale(0.94); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item" title="导入"><span class="rail-icon">⬆️</span>导入</div>
+    <div class="rail-item" title="地图"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item active" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">设置</div>
+        <div class="topbar-sub" id="topbar-sub">当前主题：动态色彩 · 浅色 · 修改即时保存</div>
+      </div>
+      <div class="search-field">
+        <span>🔍</span>
+        <input type="text" id="set-search" placeholder="搜索设置…（如 主题、路径、人脸）">
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <div class="set-layout">
+          <!-- ============ 左：设置分区导航 ============ -->
+          <nav class="set-nav" id="set-nav">
+            <div class="set-nav-item active" data-sec="appearance"><span class="sn-icon">🎨</span>外观</div>
+            <div class="set-nav-item" data-sec="general"><span class="sn-icon">🧭</span>常规</div>
+            <div class="set-nav-item" data-sec="library"><span class="sn-icon">🗂️</span>照片库与导入</div>
+            <div class="set-nav-item" data-sec="browse"><span class="sn-icon">🤖</span>浏览与 AI</div>
+            <div class="set-nav-item" data-sec="cloud"><span class="sn-icon">☁️</span>云盘与项目</div>
+            <div class="set-nav-item" data-sec="advanced"><span class="sn-icon">🔬</span>高级</div>
+          </nav>
+
+          <!-- ============ 右：设置分组列表 ============ -->
+          <div class="set-content" id="set-content">
+
+            <!-- ─────── 外观 ─────── -->
+            <section class="set-section active" id="sec-appearance" data-kw="外观 主题 配色 明暗 导航 菜单 文字 图标 背景 材质 玻璃 窗口图标">
+              <div class="set-section-title">外观</div>
+              <div class="set-section-hint">主题、导航、背景和材质效果均由统一设计 Token 驱动；点击色卡立即全局换肤（本页即实时预览）。</div>
+
+              <div class="set-group-h">主题 · 6 套</div>
+              <div class="set-group" style="padding:16px 20px;">
+                <div class="theme-grid" id="theme-grid"></div>
+                <div class="set-row" style="border:none;padding-top:14px;">
+                  <div class="sr-label">
+                    <div class="sr-title">默认主题</div>
+                    <div class="sr-desc">动态色彩 · 浅色。切换后持久化，重启不丢失；明暗随配色方案组合保存。</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">导航菜单</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">一级菜单显示</div>
+                    <div class="sr-desc">选择侧栏导航显示文字、图标，或两者同时显示。</div>
+                  </div>
+                  <div class="sr-control narrow">
+                    <div class="seg" style="display:flex;width:100%;padding:3px;">
+                      <div class="seg-item" data-nav="text" style="flex:1;text-align:center;padding:7px 4px;font-size:12px;">文字</div>
+                      <div class="seg-item" data-nav="icon" style="flex:1;text-align:center;padding:7px 4px;font-size:12px;">图标</div>
+                      <div class="seg-item active" data-nav="both" style="flex:1;text-align:center;padding:7px 4px;font-size:12px;">图标+文字</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">背景与材质</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">背景来源</div>
+                    <div class="sr-desc">跟随主题 / 自定义图片 / 纯色。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>跟随主题</option><option>自定义图片</option><option>纯色</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">背景显示方式</div>
+                    <div class="sr-desc">填充 / 适应 / 拉伸。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>填充</option><option>适应</option><option>拉伸</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">玻璃强度</div>
+                    <div class="sr-desc">背景模糊与半透明程度。</div>
+                  </div>
+                  <div class="sr-control">
+                    <div class="range-row"><input type="range" min="0.25" max="0.95" step="0.05" value="0.65" class="slider-val"><span class="rr-val">0.65</span></div>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">自定义背景</div>
+                    <div class="sr-desc">选择本地图片作为窗口背景。</div>
+                  </div>
+                  <div class="sr-control narrow" style="display:flex;gap:8px;">
+                    <button class="btn btn-tonal btn-sm" style="flex:1;">选择自定义背景</button>
+                    <button class="btn btn-ghost btn-sm">清除</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">应用窗口图标</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">窗口图标</div>
+                    <div class="sr-desc">仅影响应用窗口当前可用的图标范围，不替换 exe 全部品牌资源。</div>
+                  </div>
+                  <div class="sr-control narrow" style="display:flex;gap:8px;">
+                    <button class="btn btn-tonal btn-sm" style="flex:1;">选择图标</button>
+                    <button class="btn btn-ghost btn-sm">清除</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ─────── 常规 ─────── -->
+            <section class="set-section" id="sec-general" data-kw="常规 启动 自启动 开机 窗口 恢复 新手指南 版本 更新日志">
+              <div class="set-section-title">常规</div>
+              <div class="set-section-hint">控制应用启动方式与窗口恢复。修改会即时保存。</div>
+
+              <div class="set-group-h">启动与窗口</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">开机自启动</div>
+                    <div class="sr-desc">写入 Windows 当前用户启动项；失败时自动回滚并提示。</div>
+                  </div>
+                  <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">恢复上次窗口状态</div>
+                    <div class="sr-desc">恢复宽度、高度、位置和最大化状态；不可见位置自动校正。</div>
+                  </div>
+                  <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">上次窗口状态</div>
+                    <div class="sr-desc">已保存：1200 × 800 · 位置 (120, 80) · 最大化：否</div>
+                  </div>
+                  <div class="chip selected" style="font-size:11px;padding:4px 12px;">✓ 已恢复</div>
+                </div>
+              </div>
+
+              <div class="set-group-h">新手指南</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">重新查看新手指南</div>
+                    <div class="sr-desc">照片库、导入、AI、人物识别和批处理工具的使用方法。</div>
+                  </div>
+                  <button class="btn btn-tonal btn-sm">再次查看新手指南</button>
+                </div>
+              </div>
+
+              <div class="set-group-h">版本与更新日志</div>
+              <div class="set-group">
+                <div class="set-row stack">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div class="sr-label" style="flex:1;">
+                      <div class="sr-title">当前版本 <span class="chip primary" style="font-size:11px;padding:2px 12px;">0.2.0-alpha.3</span></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;gap:8px;font-size:12px;color:var(--on-surface-variant);">
+                    <span style="flex:1;background:var(--surface-container-high);border-radius:var(--radius-medium);padding:8px 12px;">2026-08-14 · M3 大改定稿：6 套主题 + Navigation Rail + 浏览页 + 筛选面板</span>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <div style="flex:1;background:var(--surface-container-high);border-radius:var(--radius-medium);padding:8px 12px;font-size:12px;">2026-08-11 · 自定义相册 + 语义搜索集成</div>
+                    <div style="flex:1;background:var(--surface-container-high);border-radius:var(--radius-medium);padding:8px 12px;font-size:12px;">2026-08-09 · 批量导入增强（多选/进度/去重）</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ─────── 照片库与导入 ─────── -->
+            <section class="set-section" id="sec-library" data-kw="照片库 图库 根目录 路径 扫描 索引 容量 导入">
+              <div class="set-section-title">照片库与导入</div>
+              <div class="set-section-hint">管理唯一的照片库根目录；导入任务参数仍留在导入页面。</div>
+
+              <div class="set-group-h">照片库</div>
+              <div class="set-group">
+                <div class="set-row stack">
+                  <div class="sr-label">
+                    <div class="sr-title">照片库根目录</div>
+                    <div class="sr-desc">所有照片按 月\日期\类别 组织；修改后应用会重新扫描。</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input class="text-input" readonly value="\\Hanabe\拍照" style="flex:1;">
+                    <button class="btn btn-tonal btn-sm">更改照片库</button>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">健康状态</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <span class="chip selected" style="font-size:11px;padding:4px 12px;">✓ 可用</span>
+                    <span style="font-size:12px;color:var(--on-surface-variant);">SMB 共享 · 上次验证 08-14 14:02</span>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">容量</div>
+                    <div class="sr-desc">已用 1.2 TB / 总容量 4 TB · 11,705 个媒体文件 · 12.4 GB 视频</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">扫描与索引</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">启动时后台扫描</div>
+                    <div class="sr-desc">启动验证照片库有效后自动后台扫描新文件；当前无可配置的扫描开关。</div>
+                  </div>
+                  <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">上次完整扫描</div>
+                    <div class="sr-desc">08-14 14:02 · 11,705 项 · 新增 214 · 用时 0:38 · 索引就绪</div>
+                  </div>
+                  <button class="btn btn-tonal btn-sm">立即重新扫描</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- ─────── 浏览与 AI ─────── -->
+            <section class="set-section" id="sec-browse" data-kw="浏览 默认 评分 排序 缩略图 恢复 智能 引擎 语义 标签 相似度 AI">
+              <div class="set-section-title">浏览与 AI</div>
+              <div class="set-section-hint">这里的默认值不会被当前浏览会话覆盖。</div>
+
+              <div class="set-group-h">浏览默认值</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">默认评分筛选</div>
+                    <div class="sr-desc">进入浏览页时应用的评分下限。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>全部</option><option>★★☆ 及以上</option><option>★★★ 及以上</option><option>★★★★ 及以上</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">默认排序</div>
+                    <div class="sr-desc">照片墙初始排列方式。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>拍摄日期 新 → 旧</option><option>拍摄日期 旧 → 新</option><option>文件名</option><option>文件大小</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">浏览进入恢复策略</div>
+                    <div class="sr-desc">打开浏览页时回到上次位置或首页。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>总是回到上次位置</option><option>总是首页（全库树图）</option><option>每次询问</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">全局默认缩略图尺寸</div>
+                    <div class="sr-desc">新会话照片墙的缩略图基准尺寸。</div>
+                  </div>
+                  <div class="sr-control">
+                    <div class="range-row"><input type="range" min="96" max="260" step="4" value="160" class="slider-val"><span class="rr-val">160px</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">AI 识别</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">默认识别引擎</div>
+                    <div class="sr-desc">本地 Chinese-CLIP · ONNX Runtime · 照片不出本机。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>Chinese-CLIP（本机）</option><option>ONNX 本地模型</option><option>关闭</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">语义标签数量</div>
+                    <div class="sr-desc">每张照片生成多少个语义标签。</div>
+                  </div>
+                  <div class="sr-control narrow"><div class="select-wrap"><select class="select"><option>3 个</option><option selected>5 个</option><option>8 个</option><option>10 个</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">相似度窗口</div>
+                    <div class="sr-desc">语义搜索结果判定为「相似」的阈值窗口。</div>
+                  </div>
+                  <div class="sr-control">
+                    <div class="range-row"><input type="range" min="0.02" max="0.30" step="0.01" value="0.10" class="slider-val"><span class="rr-val">0.10</span></div>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">说明</div>
+                    <div class="sr-desc">语义参数仅对支持语义标签的引擎生效；人物识别继续在人物页面手动触发。</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ─────── 云盘与项目 ─────── -->
+            <section class="set-section" id="sec-cloud" data-kw="云盘 百度 网盘 夸克 凭据 AppKey AppSecret 授权 项目 客户端">
+              <div class="set-section-title">云盘与项目</div>
+              <div class="set-section-hint">百度凭据使用 Windows 本机加密；夸克仅提供官方客户端入口。</div>
+
+              <div class="set-group-h">百度网盘</div>
+              <div class="set-group">
+                <div class="set-row stack">
+                  <div class="sr-label"><div class="sr-title">AppKey</div></div>
+                  <input class="text-input" value="hb_8f3a…（已保存，本机加密）">
+                </div>
+                <div class="set-row stack">
+                  <div class="sr-label"><div class="sr-title">AppSecret</div></div>
+                  <input class="text-input" type="password" value="••••••••••••">
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">连接状态</div>
+                    <div class="sr-desc">授权有效 · 最近同步 08-14 10:20 · 已上传 214 张</div>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn btn-tonal btn-sm">保存凭据</button>
+                    <button class="btn btn-tonal btn-sm">授权</button>
+                    <button class="btn btn-ghost btn-sm">断开连接</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">夸克</div>
+              <div class="set-group">
+                <div class="set-row stack">
+                  <div class="sr-label">
+                    <div class="sr-title">官方客户端位置</div>
+                    <div class="sr-desc">当前没有官方 API 集成，不显示连接或自动备份状态。</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input class="text-input" readonly value="C:\Program Files\Quark\Quark.exe" style="flex:1;">
+                    <button class="btn btn-tonal btn-sm">打开官网</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ─────── 高级 ─────── -->
+            <section class="set-section" id="sec-advanced" data-kw="高级 性能 推理 设备 CPU GPU 人脸 识别 引擎 ArcFace ONNX 模型 阈值 存储 诊断 快捷键 安全 隐私">
+              <div class="set-section-title">高级</div>
+              <div class="set-section-hint">性能、存储位置、诊断、安全与快捷键参考。</div>
+
+              <div class="set-group-h">性能</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">推理设备</div>
+                    <div class="sr-desc">当前：CPU · 语义索引就绪 · 平均 250ms/张</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>CPU</option><option>GPU（DirectML）</option><option>自动</option></select></div></div>
+                </div>
+              </div>
+
+              <div class="set-group-h">人脸识别</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">识别引擎</div>
+                    <div class="sr-desc">人物页扫描与按脸查找共用此设置。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>YuNet + SFace</option><option>ArcFace R100</option></select></div></div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">性能模式</div>
+                    <div class="sr-desc">快速（更省时） / 精准（更高召回）。</div>
+                  </div>
+                  <div class="sr-control"><div class="select-wrap"><select class="select"><option>精准</option><option>快速</option><option>自动</option></select></div></div>
+                </div>
+                <div class="set-row stack">
+                  <div class="sr-label">
+                    <div class="sr-title">ArcFace 检测器 ONNX 路径</div>
+                    <div class="sr-desc">需自行提供模型；许可须允许在本应用中使用。</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input class="text-input" readonly value="%LOCALAPPDATA%\HanabePhotoManager\models\ArcFace\det.onnx" style="flex:1;">
+                    <button class="btn btn-tonal btn-sm">浏览…</button>
+                  </div>
+                </div>
+                <div class="set-row stack">
+                  <div class="sr-label">
+                    <div class="sr-title">ArcFace R100 识别器 ONNX 路径</div>
+                  </div>
+                  <div style="display:flex;gap:8px;align-items:center;">
+                    <input class="text-input" readonly value="%LOCALAPPDATA%\HanabePhotoManager\models\ArcFace\rec.onnx" style="flex:1;">
+                    <button class="btn btn-tonal btn-sm">浏览…</button>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">匹配阈值（ArcFace 默认 0.45）</div>
+                    <div class="sr-desc">高于阈值判定为同一人；越严格误报越少。</div>
+                  </div>
+                  <div class="sr-control">
+                    <div class="range-row"><input type="range" min="0.2" max="0.9" step="0.01" value="0.45" class="slider-val"><span class="rr-val">0.45</span></div>
+                  </div>
+                </div>
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">模型许可确认</div>
+                    <div class="sr-desc">我确认模型由我提供，且许可允许在本应用中使用。</div>
+                  </div>
+                  <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+                </div>
+              </div>
+
+              <div class="set-group-h">存储与诊断</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">数据位置</div>
+                    <div class="sr-desc">settings.json、主题、元数据、人物相册、地图缓存与云会话均位于当前 Windows 用户的本机应用数据目录。第一期只读展示，不提供清理、迁移或修改路径。</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">快捷键</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">参考</div>
+                    <div class="sr-desc">Ctrl + 鼠标滚轮：调整缩略图尺寸 · Delete：删除所选照片（始终确认并进回收站）· Esc：关闭浮层或取消操作</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="set-group-h">安全与隐私</div>
+              <div class="set-group">
+                <div class="set-row">
+                  <div class="sr-label">
+                    <div class="sr-title">说明</div>
+                    <div class="sr-desc">云凭据使用本地加密；本地 AI 在设备上运行；删除确认始终启用且不可关闭。</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector：主题实时预览 + 数据/关于 ============ -->
+      <aside class="inspector">
+        <div class="insp-sec">
+          <h3>🎨 当前主题 <span class="tag" id="insp-theme-tag">动态色彩 · 浅色</span></h3>
+          <div class="palette-row" id="palette-row"></div>
+          <div class="win-preview">
+            <div class="wp-rail"><i></i><i class="on"></i><i></i><i></i><i></i></div>
+            <div class="wp-main">
+              <div class="wp-top"></div>
+              <div class="wp-grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+          </div>
+          <div style="font-size:11.5px;color:var(--on-surface-variant);">点击左侧色卡即可全局换肤 —— 本预览窗口随 Token 实时变化。</div>
+        </div>
+
+        <div class="insp-sec">
+          <h3>🗄️ 数据与存储</h3>
+          <div class="info-block">
+            <div class="ib-row"><span class="k">设置文件</span><span class="v mono">…\HanabePhotoManager\settings.json</span></div>
+            <div class="ib-row"><span class="k">元数据</span><span class="v">media-metadata.json · 11.6 MB</span></div>
+            <div class="ib-row"><span class="k">媒体文件</span><span class="v">11,705 项 · 1.2 TB</span></div>
+            <div class="ib-row"><span class="k">模型目录</span><span class="v mono">models\ChineseCLIP (345+409 MB)</span></div>
+            <div class="ib-row"><span class="k">最近扫描</span><span class="v">08-14 14:02 · 0:38</span></div>
+          </div>
+        </div>
+
+        <div class="insp-sec">
+          <h3>ℹ️ 关于</h3>
+          <div class="info-block">
+            <div class="ib-row"><span class="k">版本</span><span class="v">0.2.0-alpha.3</span></div>
+            <div class="ib-row"><span class="k">构建</span><span class="v mono">net8.0-windows · Release</span></div>
+            <div class="ib-row"><span class="k">许可</span><span class="v">个人使用</span></div>
+          </div>
+          <button class="btn btn-tonal btn-sm">查看更新日志</button>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>设置已自动保存 · 当前主题：<b id="sb-theme" style="color:var(--primary);">动态色彩 · 浅色</b></span>
+      <div class="progress"><div class="fill"></div></div>
+      <span>图库扫描就绪 · 11,705 项</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="重新查看新手指南">🎓</button>
+
+<script>
+/* ============ 6 套主题（色值来自 M3_DESIGN_FINAL.md） ============ */
+const THEMES = [
+  { key: 'dynamic-light', name: '动态色彩', mode: '浅色',   colors: ['#4355B9','#5B5D72','#7A5700'], sheet: ['#DEE0FF','#00105C'] },
+  { key: 'dynamic-dark',  name: '动态色彩', mode: '深色',   colors: ['#BCC3FF','#C4C6DE','#FFC34F'], sheet: ['#2A3585','#DEE0FF'] },
+  { key: 'forest-light',  name: '森林绿',   mode: '浅色',   colors: ['#1D6B50','#4F6357','#3E6373'], sheet: ['#A8F2CD','#002110'] },
+  { key: 'forest-dark',   name: '森林绿',   mode: '深色',   colors: ['#8CD5B2','#B5CCBD','#A6CCDE'], sheet: ['#004930','#A8F2CD'] },
+  { key: 'violet-light',  name: '紫罗兰',   mode: '浅色',   colors: ['#8B4AA6','#6B5D71','#006A6A'], sheet: ['#F7D8FF','#3A0051'] },
+  { key: 'violet-dark',   name: '紫罗兰',   mode: '深色',   colors: ['#E3AEF7','#D9C2DE','#77D3D3'], sheet: ['#6F2B89','#F7D8FF'] },
+];
+let currentTheme = 'dynamic-light';
+
+const PALETTE = [
+  ['primary',      '--primary'],
+  ['secondary',    '--secondary'],
+  ['tertiary',     '--tertiary'],
+  ['primary-c',    '--primary-container'],
+  ['tertiary-c',   '--tertiary-container'],
+  ['surface',      '--surface'],
+];
+
+/* ============ 主题渲染与切换 ============ */
+function renderThemes() {
+  const grid = document.getElementById('theme-grid');
+  grid.innerHTML = THEMES.map(t => `
+    <div class="theme-card ${t.key === currentTheme ? 'active' : ''}" data-theme="${t.key}">
+      <div class="tc-swatches">
+        ${t.colors.map(c => `<span class="tc-dot" style="background:${c};"></span>`).join('')}
+        <span class="tc-sheet" style="background:${t.sheet[0]};color:${t.sheet[1]};">Aa</span>
+      </div>
+      <div class="tc-name">${t.name}</div>
+      <div class="tc-mode">${t.mode} · ${t.mode === '浅色' ? '☀' : '🌙'}</div>
+    </div>`).join('');
+  grid.querySelectorAll('.theme-card').forEach(card => {
+    card.addEventListener('click', () => setTheme(card.dataset.theme));
+  });
+}
+
+function setTheme(key) {
+  currentTheme = key;
+  document.documentElement.dataset.theme = key;
+  renderThemes();
+  const t = THEMES.find(x => x.key === key);
+  const label = `${t.name} · ${t.mode}`;
+  document.getElementById('insp-theme-tag').textContent = label;
+  document.getElementById('topbar-sub').textContent = '当前主题：' + label + ' · 修改即时保存';
+  document.getElementById('sb-theme').textContent = label;
+
+  // Inspector 色板实时联动
+  const row = document.getElementById('palette-row');
+  row.innerHTML = PALETTE.map(([name, v]) => {
+    const color = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    return `<span class="p-dot" style="background:${color};" title="${name}"></span>`;
+  }).join('') + `<span class="p-label">${t.name} · ${t.mode}</span>`;
+}
+
+/* ============ 分区导航 ============ */
+const SECTIONS = ['appearance', 'general', 'library', 'browse', 'cloud', 'advanced'];
+document.querySelectorAll('.set-nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.set-nav-item').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    SECTIONS.forEach(k => {
+      document.getElementById('sec-' + k).classList.toggle('active', k === item.dataset.sec);
+    });
+  });
+});
+
+/* ============ 设置搜索（按分区关键字过滤） ============ */
+document.getElementById('set-search').addEventListener('input', e => {
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) {
+    document.querySelectorAll('.set-section').forEach(s => s.classList.add('active'));
+    document.querySelectorAll('.set-nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.set-nav-item[data-sec="appearance"]').classList.add('active');
+    return;
+  }
+  let any = false;
+  SECTIONS.forEach(k => {
+    const sec = document.getElementById('sec-' + k);
+    const kw = (sec.dataset.kw || '').toLowerCase();
+    const hit = kw.includes(q);
+    sec.classList.toggle('active', hit);
+    const nav = document.querySelector(`.set-nav-item[data-sec="${k}"]`);
+    nav.classList.toggle('active', hit);
+    if (hit) any = true;
+  });
+  if (!any) {
+    document.querySelectorAll('.set-section').forEach(s => s.classList.remove('active'));
+  }
+});
+
+/* ============ 导航显示模式 ============ */
+document.querySelectorAll('.seg-item[data-nav]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.seg-item[data-nav]').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+/* ============ 滑块数值联动 ============ */
+document.querySelectorAll('.slider-val').forEach(slider => {
+  const out = slider.nextElementSibling;
+  const fmt = slider.min.includes('.') ? v => parseFloat(v).toFixed(2) : v => v + 'px';
+  slider.addEventListener('input', () => { out.textContent = fmt(slider.value); });
+});
+
+/* ============ 启动 ============ */
+renderThemes();
+setTheme('dynamic-light');
+</script>
+</body>
+</html>

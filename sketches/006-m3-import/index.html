@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 导入 · M3 浓烈版（预设计 006）</title>
+<style>
+/* ============================================================
+   Variant 006: 导入页（Lightroom 导入模块 × M3 浓烈版）
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector）
+   功能来源 = MainWindow.xaml ImportPage + MainWindowViewModel.Import.cs
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* M3 动态色彩 tonal palette（与 001/004 完全一致） */
+  --primary: #4355B9;
+  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;
+  --on-primary-container: #00105C;
+  --secondary: #5B5D72;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;
+  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;
+  --on-tertiary-container: #271900;
+  --error: #BA1A1A;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
+
+  --surface: #FBF8FF;
+  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;
+  --on-surface-variant: #45464F;
+  --outline: #75767F;
+  --outline-variant: #C5C5CF;
+
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  font-size: 16px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+  background: var(--surface-dim);
+}
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.rail-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-medium);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.rail-logo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%);
+}
+.rail-item {
+  width: 64px;
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant);
+  font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.rail-item.active .rail-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* ===================== Main ===================== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Top app bar */
+.topbar {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+.topbar-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+.search-field {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  color: var(--on-surface-variant);
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.search-field:hover { background: var(--surface-container-highest); }
+.search-field:focus-within {
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.search-field input {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; flex: 1; color: var(--on-surface);
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+
+/* ===================== Content ===================== */
+.content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* ===================== 通用组件 ===================== */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-small);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip:active { background: var(--state-pressed); }
+.chip.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+.chip.primary { background: var(--primary); color: var(--on-primary); }
+.chip.primary:hover { background: var(--primary); filter: brightness(0.94); }
+.chip.danger { background: var(--error-container); color: var(--on-error-container); }
+
+.btn {
+  border: none; cursor: pointer;
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  transition: transform var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { filter: brightness(0.94); }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-tonal:hover { background: var(--surface-container-highest); }
+.btn-ghost { background: transparent; color: var(--on-surface-variant); }
+.btn-ghost:hover { background: var(--state-hover); }
+.btn-block { width: 100%; padding: 12px 18px; font-size: 14px; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+.btn-sm { padding: 7px 14px; font-size: 12px; }
+
+/* M3 Switch */
+.switch { position: relative; width: 52px; height: 32px; flex: 0 0 auto; cursor: pointer; }
+.switch input { opacity: 0; width: 100%; height: 100%; position: absolute; margin: 0; cursor: pointer; z-index: 2; }
+.switch .track {
+  position: absolute; inset: 0;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-highest);
+  border: 2px solid var(--outline);
+  transition: background var(--motion-normal) var(--ease), border-color var(--motion-normal) var(--ease);
+}
+.switch .thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: 16px; height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--outline);
+  transition: transform var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease);
+}
+.switch input:checked + .track { background: var(--primary); border-color: var(--primary); }
+.switch input:checked ~ .thumb { transform: translateX(20px); background: var(--on-primary); }
+.switch input:focus-visible + .track { box-shadow: 0 0 0 2px var(--primary-container); }
+
+/* M3 分段控件 */
+.seg {
+  display: inline-flex;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 4px;
+}
+.seg-item {
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-size: 13px; font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer; border: none; background: transparent;
+  transition: background var(--motion-normal) var(--ease), color var(--motion-normal) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+/* 下拉（M3 风格） */
+.select-wrap { position: relative; display: inline-block; width: 100%; }
+.select-wrap::after {
+  content: '▾'; position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--on-surface-variant); pointer-events: none; font-size: 12px;
+}
+.select {
+  appearance: none; -webkit-appearance: none;
+  width: 100%;
+  background: var(--surface-container-high);
+  border: 1px solid transparent;
+  border-radius: var(--radius-medium);
+  padding: 9px 34px 9px 14px;
+  font-size: 13px; font-weight: 500;
+  font-family: inherit;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: border-color var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.select:hover { background: var(--surface-container-highest); }
+.select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+
+/* ===================== 导入页三段布局 ===================== */
+.import-layout { display: flex; gap: 14px; flex: 1; min-height: 0; }
+
+/* ---- 左：导入源（Lightroom 源面板） ---- */
+.src-panel {
+  width: 320px; flex: 0 0 auto;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.src-panel > * { flex-shrink: 0; }
+
+.dz-camera {
+  height: 150px;
+  border-radius: var(--radius-large);
+  border: 2px dashed var(--outline);
+  background:
+    radial-gradient(140px 90px at 50% 30%, var(--primary-container) 0%, transparent 70%),
+    var(--surface-container-high);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding: 14px;
+  gap: 2px;
+  cursor: pointer;
+  transition: border-color var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease);
+  position: relative; overflow: hidden;
+}
+.dz-camera:hover { border-color: var(--primary); background-color: var(--surface-container-highest); }
+.dz-camera .dz-emoji { font-size: 42px; margin-bottom: 4px; filter: drop-shadow(0 4px 8px rgba(67,85,185,0.25)); }
+.dz-camera .dz-title { font-size: 15px; font-weight: 700; }
+.dz-camera .dz-sub { font-size: 11px; color: var(--on-surface-variant); text-align: center; }
+
+.card {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+  border: 1px solid var(--outline-variant);
+}
+.card h4 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.card .hint { font-size: 11.5px; color: var(--on-surface-variant); line-height: 1.5; }
+
+.src-path {
+  font-size: 12px; color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border-radius: var(--radius-medium);
+  padding: 9px 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  user-select: all;
+}
+.src-path .ok { color: var(--primary); font-weight: 700; }
+
+.switch-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-medium);
+  padding: 10px 12px;
+  border: 1px solid var(--outline-variant);
+}
+.switch-row .sr-t { flex: 1; font-size: 13px; font-weight: 600; }
+.switch-row .sr-d { flex: 1; font-size: 11px; color: var(--on-surface-variant); }
+
+.mini-dz-row { display: flex; gap: 8px; }
+.mini-dz {
+  flex: 1;
+  border-radius: var(--radius-large);
+  border: 2px dashed var(--outline);
+  background: var(--surface-container-high);
+  padding: 12px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease);
+}
+.mini-dz:hover { border-color: var(--tertiary); background-color: var(--surface-container-highest); }
+.mini-dz .md-emoji { font-size: 24px; }
+.mini-dz .md-title { font-size: 13px; font-weight: 700; margin-top: 2px; }
+.mini-dz .md-sub { font-size: 10.5px; color: var(--on-surface-variant); }
+
+/* ---- 中：导入队列 ---- */
+.queue {
+  flex: 1; min-width: 0; min-height: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.queue > * { flex-shrink: 0; }
+.queue-head h3 { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; }
+.queue-head .target { font-size: 13px; font-weight: 600; margin-top: 2px; }
+.queue-head .report { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 2px; line-height: 1.5; }
+.queue-head .action-hint { font-size: 12.5px; color: var(--primary); font-weight: 600; margin-top: 2px; }
+
+/* 导入进度卡 */
+.progress-card {
+  background: var(--primary-container);
+  border-radius: var(--radius-large);
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 16px;
+  border: 1px solid var(--primary);
+}
+.progress-card .pc-info { flex: 1; min-width: 0; }
+.progress-card .pc-label { font-size: 13px; font-weight: 700; color: var(--on-primary-container); }
+.progress-card .pc-meta { font-size: 12px; color: var(--on-primary-container); opacity: 0.8; margin-top: 2px; }
+.progress-card .pc-bar {
+  flex: 1.4; min-width: 120px;
+  height: 8px;
+  background: rgba(255,255,255,0.45);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.progress-card .pc-bar .fill {
+  height: 100%; width: 62%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+.progress-card .pc-pct { font-size: 16px; font-weight: 800; color: var(--on-primary-container); min-width: 44px; text-align: right; }
+
+/* 分类 section */
+.cat-section {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  border: 1px solid transparent;
+  transition: border-color var(--motion-normal) var(--ease);
+}
+.cat-section.done { border-color: var(--primary); }
+.cat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.cat-icon {
+  width: 44px; height: 44px; flex: 0 0 auto;
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.cat-info { flex: 1; min-width: 0; }
+.cat-info .c-name { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.cat-info .c-sub { font-size: 12px; color: var(--on-surface-variant); }
+.cat-info .c-sub b { color: var(--primary); }
+.cat-count {
+  background: var(--surface-container-highest);
+  color: var(--on-surface-variant);
+  font-size: 12px; font-weight: 700;
+  padding: 3px 12px; border-radius: var(--radius-full);
+}
+
+/* 预览卡 */
+.imp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 10px;
+}
+.imp-card {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-large);
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease), border-color var(--motion-normal) var(--ease), opacity var(--motion-slow) var(--ease);
+}
+.imp-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.10); }
+.imp-card.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-container); }
+.imp-card.imported { opacity: 0.62; }
+.imp-card.imported::after {
+  content: '✓ 已导入';
+  position: absolute; top: 8px; right: 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 10px; font-weight: 700;
+  padding: 2px 8px; border-radius: var(--radius-full);
+  z-index: 2;
+}
+.imp-thumb {
+  height: 108px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px;
+  background: linear-gradient(135deg, var(--primary-container), var(--secondary-container));
+  position: relative;
+}
+.imp-card .qnum {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: var(--radius-full);
+  z-index: 2;
+}
+.imp-card .check {
+  position: absolute; top: 8px; right: 8px;
+  width: 22px; height: 22px;
+  border-radius: var(--radius-full);
+  background: rgba(255,255,255,0.9);
+  border: 2px solid var(--primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: transparent;
+  z-index: 2;
+  transition: all var(--motion-fast) var(--ease);
+}
+.imp-card.selected .check { background: var(--primary); color: var(--on-primary); }
+.imp-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; }
+.imp-body .i-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.imp-body .i-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--on-surface-variant); }
+.imp-body .i-row b { color: var(--on-surface); font-weight: 600; }
+.imp-body .cat-badge {
+  align-self: flex-start;
+  background: var(--secondary-container); color: var(--on-secondary-container);
+  font-size: 10.5px; font-weight: 700;
+  padding: 2px 10px; border-radius: var(--radius-full);
+  margin-top: 2px;
+}
+.person-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10.5px; font-weight: 600;
+  padding: 1px 8px; border-radius: var(--radius-full);
+}
+.attention {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--error-container); color: var(--on-error-container);
+  font-size: 10.5px; font-weight: 700;
+  padding: 2px 10px; border-radius: var(--radius-full);
+  margin-top: 2px;
+}
+.imp-card .i-select { margin-top: 5px; }
+.imp-card .i-select .select { padding: 6px 30px 6px 10px; font-size: 11.5px; border-radius: var(--radius-small); }
+
+.more-btn {
+  margin-top: 6px;
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer; border: none; font-family: inherit;
+  transition: background var(--motion-fast) var(--ease);
+}
+.more-btn:hover { background: var(--surface-container-highest); }
+
+/* ===================== Inspector ===================== */
+.inspector {
+  width: 320px; flex: 0 0 auto;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.inspector > * { flex-shrink: 0; }
+.insp-sec { display: flex; flex-direction: column; gap: 8px; }
+.insp-sec h3 {
+  font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--on-surface-variant);
+  text-transform: uppercase;
+  display: flex; align-items: center; gap: 6px;
+}
+.insp-sec h3 .tag {
+  text-transform: none;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10px; font-weight: 700;
+  padding: 1px 8px; border-radius: var(--radius-full);
+  letter-spacing: 0;
+}
+
+/* 去重结果 */
+.dup-decision {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  border: 1px solid var(--outline-variant);
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.dup-decision .dd-title { font-size: 13px; font-weight: 700; }
+.dup-radio {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-medium);
+  cursor: pointer;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--on-surface-variant);
+  border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.dup-radio:hover { background: var(--state-hover); }
+.dup-radio .dot {
+  width: 16px; height: 16px; flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--outline);
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color var(--motion-fast) var(--ease);
+}
+.dup-radio .dot::after {
+  content: ''; width: 8px; height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  transform: scale(0);
+  transition: transform var(--motion-fast) var(--ease);
+}
+.dup-radio.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.dup-radio.active .dot { border-color: var(--primary); }
+.dup-radio.active .dot::after { transform: scale(1); }
+.dup-thumbs { display: flex; gap: 6px; }
+.dup-thumbs .dt {
+  flex: 1; aspect-ratio: 1;
+  border-radius: var(--radius-small);
+  background: linear-gradient(135deg, var(--surface-container-highest), var(--surface-container));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  border: 1px solid var(--outline-variant);
+}
+.dup-done {
+  font-size: 11.5px; color: var(--on-surface-variant);
+  display: flex; align-items: center; gap: 6px;
+}
+.dup-done .ok { color: var(--primary); font-weight: 700; }
+
+/* 完成摘要 */
+.summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sum-stat {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  border: 1px solid var(--outline-variant);
+  padding: 10px 8px;
+  text-align: center;
+}
+.sum-stat .sv { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.sum-stat .sv.ok { color: var(--primary); }
+.sum-stat .sv.skip { color: var(--tertiary); }
+.sum-stat .sv.fail { color: var(--error); }
+.sum-stat .sk { font-size: 10.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.sum-meta { font-size: 11.5px; color: var(--on-surface-variant); display: flex; justify-content: space-between; }
+
+/* ===================== Status bar ===================== */
+.statusbar {
+  height: 44px;
+  background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px; color: var(--on-surface-variant);
+  gap: 12px;
+}
+.statusbar .progress {
+  height: 6px; width: 180px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden; flex: 0 0 auto;
+}
+.statusbar .progress .fill {
+  height: 100%; width: 62%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 356px; bottom: 28px;
+  width: 56px; height: 56px;
+  border-radius: var(--radius-large);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 6px 16px rgba(67, 85, 185, 0.35);
+  cursor: pointer; border: none;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.fab:hover { box-shadow: 0 8px 24px rgba(67, 85, 185, 0.45); }
+.fab:active { transform: scale(0.94); }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item active" title="导入"><span class="rail-icon">⬆️</span>导入</div>
+    <div class="rail-item" title="地图"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">导入</div>
+        <div class="topbar-sub" id="topbar-sub">来源 D:\相机\2026-08-14 外拍 · 队列 214 项 · 目标 8月\08.14</div>
+      </div>
+      <div class="search-field">
+        <span>🔍</span>
+        <input type="text" placeholder="在队列中查找文件名、分类…">
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <div class="import-layout">
+          <!-- ============ 左：导入源 ============ -->
+          <div class="src-panel">
+            <div class="dz-camera" id="dz-camera">
+              <div class="dz-emoji">📸</div>
+              <div class="dz-title">拖入相机文件夹</div>
+              <div class="dz-sub">自动读取 · 自动分类 · 自动生成 8月\08.14 · 自动导入</div>
+            </div>
+
+            <div class="card">
+              <h4>📂 来源</h4>
+              <div class="src-path" id="src-path"><span class="ok">✓</span> D:\相机\2026-08-14 外拍（86 张）</div>
+              <div class="btn-row">
+                <button class="btn btn-tonal btn-sm">选择来源文件夹</button>
+                <button class="btn btn-tonal btn-sm">选择多个文件</button>
+              </div>
+              <div>
+                <div class="field-label" style="font-size:12px;font-weight:600;margin-bottom:6px;">转移方式</div>
+                <div class="seg" style="width:100%;">
+                  <div class="seg-item active" data-mode="copy" style="flex:1;text-align:center;padding:8px 6px;font-size:12px;">复制并保留源文件</div>
+                  <div class="seg-item" data-mode="move" style="flex:1;text-align:center;padding:8px 6px;font-size:12px;">校验后移动/删除源文件</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="switch-row">
+              <div>
+                <div class="sr-t">🧠 本地 AI 人物识别</div>
+                <div class="sr-d">只识别 JPG/JPEG；同名 RAW 自动继承，视频跳过；仅本机处理</div>
+              </div>
+              <label class="switch"><input type="checkbox" id="sw-person" checked><span class="track"></span><span class="thumb"></span></label>
+            </div>
+
+            <div class="card">
+              <h4>🎞️ 拖入后期 / 素材</h4>
+              <div class="mini-dz-row">
+                <div class="mini-dz">
+                  <div class="md-emoji">🖌️</div>
+                  <div class="md-title">修后</div>
+                  <div class="md-sub">后期完成文件</div>
+                </div>
+                <div class="mini-dz">
+                  <div class="md-emoji">🧩</div>
+                  <div class="md-title">素材</div>
+                  <div class="md-sub">项目素材</div>
+                </div>
+              </div>
+              <div class="hint">无法判断归属时会停下来让你确认，不会乱放。</div>
+            </div>
+
+            <button class="btn btn-tonal btn-block" id="btn-analyze">🔍 开始分析与分类</button>
+            <button class="btn btn-primary btn-block" id="btn-import" style="font-size:15px;padding:14px;">⬆️ 手动开始 / 继续导入</button>
+          </div>
+
+          <!-- ============ 中：导入队列 ============ -->
+          <div class="queue" id="queue">
+            <div class="queue-head">
+              <h3>导入队列</h3>
+              <div class="target" id="q-target">目标日期目录：8月\08.14</div>
+              <div class="report" id="q-report">分析完成：214 张照片与视频已按分类入队 · 12 个重复已识别 · 2 张需要人工确认</div>
+              <div class="action-hint" id="q-hint">检查右侧队列后点击「手动开始 / 继续导入」；导入会校验后落盘，绝不覆盖。</div>
+            </div>
+
+            <!-- 导入进度卡 -->
+            <div class="progress-card" id="progress-card">
+              <div class="pc-info">
+                <div class="pc-label" id="pc-label">正在导入 …</div>
+                <div class="pc-meta" id="pc-meta">IMG_7843.JPG · 复制并保留源文件</div>
+              </div>
+              <div class="pc-bar"><div class="fill" id="pc-fill"></div></div>
+              <div class="pc-pct" id="pc-pct">62%</div>
+              <button class="btn btn-ghost btn-sm" id="btn-cancel" style="color:var(--on-primary-container);">取消导入</button>
+            </div>
+
+            <!-- 分类 sections 由 JS 渲染 -->
+            <div id="cat-sections"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector：导入设置 + 去重结果 + 完成摘要 ============ -->
+      <aside class="inspector">
+        <div class="insp-sec">
+          <h3>⚙️ 导入设置 <span class="tag">可选扫描</span></h3>
+          <div class="switch-row" style="background:var(--surface-container-lowest);border:1px solid var(--outline-variant);">
+            <div>
+              <div class="sr-t">精确查重（SHA-256）</div>
+              <div class="sr-d">文件大小粗筛 → 流式哈希确认，已导入的重复文件自动跳过</div>
+            </div>
+            <label class="switch"><input type="checkbox" checked><span class="track"></span><span class="thumb"></span></label>
+          </div>
+          <div class="switch-row" style="background:var(--surface-container-lowest);border:1px solid var(--outline-variant);">
+            <div>
+              <div class="sr-t">相似照片审查（感知哈希）</div>
+              <div class="sr-d">仅做全库相似度审查，不自动阻止导入</div>
+            </div>
+            <label class="switch"><input type="checkbox"><span class="track"></span><span class="thumb"></span></label>
+          </div>
+          <div class="switch-row" style="background:var(--surface-container-lowest);border:1px solid var(--outline-variant);opacity:0.75;">
+            <div>
+              <div class="sr-t">🔒 修后目录只读保护</div>
+              <div class="sr-d">«修后» 文件夹永不写入、不可覆盖（铁律，不可关闭）</div>
+            </div>
+            <label class="switch"><input type="checkbox" checked disabled><span class="track"></span><span class="thumb"></span></label>
+          </div>
+        </div>
+
+        <div class="insp-sec">
+          <h3>🔁 去重结果 <span class="tag">12 个</span></h3>
+          <div class="dup-decision">
+            <div class="dd-title">12 个文件与图库重复</div>
+            <div class="dup-radio active" data-dec="skip"><span class="dot"></span>全部跳过（推荐）</div>
+            <div class="dup-radio" data-dec="import"><span class="dot"></span>全部仍导入</div>
+            <div class="dup-radio" data-dec="indiv"><span class="dot"></span>逐个选择</div>
+            <div class="dup-thumbs">
+              <div class="dt">🌅</div><div class="dt">🏔️</div><div class="dt">🌸</div><div class="dt">🦋</div>
+            </div>
+            <div class="dup-done"><span class="ok">✓ 已处理</span> 12 个重复 · 全部跳过 · 节省 1.8 GB</div>
+          </div>
+        </div>
+
+        <div class="insp-sec">
+          <h3>📊 本次导入摘要</h3>
+          <div class="summary-stats">
+            <div class="sum-stat"><div class="sv ok" id="sum-ok">133</div><div class="sk">成功</div></div>
+            <div class="sum-stat"><div class="sv skip" id="sum-skip">12</div><div class="sk">跳过</div></div>
+            <div class="sum-stat"><div class="sv fail" id="sum-fail">1</div><div class="sk">失败</div></div>
+          </div>
+          <div class="sum-meta"><span id="sum-size">已写入 2.1 GB / 3.2 GB</span><span id="sum-time">用时 1:42</span></div>
+          <div class="btn-row" style="margin-top:2px;">
+            <button class="btn btn-tonal btn-sm">查看导入日志</button>
+            <button class="btn btn-ghost btn-sm">在资源管理器中定位</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>队列 214 项 · 已导入 <b id="sb-done" style="color:var(--primary);">133</b> · 重复跳过 12 · 目标 8月\08.14</span>
+      <div class="progress"><div class="fill" id="sb-fill" style="width:62%;"></div></div>
+      <span id="sb-label">正在导入 62%</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="选择来源文件夹">＋</button>
+
+<script>
+/* ============ 演示数据（占位，来自真实功能模块） ============ */
+const CATEGORIES = [
+  { key: 'raw',  name: 'RAW生图',   icon: '📷', accent: 'linear-gradient(135deg,#DEE0FF,#C5C5CF)',   sub: '原始 RAW 文件 · 自动按拍摄日期归位', count: 86 },
+  { key: 'jpg',  name: 'JPG生图',   icon: '🖼️', accent: 'linear-gradient(135deg,#E0E1F9,#FFDF9E)',   sub: '相机直出 JPG · 同名 RAW 自动继承人物识别', count: 74 },
+  { key: 'video',name: '视频',     icon: '🎬', accent: 'linear-gradient(135deg,#FFDF9E,#E0E1F9)',   sub: '视频文件 · 跳过人物识别', count: 12 },
+  { key: 'action',name: 'action视频', icon: '🏃', accent: 'linear-gradient(135deg,#F7D8FF,#DEE0FF)', sub: '高速连拍 / 动作片段', count: 8 },
+  { key: 'edited',name: '修后',     icon: '🖌️', accent: 'linear-gradient(135deg,#DEE0FF,#9CF0F0)',   sub: '后期完成文件 · 只读保护', count: 21 },
+  { key: 'mat',  name: '素材',     icon: '🧩', accent: 'linear-gradient(135deg,#FFDF9E,#F7D8FF)',   sub: '项目素材 · 独立归位', count: 13 },
+];
+const FILE_EMOJIS = ['🌅','🏔️','📷','🌸','🌊','🦋','🌙','🎨','🌄','🪐','🎞️','☁️','🍜','🚗','🏮','🎂','⚽','🎹','🌻','⛺'];
+const FILE_NAMES = ['IMG_7843','IMG_7844','IMG_7845','IMG_7846','DSC_2210','DSC_2211','DJI_0032','A7R5_1120','IMG_8451','IMG_8452','VLOG_0091','P1000673','IMG_9002','IMG_9003','IMG_6677','IMG_6678'];
+const PERSONS = ['露娜','小满','阿杰','晓晴','', '', '妈妈','陈叔'];
+
+let importedCount = 133;   // 已导入
+const TOTAL = 214;
+let importing = true;      // 模拟进行中
+let timer = null;
+
+/* ============ 渲染队列 ============ */
+function buildQueue() {
+  const root = document.getElementById('cat-sections');
+  // 已导入数按分类占比分配（当前 133/214 ≈ 62%）
+  const donePer = {};
+  let acc = 0;
+  CATEGORIES.forEach((cat, ci) => {
+    const d = Math.round(importedCount * cat.count / TOTAL);
+    donePer[cat.key] = ci === CATEGORIES.length - 1 ? (importedCount - acc) : Math.min(d, cat.count);
+    acc += donePer[cat.key];
+  });
+  root.innerHTML = CATEGORIES.map((cat, ci) => {
+    const done = donePer[cat.key];
+    const cards = [];
+    const show = Math.min(cat.count, done + 3); // 展示到已导入数 + 3 张待导入，两种状态都可见
+    for (let i = 0; i < show; i++) {
+      const g = ci * 7 + i * 3;
+      const name = FILE_NAMES[(ci * 4 + i) % FILE_NAMES.length];
+      const isImported = importing ? (i < done) : true;
+      const person = PERSONS[(ci + i) % PERSONS.length];
+      const needs = (ci === 0 && i === 2) || (ci === 1 && i === 0);
+      const qnum = ci * 14 + i + 1;
+      const ext = cat.key === 'raw' ? '.ARW' : (cat.key === 'video' || cat.key === 'action') ? '.MP4' : '.JPG';
+      const opts = ['RAW生图','JPG生图','视频','action视频','修后','素材']
+        .map(o => `<option ${o === cat.name ? 'selected' : ''}>${o}</option>`).join('');
+      cards.push(`
+        <div class="imp-card ${isImported ? 'imported' : ''}" data-cat="${cat.key}">
+          <div class="imp-thumb">
+            <span>${FILE_EMOJIS[g % FILE_EMOJIS.length]}</span>
+            <span class="qnum">#${String(qnum).padStart(3,'0')}</span>
+            <span class="check">✓</span>
+          </div>
+          <div class="imp-body">
+            <div class="i-name">${name}${ext}</div>
+            <div class="i-row">${(12 + ((ci*3+i)%7))}.${(4+((ci*5+i)%9))} MB · <b>8月\\08.14</b></div>
+            <div class="i-row"><span class="cat-badge">${cat.name}</span>${person ? `<span class="person-badge">👤 ${person}</span>` : ''}</div>
+            ${needs ? '<span class="attention">⚠ 需要人工确认</span>' : ''}
+            <div class="i-select">
+              <div class="select-wrap"><select class="select" data-role="category">${opts}</select></div>
+            </div>
+          </div>
+        </div>`);
+    }
+    const hidden = cat.count - show;
+    return `
+      <section class="cat-section" data-key="${cat.key}" id="sec-${cat.key}">
+        <div class="cat-head">
+          <div class="cat-icon" style="background:${cat.accent};">${cat.icon}</div>
+          <div class="cat-info">
+            <div class="c-name">${cat.name} <span class="cat-count">${cat.count} 项</span></div>
+            <div class="c-sub"><b>${cat.count}</b> 张 · ${cat.sub}</div>
+          </div>
+          ${importing ? `<div class="chip" style="font-size:11px;padding:4px 12px;">已导入 ${Math.min(done, cat.count)}/${cat.count}</div>` : '<div class="chip primary" style="font-size:11px;padding:4px 12px;">✓ 全部已导入</div>'}
+        </div>
+        <div class="imp-grid">${cards.join('')}</div>
+        ${hidden > 0 ? `<button class="more-btn" data-cat="${cat.key}">继续显示更多（剩余 ${hidden} 张）</button>` : ''}
+      </section>`;
+  }).join('');
+
+  // 卡片选择
+  root.querySelectorAll('.imp-card:not(.imported)').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.tagName === 'SELECT') return;
+      card.classList.toggle('selected');
+    });
+  });
+  // 分类下拉联动
+  root.querySelectorAll('.imp-card select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const badge = sel.closest('.imp-card').querySelector('.cat-badge');
+      badge.textContent = sel.value;
+    });
+  });
+  // 显示更多
+  root.querySelectorAll('.more-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const sec = document.getElementById('sec-' + btn.dataset.cat);
+      const extra = btn.dataset.cat;
+      const cat = CATEGORIES.find(c => c.key === extra);
+      const grid = sec.querySelector('.imp-grid');
+      for (let i = 0; i < 3; i++) {
+        const g = (grid.children.length * 5) % FILE_EMOJIS.length;
+        const div = document.createElement('div');
+        div.className = 'imp-card';
+        div.innerHTML = `
+          <div class="imp-thumb"><span>${FILE_EMOJIS[g]}</span><span class="qnum">#${String(grid.children.length + 1).padStart(3,'0')}</span><span class="check">✓</span></div>
+          <div class="imp-body">
+            <div class="i-name">${FILE_NAMES[grid.children.length % FILE_NAMES.length]}${cat.key==='raw'?'.ARW':'.JPG'}</div>
+            <div class="i-row">18.2 MB · <b>8月\\08.14</b></div>
+            <div class="i-row"><span class="cat-badge">${cat.name}</span></div>
+          </div>`;
+        grid.appendChild(div);
+      }
+      btn.remove();
+    });
+  });
+}
+
+/* ============ 导入进度模拟 ============ */
+function setProgress(pct) {
+  document.getElementById('pc-fill').style.width = pct + '%';
+  document.getElementById('sb-fill').style.width = pct + '%';
+  document.getElementById('pc-pct').textContent = pct + '%';
+  document.getElementById('sb-label').textContent = '正在导入 ' + pct + '%';
+  const done = Math.round(TOTAL * pct / 100);
+  document.getElementById('sum-ok').textContent = done;
+  document.getElementById('sum-size').textContent = '已写入 ' + (done * 15 / 1024).toFixed(1) + ' GB / 3.2 GB';
+  document.getElementById('sb-done').textContent = done;
+}
+
+document.getElementById('btn-import').addEventListener('click', () => {
+  if (timer || !importing) return;
+  const card = document.getElementById('progress-card');
+  card.style.display = 'flex';
+  let pct = 62;
+  timer = setInterval(() => {
+    pct += 2 + Math.random() * 3;
+    if (pct >= 100) {
+      pct = 100; clearInterval(timer); timer = null;
+      importing = false;
+      setProgress(100);
+      document.getElementById('pc-label').textContent = '导入完成 ✓';
+      document.getElementById('pc-meta').textContent = '全部 214 项已写入 8月\\08.14 · 用时 2:41';
+      document.getElementById('q-hint').textContent = '本次导入完成：成功 201 · 跳过 12 · 失败 1（已记录日志）。';
+      document.getElementById('sum-fail').textContent = '1';
+      document.getElementById('sum-time').textContent = '用时 2:41';
+      document.getElementById('sb-label').textContent = '导入完成 · 用时 2:41';
+      document.getElementById('btn-cancel').style.display = 'none';
+      buildQueue(); // 全部变已导入态
+      return;
+    }
+    setProgress(Math.floor(pct));
+  }, 220);
+});
+
+document.getElementById('btn-cancel').addEventListener('click', () => {
+  if (timer) { clearInterval(timer); timer = null; }
+  importing = false;
+  document.getElementById('progress-card').style.display = 'none';
+  document.getElementById('pc-label').textContent = '已取消';
+  document.getElementById('q-hint').textContent = '导入已取消，队列保留；可随时继续导入。';
+  document.getElementById('sb-label').textContent = '已暂停 · 133 / 214';
+});
+
+/* 分析按钮演示 */
+document.getElementById('btn-analyze').addEventListener('click', function () {
+  const old = this.innerHTML;
+  this.innerHTML = '⏳ 分析中…';
+  this.disabled = true;
+  setTimeout(() => {
+    this.innerHTML = '✓ 分析完成 · 214 项入队';
+    this.disabled = false;
+    document.getElementById('q-report').textContent = '分析完成：214 张照片与视频已按分类入队 · 12 个重复已识别 · 2 张需要人工确认';
+    document.getElementById('q-hint').textContent = '点击「手动开始 / 继续导入」开始写入；导入会校验后落盘，绝不覆盖。';
+  }, 1200);
+});
+
+/* 转移方式切换 */
+document.querySelectorAll('.seg-item[data-mode]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.seg-item[data-mode]').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById('pc-meta').textContent = item.dataset.mode === 'copy'
+      ? 'IMG_7843.JPG · 复制并保留源文件' : 'IMG_7843.JPG · 校验后移动/删除源文件';
+  });
+});
+
+/* 人物识别开关 */
+document.getElementById('sw-person').addEventListener('change', e => {
+  const report = document.getElementById('q-report');
+  report.textContent = e.target.checked
+    ? '分析完成：214 张照片与视频已按分类入队 · 12 个重复已识别 · 2 张需要人工确认'
+    : '分析完成：214 张照片与视频已按分类入队（人物识别已关闭）';
+});
+
+/* 去重决策 */
+document.querySelectorAll('.dup-radio').forEach(r => {
+  r.addEventListener('click', () => {
+    document.querySelectorAll('.dup-radio').forEach(x => x.classList.remove('active'));
+    r.classList.add('active');
+    const label = r.textContent.trim();
+    document.querySelector('.dup-done').innerHTML = `<span class="ok">✓ 已处理</span> 12 个重复 · ${label} · 节省 1.8 GB`;
+  });
+});
+
+/* ============ 启动 ============ */
+buildQueue();
+setProgress(62);
+</script>
+</body>
+</html>

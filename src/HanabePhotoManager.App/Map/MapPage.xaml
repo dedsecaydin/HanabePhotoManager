@@ -1,16 +1,168 @@
-<UserControl x:Class="HanabePhotoManager.App.Map.MapPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf" AllowDrop="True" DragOver="ManualMapPhotos_DragOver" Drop="ManualMapPhotos_Drop">
-  <Grid Background="{DynamicResource Brush.Background.Canvas}"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="380"/></Grid.ColumnDefinitions>
-    <Border Style="{DynamicResource Card.Default}" Padding="0" ClipToBounds="True"><Grid><wv2:WebView2 x:Name="MapWebView"/><Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Padding="12,8" CornerRadius="{DynamicResource Radius.Control}" Background="{DynamicResource Brush.Surface.Elevated}" IsHitTestVisible="False"><TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Text="选择聚合点浏览照片，或在地图上选取手动位置。"/></Border></Grid></Border>
-    <Grid Grid.Column="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <Border Style="{DynamicResource Card.Default}"><StackPanel><DockPanel><TextBlock Text="地图照片" Style="{DynamicResource Layout.SectionTitle}"/><Button DockPanel.Dock="Right" Content="读取 EXIF" Style="{DynamicResource Button.Toolbar}" Command="{Binding RefreshCommand}"/></DockPanel><TextBlock Margin="0,6,0,12" Style="{DynamicResource Status.Description}" Text="{Binding StatusText}"/><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><Button Content="选择照片" Style="{DynamicResource Button.Secondary}" Click="ChooseMapPhotos_Click"/><Button Grid.Column="1" Margin="8,0,0,0" Content="选择文件夹" Style="{DynamicResource Button.Secondary}" Click="ChooseMapFolder_Click"/></Grid></StackPanel></Border>
-      <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="10"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-        <Border Style="{DynamicResource Navigation.Segment}"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
-          <RadioButton Content="地点浏览" GroupName="MapMode" IsChecked="True" Style="{DynamicResource Navigation.SegmentItem}" AutomationProperties.Name="地点浏览" Checked="MapMode_Checked"/>
-          <RadioButton Grid.Column="1" Content="手动标记" GroupName="MapMode" Style="{DynamicResource Navigation.SegmentItem}" AutomationProperties.Name="手动标记" Checked="MapMode_Checked"/>
-        </Grid></Border>
-        <Grid Grid.Row="2">
-          <Border x:Name="LocationBrowseContent" Style="{DynamicResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><StackPanel><TextBlock Style="{DynamicResource Layout.SectionTitle}"><Run Text="当前位置照片 · 已定位 "/><Run Text="{Binding LocatedPhotos.Count, Mode=OneWay}"/></TextBlock><TextBlock Margin="0,4,0,10" Style="{DynamicResource Status.Description}" Text="选择地图上的聚合点；单击文件可放大浏览。"/></StackPanel><ListBox x:Name="LocationPhotosList" Grid.Row="1" ItemsSource="{Binding SelectedLocationPhotos}" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}" MouseLeftButtonUp="LocationPhotosList_MouseLeftButtonUp"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/></DataTemplate></ListBox.ItemTemplate></ListBox></Grid></Border>
-          <Border x:Name="ManualMarkContent" Visibility="Collapsed" Style="{DynamicResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions><StackPanel><TextBlock Style="{DynamicResource Layout.SectionTitle}"><Run Text="批量分配位置 · 待定位 "/><Run Text="{Binding UnlocatedPhotos.Count, Mode=OneWay}"/></TextBlock><TextBlock Margin="0,4,0,8" Style="{DynamicResource Status.Description}" Text="支持 Ctrl / Shift 多选，再在地图上取点。"/></StackPanel><WrapPanel Grid.Row="1" Margin="0,0,0,8"><Button Content="全选" Style="{DynamicResource Button.Toolbar}" Click="SelectAllMapPhotos_Click"/><Button Content="反选" Style="{DynamicResource Button.Toolbar}" Click="InvertMapPhotos_Click"/><Button Content="取消选择" Style="{DynamicResource Button.Toolbar}" Click="ClearMapPhotos_Click"/><Button Content="移出所选" Style="{DynamicResource Button.Toolbar}" Click="RemoveSelectedMapPhotos_Click"/><Button Content="清空导入" Style="{DynamicResource Button.Toolbar}" Click="ClearImportedMapPhotos_Click"/></WrapPanel><ListBox x:Name="ManualPhotosList" Grid.Row="2" ItemsSource="{Binding UnlocatedPhotos}" SelectionMode="Extended" SelectionChanged="ManualPhotosList_SelectionChanged" Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}"><ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/></DataTemplate></ListBox.ItemTemplate></ListBox><StackPanel Grid.Row="3" Margin="0,10,0,0"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions><TextBox Style="{DynamicResource Input.TextBox}" Text="{Binding PendingLatitude, UpdateSourceTrigger=PropertyChanged}" ToolTip="纬度"/><TextBox Grid.Column="1" Margin="8,0,0,0" Style="{DynamicResource Input.TextBox}" Text="{Binding PendingLongitude, UpdateSourceTrigger=PropertyChanged}" ToolTip="经度"/></Grid><TextBox Margin="0,8,0,0" Style="{DynamicResource Input.TextBox}" Text="{Binding PendingDisplayName, UpdateSourceTrigger=PropertyChanged}" ToolTip="地点名称（可选）"/><Button Margin="0,8,0,0" Content="保存到所选照片" Style="{DynamicResource Button.Primary}" Command="{Binding AssignSelectedCommand}"/></StackPanel></Grid></Border>
+<UserControl x:Class="HanabePhotoManager.App.Map.MapPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             AllowDrop="True" DragOver="ManualMapPhotos_DragOver" Drop="ManualMapPhotos_Drop">
+  <UserControl.Resources>
+    <Style x:Key="MapStatBlock" TargetType="Border">
+      <Setter Property="Padding" Value="8,12"/>
+      <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
+      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Container}"/>
+    </Style>
+  </UserControl.Resources>
+  <Grid Background="{DynamicResource Brush.Background.Canvas}">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="16"/>
+      <ColumnDefinition Width="320"/>
+    </Grid.ColumnDefinitions>
+
+    <!-- ═══════ 地图工作区 ═══════ -->
+    <Border Padding="0" ClipToBounds="True" CornerRadius="{StaticResource Radius.Container}"
+            Background="{DynamicResource Brush.Surface.ContainerLowest}">
+      <Grid>
+        <wv2:WebView2 x:Name="MapWebView"/>
+        <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Padding="12,8"
+                CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerLow}"
+                IsHitTestVisible="False">
+          <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}"
+                     Text="选择聚合点浏览照片，或在地图上选取手动位置。"/>
+        </Border>
+      </Grid>
+    </Border>
+
+    <!-- ═══════ Inspector：地图照片 ═══════ -->
+    <Grid Grid.Column="2">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="12"/>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="10"/>
+        <RowDefinition Height="*"/>
+      </Grid.RowDefinitions>
+
+      <Border Style="{DynamicResource Inspector.Panel}">
+        <StackPanel>
+          <DockPanel>
+            <TextBlock Text="地图照片" Style="{DynamicResource Inspector.Header}"/>
+            <Button DockPanel.Dock="Right" Content="读取 EXIF" Style="{DynamicResource Button.Toolbar}"
+                    Command="{Binding RefreshCommand}"/>
+          </DockPanel>
+          <TextBlock Margin="0,6,0,12" Style="{DynamicResource Status.Description}" Text="{Binding StatusText}"/>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+            <Button Content="选择照片" Style="{DynamicResource Button.Secondary}" Click="ChooseMapPhotos_Click"/>
+            <Button Grid.Column="1" Margin="8,0,0,0" Content="选择文件夹" Style="{DynamicResource Button.Secondary}"
+                    Click="ChooseMapFolder_Click"/>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Row="2" Style="{DynamicResource Navigation.Segment}">
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+          <RadioButton Content="地点浏览" GroupName="MapMode" IsChecked="True" Style="{DynamicResource Navigation.SegmentItem}"
+                       AutomationProperties.Name="地点浏览" Checked="MapMode_Checked"/>
+          <RadioButton Grid.Column="1" Content="手动标记" GroupName="MapMode" Style="{DynamicResource Navigation.SegmentItem}"
+                       AutomationProperties.Name="手动标记" Checked="MapMode_Checked"/>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Row="4">
+        <Grid x:Name="LocationBrowseContent">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
+          <UniformGrid Columns="3">
+            <Border Style="{StaticResource MapStatBlock}" Margin="0,0,8,0">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="{Binding SelectedLocationPhotos.Count}" FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="当前地点" FontSize="{StaticResource Typography.Caption}"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource MapStatBlock}" Margin="4,0,4,0">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="{Binding LocatedPhotos.Count}" FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="已定位" FontSize="{StaticResource Typography.Caption}"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Border>
+            <Border Style="{StaticResource MapStatBlock}" Margin="8,0,0,0">
+              <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="{Binding Markers.Count}" FontSize="18" FontWeight="Bold"
+                           Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="聚合点" FontSize="{StaticResource Typography.Caption}"
+                           Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
+              </StackPanel>
+            </Border>
+          </UniformGrid>
+          <StackPanel Grid.Row="1" Margin="0,14,0,0">
+            <TextBlock Style="{DynamicResource Layout.SectionTitle}">
+              <Run Text="当前位置照片 · 已定位 "/><Run Text="{Binding LocatedPhotos.Count, Mode=OneWay}"/>
+            </TextBlock>
+            <TextBlock Margin="0,4,0,10" Style="{DynamicResource Status.Description}"
+                       Text="选择地图上的聚合点；单击文件可放大浏览。"/>
+          </StackPanel>
+          <ListBox x:Name="LocationPhotosList" Grid.Row="2" ItemsSource="{Binding SelectedLocationPhotos}"
+                   Style="{DynamicResource List.Default}" ItemContainerStyle="{DynamicResource ListItem.Default}"
+                   MouseLeftButtonUp="LocationPhotosList_MouseLeftButtonUp">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </Grid>
+
+        <Grid x:Name="ManualMarkContent" Visibility="Collapsed">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock Style="{DynamicResource Layout.SectionTitle}">
+              <Run Text="批量分配位置 · 待定位 "/><Run Text="{Binding UnlocatedPhotos.Count, Mode=OneWay}"/>
+            </TextBlock>
+            <TextBlock Margin="0,4,0,8" Style="{DynamicResource Status.Description}"
+                       Text="支持 Ctrl / Shift 多选，再在地图上取点。"/>
+          </StackPanel>
+          <WrapPanel Grid.Row="1" Margin="0,0,0,8">
+            <Button Content="全选" Style="{DynamicResource Button.Toolbar}" Click="SelectAllMapPhotos_Click"/>
+            <Button Content="反选" Style="{DynamicResource Button.Toolbar}" Click="InvertMapPhotos_Click"/>
+            <Button Content="取消选择" Style="{DynamicResource Button.Toolbar}" Click="ClearMapPhotos_Click"/>
+            <Button Content="移出所选" Style="{DynamicResource Button.Toolbar}" Click="RemoveSelectedMapPhotos_Click"/>
+            <Button Content="清空导入" Style="{DynamicResource Button.Toolbar}" Click="ClearImportedMapPhotos_Click"/>
+          </WrapPanel>
+          <ListBox x:Name="ManualPhotosList" Grid.Row="2" ItemsSource="{Binding UnlocatedPhotos}" SelectionMode="Extended"
+                   SelectionChanged="ManualPhotosList_SelectionChanged" Style="{DynamicResource List.Default}"
+                   ItemContainerStyle="{DynamicResource ListItem.Default}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path}"/>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+          <StackPanel Grid.Row="3" Margin="0,10,0,0">
+            <TextBlock Text="目标坐标（在地图上点击自动填入）" Style="{DynamicResource Inspector.SectionLabel}" Margin="0,0,0,6"/>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+              <TextBox Style="{DynamicResource Input.TextBox}" Text="{Binding PendingLatitude, UpdateSourceTrigger=PropertyChanged}"
+                       ToolTip="纬度"/>
+              <TextBox Grid.Column="1" Margin="8,0,0,0" Style="{DynamicResource Input.TextBox}"
+                       Text="{Binding PendingLongitude, UpdateSourceTrigger=PropertyChanged}" ToolTip="经度"/>
+            </Grid>
+            <TextBox Margin="0,8,0,0" Style="{DynamicResource Input.TextBox}"
+                     Text="{Binding PendingDisplayName, UpdateSourceTrigger=PropertyChanged}" ToolTip="地点名称（可选）"/>
+            <Button Margin="0,8,0,0" Content="保存到所选照片" Style="{DynamicResource Button.Primary}"
+                    Command="{Binding AssignSelectedCommand}"/>
+          </StackPanel>
         </Grid>
       </Grid>
     </Grid>

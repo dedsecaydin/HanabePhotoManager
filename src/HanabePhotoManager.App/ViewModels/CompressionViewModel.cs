@@ -4,6 +4,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Compression;
+using HanabePhotoManager.App.WeChat;
 
 namespace HanabePhotoManager.App.ViewModels;
 
@@ -24,7 +25,9 @@ public sealed class CompressionViewModel : ObservableObject
     private string _currentFile = string.Empty;
     private double _progressValue;
     private bool _isRunning;
+    private bool _isScanning;
     private CancellationTokenSource? _cancellation;
+    private CancellationTokenSource? _inputCancellation;
 
     public CompressionViewModel(
         ImageInputDiscovery? discovery = null,
@@ -36,10 +39,11 @@ public sealed class CompressionViewModel : ObservableObject
         _planner = planner ?? new ImageCompressionPlanner();
         _service = service ?? new ImageCompressionService();
         _collageService = collageService ?? new ImageCollageService();
+        WeChatSender = new WeChatSenderViewModel();
         StartCommand = new AsyncRelayCommand(StartAsync, () => CanStart);
-        CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => IsRunning);
-        ClearCommand = new RelayCommand(Clear, () => !IsRunning && Items.Count > 0);
-        RemoveCommand = new RelayCommand<CompressionInputItem>(Remove, item => item is not null && !IsRunning);
+        CancelCommand = new RelayCommand(CancelCurrentOperation, () => IsRunning || IsScanning);
+        ClearCommand = new RelayCommand(Clear, () => !IsRunning && !IsScanning && Items.Count > 0);
+        RemoveCommand = new RelayCommand<CompressionInputItem>(Remove, item => item is not null && !IsRunning && !IsScanning);
     }
 
     public ObservableCollection<CompressionInputItem> Items { get; } = [];
@@ -50,7 +54,8 @@ public sealed class CompressionViewModel : ObservableObject
     [
         new(ImageToolMode.Compression, "批量压缩"),
         new(ImageToolMode.Collage, "拼图"),
-        new(ImageToolMode.Watermark, "批量水印")
+        new(ImageToolMode.Watermark, "批量水印"),
+        new(ImageToolMode.WeChatSend, "微信发送")
     ];
     public IReadOnlyList<CollageOrientationChoice> CollageOrientations { get; } =
     [
@@ -77,6 +82,7 @@ public sealed class CompressionViewModel : ObservableObject
             OnPropertyChanged(nameof(IsCompressionMode));
             OnPropertyChanged(nameof(IsCollageMode));
             OnPropertyChanged(nameof(IsWatermarkMode));
+            OnPropertyChanged(nameof(IsWeChatSendMode));
             OnPropertyChanged(nameof(IsFileOperationMode));
             StatusText = value == ImageToolMode.Collage ? "按队列顺序拼接图片" : "拖入图片或选择文件夹开始";
             NotifyAvailability();
@@ -85,7 +91,9 @@ public sealed class CompressionViewModel : ObservableObject
     public bool IsCompressionMode => SelectedToolMode == ImageToolMode.Compression;
     public bool IsCollageMode => SelectedToolMode == ImageToolMode.Collage;
     public bool IsWatermarkMode => SelectedToolMode == ImageToolMode.Watermark;
-    public bool IsFileOperationMode => !IsWatermarkMode;
+    public bool IsWeChatSendMode => SelectedToolMode == ImageToolMode.WeChatSend;
+    public bool IsFileOperationMode => !IsWatermarkMode && !IsWeChatSendMode;
+    public WeChatSenderViewModel WeChatSender { get; }
     public CollageOrientation CollageOrientation
     {
         get => _collageOrientation;
@@ -139,6 +147,7 @@ public sealed class CompressionViewModel : ObservableObject
     public long OriginalTotalBytes => Items.Sum(item => item.Length);
     public long OutputTotalBytes => Results.Where(result => result.Status == CompressionItemStatus.Success).Sum(result => result.OutputBytes);
     public bool CanStart => !IsRunning
+        && !IsScanning
         && Items.Count > 0
         && !string.IsNullOrWhiteSpace(OutputDirectory)
         && (IsCollageMode && !CollageLimitOutputSize || TargetBytes > 0);
@@ -156,19 +165,66 @@ public sealed class CompressionViewModel : ObservableObject
         }
     }
 
-    public void AddInputs(IEnumerable<string> paths, bool recursive = true)
+    public bool IsScanning
     {
-        var result = _discovery.Discover(paths, recursive, CancellationToken.None);
-        var existing = Items.Select(item => item.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (var path in result.Files.Where(existing.Add))
+        get => _isScanning;
+        private set
         {
-            Items.Add(new CompressionInputItem(path, new FileInfo(path).Length));
+            if (!SetProperty(ref _isScanning, value)) return;
+            NotifyAvailability();
+            CancelCommand.NotifyCanExecuteChanged();
+            ClearCommand.NotifyCanExecuteChanged();
+            RemoveCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    public async Task AddInputsAsync(
+        IEnumerable<string> paths,
+        bool recursive = true,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        _inputCancellation?.Cancel();
+        _inputCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var scanCancellation = _inputCancellation;
+        IsScanning = true;
+        ProgressValue = 0;
+        CurrentFile = "正在扫描文件夹，可取消…";
+        StatusText = "正在扫描图片文件；大型网络文件夹可能需要一些时间。";
+        try
+        {
+        var inputs = paths.ToArray();
+        var result = await Task.Run(
+            () => DiscoverCompressionInputs(inputs, recursive, scanCancellation.Token),
+            scanCancellation.Token).ConfigureAwait(true);
+        scanCancellation.Token.ThrowIfCancellationRequested();
+        var existing = Items.Select(item => item.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var input in result.Inputs.Where(input => existing.Add(input.Path)))
+        {
+            Items.Add(input);
         }
         foreach (var warning in result.Warnings) Warnings.Add(warning);
         StatusText = $"已选择 {Items.Count:N0} 张图片";
         OnPropertyChanged(nameof(OriginalTotalBytes));
         NotifyAvailability();
         ClearCommand.NotifyCanExecuteChanged();
+        }
+        catch (OperationCanceledException) when (scanCancellation.IsCancellationRequested)
+        {
+            if (ReferenceEquals(_inputCancellation, scanCancellation))
+                StatusText = "已取消扫描。";
+            throw;
+        }
+        finally
+        {
+            if (ReferenceEquals(_inputCancellation, scanCancellation))
+            {
+                CurrentFile = string.Empty;
+                IsScanning = false;
+                _inputCancellation = null;
+            }
+            scanCancellation.Dispose();
+        }
     }
 
     private async Task StartAsync()
@@ -237,7 +293,7 @@ public sealed class CompressionViewModel : ObservableObject
 
     private void Remove(CompressionInputItem? item)
     {
-        if (item is null || IsRunning) return;
+        if (item is null || IsRunning || IsScanning) return;
         Items.Remove(item);
         OnPropertyChanged(nameof(OriginalTotalBytes));
         NotifyAvailability();
@@ -262,7 +318,41 @@ public sealed class CompressionViewModel : ObservableObject
         OnPropertyChanged(nameof(CanStart));
         StartCommand.NotifyCanExecuteChanged();
     }
+
+    private void CancelCurrentOperation()
+    {
+        _inputCancellation?.Cancel();
+        _cancellation?.Cancel();
+    }
+
+    private CompressionInputScan DiscoverCompressionInputs(
+        IEnumerable<string> paths,
+        bool recursive,
+        CancellationToken cancellationToken)
+    {
+        var discovery = _discovery.Discover(paths, recursive, cancellationToken);
+        var inputs = new List<CompressionInputItem>(discovery.Files.Count);
+        var warnings = discovery.Warnings.ToList();
+        foreach (var path in discovery.Files)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                inputs.Add(new CompressionInputItem(path, new FileInfo(path).Length));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                warnings.Add($"无法读取图片：{path}（{ex.Message}）");
+            }
+        }
+
+        return new CompressionInputScan(inputs, warnings);
+    }
 }
+
+internal sealed record CompressionInputScan(
+    IReadOnlyList<CompressionInputItem> Inputs,
+    IReadOnlyList<string> Warnings);
 
 public sealed record CompressionInputItem(string Path, long Length)
 {
@@ -278,7 +368,8 @@ public enum ImageToolMode
 {
     Compression,
     Collage,
-    Watermark
+    Watermark,
+    WeChatSend
 }
 
 public sealed record ImageToolModeChoice(ImageToolMode Value, string Label);

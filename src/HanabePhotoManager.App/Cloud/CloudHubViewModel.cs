@@ -13,6 +13,7 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
     private readonly ICloudProvider _provider;
     private readonly ICloudIndexStore _index;
     private readonly ICloudCacheStore _cache;
+    private readonly ICloudTransferQueueStore? _transferQueueStore;
     private readonly SynchronizationContext _synchronizationContext;
     private readonly object _operationGate = new();
     private CancellationTokenSource? _activeOperation;
@@ -35,11 +36,13 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
         ICloudProvider provider,
         ICloudIndexStore index,
         ICloudCacheStore cache,
-        SynchronizationContext? synchronizationContext = null)
+        SynchronizationContext? synchronizationContext = null,
+        ICloudTransferQueueStore? transferQueueStore = null)
     {
         _provider = provider ?? throw new ArgumentNullException(nameof(provider));
         _index = index ?? throw new ArgumentNullException(nameof(index));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _transferQueueStore = transferQueueStore;
         _synchronizationContext = synchronizationContext ??
             SynchronizationContext.Current ??
             throw new InvalidOperationException(
@@ -73,8 +76,69 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
     public CloudAccountState AccountState
     {
         get => _accountState;
-        private set => SetProperty(ref _accountState, value);
+        private set
+        {
+            if (SetProperty(ref _accountState, value))
+            {
+                OnPropertyChanged(nameof(AccountTitle));
+                OnPropertyChanged(nameof(UsedPercent));
+                OnPropertyChanged(nameof(UsedPercentText));
+                OnPropertyChanged(nameof(UsedBytesText));
+                OnPropertyChanged(nameof(CapacityText));
+                OnPropertyChanged(nameof(HasCapacityInfo));
+                OnPropertyChanged(nameof(IsAccountConnected));
+                OnPropertyChanged(nameof(AccountBadgeText));
+                OnPropertyChanged(nameof(AccountSubtitle));
+            }
+        }
     }
+
+    /// <summary>Account display name (e.g. "百度网盘" / "夸克网盘").</summary>
+    public string AccountTitle => AccountState.DisplayName;
+
+    /// <summary>
+    /// Live account hint shown under the account name: the current operation
+    /// status while connected, or the honest "not logged in / not integrated"
+    /// reason while no data source is available.
+    /// </summary>
+    public string AccountSubtitle => AccountState.IsAuthenticated
+        ? StatusText
+        : AccountState.StatusText;
+
+    /// <summary>Short connection badge text ("已连接" / "未接入").</summary>
+    public string AccountBadgeText => AccountState.IsAuthenticated ? "已连接" : "未接入";
+
+    public bool IsAccountConnected => AccountState.IsAuthenticated;
+
+    /// <summary>Usage fraction in [0, 1]; zero when no capacity information exists.</summary>
+    public double UsedPercent => AccountState.TotalBytes > 0
+        ? Math.Clamp(AccountState.UsedBytes / (double)AccountState.TotalBytes, 0, 1)
+        : 0;
+
+    /// <summary>Compact percentage label ("68%"), "—" when unknown.</summary>
+    public string UsedPercentText => AccountState.TotalBytes > 0
+        ? $"{UsedPercent * 100:0}%"
+        : "—";
+
+    /// <summary>Human-readable used capacity ("214.6 GB"), "—" when unknown.</summary>
+    public string UsedBytesText => AccountState.TotalBytes > 0
+        ? FormatBytes(AccountState.UsedBytes)
+        : "—";
+
+    /// <summary>Total / remaining capacity line, or an honest "no data" note.</summary>
+    public string CapacityText => AccountState.TotalBytes > 0
+        ? $"总容量 {FormatBytes(AccountState.TotalBytes)} · 剩余 {FormatBytes(AccountState.TotalBytes - AccountState.UsedBytes)}"
+        : "暂无容量信息";
+
+    public bool HasCapacityInfo => AccountState.TotalBytes > 0;
+
+    /// <summary>Transfer jobs loaded from the local queue store (empty when none).</summary>
+    public ObservableCollection<CloudTransferJobItemViewModel> TransferJobs { get; } = [];
+
+    public bool HasTransferJobs => TransferJobs.Count > 0;
+
+    /// <summary>Jobs currently in a running / pending / verifying state.</summary>
+    public int ActiveTransferCount => TransferJobs.Count(job => job.IsActive);
 
     public CloudPath CurrentPath
     {
@@ -159,7 +223,13 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
     public string StatusText
     {
         get => _statusText;
-        private set => SetProperty(ref _statusText, value);
+        private set
+        {
+            if (SetProperty(ref _statusText, value))
+            {
+                OnPropertyChanged(nameof(AccountSubtitle));
+            }
+        }
     }
 
     public string? SelectedPreviewPath
@@ -213,6 +283,23 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
                         ? $"已连接 {account.DisplayName}，正在扫描云端内容…"
                         : $"{account.DisplayName} 尚未登录，请先完成登录。";
                 });
+
+                if (_transferQueueStore is not null)
+                {
+                    var jobs = await _transferQueueStore.LoadAsync(token);
+                    token.ThrowIfCancellationRequested();
+                    await ApplyIfCurrentAsync(generation, () =>
+                    {
+                        TransferJobs.Clear();
+                        foreach (var job in jobs)
+                        {
+                            TransferJobs.Add(new CloudTransferJobItemViewModel(job));
+                        }
+
+                        OnPropertyChanged(nameof(HasTransferJobs));
+                        OnPropertyChanged(nameof(ActiveTransferCount));
+                    });
+                }
 
                 if (!account.IsAuthenticated)
                 {
@@ -603,6 +690,20 @@ public sealed class CloudHubViewModel : ObservableObject, IDisposable
         return lastSeparator <= 0
             ? new CloudPath("/")
             : new CloudPath(path.Value[..lastSeparator]);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double mb = 1024.0 * 1024.0;
+        const double gb = mb * 1024.0;
+        const double tb = gb * 1024.0;
+        return bytes >= tb
+            ? $"{bytes / tb:0.##} TB"
+            : bytes >= gb
+                ? $"{bytes / gb:0.#} GB"
+                : bytes >= mb
+                    ? $"{bytes / mb:0.#} MB"
+                    : $"{bytes} B";
     }
 }
 

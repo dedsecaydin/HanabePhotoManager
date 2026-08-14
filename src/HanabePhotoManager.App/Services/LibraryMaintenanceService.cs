@@ -13,6 +13,9 @@ public sealed class LibraryMaintenanceService
         ["Thumbs.db", "desktop.ini", ".DS_Store"],
         StringComparer.OrdinalIgnoreCase);
 
+    public static bool IsNetworkLibraryRoot(string path) =>
+        !string.IsNullOrWhiteSpace(path) && path.StartsWith(@"\\", StringComparison.Ordinal);
+
     public Task<LibraryMaintenanceResult> RemoveEmptyDateDirectoriesAsync(
         string libraryRoot,
         CancellationToken cancellationToken) =>

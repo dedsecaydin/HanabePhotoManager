@@ -1,0 +1,48 @@
+using System.Windows;
+using WinForms = System.Windows.Forms;
+
+namespace HanabePhotoManager.App.WeChat;
+
+public partial class WeChatSenderView : System.Windows.Controls.UserControl
+{
+    public WeChatSenderView() => InitializeComponent();
+
+    private WeChatSenderViewModel? ViewModel => DataContext as WeChatSenderViewModel;
+
+    private void ChooseFiles_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Multiselect = true,
+            Filter = "图片|*.jpg;*.jpeg;*.png;*.webp;*.bmp;*.tif;*.tiff;*.heic;*.arw;*.cr2;*.cr3;*.nef;*.dng;*.raf;*.orf;*.rw2|所有文件|*.*"
+        };
+        if (dialog.ShowDialog() == true)
+            ViewModel?.AddInputs(dialog.FileNames);
+    }
+
+    private void ChooseFolder_Click(object sender, RoutedEventArgs e)
+    {
+        using var dialog = new WinForms.FolderBrowserDialog
+        {
+            Description = "选择原图文件夹（自动扫描子文件夹）",
+            UseDescriptionForTitle = true
+        };
+        if (dialog.ShowDialog() == WinForms.DialogResult.OK)
+            ViewModel?.AddInputs([dialog.SelectedPath], true);
+    }
+
+    private void OnDragOver(object sender, System.Windows.DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
+            ? System.Windows.DragDropEffects.Copy
+            : System.Windows.DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnDrop(object sender, System.Windows.DragEventArgs e)
+    {
+        if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is string[] paths)
+            ViewModel?.AddInputs(paths, true);
+        e.Handled = true;
+    }
+}

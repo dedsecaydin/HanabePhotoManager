@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 图片小工具 · M3 浓烈版（预设计 008）</title>
+<style>
+/* ============================================================
+   Variant 008: 图片小工具（工具卡片网格 × 工具详情工作台）
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector 320px + FAB + 状态层）
+   功能来源 = CompressionPage（压缩/拼图）+ WatermarkPage（水印）+ WeChatSenderView（微信发送）
+            + ContestOpenPage / ContestJudgedPage（投稿/欣赏项目）
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ============ 默认主题：动态色彩 · 浅色 ============ */
+:root {
+  --primary: #4355B9;  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;  --on-primary-container: #00105C;
+  --secondary: #5B5D72;  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;  --on-tertiary-container: #271900;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+
+  --surface: #FBF8FF;  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;  --on-surface-variant: #45464F;
+  --outline: #75767F;  --outline-variant: #C5C5CF;
+
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+
+  --radius-small: 8px;  --radius-medium: 12px;  --radius-large: 16px;
+  --radius-extra-large: 28px;  --radius-full: 999px;
+
+  --motion-fast: 150ms;  --motion-normal: 180ms;  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  font-size: 16px;
+}
+
+/* ============ 6 套主题（与 007 一致，色值来自 M3_DESIGN_FINAL.md） ============ */
+:root[data-theme="dynamic-dark"] {
+  --primary: #BCC3FF;  --on-primary: #1E2768;
+  --primary-container: #2A3585;  --on-primary-container: #DEE0FF;
+  --secondary: #C4C6DE;  --on-secondary: #2A2B40;
+  --secondary-container: #434459;  --on-secondary-container: #E0E1F9;
+  --tertiary: #FFC34F;  --on-tertiary: #442C00;
+  --tertiary-container: #5E4100;  --on-tertiary-container: #FFDF9E;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121318;  --surface-dim: #121318;
+  --surface-container-lowest: #0D0E12;  --surface-container-low: #17181E;
+  --surface-container: #1D1E24;  --surface-container-high: #27282F;
+  --surface-container-highest: #32333B;
+  --on-surface: #E3E1E9;  --on-surface-variant: #C6C5D0;
+  --outline: #90919B;  --outline-variant: #45464F;
+  --state-hover: rgba(227, 225, 233, 0.08);  --state-pressed: rgba(227, 225, 233, 0.12);
+}
+:root[data-theme="forest-light"] {
+  --primary: #1D6B50;  --on-primary: #FFFFFF;
+  --primary-container: #A8F2CD;  --on-primary-container: #002110;
+  --secondary: #4F6357;  --on-secondary: #FFFFFF;
+  --secondary-container: #D2E8DA;  --on-secondary-container: #0E2018;
+  --tertiary: #3E6373;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #C2E8FB;  --on-tertiary-container: #001F2C;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FCFDF7;  --surface-dim: #DCE3DB;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #F6F9F4;
+  --surface-container: #F0F5EE;  --surface-container-high: #EAEFE9;
+  --surface-container-highest: #E4EAE3;
+  --on-surface: #1B1D1B;  --on-surface-variant: #444844;
+  --outline: #757A75;  --outline-variant: #C4C9C3;
+  --state-hover: rgba(27, 29, 27, 0.08);  --state-pressed: rgba(27, 29, 27, 0.12);
+}
+:root[data-theme="forest-dark"] {
+  --primary: #8CD5B2;  --on-primary: #003420;
+  --primary-container: #004930;  --on-primary-container: #A8F2CD;
+  --secondary: #B5CCBD;  --on-secondary: #21352A;
+  --secondary-container: #374B3F;  --on-secondary-container: #D2E8DA;
+  --tertiary: #A6CCDE;  --on-tertiary: #0A3343;
+  --tertiary-container: #244B5B;  --on-tertiary-container: #C2E8FB;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121412;  --surface-dim: #121412;
+  --surface-container-lowest: #0C0E0C;  --surface-container-low: #181B18;
+  --surface-container: #1D201D;  --surface-container-high: #272A27;
+  --surface-container-highest: #32352F;
+  --on-surface: #E1E3DE;  --on-surface-variant: #C2C8C2;
+  --outline: #8C928C;  --outline-variant: #434943;
+  --state-hover: rgba(225, 227, 222, 0.08);  --state-pressed: rgba(225, 227, 222, 0.12);
+}
+:root[data-theme="violet-light"] {
+  --primary: #8B4AA6;  --on-primary: #FFFFFF;
+  --primary-container: #F7D8FF;  --on-primary-container: #3A0051;
+  --secondary: #6B5D71;  --on-secondary: #FFFFFF;
+  --secondary-container: #F3DFF8;  --on-secondary-container: #271B2B;
+  --tertiary: #006A6A;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #9CF0F0;  --on-tertiary-container: #003737;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FEF7FF;  --surface-dim: #DED8E1;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #FAF2FC;
+  --surface-container: #F5ECF7;  --surface-container-high: #EFE6F1;
+  --surface-container-highest: #E9E2EA;
+  --on-surface: #1D1B1E;  --on-surface-variant: #49454E;
+  --outline: #7A757E;  --outline-variant: #CAC4CF;
+  --state-hover: rgba(29, 27, 30, 0.08);  --state-pressed: rgba(29, 27, 30, 0.12);
+}
+:root[data-theme="violet-dark"] {
+  --primary: #E3AEF7;  --on-primary: #4B1160;
+  --primary-container: #6F2B89;  --on-primary-container: #F7D8FF;
+  --secondary: #D9C2DE;  --on-secondary: #3A2D3F;
+  --secondary-container: #524359;  --on-secondary-container: #F3DFF8;
+  --tertiary: #77D3D3;  --on-tertiary: #003738;
+  --tertiary-container: #00504F;  --on-tertiary-container: #9CF0F0;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #151316;  --surface-dim: #151316;
+  --surface-container-lowest: #100E11;  --surface-container-low: #1B191C;
+  --surface-container: #201E21;  --surface-container-high: #2B282C;
+  --surface-container-highest: #343138;
+  --on-surface: #E7E1E8;  --on-surface-variant: #CAC4CF;
+  --outline: #948F98;  --outline-variant: #49454E;
+  --state-hover: rgba(231, 225, 232, 0.08);  --state-pressed: rgba(231, 225, 232, 0.12);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app { display: flex; height: 100vh; padding: 12px; gap: 12px; background: var(--surface-dim); transition: background var(--motion-slow) var(--ease); }
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background var(--motion-slow) var(--ease);
+}
+.rail-logo {
+  width: 44px; height: 44px; border-radius: var(--radius-medium);
+  background: var(--primary-container); color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px; margin-bottom: 12px; position: relative; overflow: hidden;
+}
+.rail-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%); }
+.rail-item {
+  width: 64px; border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant); font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full); font-size: 16px;
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.rail-item.active .rail-icon { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* ===================== Main ===================== */
+.main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface-container-low); border-radius: var(--radius-extra-large);
+  padding: 14px 20px;
+  transition: background var(--motion-slow) var(--ease);
+}
+.topbar-title { font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.search-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 9px 16px; width: 300px; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease);
+}
+.search-field:focus-within { outline: 2px solid var(--primary); outline-offset: 1px; }
+.search-field input {
+  border: none; outline: none; background: transparent; color: var(--on-surface);
+  font-size: 13.5px; width: 100%; font-family: inherit;
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+.theme-chip {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 8px 14px; font-size: 12.5px; color: var(--on-surface-variant);
+  border: 1px solid transparent; user-select: none;
+  transition: background var(--motion-fast) var(--ease);
+}
+.theme-chip:hover { background: var(--surface-container-high); }
+.theme-chip .tc-dots { display: flex; gap: 3px; }
+.theme-chip .tc-dots span { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ===================== Content ===================== */
+.content { flex: 1; display: flex; gap: 12px; min-height: 0; }
+
+.workspace {
+  flex: 1; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large); padding: 18px;
+  overflow-y: auto; min-width: 0;
+  transition: background var(--motion-slow) var(--ease);
+}
+
+.inspector {
+  width: 320px; background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large); padding: 18px;
+  overflow-y: auto; flex-shrink: 0;
+  transition: background var(--motion-slow) var(--ease);
+}
+
+/* ===================== Statusbar / FAB ===================== */
+.statusbar {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-container); border-radius: var(--radius-large);
+  padding: 10px 18px; font-size: 12.5px; color: var(--on-surface-variant);
+  transition: background var(--motion-slow) var(--ease);
+}
+.statusbar b { color: var(--primary); font-weight: 600; }
+.statusbar > span:last-child { white-space: nowrap; flex-shrink: 0; }
+.progress { flex: 1; height: 5px; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
+.progress .fill { height: 100%; width: 0%; border-radius: var(--radius-full); background: var(--primary); transition: width var(--motion-normal) var(--ease); }
+
+.fab {
+  position: fixed; right: 32px; bottom: 28px; width: 56px; height: 56px;
+  border-radius: var(--radius-large); border: none; cursor: pointer;
+  background: var(--primary); color: var(--on-primary); font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  transition: transform var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+  z-index: 50;
+}
+.fab:hover { transform: scale(1.06); }
+.fab:active { transform: scale(0.96); }
+
+/* ===================== 通用组件 ===================== */
+.card {
+  background: var(--surface-container-low); border-radius: var(--radius-large);
+  padding: 16px; margin-bottom: 12px;
+  transition: background var(--motion-slow) var(--ease);
+}
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.card-desc { font-size: 12.5px; color: var(--on-surface-variant); margin-bottom: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+  border-radius: var(--radius-full); padding: 9px 18px;
+  background: var(--surface-container-high); color: var(--on-surface);
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-container-highest); }
+.btn:active { background: var(--state-pressed); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.secondary { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.secondary:hover { filter: brightness(0.98); }
+.btn.tertiary { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.btn.ghost { background: transparent; color: var(--on-surface-variant); }
+.btn.ghost:hover { background: var(--state-hover); }
+.btn.sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+  background: transparent; color: var(--on-surface-variant); border: 1px solid var(--outline-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--state-hover); }
+.chip.active { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.input {
+  width: 100%; background: var(--surface-container-high);
+  border: 1px solid transparent; border-radius: var(--radius-medium);
+  padding: 10px 12px; color: var(--on-surface); font-size: 13px; font-family: inherit;
+  outline: none; transition: border var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.input:focus { border-color: var(--primary); background: var(--surface-container-lowest); }
+.input[readonly] { color: var(--on-surface-variant); }
+select.input { appearance: none; cursor: pointer; }
+.field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--on-surface-variant); margin: 12px 0 6px; }
+
+input[type="range"] { width: 100%; accent-color: var(--primary); cursor: pointer; }
+input[type="checkbox"] { accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer; }
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; margin: 8px 0; cursor: pointer; }
+.radio-row { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+input[type="radio"] { accent-color: var(--primary); width: 15px; height: 15px; cursor: pointer; }
+
+.seg {
+  display: flex; gap: 4px; background: var(--surface-container);
+  border-radius: var(--radius-full); padding: 4px; margin-bottom: 12px;
+}
+.seg-item {
+  flex: 1; text-align: center; padding: 8px 6px; font-size: 12.5px; font-weight: 600;
+  border-radius: var(--radius-full); cursor: pointer; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active { background: var(--surface-container-lowest); color: var(--on-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+/* ===================== 008 特有：工具卡片网格 ===================== */
+.tool-hero { margin-bottom: 16px; }
+.tool-hero h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.tool-hero p { font-size: 13px; color: var(--on-surface-variant); }
+.tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.tool-card {
+  border-radius: var(--radius-large); overflow: hidden; cursor: pointer;
+  background: var(--surface-container-low);
+  border: 1px solid transparent;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease), background var(--motion-slow) var(--ease);
+  position: relative;
+}
+.tool-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+.tool-card:active { transform: translateY(0); }
+.tool-card .cover { aspect-ratio: 16 / 10; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.tool-card .cover .art { font-size: 44px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.18)); position: relative; z-index: 2; }
+.tool-card .cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(255,255,255,0.22), transparent 55%); z-index: 1; }
+.tool-card .body { padding: 13px 15px 15px; }
+.tool-card .body .t-name { font-size: 15px; font-weight: 700; }
+.tool-card .body .t-desc { font-size: 12px; color: var(--on-surface-variant); margin: 4px 0 10px; line-height: 1.45; }
+.tool-card .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tool-card .tags .tag { font-size: 10.5px; padding: 3px 9px; border-radius: var(--radius-full); font-weight: 600; }
+.cover-c1 { background: linear-gradient(135deg, #DEE0FF, #B9BFFF); }
+.cover-c2 { background: linear-gradient(135deg, #FFDF9E, #FFC34F); }
+.cover-c3 { background: linear-gradient(135deg, #E0E1F9, #C4C6DE); }
+.cover-c4 { background: linear-gradient(135deg, #C2E8FB, #7ECBE8); }
+.cover-c5 { background: linear-gradient(135deg, #A8F2CD, #5EDBA0); }
+.cover-c6 { background: linear-gradient(135deg, #F7D8FF, #E3AEF7); }
+.tag-p { background: var(--primary-container); color: var(--on-primary-container); }
+.tag-s { background: var(--secondary-container); color: var(--on-secondary-container); }
+.tag-t { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+
+/* ===================== 008 特有：工具详情工作台 ===================== */
+.detail-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer;
+  background: var(--secondary-container); color: var(--on-secondary-container);
+  border-radius: var(--radius-full); padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: inherit;
+  transition: background var(--motion-fast) var(--ease);
+}
+.back-btn:hover { filter: brightness(0.97); }
+.detail-title { font-size: 18px; font-weight: 700; }
+.detail-tabs { display: flex; gap: 6px; margin-left: auto; }
+
+.tool-workspace { display: grid; grid-template-columns: 340px 16px 1fr; gap: 0; min-height: 100%; }
+.tool-left { min-width: 0; }
+.tool-right { min-width: 0; display: flex; flex-direction: column; }
+
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.photo-cell {
+  aspect-ratio: 1; border-radius: var(--radius-medium); position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; font-size: 22px;
+  background: var(--surface-container-high); border: 2px solid transparent;
+  transition: border-color var(--motion-fast) var(--ease), transform var(--motion-fast) var(--ease);
+}
+.photo-cell:hover { transform: scale(1.04); }
+.photo-cell .sz { position: absolute; bottom: 2px; right: 5px; font-size: 9px; color: rgba(0,0,0,0.55); background: rgba(255,255,255,0.7); padding: 0 4px; border-radius: 6px; }
+.pc-1 { background: linear-gradient(135deg, #FFD3E0, #FF9EB8); }
+.pc-2 { background: linear-gradient(135deg, #BFE6FF, #7CC8F5); }
+.pc-3 { background: linear-gradient(135deg, #C9F2D8, #7AD9A0); }
+.pc-4 { background: linear-gradient(135deg, #FFF0BF, #FFD36B); }
+.pc-5 { background: linear-gradient(135deg, #E4D9FF, #B7A1F0); }
+.pc-6 { background: linear-gradient(135deg, #FFE0CC, #FFB27A); }
+
+.queue-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: var(--radius-medium); cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.queue-item:hover { background: var(--state-hover); }
+.queue-item.selected { background: var(--secondary-container); }
+.queue-item .thumb { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.queue-item .qi-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.queue-item .qi-meta { font-size: 11px; color: var(--on-surface-variant); }
+
+.result-item { display: flex; gap: 8px; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid var(--outline-variant); align-items: flex-start; }
+.result-item:last-child { border-bottom: none; }
+.result-item .ok { color: var(--primary); font-weight: 700; flex-shrink: 0; }
+.result-item .bad { color: var(--error); font-weight: 700; flex-shrink: 0; }
+
+.stat-block { display: flex; flex-direction: column; align-items: center; padding: 14px 8px; background: var(--surface-container); border-radius: var(--radius-large); }
+.stat-block .big { font-size: 22px; font-weight: 800; color: var(--primary); }
+.stat-block .lbl { font-size: 11.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.stat-row { display: flex; gap: 10px; margin-bottom: 12px; }
+.stat-row .stat-block { flex: 1; }
+
+/* 水印预览 */
+.wm-preview {
+  border-radius: var(--radius-large); background: var(--surface-dim);
+  position: relative; overflow: hidden; flex: 1; min-height: 320px;
+  display: flex; align-items: center; justify-content: center;
+}
+.wm-preview .photo-bg {
+  width: 82%; aspect-ratio: 4/3; border-radius: var(--radius-large);
+  background: linear-gradient(135deg, #7CC8F5, #4E8FD8 40%, #2E5FA3);
+  position: relative; overflow: hidden;
+}
+.wm-preview .photo-bg::before { content: '🏔️'; position: absolute; font-size: 64px; top: 18%; left: 12%; opacity: 0.9; }
+.wm-preview .photo-bg::after { content: '🌲'; position: absolute; font-size: 40px; bottom: 12%; left: 62%; opacity: 0.9; }
+.wm-stamp {
+  position: absolute; font-size: 20px; color: rgba(255,255,255,0.85); font-weight: 700;
+  letter-spacing: 4px; text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  transform: rotate(-14deg); user-select: none; cursor: move;
+}
+.wm-preview .hint { position: absolute; bottom: 14px; font-size: 11.5px; color: var(--on-surface-variant); background: var(--surface-container-low); padding: 5px 12px; border-radius: var(--radius-full); }
+
+/* 微信发送步骤 */
+.step-card {
+  display: flex; gap: 14px; padding: 14px; border-radius: var(--radius-large);
+  background: var(--surface-container); margin-bottom: 12px;
+}
+.step-num {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  background: var(--primary); color: var(--on-primary); font-weight: 800; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.step-card.done .step-num { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.step-body { flex: 1; min-width: 0; }
+.step-title { font-size: 14px; font-weight: 700; margin-bottom: 3px; }
+.step-desc { font-size: 12.5px; color: var(--on-surface-variant); }
+
+/* 投稿/欣赏项目 */
+.contest-list { display: flex; flex-direction: column; gap: 10px; }
+.contest-item {
+  border-radius: var(--radius-large); padding: 14px 16px; cursor: pointer;
+  background: var(--surface-container-low); border: 1px solid var(--outline-variant);
+  transition: background var(--motion-fast) var(--ease), border-color var(--motion-fast) var(--ease);
+}
+.contest-item:hover { background: var(--surface-container); border-color: var(--primary); }
+.contest-item.active { background: var(--primary-container); border-color: var(--primary); }
+.contest-item .c-name { font-size: 14px; font-weight: 700; }
+.contest-item .c-desc { font-size: 12px; color: var(--on-surface-variant); margin: 4px 0; line-height: 1.45; }
+.contest-item .c-url { font-size: 11px; color: var(--tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.browser-mock {
+  border-radius: var(--radius-large); background: var(--surface-container-high);
+  height: 100%; min-height: 420px; display: flex; flex-direction: column; overflow: hidden;
+}
+.browser-mock .bm-bar { display: flex; gap: 6px; padding: 10px 14px; align-items: center; border-bottom: 1px solid var(--outline-variant); }
+.browser-mock .bm-url { flex: 1; background: var(--surface-container-lowest); border-radius: var(--radius-full); padding: 6px 14px; font-size: 12px; color: var(--on-surface-variant); }
+.browser-mock .bm-body { flex: 1; display: flex; align-items: center; justify-content: center; color: var(--on-surface-variant); font-size: 13px; gap: 8px; }
+
+/* 视图切换 */
+.view { display: none; }
+.view.active { display: block; animation: fadeIn var(--motion-normal) var(--ease); }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; text-align: center; color: var(--on-surface-variant); }
+.empty-state .big { font-size: 52px; margin-bottom: 14px; }
+.empty-state .t { font-size: 16px; font-weight: 700; color: var(--on-surface); margin-bottom: 6px; }
+.empty-state .d { font-size: 13px; max-width: 420px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item active" title="图片小工具"><span class="rail-icon">🧰</span>工具</div>
+    <div class="rail-item" title="地图照片"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">图片小工具</div>
+        <div class="topbar-sub" id="topbar-sub">压缩 · 拼图 · 水印 · 微信发送 · 投稿与欣赏项目</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="search-field"><span>🔍</span><input type="text" placeholder="搜索工具或项目…（演示）"></div>
+        <div class="theme-chip" id="theme-chip" title="点击切换主题（6 套预览）">
+          <span class="tc-dots"><span style="background:#4355B9;"></span><span style="background:#5B5D72;"></span><span style="background:#7A5700;"></span></span>
+          <span id="theme-label">动态色彩</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+
+        <!-- ═══════════ 视图 1：工具卡片网格 ═══════════ -->
+        <section class="view active" id="view-grid">
+          <div class="tool-hero">
+            <h2>图片小工具</h2>
+            <p>批量压缩、拼接与水印工具，以及摄影投稿 / 获奖作品欣赏入口。选择一项开始。</p>
+          </div>
+          <div class="tool-grid">
+            <div class="tool-card" data-tool="compress">
+              <div class="cover cover-c1"><span class="art">🗜️</span></div>
+              <div class="body">
+                <div class="t-name">图片压缩</div>
+                <div class="t-desc">保持原始像素尺寸，按「每张上限」或「整批总大小」压缩到目标体积，自动挑选最高可用质量。</div>
+                <div class="tags"><span class="tag tag-p">批量</span><span class="tag tag-s">JPEG 质量</span></div>
+              </div>
+            </div>
+            <div class="tool-card" data-tool="collage">
+              <div class="cover cover-c2"><span class="art">🪞</span></div>
+              <div class="body">
+                <div class="t-name">图片拼图</div>
+                <div class="t-desc">不限张数按队列顺序纵向 / 横向拼接，保留每张图片原本大小，可选限制输出文件大小。</div>
+                <div class="tags"><span class="tag tag-t">纵向</span><span class="tag tag-t">横向</span></div>
+              </div>
+            </div>
+            <div class="tool-card" data-tool="watermark">
+              <div class="cover cover-c3"><span class="art">💧</span></div>
+              <div class="body">
+                <div class="t-name">批量水印</div>
+                <div class="t-desc">透明 PNG 签名或铺满水印，预览中拖拽定位，支持单张独立参数与文件夹批处理，保留 EXIF / GPS / ICC。</div>
+                <div class="tags"><span class="tag tag-s">签名</span><span class="tag tag-s">铺满</span><span class="tag tag-p">批处理</span></div>
+              </div>
+            </div>
+            <div class="tool-card" data-tool="wechat">
+              <div class="cover cover-c4"><span class="art">💬</span></div>
+              <div class="body">
+                <div class="t-name">微信发送</div>
+                <div class="t-desc">原图发送队列，每批最多 9 张、不压缩不转码；自动检测微信、定位目标聊天，结果不确定时安全暂停。</div>
+                <div class="tags"><span class="tag tag-p">原图</span><span class="tag tag-s">9 张/批</span></div>
+              </div>
+            </div>
+            <div class="tool-card" data-tool="contest-open">
+              <div class="cover cover-c5"><span class="art">🏆</span></div>
+              <div class="body">
+                <div class="t-name">投稿项目</div>
+                <div class="t-desc">当前正在征稿的摄影赛事列表。选择任意一项即可打开官方投稿页面。</div>
+                <div class="tags"><span class="tag tag-p">征稿中</span><span class="tag tag-t">官方页面</span></div>
+              </div>
+            </div>
+            <div class="tool-card" data-tool="contest-judged">
+              <div class="cover cover-c6"><span class="art">🎖️</span></div>
+              <div class="body">
+                <div class="t-name">欣赏项目</div>
+                <div class="t-desc">已评奖的摄影赛事，浏览官方获奖作品页面，支持批量下载获奖作品。</div>
+                <div class="tags"><span class="tag tag-s">获奖作品</span><span class="tag tag-t">批量下载</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 2：压缩 ═══════════ -->
+        <section class="view" id="view-compress">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">图片压缩</div>
+            <div class="detail-tabs">
+              <div class="chip active">压缩</div>
+              <div class="chip" data-goto="collage">拼图</div>
+              <div class="chip" data-goto="watermark">水印</div>
+              <div class="chip" data-goto="wechat">微信发送</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="card">
+                <div class="card-title">添加图片</div>
+                <div class="card-desc">拖入图片或文件夹；文件夹会自动扫描全部子目录。拼图按队列顺序处理，不限制张数。</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn secondary" id="btn-add-files">选择图片</button>
+                  <button class="btn secondary" id="btn-add-folder">选择文件夹</button>
+                </div>
+                <button class="btn ghost sm" style="margin-top:8px;" id="btn-clear-list">清空列表</button>
+              </div>
+              <div class="card">
+                <div class="card-title">压缩设置</div>
+                <label class="field-label">目标方式</label>
+                <select class="input" id="comp-target">
+                  <option>每张图片上限</option>
+                  <option>整批总大小</option>
+                </select>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                  <input class="input" value="500" style="flex:1;">
+                  <select class="input" style="width:92px;"><option>KB</option><option>MB</option></select>
+                </div>
+                <div class="card-desc" style="margin:8px 0 0;">保持原始像素尺寸，并优先选择满足大小上限的最高质量。</div>
+              </div>
+              <div class="card">
+                <div class="card-title">输出目录</div>
+                <input class="input" readonly value="D:\hanabephoto\输出\压缩\2026-08-14">
+                <button class="btn secondary" style="margin-top:8px;">选择输出目录</button>
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                  <button class="btn primary" id="btn-run-compress" style="flex:1;">开始压缩</button>
+                  <button class="btn ghost">取消</button>
+                </div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                  <div>
+                    <div class="card-title">输入队列</div>
+                    <div class="card-desc" style="margin:0;">等待扫描 · 拖入图片或文件夹添加</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:17px;font-weight:800;">8 项</div>
+                    <div style="font-size:11px;color:var(--on-surface-variant);">原始 42.6 MB</div>
+                  </div>
+                </div>
+                <div class="progress" style="margin-bottom:6px;"><div class="fill" style="width:62%;"></div></div>
+                <div style="font-size:11.5px;color:var(--on-surface-variant);margin-bottom:10px;">IMG_4821.jpg · 第 5 / 8 项</div>
+                <div style="flex:1;overflow-y:auto;">
+                  <div class="queue-item"><div class="thumb pc-1">🌄</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4817.jpg</div><div class="qi-meta">5.2 MB → 480 KB</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">完成</span></div>
+                  <div class="queue-item"><div class="thumb pc-2">🏞️</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4818.jpg</div><div class="qi-meta">6.1 MB → 496 KB</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">完成</span></div>
+                  <div class="queue-item"><div class="thumb pc-3">🌿</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4819.jpg</div><div class="qi-meta">4.8 MB → 488 KB</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">完成</span></div>
+                  <div class="queue-item"><div class="thumb pc-4">🌇</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4820.jpg</div><div class="qi-meta">7.3 MB → 505 KB</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">完成</span></div>
+                  <div class="queue-item selected"><div class="thumb pc-5">🏔️</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4821.jpg</div><div class="qi-meta">5.9 MB → 压缩中…</div></div><span style="font-size:11px;color:var(--tertiary);font-weight:700;">62%</span></div>
+                  <div class="queue-item"><div class="thumb pc-6">🌸</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4822.jpg</div><div class="qi-meta">4.2 MB</div></div><span style="font-size:11px;color:var(--on-surface-variant);">等待</span></div>
+                  <div class="queue-item"><div class="thumb pc-1">🌅</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4823.jpg</div><div class="qi-meta">6.6 MB</div></div><span style="font-size:11px;color:var(--on-surface-variant);">等待</span></div>
+                  <div class="queue-item"><div class="thumb pc-2">⛰️</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4824.jpg</div><div class="qi-meta">2.5 MB</div></div><span style="font-size:11px;color:var(--on-surface-variant);">等待</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 3：拼图 ═══════════ -->
+        <section class="view" id="view-collage">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">图片拼图</div>
+            <div class="detail-tabs">
+              <div class="chip" data-goto="compress">压缩</div>
+              <div class="chip active">拼图</div>
+              <div class="chip" data-goto="watermark">水印</div>
+              <div class="chip" data-goto="wechat">微信发送</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="card">
+                <div class="card-title">添加图片</div>
+                <div class="card-desc">拖入图片或文件夹；文件夹会自动扫描全部子目录。拼图按队列顺序处理，不限制张数。</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn secondary">选择图片</button>
+                  <button class="btn secondary">选择文件夹</button>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-title">拼图设置</div>
+                <div class="card-desc">保留每张图片原本大小；较窄或较矮的图片会居中，空白区域使用白色。</div>
+                <label class="field-label">拼接方向</label>
+                <select class="input">
+                  <option>纵向拼接</option>
+                  <option>横向拼接</option>
+                </select>
+                <label class="check-row" style="margin-top:12px;"><input type="checkbox" checked> 限制输出文件大小</label>
+                <div style="display:flex;gap:8px;">
+                  <input class="input" value="800" style="flex:1;">
+                  <select class="input" style="width:92px;"><option>KB</option><option>MB</option></select>
+                </div>
+                <div class="card-desc" style="margin:8px 0 0;">限制大小只调整 JPEG 编码质量，不改变拼图像素尺寸。</div>
+              </div>
+              <div class="card">
+                <div class="card-title">输出目录</div>
+                <input class="input" readonly value="D:\hanabephoto\输出\拼图\2026-08-14">
+                <button class="btn secondary" style="margin-top:8px;">选择输出目录</button>
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                  <button class="btn primary" style="flex:1;">开始拼图</button>
+                  <button class="btn ghost">取消</button>
+                </div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                  <div>
+                    <div class="card-title">拼图预览</div>
+                    <div class="card-desc" style="margin:0;">按队列顺序纵向拼接示意</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:17px;font-weight:800;">5 张</div>
+                    <div style="font-size:11px;color:var(--on-surface-variant);">输出 3.2 MB</div>
+                  </div>
+                </div>
+                <div style="flex:1;display:flex;justify-content:center;align-items:center;background:var(--surface-dim);border-radius:var(--radius-large);padding:18px;overflow:auto;">
+                  <div style="display:flex;flex-direction:column;gap:4px;width:200px;">
+                    <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,#FFD3E0,#FF9EB8);display:flex;align-items:center;justify-content:center;font-size:20px;">🌄</div>
+                    <div style="aspect-ratio:16/7;border-radius:8px;background:linear-gradient(135deg,#BFE6FF,#7CC8F5);display:flex;align-items:center;justify-content:center;font-size:20px;">🏞️</div>
+                    <div style="aspect-ratio:1/1;border-radius:8px;background:linear-gradient(135deg,#C9F2D8,#7AD9A0);display:flex;align-items:center;justify-content:center;font-size:20px;">🌿</div>
+                    <div style="aspect-ratio:4/3;border-radius:8px;background:linear-gradient(135deg,#FFF0BF,#FFD36B);display:flex;align-items:center;justify-content:center;font-size:20px;">🌇</div>
+                    <div style="aspect-ratio:16/9;border-radius:8px;background:linear-gradient(135deg,#E4D9FF,#B7A1F0);display:flex;align-items:center;justify-content:center;font-size:20px;">🏔️</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 4：水印 ═══════════ -->
+        <section class="view" id="view-watermark">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">批量水印</div>
+            <div class="detail-tabs">
+              <div class="chip" data-goto="compress">压缩</div>
+              <div class="chip" data-goto="collage">拼图</div>
+              <div class="chip active">水印</div>
+              <div class="chip" data-goto="wechat">微信发送</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="seg">
+                <div class="seg-item active" data-wm-mode="list">图片列表</div>
+                <div class="seg-item" data-wm-mode="folder">文件夹批处理</div>
+              </div>
+              <div class="card" id="wm-list-card">
+                <div class="card-title">批量导入图片</div>
+                <div class="card-desc">可批量选择，也可将图片或文件夹直接拖入。</div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                  <button class="btn secondary" style="flex:1;">批量选择图片</button>
+                  <button class="btn secondary" style="flex:1;">导入文件夹</button>
+                </div>
+                <label class="check-row"><input type="checkbox"> 包含子文件夹</label>
+                <div style="margin:10px 0;font-size:12px;color:var(--on-surface-variant);">6 张待处理</div>
+                <div class="queue-item selected"><div class="thumb pc-3">🏞️</div><div style="flex:1;min-width:0;"><div class="qi-name">DSC_0021.jpg</div></div><span style="font-size:11px;color:var(--primary);">✓ 已选</span></div>
+                <div class="queue-item"><div class="thumb pc-4">🌇</div><div style="flex:1;min-width:0;"><div class="qi-name">DSC_0022.jpg</div></div><span style="font-size:11px;color:var(--on-surface-variant);">待处理</span></div>
+                <div class="queue-item"><div class="thumb pc-5">🏔️</div><div style="flex:1;min-width:0;"><div class="qi-name">DSC_0023.jpg</div></div><span style="font-size:11px;color:var(--on-surface-variant);">待处理</span></div>
+                <div style="display:flex;gap:6px;margin-top:10px;">
+                  <button class="btn ghost sm" style="flex:1;">全选</button>
+                  <button class="btn ghost sm" style="flex:1;">移除</button>
+                  <button class="btn ghost sm" style="flex:1;">清空</button>
+                </div>
+              </div>
+              <div class="card" id="wm-folder-card" style="display:none;">
+                <div class="card-title">来源文件夹</div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                  <button class="btn secondary" style="flex:1;">添加文件夹</button>
+                  <button class="btn secondary" style="flex:1;">移除所选</button>
+                </div>
+                <label class="check-row"><input type="checkbox" checked> 扫描子文件夹</label>
+                <div style="font-size:12.5px;padding:6px 0;color:var(--on-surface);">D:\hanabephoto\相册\2026-05</div>
+                <div style="font-size:12.5px;padding:6px 0;color:var(--on-surface);">D:\hanabephoto\相册\2026-06</div>
+                <div style="font-size:12.5px;color:var(--on-surface-variant);margin:8px 0;">扫描数量：1,248 张</div>
+                <button class="btn secondary" style="width:100%;margin-top:4px;">选择输出根目录</button>
+                <div style="font-size:11.5px;color:var(--on-surface-variant);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">D:\hanabephoto\输出\水印\批量</div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                <div class="card-title" style="margin-bottom:8px;">实时预览</div>
+                <div class="wm-preview" id="wm-preview">
+                  <div class="photo-bg"></div>
+                  <div class="wm-stamp" style="top:12%;right:10%;" id="wm-stamp">HANABE ©</div>
+                  <div class="hint">在预览中单击或拖动确定相对位置 · 已选：DSC_0021.jpg</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                  <button class="btn secondary" style="flex:1;">选择导出目录</button>
+                  <label class="check-row" style="margin:0;"><input type="checkbox" checked> 保留 EXIF / GPS / ICC</label>
+                </div>
+                <div class="progress" style="margin-top:10px;"><div class="fill" style="width:0%;"></div></div>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                  <button class="btn ghost" style="flex:1;">取消</button>
+                  <button class="btn primary" style="flex:1;">导出水印图片</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 5：微信发送 ═══════════ -->
+        <section class="view" id="view-wechat">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">微信发送</div>
+            <div class="detail-tabs">
+              <div class="chip" data-goto="compress">压缩</div>
+              <div class="chip" data-goto="collage">拼图</div>
+              <div class="chip" data-goto="watermark">水印</div>
+              <div class="chip active">微信发送</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="card">
+                <div class="card-title">原图发送队列</div>
+                <div class="card-desc">每批最多 9 张，以文件附件发送原图；不压缩、不转码。结果不确定时会暂停，不会盲目重发。</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn secondary" style="flex:1;">选择照片</button>
+                  <button class="btn secondary" style="flex:1;">选择文件夹</button>
+                </div>
+                <button class="btn ghost sm" style="margin-top:8px;">清空队列</button>
+              </div>
+              <div class="step-card done">
+                <div class="step-num">1</div>
+                <div class="step-body">
+                  <div class="step-title">检测微信</div>
+                  <div class="step-desc">已检测到微信：WeChat 3.9.11 · 进程运行中</div>
+                  <button class="btn ghost sm" style="margin-top:8px;">重新检测并打开微信</button>
+                </div>
+              </div>
+              <div class="step-card done">
+                <div class="step-num">2</div>
+                <div class="step-body">
+                  <div class="step-title">定位并确认目标</div>
+                  <div class="step-desc">微信标题：文件传输助手 · 类型：单聊</div>
+                  <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn secondary sm">定位目标聊天</button>
+                    <button class="btn ghost sm">确认此目标</button>
+                  </div>
+                </div>
+              </div>
+              <div class="step-card">
+                <div class="step-num">3</div>
+                <div class="step-body">
+                  <div class="step-title">开始发送</div>
+                  <div class="step-desc">发送进度：批次 3 · 成功 18 · 失败 0 · 不确定 0 · 24 张</div>
+                  <button class="btn primary sm" style="margin-top:8px;">开始发送</button>
+                </div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0;">
+                <div class="card-title">发送队列</div>
+                <div class="card-desc">24 张 · 3 批</div>
+                <div class="progress" style="margin-bottom:10px;"><div class="fill" style="width:75%;"></div></div>
+                <div style="flex:1;overflow-y:auto;">
+                  <div class="queue-item"><div class="thumb pc-2">🏞️</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4818.jpg</div><div class="qi-meta">批次 3 · 已复制</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">✓</span></div>
+                  <div class="queue-item"><div class="thumb pc-4">🌇</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4820.jpg</div><div class="qi-meta">批次 3 · 已复制</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">✓</span></div>
+                  <div class="queue-item"><div class="thumb pc-5">🏔️</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4821.jpg</div><div class="qi-meta">批次 3 · 已复制</div></div><span style="font-size:11px;color:var(--primary);font-weight:700;">✓</span></div>
+                  <div class="queue-item"><div class="thumb pc-6">🌸</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4822.jpg</div><div class="qi-meta">批次 3 · 复制中…</div></div><span style="font-size:11px;color:var(--tertiary);font-weight:700;">…</span></div>
+                  <div class="queue-item"><div class="thumb pc-1">🌅</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4823.jpg</div><div class="qi-meta">等待批次 4</div></div><span style="font-size:11px;color:var(--on-surface-variant);">等待</span></div>
+                  <div class="queue-item"><div class="thumb pc-3">🌿</div><div style="flex:1;min-width:0;"><div class="qi-name">IMG_4819.jpg</div><div class="qi-meta">等待批次 4</div></div><span style="font-size:11px;color:var(--on-surface-variant);">等待</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 6：投稿项目 ═══════════ -->
+        <section class="view" id="view-contest-open">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">投稿项目</div>
+            <div class="detail-tabs">
+              <div class="chip active">投稿项目</div>
+              <div class="chip" data-goto="contest-judged">欣赏项目</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="card" style="height:100%;display:flex;flex-direction:column;">
+                <div class="card-title">征稿中的赛事</div>
+                <div class="card-desc">选择任意一项打开官方投稿页面。</div>
+                <div class="contest-list" style="flex:1;overflow-y:auto;">
+                  <div class="contest-item active">
+                    <div class="c-name">第 30 届「中国摄影金像奖」</div>
+                    <div class="c-desc">面向全国摄影师的年度最高奖项，投稿截止 2026-09-30。</div>
+                    <div class="c-url">photo.org.cn/golden-award-30</div>
+                  </div>
+                  <div class="contest-item">
+                    <div class="c-name">「城市之光」城市摄影大赛</div>
+                    <div class="c-desc">以城市夜景与人文为主题，组照 6-10 张。</div>
+                    <div class="c-url">citylight.photo/2026</div>
+                  </div>
+                  <div class="contest-item">
+                    <div class="c-name">国家地理年度自然摄影师</div>
+                    <div class="c-desc">自然风光与野生动物类别，全球征稿。</div>
+                    <div class="c-url">natgeo.com/nature-2026</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="browser-mock">
+                <div class="bm-bar">
+                  <span>←</span><span>→</span><span>⟳</span>
+                  <div class="bm-url">https://photo.org.cn/golden-award-30</div>
+                </div>
+                <div class="bm-body"><span style="font-size:34px;">🏆</span> 官方投稿页面（内嵌浏览器占位）</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══════════ 视图 7：欣赏项目 ═══════════ -->
+        <section class="view" id="view-contest-judged">
+          <div class="detail-header">
+            <button class="back-btn" data-back>← 返回工具</button>
+            <div class="detail-title">欣赏项目</div>
+            <div class="detail-tabs">
+              <div class="chip" data-goto="contest-open">投稿项目</div>
+              <div class="chip active">欣赏项目</div>
+            </div>
+          </div>
+          <div class="tool-workspace">
+            <div class="tool-left">
+              <div class="card" style="height:100%;display:flex;flex-direction:column;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <div class="card-title" style="margin:0;">已评奖赛事</div>
+                  <button class="btn secondary sm">批量下载获奖作品</button>
+                </div>
+                <div class="card-desc">选择任意一项查看官方获奖作品页面。</div>
+                <div class="contest-list" style="flex:1;overflow-y:auto;">
+                  <div class="contest-item active">
+                    <div class="c-name">第 29 届「中国摄影金像奖」</div>
+                    <div class="c-desc">2025 年度获奖作品已公布，金奖 12 名。</div>
+                    <div class="c-url">photo.org.cn/golden-award-29</div>
+                  </div>
+                  <div class="contest-item">
+                    <div class="c-name">「山河入镜」风光摄影展</div>
+                    <div class="c-desc">年度风光佳作 200 幅在线展出。</div>
+                    <div class="c-url">landscape.gallery/2025</div>
+                  </div>
+                  <div class="contest-item">
+                    <div class="c-name">街头摄影年鉴 2025</div>
+                    <div class="c-desc">全球街头摄影评选结果与作品集。</div>
+                    <div class="c-url">streetyearbook.com/2025</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div></div>
+            <div class="tool-right">
+              <div class="browser-mock">
+                <div class="bm-bar">
+                  <span>←</span><span>→</span><span>⟳</span>
+                  <div class="bm-url">https://photo.org.cn/golden-award-29</div>
+                </div>
+                <div class="bm-body"><span style="font-size:34px;">🎖️</span> 官方获奖作品页面（内嵌浏览器占位）</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ============ Inspector（结果 / 统计） ============ -->
+      <aside class="inspector">
+        <div class="card-title" style="font-size:16px;" id="insp-title">运行统计</div>
+        <div class="card-desc" id="insp-desc">当前工具的处理进度与结果摘要</div>
+
+        <div id="insp-stats">
+          <div class="stat-row">
+            <div class="stat-block"><div class="big">42.6<span style="font-size:12px;">MB</span></div><div class="lbl">原始大小</div></div>
+            <div class="stat-block"><div class="big">3.9<span style="font-size:12px;">MB</span></div><div class="lbl">压缩后</div></div>
+            <div class="stat-block"><div class="big">91%</div><div class="lbl">节省空间</div></div>
+          </div>
+          <div class="stat-row">
+            <div class="stat-block"><div class="big">8</div><div class="lbl">输入项</div></div>
+            <div class="stat-block"><div class="big">4</div><div class="lbl">已完成</div></div>
+            <div class="stat-block"><div class="big">0</div><div class="lbl">失败</div></div>
+          </div>
+        </div>
+
+        <div class="card-title" style="font-size:14px;margin-top:6px;">处理结果</div>
+        <div id="insp-results">
+          <div class="result-item"><span class="ok">✓</span> IMG_4817.jpg → 480 KB（-91%）</div>
+          <div class="result-item"><span class="ok">✓</span> IMG_4818.jpg → 496 KB（-92%）</div>
+          <div class="result-item"><span class="ok">✓</span> IMG_4819.jpg → 488 KB（-90%）</div>
+          <div class="result-item"><span class="ok">✓</span> IMG_4820.jpg → 505 KB（-93%）</div>
+          <div class="result-item"><span style="color:var(--tertiary);font-weight:700;">…</span> IMG_4821.jpg 压缩中</div>
+        </div>
+
+        <div class="card-title" style="font-size:14px;margin-top:14px;">提示</div>
+        <div style="font-size:12.5px;color:var(--on-surface-variant);line-height:1.6;">
+          保持原始像素尺寸的压缩不会改变照片分辨率，仅优化编码体积；适合微信 / 网盘分享前批量瘦身。
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>🧰 工具状态：<b id="sb-status">压缩任务进行中</b></span>
+      <div class="progress"><div class="fill" style="width:62%;"></div></div>
+      <span>队列 8 项 · 已完成 4 · 剩余约 40 秒</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="添加图片到当前工具">＋</button>
+
+<script>
+/* ============ 6 套主题切换（预览用） ============ */
+const THEMES = [
+  { key: 'dynamic-light', name: '动态色彩', dots: ['#4355B9','#5B5D72','#7A5700'] },
+  { key: 'dynamic-dark',  name: '动态色彩·深', dots: ['#BCC3FF','#C4C6DE','#FFC34F'] },
+  { key: 'forest-light',  name: '森林绿', dots: ['#1D6B50','#4F6357','#3E6373'] },
+  { key: 'forest-dark',   name: '森林绿·深', dots: ['#8CD5B2','#B5CCBD','#A6CCDE'] },
+  { key: 'violet-light',  name: '紫罗兰', dots: ['#8B4AA6','#6B5D71','#006A6A'] },
+  { key: 'violet-dark',   name: '紫罗兰·深', dots: ['#E3AEF7','#D9C2DE','#77D3D3'] },
+];
+let themeIdx = 0;
+const chip = document.getElementById('theme-chip');
+chip.addEventListener('click', () => {
+  themeIdx = (themeIdx + 1) % THEMES.length;
+  const t = THEMES[themeIdx];
+  document.documentElement.dataset.theme = t.key;
+  document.getElementById('theme-label').textContent = t.name;
+  chip.querySelector('.tc-dots').innerHTML = t.dots.map(c => `<span style="background:${c};"></span>`).join('');
+});
+
+/* ============ 视图切换（工具卡片 → 详情） ============ */
+const VIEWS = ['grid','compress','collage','watermark','wechat','contest-open','contest-judged'];
+function showView(id) {
+  VIEWS.forEach(v => document.getElementById('view-' + v).classList.toggle('active', v === id));
+  const titles = {
+    grid: ['图片小工具','压缩 · 拼图 · 水印 · 微信发送 · 投稿与欣赏项目'],
+    compress: ['图片压缩','保持原始像素尺寸 · 按大小上限压缩'],
+    collage: ['图片拼图','不限张数 · 纵向 / 横向拼接'],
+    watermark: ['批量水印','签名或铺满水印 · 实时预览定位'],
+    wechat: ['微信发送','原图发送 · 每批最多 9 张'],
+    'contest-open': ['投稿项目','正在征稿的摄影赛事'],
+    'contest-judged': ['欣赏项目','已评奖赛事 · 获奖作品'],
+  };
+  document.getElementById('topbar-title').textContent = titles[id][0];
+  document.getElementById('topbar-sub').textContent = titles[id][1];
+  document.getElementById('insp-title').textContent = id === 'grid' ? '运行统计' : titles[id][0] + ' · 运行统计';
+  document.getElementById('insp-desc').textContent = id === 'grid' ? '选择工具后显示处理进度与结果摘要' : '当前工具的处理进度与结果摘要';
+  document.getElementById('sb-status').textContent =
+    id === 'grid' ? '就绪 · 选择一个工具开始' :
+    id === 'compress' ? '压缩任务进行中' :
+    id === 'collage' ? '拼图队列就绪' :
+    id === 'watermark' ? '水印预览 · 待导出' :
+    id === 'wechat' ? '微信已检测 · 等待发送' :
+    id === 'contest-open' ? '浏览征稿赛事' : '浏览获奖作品';
+  const fab = document.querySelector('.fab');
+  fab.style.display = id === 'grid' || id === 'contest-open' || id === 'contest-judged' ? 'none' : 'flex';
+}
+document.querySelectorAll('.tool-card').forEach(card => {
+  card.addEventListener('click', () => showView(card.dataset.tool));
+});
+document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showView('grid')));
+document.querySelectorAll('[data-goto]').forEach(c => c.addEventListener('click', () => showView(c.dataset.goto)));
+
+/* ============ 水印：模式切换 + 预览拖拽 ============ */
+document.querySelectorAll('[data-wm-mode]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('[data-wm-mode]').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    const folder = item.dataset.wmMode === 'folder';
+    document.getElementById('wm-folder-card').style.display = folder ? '' : 'none';
+    document.getElementById('wm-list-card').style.display = folder ? 'none' : '';
+    document.getElementById('insp-desc').textContent = folder ? '文件夹批处理模式 · 扫描 1,248 张' : '图片列表模式 · 6 张待处理';
+  });
+});
+const stamp = document.getElementById('wm-stamp');
+const preview = document.getElementById('wm-preview');
+let dragging = false;
+stamp.addEventListener('mousedown', e => { dragging = true; e.preventDefault(); });
+document.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const r = preview.getBoundingClientRect();
+  stamp.style.left = Math.min(Math.max(e.clientX - r.left - 40, 8), r.width - 90) + 'px';
+  stamp.style.top  = Math.min(Math.max(e.clientY - r.top - 12, 8), r.height - 30) + 'px';
+});
+document.addEventListener('mouseup', () => { dragging = false; });
+
+/* ============ 演示交互 ============ */
+document.getElementById('btn-add-files').addEventListener('click', () => {
+  document.getElementById('btn-run-compress').textContent = '开始压缩';
+});
+let running = false;
+document.getElementById('btn-run-compress').addEventListener('click', function () {
+  running = !running;
+  this.textContent = running ? '取消任务' : '开始压缩';
+  const fills = document.querySelectorAll('#view-compress .progress .fill, .statusbar .progress .fill');
+  const st = document.getElementById('sb-status');
+  if (running) {
+    let p = 62;
+    const timer = setInterval(() => {
+      p = Math.min(p + 2, 100);
+      fills.forEach(f => f.style.width = p + '%');
+      if (p >= 100) { clearInterval(timer); st.textContent = '压缩完成 · 8/8 项'; }
+    }, 90);
+  }
+});
+</script>
+</body>
+</html>

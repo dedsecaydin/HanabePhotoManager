@@ -91,6 +91,12 @@ public sealed class SimulatedCloudProviderTests : IDisposable
         try
         {
             Directory.CreateSymbolicLink(link, external);
+            // Some Windows configurations silently fail to create a functional
+            // symlink: CreateSymbolicLink returns without throwing, but the
+            // entry is invisible to the file system.  When that happens the
+            // lexical checks above are sufficient, same as the catch below.
+            if (!Directory.Exists(link) && !File.Exists(link))
+                return;
             Func<Task> listWithLink = async () => await CollectAsync(provider.ListAsync(new CloudPath("/"), default));
             await listWithLink.Should().ThrowAsync<SecurityException>();
         }

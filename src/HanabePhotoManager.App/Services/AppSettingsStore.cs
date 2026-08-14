@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using HanabePhotoManager.App.Navigation;
@@ -83,11 +83,15 @@ public sealed class AppSettings
 
     public List<string> NavigationOrder { get; set; } = [];
 
-    public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.Text;
+    public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.IconAndText;
 
     public string? LibraryRoot { get; set; }
 
     public double DefaultThumbnailSize { get; set; } = 150;
+
+    public double ZoomableGridTileSize { get; set; } = 150;
+
+    public double TreemapZoom { get; set; } = 1.0;
 
     [System.Text.Json.Serialization.JsonPropertyName("ThumbnailSize")]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
@@ -146,6 +150,22 @@ public sealed class AppSettings
     public string BrowseEntryMode { get; set; } = nameof(global::HanabePhotoManager.App.Services.BrowseEntryMode.SessionRestore);
 
     public BrowseSnapshot? BrowseSnapshot { get; set; }
+
+    public string BrowseDisplayMode { get; set; } = nameof(global::HanabePhotoManager.App.ViewModels.BrowseDisplayMode.Treemap);
+
+    public string TreemapWeightMode { get; set; } = nameof(global::HanabePhotoManager.Core.Browsing.Treemap.TreemapWeightMode.FileSize);
+
+    public bool IsTreemapBorderless { get; set; } = true;
+
+    public bool ShowPsdFiles { get; set; } = false;
+
+    public List<string> SelectedFileTypeFilters { get; set; } = [];
+
+    /// <summary>
+    /// Whether the browse page's advanced filter section is expanded. Defaults to
+    /// collapsed so the filter panel stays compact for the 90% high-frequency use.
+    /// </summary>
+    public bool IsAdvancedFiltersExpanded { get; set; }
 
     /// <summary>
     /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored

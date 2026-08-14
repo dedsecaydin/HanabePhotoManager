@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 人物 · M3 浓烈版（预设计 004）</title>
+<style>
+/* ============================================================
+   Variant 004: 人物页（人物相册 + 按脸查找）M3 浓烈版
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector）
+   设计 stance：Lightroom 人物模块的信息密度 × M3 大圆角/动态色彩/状态层
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* M3 动态色彩 tonal palette（与 001 完全一致） */
+  --primary: #4355B9;
+  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;
+  --on-primary-container: #00105C;
+  --secondary: #5B5D72;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;
+  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;
+  --on-tertiary-container: #271900;
+  --error: #BA1A1A;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
+
+  --surface: #FBF8FF;
+  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;
+  --on-surface-variant: #45464F;
+  --outline: #75767F;
+  --outline-variant: #C5C5CF;
+
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  font-size: 16px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+  background: var(--surface-dim);
+}
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.rail-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-medium);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.rail-logo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%);
+}
+.rail-item {
+  width: 64px;
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant);
+  font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.rail-item.active .rail-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* ===================== Main ===================== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Top app bar */
+.topbar {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+.topbar-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+.search-field {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  color: var(--on-surface-variant);
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.search-field:hover { background: var(--surface-container-highest); }
+.search-field:focus-within {
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.search-field input {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; flex: 1; color: var(--on-surface);
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+
+/* ===================== Content ===================== */
+.content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+
+/* M3 segmented control（人物相册 / 按脸查找） */
+.seg {
+  display: inline-flex;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 4px;
+}
+.seg-item {
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-size: 13px; font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer; border: none; background: transparent;
+  transition: background var(--motion-normal) var(--ease), color var(--motion-normal) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
+/* Chips */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-small);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip:active { background: var(--state-pressed); }
+.chip.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+.chip.primary { background: var(--primary); color: var(--on-primary); }
+.chip.primary:hover { background: var(--primary); filter: brightness(0.94); }
+.chip.danger { background: var(--error-container); color: var(--on-error-container); }
+
+/* 扫描状态条（人物索引状态） */
+.status-strip {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-large);
+  padding: 10px 16px;
+}
+.status-strip .meta { font-size: 12px; color: var(--on-surface-variant); }
+.model-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--tertiary-container);
+  color: var(--on-tertiary-container);
+  font-size: 12px; font-weight: 600;
+  padding: 4px 12px; border-radius: var(--radius-full);
+}
+.mini-progress {
+  height: 6px; width: 140px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden; flex: 0 0 auto;
+}
+.mini-progress .fill {
+  height: 100%; width: 0%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+/* ===================== 人物相册（tab 1） ===================== */
+.panel { display: flex; flex-direction: column; gap: 14px; flex: 1; min-height: 0; }
+.panel.hidden { display: none; }
+
+.section-label {
+  font-size: 13px; font-weight: 600; color: var(--on-surface-variant);
+  letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px;
+}
+.section-label .count {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  border-radius: var(--radius-full);
+  padding: 1px 10px; font-size: 12px; font-weight: 600;
+}
+
+/* 人物网格 —— Lightroom 人物模块密度 */
+.person-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 14px 10px;
+  align-content: start;
+}
+.person-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 14px 8px 12px;
+  border-radius: var(--radius-large);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--motion-normal) var(--ease), transform var(--motion-normal) var(--ease);
+}
+.person-card:hover { background: var(--state-hover); }
+.person-card:active { background: var(--state-pressed); transform: scale(0.98); }
+.person-card.selected { background: var(--secondary-container); }
+
+.avatar {
+  width: 96px; height: 96px;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+  border: 3px solid var(--surface-container-highest);
+  outline: 2px solid transparent;
+  background-size: cover; background-position: center;
+  transition: outline-color var(--motion-normal) var(--ease), transform var(--motion-normal) var(--ease);
+  user-select: none;
+}
+.person-card:hover .avatar { transform: translateY(-2px); }
+.person-card.selected .avatar { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.person-card .name-row {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 8px; max-width: 100%;
+}
+.person-card .name {
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 104px;
+}
+.person-card .edit {
+  width: 20px; height: 20px; flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--on-surface-variant);
+  opacity: 0; cursor: pointer;
+  transition: opacity var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.person-card:hover .edit { opacity: 1; }
+.person-card .edit:hover { background: var(--surface-container-highest); }
+.person-card .count {
+  font-size: 11px; color: var(--on-surface-variant);
+  margin-top: 2px;
+}
+.person-card .unconfirmed {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: var(--radius-full);
+}
+
+/* 人物详情（点击人物后） */
+.person-detail { display: none; flex-direction: column; gap: 14px; }
+.person-detail.open { display: flex; }
+
+.back-chip {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.back-chip:hover { background: var(--surface-container-highest); }
+
+.detail-hero {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 20px 24px;
+}
+.detail-hero .avatar { width: 112px; height: 112px; font-size: 48px; flex: 0 0 auto; }
+.detail-hero .hero-info { flex: 1; min-width: 0; }
+.detail-hero h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; }
+.detail-hero .hero-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 2px; }
+.detail-hero .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 通用照片网格 */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.photo-tile {
+  aspect-ratio: 1;
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--surface-container);
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.photo-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.photo-tile:active { transform: scale(0.98); }
+.photo-tile .img {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  background: linear-gradient(135deg, var(--primary-container) 0%, var(--tertiary-container) 45%, var(--secondary-container) 100%);
+  color: var(--on-primary-container);
+}
+.photo-tile.selected { outline: 3px solid var(--primary); outline-offset: 2px; }
+.photo-tile.selected::after {
+  content: '✓';
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.photo-tile .date {
+  position: absolute; bottom: 8px; left: 8px;
+  background: rgba(0,0,0,0.55);
+  color: #fff; font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+.photo-tile .faces {
+  position: absolute; top: 8px; left: 8px;
+  background: rgba(0,0,0,0.55);
+  color: #fff; font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* ===================== 按脸查找（tab 2） ===================== */
+.facesearch-layout { display: flex; gap: 14px; min-height: 0; flex: 1; }
+
+.fs-controls {
+  width: 292px; flex: 0 0 auto;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  overflow-y: auto;
+}
+.fs-controls h4 { font-size: 14px; font-weight: 600; }
+.fs-controls .hint { font-size: 12px; color: var(--on-surface-variant); line-height: 1.45; }
+
+.dropzone {
+  height: 228px;
+  border-radius: var(--radius-large);
+  border: 2px dashed var(--outline);
+  background:
+    radial-gradient(120px 90px at 50% 38%, var(--primary-container) 0%, transparent 70%),
+    var(--surface-container-high);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  padding: 16px;
+  gap: 4px;
+  cursor: pointer;
+  transition: border-color var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease);
+  position: relative; overflow: hidden;
+}
+.dropzone:hover { border-color: var(--primary); background-color: var(--surface-container-highest); }
+.dropzone .dz-emoji { font-size: 52px; margin-bottom: 8px; filter: drop-shadow(0 4px 8px rgba(67,85,185,0.25)); }
+.dropzone .dz-title { font-size: 15px; font-weight: 600; }
+.dropzone .dz-sub { font-size: 12px; color: var(--on-surface-variant); }
+.dropzone .dz-tag {
+  position: absolute; top: 10px; right: 10px;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-full);
+}
+
+.field-label {
+  font-size: 13px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.field-label .value { font-weight: 700; color: var(--primary); font-size: 14px; }
+
+.radio-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.radio {
+  flex: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-full);
+  font-size: 12px; font-weight: 600;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.radio:hover { background: var(--surface-container-highest); }
+.radio.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+
+input[type="range"] {
+  width: 100%; accent-color: var(--primary);
+  height: 20px; cursor: pointer;
+}
+
+.btn {
+  border: none; cursor: pointer;
+  border-radius: var(--radius-full);
+  padding: 10px 18px;
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  transition: transform var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--primary); color: var(--on-primary); }
+.btn-primary:hover { filter: brightness(0.94); }
+.btn-tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn-tonal:hover { background: var(--surface-container-highest); }
+.btn-ghost { background: transparent; color: var(--on-surface-variant); }
+.btn-ghost:hover { background: var(--state-hover); }
+.btn-block { width: 100%; padding: 12px 18px; font-size: 14px; }
+.btn-row { display: flex; gap: 8px; }
+.btn-row .btn { flex: 1; }
+
+.fs-path {
+  font-size: 11px; color: var(--on-surface-variant);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 查找结果区 */
+.fs-results { flex: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; overflow-y: auto; padding-right: 2px; }
+.fs-results-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fs-results-head h3 { font-size: 18px; font-weight: 700; }
+.local-badge {
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: var(--radius-full);
+}
+.fs-status { font-size: 12px; color: var(--on-surface-variant); }
+.progress-track {
+  height: 8px; width: 100%;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.progress-track .fill {
+  height: 100%; width: 0%;
+  background: var(--primary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+.progress-meta { font-size: 12px; color: var(--on-surface-variant); }
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(172px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.result-card {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-large);
+  padding: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease), border-color var(--motion-normal) var(--ease);
+}
+.result-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.10); }
+.result-card.selected { border-color: var(--primary); }
+.result-card .thumb {
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-medium);
+  overflow: hidden; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px;
+  background: linear-gradient(135deg, var(--primary-container), var(--secondary-container));
+}
+.result-card .sim {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: var(--radius-full);
+}
+.result-card .r-name {
+  font-size: 13px; font-weight: 600;
+  margin: 8px 4px 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.result-card .r-folder {
+  font-size: 11px; color: var(--on-surface-variant);
+  margin: 0 4px 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ===================== Inspector ===================== */
+.inspector {
+  width: 320px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.inspector h3 { font-size: 14px; font-weight: 600; }
+.inspector .sub { font-size: 12px; color: var(--on-surface-variant); }
+
+.insp-avatar {
+  width: 84px; height: 84px;
+  border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  margin: 0 auto;
+  border: 3px solid var(--surface-container-highest);
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+.insp-name { text-align: center; font-size: 16px; font-weight: 700; margin-top: 8px; }
+.insp-count { text-align: center; font-size: 12px; color: var(--on-surface-variant); }
+
+.thumb-strip { display: flex; gap: 8px; }
+.thumb-strip .t {
+  flex: 1; aspect-ratio: 1;
+  border-radius: var(--radius-small);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  background: linear-gradient(135deg, var(--primary-container), var(--tertiary-container));
+  cursor: pointer;
+}
+
+.info-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px; padding: 6px 0;
+  border-bottom: 1px solid var(--outline-variant);
+  gap: 10px;
+}
+.info-row .k { color: var(--on-surface-variant); flex: 0 0 auto; }
+.info-row .v { font-weight: 500; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.action-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 356px; bottom: 28px;
+  width: 56px; height: 56px;
+  border-radius: var(--radius-large);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 6px 16px rgba(67, 85, 185, 0.35);
+  cursor: pointer; border: none;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.fab:hover { box-shadow: 0 8px 24px rgba(67, 85, 185, 0.45); }
+.fab:active { transform: scale(0.94); }
+
+/* ===================== Status bar ===================== */
+.statusbar {
+  height: 44px;
+  background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px; color: var(--on-surface-variant);
+}
+.statusbar .progress {
+  height: 6px; width: 180px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.statusbar .progress .fill {
+  height: 100%; width: 100%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item active" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item" title="地图"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">人物</div>
+        <div class="topbar-sub">12 个人物 · 328 张含人脸照片 · 最近扫描 08-14 14:02</div>
+      </div>
+      <div class="search-field">
+        <span>🔍</span>
+        <input type="text" placeholder="搜索人物姓名、照片描述…">
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <!-- 头部：分段切换 + 扫描 -->
+        <div class="workspace-head">
+          <div class="seg">
+            <div class="seg-item active" data-tab="groups">人物相册</div>
+            <div class="seg-item" data-tab="search">按脸查找</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <div class="chip">🔀 合并</div>
+            <div class="chip primary">▶ 扫描人物</div>
+          </div>
+        </div>
+
+        <!-- ============ Tab 1：人物相册 ============ -->
+        <div class="panel" id="panel-groups">
+          <!-- 扫描状态条 -->
+          <div class="status-strip">
+            <span class="model-badge">🧠 YuNet + SFace · 阈值 0.40</span>
+            <span class="meta">12 个人物 · 328 张含人脸照片 · 本次检测 1,024 张人脸</span>
+            <div class="mini-progress"><div class="fill" style="width:100%;"></div></div>
+            <span class="meta">就绪</span>
+          </div>
+
+          <!-- 人物网格 -->
+          <div class="section-label">人物 <span class="count">12</span></div>
+          <div class="person-grid" id="person-grid"></div>
+        </div>
+
+        <!-- 人物详情（点击人物后展开） -->
+        <div class="person-detail" id="person-detail">
+          <div class="back-chip" id="back-people">← 全部人物</div>
+          <div class="detail-hero">
+            <div class="avatar" id="pd-avatar"></div>
+            <div class="hero-info">
+              <h2 id="pd-name"></h2>
+              <div class="hero-sub" id="pd-sub"></div>
+            </div>
+            <div class="hero-actions">
+              <div class="chip selected">✏️ 重命名</div>
+              <div class="chip">🔀 合并</div>
+              <div class="chip">导出全部</div>
+            </div>
+          </div>
+          <div class="section-label">照片 <span class="count" id="pd-count"></span></div>
+          <div class="photo-grid" id="pd-photos"></div>
+        </div>
+
+        <!-- ============ Tab 2：按脸查找 ============ -->
+        <div class="panel hidden" id="panel-search">
+          <div class="facesearch-layout">
+            <!-- 左控制列 -->
+            <div class="fs-controls">
+              <div>
+                <h4>参考人物</h4>
+                <div class="hint" style="margin-top:3px;">建议使用脸部清晰、角度接近正面的照片。</div>
+              </div>
+              <div class="dropzone">
+                <span class="dz-tag">仅本机运行</span>
+                <div class="dz-emoji">🧑</div>
+                <div class="dz-title">拖入人脸照片</div>
+                <div class="dz-sub">或点击下方选择参考照片</div>
+              </div>
+              <button class="btn btn-tonal btn-block">选择参考照片</button>
+
+              <div>
+                <div class="field-label">查找范围 <span class="value">全图库</span></div>
+                <div class="radio-row" style="margin-top:8px;">
+                  <div class="radio selected">全图库</div>
+                  <div class="radio">指定文件夹</div>
+                </div>
+                <div class="fs-path" style="margin-top:8px;">整个本机照片库 · 6,217 张</div>
+              </div>
+
+              <div>
+                <div class="field-label">匹配强度 <span class="value">42%</span></div>
+                <input type="range" min="30" max="72" value="42" style="margin-top:6px;">
+                <div class="hint">越高越严格；找不到时可稍微向左调。</div>
+              </div>
+
+              <button class="btn btn-primary btn-block">开始查找</button>
+              <div class="btn-row">
+                <button class="btn btn-ghost">停止</button>
+                <button class="btn btn-ghost">清除参考图</button>
+              </div>
+            </div>
+
+            <!-- 右结果区 -->
+            <div class="fs-results">
+              <div class="fs-results-head">
+                <h3>找到 186 张相似照片</h3>
+                <span class="local-badge">🔒 仅在本机运行</span>
+                <span class="fs-status">已按相似度从高到低排列 · 双击照片可直接打开</span>
+              </div>
+              <div class="progress-track"><div class="fill" style="width:100%;"></div></div>
+              <div class="progress-meta">完成 · 扫描 6,217 张 · 命中 186 张 · 用时 0:42</div>
+              <div class="result-grid" id="result-grid"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector ============ -->
+      <aside class="inspector">
+        <div id="insp-person">
+          <h3>选中的人物</h3>
+          <div class="insp-avatar" id="insp-avatar"></div>
+          <div class="insp-name" id="insp-name"></div>
+          <div class="insp-count" id="insp-count"></div>
+
+          <h3 style="margin-top:8px;">最近照片</h3>
+          <div class="thumb-strip" id="insp-thumbs"></div>
+
+          <h3 style="margin-top:8px;">操作</h3>
+          <div class="action-chips">
+            <div class="chip selected">✏️ 重命名</div>
+            <div class="chip">🔀 合并</div>
+            <div class="chip">导出全部</div>
+            <div class="chip">隐藏人物</div>
+          </div>
+        </div>
+        <div id="insp-photo" style="display:none;">
+          <h3>选中的照片</h3>
+          <div style="height:130px;border-radius:var(--radius-medium);background:linear-gradient(135deg,var(--primary-container),var(--tertiary-container));display:flex;align-items:center;justify-content:center;font-size:40px;">🌅</div>
+          <div class="sub" style="margin-top:6px;">IMG_4785_海边_露娜.jpg</div>
+          <div class="info-row"><span class="k">相似度</span><span class="v" style="color:var(--primary);font-weight:700;">92%</span></div>
+          <div class="info-row"><span class="k">尺寸</span><span class="v">3840 × 2160</span></div>
+          <div class="info-row"><span class="k">拍摄时间</span><span class="v">2026-08-13 21:47</span></div>
+          <div class="info-row"><span class="k">相机</span><span class="v">Sony α7 IV</span></div>
+          <div class="info-row"><span class="k">镜头</span><span class="v">FE 24-70mm F2.8</span></div>
+          <div class="info-row"><span class="k">ISO / 光圈</span><span class="v">800 / f/2.8</span></div>
+          <div class="info-row"><span class="k">图中人脸</span><span class="v">2 张</span></div>
+          <h3 style="margin-top:8px;">操作</h3>
+          <div class="action-chips">
+            <div class="chip">打开原图</div>
+            <div class="chip">定位文件</div>
+            <div class="chip selected">收藏 ★</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>人物索引已就绪 · 12 个人物 / 328 张人脸照片</span>
+      <div class="progress"><div class="fill"></div></div>
+      <span>后台扫描 62%</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="扫描人物">＋</button>
+
+<script>
+/* ============ 演示数据（占位） ============ */
+const PEOPLE = [
+  { emoji: '👩', name: '妈妈',  count: 126, grad: 'linear-gradient(135deg,#DEE0FF,#FFDF9E)' },
+  { emoji: '👨', name: '爸爸',  count: 98,  grad: 'linear-gradient(135deg,#FFDF9E,#E0E1F9)' },
+  { emoji: '👧', name: '小满',  count: 213, grad: 'linear-gradient(135deg,#F7D8FF,#DEE0FF)' },
+  { emoji: '👦', name: '小宇',  count: 87,  grad: 'linear-gradient(135deg,#DEE0FF,#9CF0F0)' },
+  { emoji: '👵', name: '奶奶',  count: 64,  grad: 'linear-gradient(135deg,#FFDF9E,#F7D8FF)' },
+  { emoji: '👴', name: '爷爷',  count: 41,  grad: 'linear-gradient(135deg,#E0E1F9,#FFDF9E)' },
+  { emoji: '🧑', name: '阿杰',  count: 156, grad: 'linear-gradient(135deg,#FFDF9E,#DEE0FF)' },
+  { emoji: '👩‍🦰', name: '露娜', count: 132, grad: 'linear-gradient(135deg,#F7D8FF,#FFDF9E)' },
+  { emoji: '👱‍♀️', name: '晓晴', count: 77,  grad: 'linear-gradient(135deg,#DEE0FF,#F7D8FF)' },
+  { emoji: '🧓', name: '陈叔',  count: 29,  grad: 'linear-gradient(135deg,#E0E1F9,#9CF0F0)' },
+  { emoji: '👦🏻', name: '未命名', count: 5,  grad: 'linear-gradient(135deg,#FFDF9E,#E0E1F9)', unconfirmed: true },
+  { emoji: '👤', name: '待确认', count: 3,  grad: 'linear-gradient(135deg,#F7D8FF,#DEE0FF)', unconfirmed: true },
+];
+const PHOTO_EMOJIS = ['🌅','🏔️','📷','🌸','🌊','🦋','🌙','🎨','🌄','🪐','🎞️','☁️','🍜','🚗','🏮','🎂','⚽','🎹','🌻','⛺','🛶','🎡','📚','🖼️'];
+const RESULTS = [
+  { sim: 96, name: 'IMG_4785_海边_露娜.jpg',  folder: 'D:\\Photos\\2026-08\\海边' },
+  { sim: 94, name: 'IMG_3901_生日_合照.jpg',   folder: 'D:\\Photos\\2026-07\\生日' },
+  { sim: 93, name: 'IMG_2208_咖啡_午后.jpg',   folder: 'D:\\Photos\\2026-06\\咖啡店' },
+  { sim: 91, name: 'IMG_5120_展会_现场.jpg',   folder: 'D:\\Photos\\2026-08\\展会' },
+  { sim: 89, name: 'IMG_1024_婚礼_签到.jpg',   folder: 'D:\\Photos\\2026-05\\婚礼' },
+  { sim: 87, name: 'IMG_6666_徒步_山顶.jpg',   folder: 'D:\\Photos\\2026-07\\徒步' },
+  { sim: 86, name: 'IMG_3311_晚餐_合影.jpg',   folder: 'D:\\Photos\\2026-04\\聚餐' },
+  { sim: 84, name: 'IMG_7788_地铁_自拍.jpg',   folder: 'D:\\Photos\\2026-08\\日常' },
+  { sim: 82, name: 'IMG_5544_公园_长椅.jpg',   folder: 'D:\\Photos\\2026-06\\公园' },
+  { sim: 80, name: 'IMG_9080_毕业_典礼.jpg',   folder: 'D:\\Photos\\2026-06\\毕业' },
+  { sim: 78, name: 'IMG_1122_机场_送机.jpg',   folder: 'D:\\Photos\\2026-03\\旅行' },
+];
+
+let selectedPerson = 0;
+let selectedResult = 0;
+
+/* ============ 渲染 ============ */
+function renderPeople() {
+  const grid = document.getElementById('person-grid');
+  grid.innerHTML = PEOPLE.map((p, i) => `
+    <div class="person-card ${i === selectedPerson ? 'selected' : ''}" data-i="${i}">
+      ${p.unconfirmed ? '<span class="unconfirmed">待确认</span>' : ''}
+      <div class="avatar" style="background:${p.grad};">${p.emoji}</div>
+      <div class="name-row">
+        <span class="name">${p.name}</span>
+        <span class="edit" title="重命名">✎</span>
+      </div>
+      <div class="count">${p.count} 张照片</div>
+    </div>`).join('');
+  grid.querySelectorAll('.person-card').forEach(card => {
+    card.addEventListener('click', () => openPerson(+card.dataset.i));
+  });
+  updateInspectorPerson();
+}
+
+function renderResults() {
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = RESULTS.map((r, i) => `
+    <div class="result-card ${i === selectedResult ? 'selected' : ''}" data-i="${i}">
+      <div class="thumb">
+        <span>${PHOTO_EMOJIS[i % PHOTO_EMOJIS.length]}</span>
+        <span class="sim">${r.sim}%</span>
+      </div>
+      <div class="r-name">${r.name}</div>
+      <div class="r-folder">${r.folder}</div>
+    </div>`).join('');
+  grid.querySelectorAll('.result-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedResult = +card.dataset.i;
+      renderResults();
+      document.getElementById('insp-photo').style.display = '';
+      document.getElementById('insp-person').style.display = 'none';
+    });
+  });
+}
+
+function openPerson(i) {
+  selectedPerson = i;
+  const p = PEOPLE[i];
+  document.getElementById('panel-groups').classList.add('hidden');
+  document.getElementById('person-detail').classList.add('open');
+  document.getElementById('pd-avatar').style.background = p.grad;
+  document.getElementById('pd-avatar').textContent = p.emoji;
+  document.getElementById('pd-name').textContent = p.name;
+  document.getElementById('pd-sub').textContent = `${p.count} 张照片 · 最近拍摄 2026-08-13`;
+  document.getElementById('pd-count').textContent = p.count;
+  document.getElementById('pd-photos').innerHTML =
+    Array.from({ length: Math.min(p.count, 16) }, (_, k) => `
+      <div class="photo-tile" title="双击打开">
+        <div class="img">${PHOTO_EMOJIS[(i * 7 + k) % PHOTO_EMOJIS.length]}</div>
+        <span class="date">08-${String((k % 28) + 1).padStart(2, '0')}</span>
+        ${k % 4 === 0 ? '<span class="faces">👤×2</span>' : ''}
+      </div>`).join('');
+  updateInspectorPerson();
+}
+
+function backToPeople() {
+  document.getElementById('person-detail').classList.remove('open');
+  document.getElementById('panel-groups').classList.remove('hidden');
+  renderPeople();
+}
+
+function updateInspectorPerson() {
+  const p = PEOPLE[selectedPerson];
+  document.getElementById('insp-avatar').style.background = p.grad;
+  document.getElementById('insp-avatar').textContent = p.emoji;
+  document.getElementById('insp-name').textContent = p.name;
+  document.getElementById('insp-count').textContent = `${p.count} 张照片`;
+  document.getElementById('insp-thumbs').innerHTML =
+    Array.from({ length: 3 }, (_, k) =>
+      `<div class="t">${PHOTO_EMOJIS[(selectedPerson * 7 + k) % PHOTO_EMOJIS.length]}</div>`).join('');
+  document.getElementById('insp-photo').style.display = 'none';
+  document.getElementById('insp-person').style.display = '';
+}
+
+/* ============ 事件 ============ */
+document.querySelectorAll('.seg-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.seg-item').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    const tab = item.dataset.tab;
+    document.getElementById('panel-groups').classList.toggle('hidden', tab !== 'groups');
+    document.getElementById('person-detail').classList.toggle('open', false);
+    document.getElementById('panel-search').classList.toggle('hidden', tab !== 'search');
+    if (tab === 'groups') updateInspectorPerson();
+    if (tab === 'search') {
+      document.getElementById('insp-photo').style.display = '';
+      document.getElementById('insp-person').style.display = 'none';
+      renderResults();
+    }
+  });
+});
+
+document.getElementById('back-people').addEventListener('click', backToPeople);
+
+renderPeople();
+renderResults();
+</script>
+</body>
+</html>

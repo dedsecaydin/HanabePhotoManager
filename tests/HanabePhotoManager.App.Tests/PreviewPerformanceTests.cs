@@ -1,5 +1,6 @@
 using FluentAssertions;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.App.Search;
 using HanabePhotoManager.App.ViewModels;
 using HanabePhotoManager.Core.Imports;
 using System.IO;
@@ -9,6 +10,62 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class PreviewPerformanceTests
 {
+    [Fact]
+    public void SemanticRanking_IntersectsExistingFilteredItemsAndKeepsClipOrder()
+    {
+        var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
+        var second = new PreviewFileViewModel("second.jpg", "JPG生图", @"D:\photos\second.jpg", "1 KB", ".jpg", null);
+        var excluded = new PreviewFileViewModel("excluded.jpg", "JPG生图", @"D:\photos\excluded.jpg", "1 KB", ".jpg", null);
+
+        var ranked = SemanticBrowseRanking.Apply(
+            [first, second],
+            item => item.FullPath,
+            [excluded.FullPath, second.FullPath, first.FullPath]);
+
+        ranked.Should().Equal(second, first);
+    }
+
+    [Fact]
+    public void SemanticRanking_WithNoActiveQueryLeavesExistingOrderUntouched()
+    {
+        var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
+        var second = new PreviewFileViewModel("second.jpg", "JPG生图", @"D:\photos\second.jpg", "1 KB", ".jpg", null);
+
+        SemanticBrowseRanking.Apply([first, second], item => item.FullPath, null)
+            .Should().Equal(first, second);
+    }
+
+    [Fact]
+    public void SemanticRanking_NeverExposesMoreThanTheTopFiftyCandidates()
+    {
+        var files = Enumerable.Range(0, 75)
+            .Select(index => new PreviewFileViewModel(
+                $"{index:D2}.jpg", "JPG生图", $@"D:\photos\{index:D2}.jpg", "1 KB", ".jpg", null))
+            .ToArray();
+        var rankedPaths = files.Reverse().Select(file => file.FullPath).ToArray();
+
+        var ranked = SemanticBrowseRanking.Apply(files, file => file.FullPath, rankedPaths).ToArray();
+
+        ranked.Should().HaveCount(SemanticSearchViewModel.ResultLimit);
+        ranked.First().FullPath.Should().Be(@"D:\photos\74.jpg");
+        ranked.Last().FullPath.Should().Be(@"D:\photos\25.jpg");
+    }
+
+    [Fact]
+    public void RebuildRetouchStatistics_DoesNotRescanTheWholeLibraryForEveryDateNode()
+    {
+        var root = FindSourceRoot();
+        var source = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var methodStart = source.IndexOf("private void RecalcDateNodeStats()", StringComparison.Ordinal);
+        var nextMethod = source.IndexOf("private ", methodStart + 1, StringComparison.Ordinal);
+        var method = source[methodStart..nextMethod];
+        var perNodeLoop = method[method.IndexOf("foreach (var node in flatNodes)", StringComparison.Ordinal)..];
+
+        perNodeLoop.Should().NotContain("PreviewFiles.Where(");
+        perNodeLoop.Should().NotContain("RetouchedFiles.Where(");
+    }
+
     [Fact]
     public void PhotoWalls_UseBoundedCollectionsWhileKeepingAllFeaturesInTemplate()
     {
@@ -160,6 +217,7 @@ public sealed class PreviewPerformanceTests
         viewModel.PeopleAlbums.SelectedAlbum = person;
 
         viewModel.VisiblePreviewSections.Should().OnlyContain(section => section.IsExpanded);
+        viewModel.CalendarMonthTitle.Should().Be("2026年 7月");
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 1)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 2)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 3)).IsAvailable.Should().BeFalse();
@@ -187,7 +245,7 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("x:Name=\"BrowseSummaryCard\"");
         xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
         xaml.Should().Contain("DockPanel.Dock=\"Bottom\"");
-        xaml.Should().Contain("Text=\"{Binding ThumbnailSize, StringFormat={}{0:N0}px}\"");
+        xaml.Should().Contain("Text=\"{Binding ZoomableGridTileSize, StringFormat={}{0:N0}px}\"");
         xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
         xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Margin=\"0,10,14,4\" Visibility=");
         xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Padding=\"12,9\" Margin=\"0,10,14,0\" CornerRadius");
@@ -291,6 +349,7 @@ public sealed class PreviewPerformanceTests
         var viewModel = new MainWindowViewModel
         {
             CurrentPreviewCategory = "修后",
+            UnifiedSearchText = "IMG_0001.JPG",
             PreviewSearchText = "JK",
             PreviewRetouchFilter = "已修",
             RatingFilter = "5★",
@@ -298,11 +357,14 @@ public sealed class PreviewPerformanceTests
             SmartCategoryFilter = "人像",
             IsBrowseConditionsExpanded = true
         };
+        viewModel.SemanticSearch.QueryText = "红色衣服";
 
         await viewModel.ResetBrowseConditionsCommand.ExecuteAsync(null);
 
         viewModel.CurrentPreviewCategory.Should().Be("全部");
+        viewModel.UnifiedSearchText.Should().BeEmpty();
         viewModel.PreviewSearchText.Should().BeEmpty();
+        viewModel.SemanticSearch.QueryText.Should().BeEmpty();
         viewModel.PreviewRetouchFilter.Should().Be("全部");
         viewModel.RatingFilter.Should().Be("全部评分");
         viewModel.PreviewSortMode.Should().Be(0);
@@ -322,6 +384,28 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("Content=\"重置\"");
         xaml.Should().Contain("ResetBrowseConditionsCommand");
         xaml.Should().Contain("BrowseConditionsSummary");
+        xaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
+        xaml.Should().Contain("Text=\"{Binding UnifiedSearchText, UpdateSourceTrigger=PropertyChanged}\"");
+        xaml.Should().Contain("BrowseSearchModeChoices");
+        xaml.Should().Contain("Style=\"{StaticResource Input.TextBox}\"");
+        xaml.Should().Contain("Command=\"{Binding SemanticSearch.CancelCommand}\"");
+        xaml.Should().NotContain("<search:SemanticSearchView");
+    }
+
+    [Fact]
+    public void BrowseConditions_UseOneSmartSearchBoxAndHideManualAssignmentControls()
+    {
+        var viewModel = new MainWindowViewModel();
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        viewModel.BrowseSearchModeChoices.Select(choice => choice.Label)
+            .Should().Contain(["智能", "文件名或路径", "语义描述"]);
+        xaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
+        xaml.Should().NotContain("应用到所选");
+        xaml.Should().NotContain("添加到所选");
+        xaml.Should().NotContain("手动类别");
+        xaml.Should().NotContain("自定义标签");
     }
 
     [Fact]
@@ -330,10 +414,11 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("Tag=\"PreviewCard\" Margin=\"0,0,14,14\" Padding=\"0\" CornerRadius=\"22\"");
-        xaml.Should().Contain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
-        xaml.Should().Contain("<Border.Background><ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\" /></Border.Background>");
-        xaml.Should().NotContain("<Rectangle>\n                                                  <Shape.Fill>");
+        xaml.Should().Contain("Tag=\"PreviewCard\"");
+        xaml.Should().Contain("Name=\"ThumbnailClip\"");
+        xaml.Should().Contain("CornerRadius=\"14\" ClipToBounds=\"True\"");
+        xaml.Should().Contain("ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\"");
+        xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }
 
     private static string FindSourceRoot()

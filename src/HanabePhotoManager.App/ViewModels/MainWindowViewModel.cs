@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -6,24 +6,47 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HanabePhotoManager.App.Browsing.Treemap;
+using HanabePhotoManager.App.Albums;
+using HanabePhotoManager.App.Collections;
+using HanabePhotoManager.App.Duplicates;
+using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
+using HanabePhotoManager.App.ReleaseNotes;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.App.Search;
+using HanabePhotoManager.Core.Browsing.Treemap;
 using HanabePhotoManager.App.Watermark;
 using HanabePhotoManager.Core.Imports;
 using HanabePhotoManager.Core.Performance;
 using HanabePhotoManager.Infrastructure.Files;
+using HanabePhotoManager.Infrastructure.Albums;
+using HanabePhotoManager.Infrastructure.Search;
 using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
 
 namespace HanabePhotoManager.App.ViewModels;
 
-public sealed class MainWindowViewModel : ObservableObject
+public enum CloudProviderChoice
+{
+    Baidu,
+    Quark
+}
+
+public enum BrowseDisplayMode
+{
+    Grid,
+    Treemap
+}
+
+public sealed partial class MainWindowViewModel : ObservableObject
 {
     private static readonly string[] CategoryFolderNames =
     [
@@ -57,16 +80,21 @@ public sealed class MainWindowViewModel : ObservableObject
         ".mp4", ".mov", ".xml", ".lrf", ".aac"
     ];
 
+    private static readonly HashSet<string> ContentScanExtensions = new(
+        [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
+         ".mp4", ".mov"],
+        StringComparer.OrdinalIgnoreCase);
+
     private static readonly IReadOnlyList<string> DefaultNavigationOrder =
     [
         "Home",
         "Import",
         "Preview",
+        "CustomAlbums",
         "FaceSearch",
         "MapPhotos",
         "Compression",
-        "BaiduCloud",
-        "QuarkCloud",
+        "Cloud",
         "ContestOpen",
         "ContestJudged"
     ];
@@ -77,6 +105,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private static readonly HashSet<string> ThumbnailCandidateExtensions = new(
         [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".psd", ".psb", ".mp4", ".mov"],
+        StringComparer.OrdinalIgnoreCase);
+
+    // Video containers: their "thumbnail" is the first frame, which the Shell
+    // must extract from the file (it is never present in the thumbnail cache).
+    private static readonly HashSet<string> VideoExtensions = new(
+        [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v"],
         StringComparer.OrdinalIgnoreCase);
 
     // RAW formats that Windows Shell cannot thumbnail without a third-party codec. Skipping
@@ -96,13 +130,16 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly CloudConnectionSettingsService _cloudConnectionService = new();
     private readonly CameraFolderDateResolver _dateResolver = new();
     private readonly MediaGroupBuilder _groupBuilder = new(new MediaClassifier(["ARW", "CR2", "CR3"]));
-    private readonly ImportPlanBuilder _planBuilder = new(new DestinationProbe(new Sha256FileHasher()));
+    private readonly Sha256FileHasher _fileHasher = new();
+    private readonly ImportPlanBuilder _planBuilder;
     private readonly LibraryDirectoryInitializer _directoryInitializer = new();
-    private readonly VerifiedFileTransfer _transfer = new(new Sha256FileHasher());
+    private readonly VerifiedFileTransfer _transfer;
+    private readonly LibraryContentScanner _contentScanner;
     private readonly LocalPersonClusterer _personClusterer = new();
     private readonly LibraryMaintenanceService _libraryMaintenanceService = new();
     private readonly RetouchedMediaIndex _retouchedMediaIndex = new();
     private readonly BrowseStatePolicy _browseStatePolicy = new();
+    private readonly LibraryDateSnapshotService _libraryDateSnapshotService;
     private readonly IMediaMetadataStore _mediaMetadataStore;
     private readonly IWindowsWallpaperService _wallpaperService;
     private readonly PersistentAssetStore _assetStore = new(Path.Combine(AppDataPaths.Root, "Assets"));
@@ -119,7 +156,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _targetDateText = "--";
     private string _backgroundMode = "平衡玻璃";
     private string _backgroundImageLayout = "填充";
-    private string _currentPage = "Home";
+    private string _currentPage = "Preview";
+    private CloudProviderChoice _selectedCloudProvider = CloudProviderChoice.Baidu;
+    private BrowseDisplayMode _browseDisplayMode = BrowseDisplayMode.Treemap;
     private string _currentPreviewCategory = "全部";
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
@@ -128,19 +167,30 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _selectedDeviceSummary = "点击设备组中的磁盘、相机或照片库后，这里会显示文件夹和媒体文件概览。";
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
+    private readonly IImportSourcePicker _importSourcePicker = new WinFormsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
     private int _previewScanVersion;
-    private string _exifSummary = string.Empty;
+    private readonly IPhotoDetailMetadataReader _metadataReader = new PhotoDetailMetadataReader();
+    private PhotoDetailMetadata _selectedFileMetadata = PhotoDetailMetadata.Empty(string.Empty);
     private PreviewFileViewModel? _selectedPreviewFile;
     private CancellationTokenSource? _activeTaskCancellation;
     private CancellationTokenSource? _importThumbnailCancellation;
     private CancellationTokenSource? _previewThumbnailCancellation;
+    private int _treemapLoadActive; // 1 = loading in progress, 0 = idle
+    private int _treemapLoadGeneration;
+    private readonly HashSet<string> _pendingTreemapThumbnailPaths = new(StringComparer.OrdinalIgnoreCase);
+    private CancellationTokenSource? _dateLoadCancellation;
+    private CancellationTokenSource? _dateCapacityCancellation;
+    private int _dateLoadGeneration;
     private ActiveTaskKind _activeTaskKind = ActiveTaskKind.None;
     private double _progressValue;
     private DateTimeOffset _operationStartedAt;
     private double _thumbnailSize = 150;
     private double _defaultThumbnailSize = 150;
+    private double _zoomableGridTileSize = 150;
+    private double _treemapZoom = 1.0;
+    private ObservableCollection<GridBreadcrumbViewModel> _gridBreadcrumbs = [];
     private string _defaultRatingFilter = "全部评分";
     private int _defaultPreviewSort;
     private double _glassIntensity = 0.62;
@@ -148,6 +198,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private double _windowHeight = 980;
     private bool _isBusy;
     private bool _isProgressIndeterminate;
+    private bool _isDuplicateScanRunning;
     private bool _launchAtStartup;
     private bool _restoreWindowState = true;
     private double? _windowLeft;
@@ -157,10 +208,11 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _enablePersonRecognition;
     private bool _previewHasLoaded;
     private bool _isBrowseConditionsExpanded;
+    private bool _isAdvancedFiltersExpanded;
     private bool _isInitialized;
     private bool _isOnboardingVisible;
     private int _onboardingStep;
-    private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.Text;
+    private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.IconAndText;
     private int _previewPage;
     private readonly Dictionary<string, bool> _previewDateExpansion = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressPreviewSectionRefresh;
@@ -190,11 +242,16 @@ public sealed class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IWindowsWallpaperService? wallpaperService = null,
         IMediaMetadataStore? mediaMetadataStore = null,
-        IStartupRegistrationService? startupRegistrationService = null)
+        IStartupRegistrationService? startupRegistrationService = null,
+        LibraryDateSnapshotService? libraryDateSnapshotService = null)
     {
+        _planBuilder = new ImportPlanBuilder(new DestinationProbe(_fileHasher));
+        _transfer = new VerifiedFileTransfer(_fileHasher);
+        _contentScanner = new LibraryContentScanner(_fileHasher);
         _startupRegistrationService = startupRegistrationService ?? new WindowsStartupRegistrationService();
         _wallpaperService = wallpaperService ?? new WindowsWallpaperService();
         _mediaMetadataStore = mediaMetadataStore ?? new MediaMetadataStore();
+        _libraryDateSnapshotService = libraryDateSnapshotService ?? new LibraryDateSnapshotService();
         TagManager = new TagManagerViewModel(_mediaMetadataStore);
         PhotoAnalysis = new PhotoAnalysisViewModel(_mediaMetadataStore);
         PhotoAnalysis.PropertyChanged += (_, args) =>
@@ -210,7 +267,20 @@ public sealed class MainWindowViewModel : ObservableObject
             () => PreviewFiles.Select(file => file.FullPath));
         Compression = new CompressionViewModel();
         Watermark = new WatermarkViewModel();
+        CustomAlbums = new CustomAlbumsViewModel(
+            new JsonCustomAlbumStore(Path.Combine(AppDataPaths.Root, "custom-albums.json")),
+            new CustomAlbumPhotoScanner());
         PhotoViewer = new PhotoViewerViewModel();
+        TreemapBrowser = new ProgressiveTreemapViewModel();
+        TreemapBrowser.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(TreemapBrowser.Items)
+                or nameof(TreemapBrowser.CurrentContainerKey))
+            {
+                OnPropertyChanged(nameof(CurrentViewItemCount));
+            }
+        };
+        ReleaseNotes = new ReleaseNotesViewModel();
         PhotoViewer.PhotoDeleted += RemoveDeletedViewerPhoto;
         PeopleAlbums.PropertyChanged += (_, args) =>
         {
@@ -221,6 +291,7 @@ public sealed class MainWindowViewModel : ObservableObject
                     foreach (var section in VisiblePreviewSections)
                         _previewDateExpansion[section.Key] = section.IsExpanded;
                     _personFilterOwnsExpansion = true;
+                    ShowLatestPersonDateMonth(PeopleAlbums.SelectedAlbum);
                 }
                 else
                 {
@@ -232,11 +303,27 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         };
         FaceSearch = new FaceSearchViewModel(() => LibraryRoot);
+        SemanticSearch = new SemanticSearchViewModel(
+            new ClipSemanticSearchService(
+                new SqliteSemanticIndexStore(Path.Combine(AppDataPaths.Root, "semantic-index.db")),
+                new ModelCatalog()),
+            () => LibraryRoot);
+        SemanticSearch.ResultsChanged += (_, _) =>
+        {
+            RefreshFilteredCache(resetPage: true);
+            if (HasLibraryRoot && IsTreemapBrowseMode && string.IsNullOrWhiteSpace(SelectedDatePath) && !SemanticSearch.HasActiveQuery)
+            {
+                RepopulateTreemapFrom(_filteredCache);
+            }
+            OnPropertyChanged(nameof(BrowseConditionsSummary));
+        };
         BrowseLibraryCommand = new AsyncRelayCommand(BrowseLibraryAsync, CanRunCommand);
         BrowseSourceCommand = new AsyncRelayCommand(BrowseSourceAsync, CanRunCommand);
+        BrowseSourceFilesCommand = new AsyncRelayCommand(BrowseSourceFilesAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
+        ScanLibraryDuplicatesCommand = new AsyncRelayCommand(ScanLibraryDuplicatesAsync, CanRunCommand);
         OpenSelectedDateCommand = new RelayCommand(OpenSelectedDate, () => Directory.Exists(SelectedDatePath));
         RefreshDevicesCommand = new RelayCommand(RefreshConnectedDevices);
         InspectDeviceCommand = new RelayCommand<ConnectedDeviceViewModel>(InspectDevice);
@@ -249,6 +336,7 @@ public sealed class MainWindowViewModel : ObservableObject
         ShowHomeCommand = new RelayCommand(() => CurrentPage = "Home");
         ShowImportCommand = new RelayCommand(() => CurrentPage = "Import");
         ShowPreviewCommand = new RelayCommand(() => _ = ShowPreviewAsync());
+        ShowCustomAlbumsCommand = new RelayCommand(() => CurrentPage = "CustomAlbums");
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
@@ -257,15 +345,27 @@ public sealed class MainWindowViewModel : ObservableObject
             Compression.SelectedToolMode = ImageToolMode.Watermark;
             CurrentPage = "Compression";
         });
-        ShowBaiduCloudCommand = new RelayCommand(() => CurrentPage = "BaiduCloud");
-        ShowQuarkCloudCommand = new RelayCommand(() => CurrentPage = "QuarkCloud");
+        ShowCloudCommand = new RelayCommand(() => CurrentPage = "Cloud");
+        SelectCloudProviderCommand = new RelayCommand<CloudProviderChoice>(SelectCloudProvider);
+        ShowBaiduCloudCommand = new RelayCommand(() =>
+            SelectCloudProviderCommand.Execute(CloudProviderChoice.Baidu));
+        ShowQuarkCloudCommand = new RelayCommand(() =>
+            SelectCloudProviderCommand.Execute(CloudProviderChoice.Quark));
         DeleteSelectedFilesCommand = new RelayCommand(DeleteSelectedFiles, CanDeleteSelectedFiles);
+        OpenTreemapItemCommand = new RelayCommand<string>(OpenTreemapItem);
+        ZoomTreemapCommand = new RelayCommand<string>(key =>
+        {
+            if (!string.IsNullOrWhiteSpace(key)) TreemapBrowser.ZoomTo(key);
+        });
+        NavigateTreemapCommand = new RelayCommand<string?>(TreemapBrowser.NavigateToAncestor);
         ShowContestOpenCommand = new RelayCommand(() => CurrentPage = "ContestOpen");
         ShowContestJudgedCommand = new RelayCommand(() => CurrentPage = "ContestJudged");
         ShowSettingsCommand = new RelayCommand(() => CurrentPage = "Settings");
         ResetNavigationItems(null);
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
+        NavigateGridCategoryCommand = new RelayCommand<string?>(NavigateGridCategory);
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
+        ToggleAdvancedFiltersCommand = new RelayCommand(() => IsAdvancedFiltersExpanded = !IsAdvancedFiltersExpanded);
         OpenQuarkOfficialCommand = new RelayCommand(OpenQuarkOfficial);
         OpenBaiduConsoleCommand = new RelayCommand(OpenBaiduConsole);
         SaveBaiduCredentialsCommand = new AsyncRelayCommand(SaveBaiduCredentialsAsync, CanSaveBaiduCredentials);
@@ -298,6 +398,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public FaceSearchViewModel FaceSearch { get; }
 
+    public SemanticSearchViewModel SemanticSearch { get; }
+
     public TagManagerViewModel TagManager { get; }
 
     public PhotoAnalysisViewModel PhotoAnalysis { get; }
@@ -310,7 +412,13 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public WatermarkViewModel Watermark { get; }
 
+    public CustomAlbumsViewModel CustomAlbums { get; }
+
     public PhotoViewerViewModel PhotoViewer { get; }
+
+    public ProgressiveTreemapViewModel TreemapBrowser { get; }
+
+    public ReleaseNotesViewModel ReleaseNotes { get; }
 
     public IAsyncRelayCommand DismissOnboardingCommand { get; }
     public IRelayCommand ReplayOnboardingCommand { get; }
@@ -420,6 +528,22 @@ public sealed class MainWindowViewModel : ObservableObject
         PhotoViewer.Open(paths, file.PreviewPath);
     }
 
+    private void OpenTreemapItem(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+        var file = FilteredPreviewFiles.FirstOrDefault(item =>
+            string.Equals(item.FullPath, path, StringComparison.OrdinalIgnoreCase));
+        if (file is null) return;
+        if (!WpfImageExtensions.Contains(Path.GetExtension(file.FullPath))) return;
+
+        SelectedPreviewFile = file;
+        var paths = FilteredPreviewFiles
+            .Select(item => item.PreviewPath)
+            .Where(p => WpfImageExtensions.Contains(Path.GetExtension(p)))
+            .ToArray();
+        PhotoViewer.Open(paths, file.PreviewPath);
+    }
+
     public void RemoveDeletedViewerPhoto(string path)
     {
         var removed = PreviewFiles.Where(file =>
@@ -440,7 +564,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<CategorySummaryViewModel> CategorySummaries { get; } = [];
 
-    public ObservableCollection<PreviewFileViewModel> PreviewFiles { get; } = [];
+    public RangeObservableCollection<PreviewFileViewModel> PreviewFiles { get; } = [];
 
     public ObservableCollection<PreviewFileViewModel> VisiblePreviewFiles { get; } = [];
 
@@ -458,11 +582,15 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public int TotalPhotoGroupCount => CountPhotoGroups(PreviewFiles);
 
-    public string ExifSummary
+    public PhotoDetailMetadata SelectedFileMetadata
     {
-        get => _exifSummary;
-        private set => SetProperty(ref _exifSummary, value);
+        get => _selectedFileMetadata;
+        private set => SetProperty(ref _selectedFileMetadata, value);
     }
+
+    public int SelectedFileCount => PreviewFiles.Count(file => file.IsSelected);
+
+    public bool IsMultiSelection => HasSelectedFiles && SelectedPreviewFile is null;
 
     private CancellationTokenSource? _exifCts;
 
@@ -473,8 +601,26 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _selectedPreviewFile, value))
             {
+                OnPropertyChanged(nameof(SelectedTreemapPath));
+                OnPropertyChanged(nameof(IsMultiSelection));
+                OnPropertyChanged(nameof(SelectedFileCount));
                 _ = LoadExifForSelectedAsync();
             }
+        }
+    }
+
+    public string? SelectedTreemapPath
+    {
+        get => SelectedPreviewFile?.FullPath;
+        set
+        {
+            if (string.Equals(SelectedPreviewFile?.FullPath, value, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            SelectedPreviewFile = PreviewFiles.FirstOrDefault(file =>
+                string.Equals(file.FullPath, value, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -485,51 +631,27 @@ public sealed class MainWindowViewModel : ObservableObject
         var ct = _exifCts.Token;
 
         var file = _selectedPreviewFile;
-        if (file is null || !File.Exists(file.PreviewPath))
+        if (file is null)
         {
-            ExifSummary = "选择照片查看元数据";
+            SelectedFileMetadata = PhotoDetailMetadata.Empty(string.Empty);
             return;
         }
 
         var path = file.PreviewPath;
-        ExifSummary = "读取元数据中…";
+        // Show the file-level facts immediately while the metadata read runs.
+        SelectedFileMetadata = PhotoDetailMetadata.Empty(path);
 
         try
         {
-            var text = await Task.Run(() => ReadExifCore(path), ct);
+            var metadata = await Task.Run(() => _metadataReader.Read(path), ct);
             if (ct.IsCancellationRequested) return;
-            ExifSummary = string.IsNullOrWhiteSpace(text) ? "该文件无可用 EXIF 数据" : text;
+            SelectedFileMetadata = metadata;
         }
         catch (OperationCanceledException) { }
         catch
         {
-            ExifSummary = "无法读取元数据（可能非标准图像格式）";
+            SelectedFileMetadata = PhotoDetailMetadata.Empty(path);
         }
-    }
-
-    private static string ReadExifCore(string path)
-    {
-        var dirs = MetadataExtractor.ImageMetadataReader.ReadMetadata(path);
-        var sb = new StringBuilder();
-        foreach (var directory in dirs)
-        {
-            foreach (var tag in directory.Tags)
-            {
-                var name = tag.Name;
-                if (name == "File Name" || name == "File Size" || name == "Image Width" || name == "Image Height"
-                    || name.Contains("Make") || name.Contains("Model") || (name.Contains("Aperture") && !name.Contains("Max"))
-                    || name.Contains("Shutter") || name.Contains("ISO") || name.Contains("Focal Length")
-                    || name.Contains("Date") || name.Contains("Exposure") || name.Contains("White Balance")
-                    || name.Contains("Lens") || name.Contains("Flash"))
-                {
-                    sb.AppendLine($"{name}：{tag.Description}");
-                }
-            }
-            if (directory.Name.Contains("GPS"))
-                foreach (var tag in directory.Tags.Where(t => t.Name.Contains("GPS")))
-                    sb.AppendLine($"{tag.Name}：{tag.Description}");
-        }
-        return sb.ToString().TrimEnd();
     }
 
     public ObservableCollection<ImportPreviewItemViewModel> ImportItems { get; } = [];
@@ -585,6 +707,18 @@ public sealed class MainWindowViewModel : ObservableObject
         new(BrowseEntryMode.CrossLaunchRestore, "跨启动恢复", "重新打开应用后继续上次日期和筛选"),
         new(BrowseEntryMode.SessionRestore, "仅本次运行恢复", "切换栏目后保留，重启后回到全部日期"),
         new(BrowseEntryMode.AlwaysAllDates, "始终全部日期", "每次进入浏览页都清除日期选择")
+    ];
+
+    public IReadOnlyList<BrowseDisplayChoice> BrowseDisplayModes { get; } =
+    [
+        new(BrowseDisplayMode.Grid, "网格"),
+        new(BrowseDisplayMode.Treemap, "空间树图")
+    ];
+
+    public IReadOnlyList<TreemapWeightChoice> TreemapWeightModes { get; } =
+    [
+        new(TreemapWeightMode.FileSize, "按文件大小"),
+        new(TreemapWeightMode.PhotoCount, "按照片数量")
     ];
 
     public IReadOnlyList<string> PreviewCategoryFilters { get; } =
@@ -728,6 +862,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand BrowseSourceCommand { get; }
 
+    public IAsyncRelayCommand BrowseSourceFilesCommand { get; }
+
     public IAsyncRelayCommand AnalyzeSourceCommand { get; }
 
     public IAsyncRelayCommand ImportSelectedCommand { get; }
@@ -780,7 +916,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ShowPreviewCommand { get; }
 
+    public IRelayCommand ShowCustomAlbumsCommand { get; }
+
     public IRelayCommand ShowFaceSearchCommand { get; }
+
 
     public IRelayCommand ShowMapPhotosCommand { get; }
 
@@ -788,9 +927,14 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ShowWatermarkCommand { get; }
 
+    public IRelayCommand ShowCloudCommand { get; }
+    public IRelayCommand<CloudProviderChoice> SelectCloudProviderCommand { get; }
     public IRelayCommand ShowBaiduCloudCommand { get; }
     public IRelayCommand ShowQuarkCloudCommand { get; }
     public IRelayCommand DeleteSelectedFilesCommand { get; }
+    public IRelayCommand<string> OpenTreemapItemCommand { get; }
+    public IRelayCommand<string> ZoomTreemapCommand { get; }
+    public IRelayCommand<string?> NavigateTreemapCommand { get; }
     public IRelayCommand ShowContestOpenCommand { get; }
     public IRelayCommand ShowContestJudgedCommand { get; }
 
@@ -818,10 +962,331 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand ResetBrowseConditionsCommand { get; }
 
+    public IAsyncRelayCommand ScanLibraryDuplicatesCommand { get; }
+
+    public IRelayCommand ToggleAdvancedFiltersCommand { get; }
+
+    public event Action? TreemapRepopulated;
+
     public bool IsBrowseConditionsExpanded
     {
         get => _isBrowseConditionsExpanded;
         set => SetProperty(ref _isBrowseConditionsExpanded, value);
+    }
+
+    public bool IsAdvancedFiltersExpanded
+    {
+        get => _isAdvancedFiltersExpanded;
+        set
+        {
+            if (SetProperty(ref _isAdvancedFiltersExpanded, value) && _isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public BrowseDisplayMode BrowseDisplayMode
+    {
+        get => _browseDisplayMode;
+        set
+        {
+            if (!SetProperty(ref _browseDisplayMode, value))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGridBrowseMode));
+            OnPropertyChanged(nameof(IsTreemapBrowseMode));
+            OnPropertyChanged(nameof(CurrentViewItemCount));
+            if (value == BrowseDisplayMode.Treemap)
+            {
+                // The grid section collection may contain an entire date range.
+                // Stop its eager thumbnail loader before the treemap takes over.
+                CancelPreviewThumbnailLoading();
+                EnsureTreemapPopulatedFromPreviewFiles();
+            }
+            if (_isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public TreemapWeightMode TreemapWeightMode
+    {
+        get => TreemapBrowser.WeightMode;
+        set
+        {
+            if (TreemapBrowser.WeightMode == value)
+            {
+                return;
+            }
+
+            TreemapBrowser.WeightMode = value;
+            OnPropertyChanged();
+            if (_isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public bool IsGridBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Grid;
+
+    public bool IsTreemapBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Treemap;
+
+    private bool _isTreemapBorderless = true;
+    public bool IsTreemapBorderless
+    {
+        get => _isTreemapBorderless;
+        set
+        {
+            if (SetProperty(ref _isTreemapBorderless, value) && _isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    private void EnsureTreemapPopulatedFromPreviewFiles()
+    {
+        if (TreemapBrowser.Items.Count > 0 ||
+            PreviewFiles.Count == 0 ||
+            string.IsNullOrWhiteSpace(SelectedDatePath))
+        {
+            return;
+        }
+
+        RepopulateTreemapFrom(FilteredPreviewFiles);
+    }
+
+    private void RepopulateTreemapFrom(IEnumerable<PreviewFileViewModel> source)
+    {
+        var files = source.ToArray();
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] RepopulateTreemapFrom — {files.Length} files, " +
+            $"with thumbnail: {files.Count(f => f.Thumbnail is not null)}");
+        var generation = TreemapBrowser.BeginScan(SelectedDatePath ?? string.Empty);
+        if (files.Length > 0)
+        {
+            var items = files.Select(file => new LibraryDateMediaItem(
+                file.FullPath, file.Name, file.Extension, file.Category,
+                file.Length, DateTime.MinValue)).ToArray();
+            TreemapBrowser.ApplyBatch(generation, new LibraryDateSnapshotBatch(items, items.Length, FromCache: true));
+            foreach (var file in files.Where(file => file.Thumbnail is not null))
+            {
+                TreemapBrowser.UpdateThumbnail(file.FullPath, file.Thumbnail);
+            }
+            TreemapBrowser.Complete(generation, isPartial: false);
+            StartTreemapThumbnailLoading(files);
+        }
+        else
+        {
+            TreemapBrowser.Complete(generation, isPartial: false);
+        }
+
+        TreemapRepopulated?.Invoke();
+    }
+
+    private void StartTreemapThumbnailLoading(PreviewFileViewModel[] files)
+    {
+        // Don't load everything — just kick off viewport-driven loading.
+        // The actual viewport priority loading is triggered by code-behind
+        // after each render via RefreshTreemapViewportLoading().
+        _treemapSourceFiles = files;
+        _treemapSourceLookup = new Dictionary<string, PreviewFileViewModel>(
+            files.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files)
+        {
+            _treemapSourceLookup[file.FullPath] = file;
+        }
+
+        _treemapDimensionCancellation?.Cancel();
+        _treemapDimensionCancellation?.Dispose();
+        _treemapDimensionCancellation = new CancellationTokenSource();
+        if (LibraryMaintenanceService.IsNetworkLibraryRoot(SelectedDatePath ?? string.Empty))
+        {
+            // A UNC header pass opens every image before the user can see the
+            // wall. Visible thumbnail dimensions populate progressively instead.
+            return;
+        }
+        // Read headers in the background, then publish one coherent aspect-ratio
+        // update. Publishing every 1,024 headers repeatedly lays out the entire
+        // root tree on a network library and saturates CPU.
+        _ = LoadTreemapDimensionsAsync(files, _treemapDimensionCancellation.Token);
+    }
+
+    private async Task LoadTreemapDimensionsAsync(
+        PreviewFileViewModel[] files,
+        CancellationToken cancellationToken)
+    {
+        var pendingDimensions = new List<(string fullPath, double aspectRatio)>();
+        foreach (var fileBatch in files.Chunk(32))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var dimensions = await Task.Run(() => fileBatch
+                .Select(file => (file.FullPath, dimensions: ImageDimensionReader.ReadDimensions(file.FullPath)))
+                .Where(result => result.dimensions is { width: > 0, height: > 0 })
+                .Select(result => (result.FullPath,
+                    (double)result.dimensions!.Value.width / result.dimensions.Value.height))
+                .ToArray(), cancellationToken)
+                .ConfigureAwait(false);
+            pendingDimensions.AddRange(dimensions);
+        }
+
+        if (!cancellationToken.IsCancellationRequested && pendingDimensions.Count > 0)
+        {
+            TreemapBrowser.SubmitDimensions(pendingDimensions);
+        }
+    }
+
+    private PreviewFileViewModel[]? _treemapSourceFiles;
+    private Dictionary<string, PreviewFileViewModel>? _treemapSourceLookup;
+    private CancellationTokenSource? _treemapDimensionCancellation;
+
+    /// <summary>
+    /// Called by code-behind after each treemap render to load ONLY
+    /// the thumbnails for tiles currently in the visible viewport.
+    /// </summary>
+    internal void RefreshTreemapViewportLoading(IReadOnlyList<string> visiblePathsNeedingThumbnail)
+    {
+        if (!IsTreemapBrowseMode || !IsPreviewPage) return;
+        if (visiblePathsNeedingThumbnail.Count == 0) return;
+        EnsureTreemapSourceLookup();
+        if (_treemapSourceLookup is not { } pathToFile) return;
+
+        var toLoad = new List<PreviewFileViewModel>(visiblePathsNeedingThumbnail.Count);
+        foreach (var path in visiblePathsNeedingThumbnail)
+        {
+            if (pathToFile.TryGetValue(path, out var file) && file.Thumbnail is null)
+            {
+                toLoad.Add(file);
+            }
+        }
+
+        if (toLoad.Count == 0) return;
+
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            foreach (var file in toLoad)
+            {
+                _pendingTreemapThumbnailPaths.Add(file.FullPath);
+            }
+        }
+
+        DrainTreemapThumbnailQueue();
+    }
+
+    /// <summary>
+    /// Seeds (or refreshes) the FullPath → PreviewFileViewModel lookup used by
+    /// the viewport thumbnail queue. The treemap can be populated either through
+    /// RepopulateTreemapFrom (filters) or through the incremental ApplyBatch scan
+    /// (startup all-library / date selection), so this falls back to the filtered
+    /// cache whenever the lookup is missing or stale.
+    /// </summary>
+    private void EnsureTreemapSourceLookup()
+    {
+        var expected = _filteredCache.Count;
+        if (_treemapSourceLookup is not null &&
+            _treemapSourceFiles is { Length: var length } &&
+            length == expected)
+        {
+            return;
+        }
+
+        if (expected == 0)
+        {
+            return;
+        }
+
+        var files = _filteredCache.ToArray();
+        _treemapSourceFiles = files;
+        _treemapSourceLookup = new Dictionary<string, PreviewFileViewModel>(
+            files.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files)
+        {
+            _treemapSourceLookup[file.FullPath] = file;
+        }
+    }
+
+    private void DrainTreemapThumbnailQueue()
+    {
+        if (Interlocked.CompareExchange(ref _treemapLoadActive, 1, 0) != 0 ||
+            _treemapSourceFiles is not { Length: > 0 } source)
+        {
+            return;
+        }
+
+        var lookup = _treemapSourceLookup
+            ?? source.ToDictionary(file => file.FullPath, StringComparer.OrdinalIgnoreCase);
+        PreviewFileViewModel[] batch;
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            var queued = _pendingTreemapThumbnailPaths
+                .Select(path => lookup.GetValueOrDefault(path))
+                .Where(file => file is { Thumbnail: null })
+                .Select(file => file!)
+                .ToArray();
+            batch = queued
+                .Take(PreviewLoadingPolicy.ThumbnailConcurrency * 8)
+                .ToArray();
+            _pendingTreemapThumbnailPaths.Clear();
+            foreach (var file in queued.Skip(batch.Length))
+            {
+                _pendingTreemapThumbnailPaths.Add(file.FullPath);
+            }
+        }
+
+        if (batch.Length == 0)
+        {
+            Interlocked.Exchange(ref _treemapLoadActive, 0);
+            return;
+        }
+
+        var generation = Interlocked.Increment(ref _treemapLoadGeneration);
+        _previewThumbnailCancellation ??= new CancellationTokenSource();
+        _ = LoadPreviewThumbnailsAsync(batch, 512, _previewThumbnailCancellation.Token)
+            .ContinueWith(_ => CompleteTreemapThumbnailBatch(generation), TaskScheduler.Default);
+    }
+
+    private void CompleteTreemapThumbnailBatch(int generation)
+    {
+        if (generation != Volatile.Read(ref _treemapLoadGeneration))
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _treemapLoadActive, 0);
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(DrainTreemapThumbnailQueue);
+    }
+
+    private async Task SelfHealTreemapThumbnailsAsync(PreviewFileViewModel[] source)
+    {
+        try
+        {
+            // Wait for initial batch to finish first
+            await Task.Delay(8000).ConfigureAwait(false);
+            for (var round = 0; round < 10 && IsPreviewPage && IsTreemapBrowseMode; round++)
+            {
+                // Only heal when pipeline is truly idle — don't interrupt active loading
+                if (Interlocked.CompareExchange(ref _treemapLoadActive, 0, 0) == 1)
+                {
+                    await Task.Delay(3000).ConfigureAwait(false);
+                    continue;
+                }
+
+                var unloaded = source.Where(item => item.Thumbnail is null).ToArray();
+                if (unloaded.Length == 0) break;
+
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Self-heal round {round}: {unloaded.Length} stragglers, restarting");
+                StartPreviewThumbnailLoading(unloaded, 512, skipCancel: true);
+
+                await Task.Delay(10000).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) { }
     }
 
     public bool IsCompactBrowseLayout
@@ -839,7 +1304,8 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public string BrowseConditionsSummary =>
-        $"{(SelectedDate is null ? "全部日期" : SelectedDateTitle)} · {CurrentPreviewCategory} · {PreviewRetouchFilter} · {RatingFilter}";
+        $"{(SelectedDate is null ? "全部日期" : SelectedDateTitle)} · {CurrentPreviewCategory} · {PreviewRetouchFilter} · {RatingFilter}" +
+        (SemanticSearch.HasActiveQuery ? $" · 语义：{SemanticSearch.QueryText.Trim()}" : string.Empty);
 
     public BrowseEntryMode BrowseEntryModeSetting
     {
@@ -870,6 +1336,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(HasLibraryRoot));
                 OnPropertyChanged(nameof(LibraryHealthText));
                 FaceSearch.NotifyLibraryRootChanged();
+                SemanticSearch.NotifyLibraryRootChanged();
                 RefreshConnectedDevices();
                 NotifyCommandStates();
             }
@@ -942,6 +1409,22 @@ public sealed class MainWindowViewModel : ObservableObject
         set => SetProperty(ref _importReport, value);
     }
 
+    public int ImportSuccessCount { get; private set; }
+
+    public int ImportSkippedCount { get; private set; }
+
+    public int ImportFailedCount { get; private set; }
+
+    private void SetImportSummary(int success, int skipped, int failed)
+    {
+        ImportSuccessCount = success;
+        ImportSkippedCount = skipped;
+        ImportFailedCount = failed;
+        OnPropertyChanged(nameof(ImportSuccessCount));
+        OnPropertyChanged(nameof(ImportSkippedCount));
+        OnPropertyChanged(nameof(ImportFailedCount));
+    }
+
     public string ProgressLabel
     {
         get => _progressLabel;
@@ -992,6 +1475,12 @@ public sealed class MainWindowViewModel : ObservableObject
         set => SetProperty(ref _isProgressIndeterminate, value);
     }
 
+    public bool IsDuplicateScanRunning
+    {
+        get => _isDuplicateScanRunning;
+        set => SetProperty(ref _isDuplicateScanRunning, value);
+    }
+
     public bool IsBusy
     {
         get => _isBusy;
@@ -999,6 +1488,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _isBusy, value))
             {
+                OnPropertyChanged(nameof(IsImportRunning));
                 NotifyCommandStates();
                 CancelCurrentTaskCommand.NotifyCanExecuteChanged();
             }
@@ -1014,6 +1504,60 @@ public sealed class MainWindowViewModel : ObservableObject
             if (SetProperty(ref _thumbnailSize, clamped))
             {
                 _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    /// <summary>
+    /// Continuous zoom tile size for the grid browse mode. Range is wider than
+    /// the legacy <see cref="ThumbnailSize"/> so the user can zoom from a dense
+    /// overview up to a large preview while keeping every tile a uniform square.
+    /// </summary>
+    public double ZoomableGridTileSize
+    {
+        get => _zoomableGridTileSize;
+        set
+        {
+            var clamped = Math.Clamp(value, 48, 512);
+            if (!SetProperty(ref _zoomableGridTileSize, clamped))
+            {
+                return;
+            }
+
+            OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
+            RefreshPreviewThumbnailsForZoom();
+            if (_isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public bool IsGridTileLargeEnoughForLabels => _zoomableGridTileSize >= 140;
+
+    public ObservableCollection<GridBreadcrumbViewModel> GridBreadcrumbs => _gridBreadcrumbs;
+
+    public bool HasGridBreadcrumb => _gridBreadcrumbs.Count > 1;
+
+    public IRelayCommand<string?> NavigateGridCategoryCommand { get; }
+
+    /// <summary>
+    /// Zoom scale for the treemap browse mode. 1.0 is the default fit; higher
+    /// values enlarge every tile proportionally so the user can inspect small
+    /// categories or dense areas.
+    /// </summary>
+    public double TreemapZoom
+    {
+        get => _treemapZoom;
+        set
+        {
+            var clamped = Math.Clamp(value, 0.02, 8.0);
+            if (SetProperty(ref _treemapZoom, clamped))
+            {
+                if (_isInitialized)
+                {
+                    _ = SaveSettingsAsync();
+                }
             }
         }
     }
@@ -1201,10 +1745,31 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _currentPreviewCategory, value))
             {
+                RebuildGridBreadcrumbs();
                 RefreshFilteredCache(resetPage: true);
                 OnPropertyChanged(nameof(BrowseConditionsSummary));
             }
         }
+    }
+
+    private void RebuildGridBreadcrumbs()
+    {
+        _gridBreadcrumbs.Clear();
+        _gridBreadcrumbs.Add(new GridBreadcrumbViewModel("全部", "全部"));
+        if (!string.Equals(_currentPreviewCategory, "全部", StringComparison.OrdinalIgnoreCase))
+        {
+            _gridBreadcrumbs.Add(new GridBreadcrumbViewModel(_currentPreviewCategory, _currentPreviewCategory));
+        }
+
+        OnPropertyChanged(nameof(GridBreadcrumbs));
+        OnPropertyChanged(nameof(HasGridBreadcrumb));
+    }
+
+    private void NavigateGridCategory(string? key)
+    {
+        CurrentPreviewCategory = string.IsNullOrWhiteSpace(key) || string.Equals(key, "全部", StringComparison.OrdinalIgnoreCase)
+            ? "全部"
+            : key;
     }
 
     private void RefreshFilteredCache(bool resetPage = false)
@@ -1221,7 +1786,35 @@ public sealed class MainWindowViewModel : ObservableObject
         RebuildVisiblePreviewPage();
         OnPropertyChanged(nameof(FilteredPreviewFiles));
         NotifyPreviewCountsChanged();
+        if (HasLibraryRoot && IsTreemapBrowseMode)
+        {
+            if (RequiresTreemapRepopulation())
+            {
+                RepopulateTreemapFrom(_filteredCache);
+            }
+            else if (_treemapSourceFiles is null && _filteredCache.Count > 0)
+            {
+                // The incremental all-library / date scan populates the treemap
+                // via ApplyBatch and never routes through RepopulateTreemapFrom,
+                // so the viewport thumbnail source is never seeded. Seed it once
+                // the filtered cache is complete so the initial photo wall loads
+                // thumbnails through the viewport queue.
+                StartTreemapThumbnailLoading(_filteredCache.ToArray());
+                TreemapRepopulated?.Invoke();
+            }
+        }
     }
+
+    private bool RequiresTreemapRepopulation() =>
+        SemanticSearch.HasActiveQuery ||
+        CurrentPreviewCategory != "全部" ||
+        !string.IsNullOrWhiteSpace(PreviewSearchText) ||
+        PreviewRetouchFilter != "全部" ||
+        _selectedFileTypeFilters.Count > 0 ||
+        SmartCategoryFilter != "全部智能类别" ||
+        RatingFilter != "全部评分" ||
+        PeopleAlbums.SelectedAlbum is not null ||
+        PreviewSortMode != 0;
 
     private int _previewSort;
     public int PreviewSortMode
@@ -1233,6 +1826,102 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 RefreshFilteredCache(resetPage: true);
                 OnPropertyChanged(nameof(BrowseConditionsSummary));
+            }
+        }
+    }
+
+    private static readonly Dictionary<string, string> ExtensionToTypeGroup = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["ARW"] = "RAW", ["CR2"] = "RAW", ["CR3"] = "RAW", ["NEF"] = "RAW",
+        ["NRW"] = "RAW", ["RAF"] = "RAW", ["ORF"] = "RAW", ["RW2"] = "RAW",
+        ["DNG"] = "RAW",
+        ["JPG"] = "JPG", ["JPEG"] = "JPG", ["JPE"] = "JPG",
+        ["PNG"] = "PNG",
+        ["MP4"] = "Video", ["MOV"] = "Video", ["M4V"] = "Video",
+        ["AVI"] = "Video", ["MKV"] = "Video",
+        ["PSD"] = "PSD", ["PSB"] = "PSD",
+    };
+
+    internal static string ResolveFileTypeGroup(string? extension)
+    {
+        if (string.IsNullOrWhiteSpace(extension)) return "Other";
+        var ext = extension.TrimStart('.');
+        return ExtensionToTypeGroup.GetValueOrDefault(ext, "Other");
+    }
+
+    private readonly HashSet<string> _selectedFileTypeFilters = new(StringComparer.OrdinalIgnoreCase);
+    private bool _isShowingPsdFiles;
+
+    public bool IsShowingPsdFiles
+    {
+        get => _isShowingPsdFiles;
+        set
+        {
+            if (SetProperty(ref _isShowingPsdFiles, value) && _isInitialized)
+            {
+                RefreshFilteredCache(resetPage: true);
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    public void ToggleFileTypeFilter(string typeGroup)
+    {
+        if (string.Equals(typeGroup, "全部", StringComparison.OrdinalIgnoreCase))
+        {
+            _selectedFileTypeFilters.Clear();
+            RefreshFilteredCache(resetPage: true);
+            return;
+        }
+
+        if (!_selectedFileTypeFilters.Remove(typeGroup))
+        {
+            _selectedFileTypeFilters.Add(typeGroup);
+        }
+
+        RefreshFilteredCache(resetPage: true);
+        OnPropertyChanged(nameof(FileTypeFilterSummary));
+    }
+
+    public bool IsFileTypeFilterActive(string typeGroup)
+    {
+        if (_selectedFileTypeFilters.Count == 0)
+            return string.Equals(typeGroup, "全部", StringComparison.OrdinalIgnoreCase);
+        return _selectedFileTypeFilters.Contains(typeGroup);
+    }
+
+    public string FileTypeFilterSummary =>
+        _selectedFileTypeFilters.Count == 0 ? "全部" : string.Join(" + ", _selectedFileTypeFilters);
+
+    public IReadOnlyList<BrowseSearchModeChoice> BrowseSearchModeChoices { get; } =
+    [
+        new(BrowseSearchMode.Auto, "智能"),
+        new(BrowseSearchMode.File, "文件名或路径"),
+        new(BrowseSearchMode.Semantic, "语义描述")
+    ];
+
+    private BrowseSearchMode _browseSearchMode = BrowseSearchMode.Auto;
+    public BrowseSearchMode BrowseSearchMode
+    {
+        get => _browseSearchMode;
+        set
+        {
+            if (SetProperty(ref _browseSearchMode, value))
+            {
+                ApplyUnifiedSearch();
+            }
+        }
+    }
+
+    private string _unifiedSearchText = string.Empty;
+    public string UnifiedSearchText
+    {
+        get => _unifiedSearchText;
+        set
+        {
+            if (SetProperty(ref _unifiedSearchText, value ?? string.Empty))
+            {
+                ApplyUnifiedSearch();
             }
         }
     }
@@ -1321,11 +2010,44 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         var result = source;
 
-        // Retouch filter
+        // Exclude PSD/PSB and other non-media by default
+        if (!IsShowingPsdFiles)
+        {
+            result = result.Where(f =>
+                !string.Equals(f.Extension, "PSD", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(f.Extension, "PSB", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Retouch filter — "已修": only retouched OUTPUT files,
+        // not originals that merely have a retouched counterpart.
+        // Output files have PreviewPath == FullPath (they are the final version);
+        // originals have PreviewPath != FullPath (they point to the retouched copy).
         if (PreviewRetouchFilter == "已修")
-            result = result.Where(f => f.IsRetouched);
+        {
+            result = result.Where(f =>
+            {
+                try
+                {
+                    return f.IsRetouched &&
+                        string.Equals(f.PreviewPath, f.FullPath, StringComparison.OrdinalIgnoreCase);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Trace.WriteLine(
+                        $"[Filter] Error checking '已修' for {f.FullPath}: {ex.Message}");
+                    return false;
+                }
+            });
+        }
         else if (PreviewRetouchFilter == "未修")
             result = result.Where(f => !f.IsRetouched);
+
+        // File type filter — multi-select; empty = show all supported types
+        if (_selectedFileTypeFilters.Count > 0)
+        {
+            result = result.Where(f => _selectedFileTypeFilters.Contains(
+                ResolveFileTypeGroup(f.Extension)));
+        }
 
         // Text search
         if (!string.IsNullOrWhiteSpace(PreviewSearchText))
@@ -1357,10 +2079,27 @@ public sealed class MainWindowViewModel : ObservableObject
             _ => result // Default: unsorted (by discovery order)
         };
 
+        result = SemanticBrowseRanking.Apply(
+            result,
+            file => file.FullPath,
+            SemanticSearch.HasActiveQuery ? SemanticSearch.RankedResultPaths : null);
+
         return result;
     }
 
     public int FilteredPreviewCount => _filteredCache.Count;
+
+    /// <summary>
+    /// Item count for the bottom-right label.
+    /// In grid mode: total filtered count.
+    /// In treemap mode: only items within the current treemap container level.
+    /// </summary>
+    public int CurrentViewItemCount => IsTreemapBrowseMode
+        ? TreemapBrowser.Items.Count(item =>
+            !item.IsContainer &&
+            (TreemapBrowser.CurrentContainerKey is null ||
+             string.Equals(item.ParentKey, TreemapBrowser.CurrentContainerKey, StringComparison.OrdinalIgnoreCase)))
+        : _filteredCache.Count;
 
     public bool HasPreviousPreviewPage => _previewPage > 0;
 
@@ -1442,8 +2181,14 @@ public sealed class MainWindowViewModel : ObservableObject
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
+        _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
+        _treemapZoom = Math.Clamp(settings.TreemapZoom, 0.02, 8.0);
         OnPropertyChanged(nameof(DefaultThumbnailSize));
         OnPropertyChanged(nameof(ThumbnailSize));
+        OnPropertyChanged(nameof(ZoomableGridTileSize));
+        OnPropertyChanged(nameof(TreemapZoom));
+        OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
+        RebuildGridBreadcrumbs();
         GlassIntensity = settings.GlassIntensity;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
@@ -1499,6 +2244,18 @@ public sealed class MainWindowViewModel : ObservableObject
         BrowseEntryModeSetting = Enum.TryParse<BrowseEntryMode>(settings.BrowseEntryMode, out var browseMode)
             ? browseMode
             : BrowseEntryMode.SessionRestore;
+        PrepareStartupAllLibraryTreemap();
+        TreemapWeightMode = Enum.TryParse<TreemapWeightMode>(settings.TreemapWeightMode, out var weightMode)
+            ? weightMode
+            : TreemapWeightMode.FileSize;
+        _isTreemapBorderless = settings.IsTreemapBorderless is not false;
+        _isShowingPsdFiles = settings.ShowPsdFiles is true;
+        _isAdvancedFiltersExpanded = settings.IsAdvancedFiltersExpanded is true;
+        OnPropertyChanged(nameof(IsAdvancedFiltersExpanded));
+        if (settings.SelectedFileTypeFilters is { Count: > 0 } savedTypes)
+        {
+            foreach (var t in savedTypes) _selectedFileTypeFilters.Add(t);
+        }
         _persistedBrowseSnapshot = settings.BrowseSnapshot;
         BaiduAppKey = settings.BaiduAppKey ?? string.Empty;
         QuarkClientPath = settings.QuarkClientPath ?? string.Empty;
@@ -1507,6 +2264,7 @@ public sealed class MainWindowViewModel : ObservableObject
         await TagManager.InitializeAsync().ConfigureAwait(true);
         PeopleAlbums.RefreshRecognitionStatus();
         await PeopleAlbums.InitializeAsync().ConfigureAwait(true);
+        await CustomAlbums.InitializeAsync().ConfigureAwait(true);
 
         if (!string.IsNullOrWhiteSpace(LibraryRoot) && Directory.Exists(LibraryRoot))
         {
@@ -1524,6 +2282,59 @@ public sealed class MainWindowViewModel : ObservableObject
 
         _isInitialized = true;
         await SaveSettingsAsync().ConfigureAwait(true);
+    }
+
+    private void ApplyUnifiedSearch()
+    {
+        var useFileSearch = BrowseSearchMode == BrowseSearchMode.File ||
+            (BrowseSearchMode == BrowseSearchMode.Auto && LooksLikeFileOrPath(UnifiedSearchText));
+        if (useFileSearch)
+        {
+            SemanticSearch.QueryText = string.Empty;
+            PreviewSearchText = UnifiedSearchText;
+        }
+        else
+        {
+            PreviewSearchText = string.Empty;
+            SemanticSearch.QueryText = UnifiedSearchText;
+        }
+
+        OnPropertyChanged(nameof(BrowseConditionsSummary));
+    }
+
+    private bool LooksLikeFileOrPath(string searchText)
+    {
+        var text = searchText.Trim();
+        if (string.IsNullOrWhiteSpace(text)) return true;
+        if (text.IndexOfAny(['\\', '/', ':']) >= 0 || Path.HasExtension(text)) return true;
+        return PreviewFiles.Any(file => file.Name.Contains(text, StringComparison.OrdinalIgnoreCase) ||
+            file.FullPath.Contains(text, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public bool IsImportRunning => IsBusy && _activeTaskKind == ActiveTaskKind.Import;
+
+    private void PrepareStartupAllLibraryTreemap()
+    {
+        // A fresh application launch always opens the complete library in the
+        // treemap. Later filtering and date navigation still use their normal
+        // state transitions, but no persisted browse filter narrows the initial
+        // root scan.
+        BrowseDisplayMode = BrowseDisplayMode.Treemap;
+        _sessionBrowseSnapshot = null;
+        _persistedBrowseSnapshot = null;
+        _calendarSelectedDate = null;
+        SetProperty(ref _selectedDate, null, nameof(SelectedDate));
+        CurrentPreviewCategory = "全部";
+        UnifiedSearchText = string.Empty;
+        PreviewSearchText = string.Empty;
+        SemanticSearch.QueryText = string.Empty;
+        PreviewRetouchFilter = "全部";
+        RatingFilter = "全部评分";
+        PreviewSortMode = 0;
+        SmartCategoryFilter = "全部智能类别";
+        _selectedFileTypeFilters.Clear();
+        OnPropertyChanged(nameof(FileTypeFilterSummary));
+        OnPropertyChanged(nameof(BrowseConditionsSummary));
     }
 
     public void AdjustThumbnailSize(bool larger)
@@ -1556,6 +2367,24 @@ public sealed class MainWindowViewModel : ObservableObject
         _calendarDisplayMonth = _calendarDisplayMonth.AddMonths(offset);
         OnPropertyChanged(nameof(CalendarMonthTitle));
         RebuildCalendarDays();
+    }
+
+    private void ShowLatestPersonDateMonth(PersonAlbumItemViewModel person)
+    {
+        var latest = FlattenDateNodes(LibraryDates)
+            .Where(node => node.Date is not null && person.PhotoPaths.Any(path => IsPathInside(path, node.FullPath)))
+            .Select(node => node.Date!.Value)
+            .OrderBy(date => date.Year)
+            .ThenBy(date => date.Month)
+            .ThenBy(date => date.Day)
+            .LastOrDefault();
+        if (latest == default) return;
+
+        var month = new DateTime(latest.Year, latest.Month, 1);
+        if (_calendarDisplayMonth == month) return;
+
+        _calendarDisplayMonth = month;
+        OnPropertyChanged(nameof(CalendarMonthTitle));
     }
 
     private void SelectCalendarDay(CalendarDayViewModel? day)
@@ -1656,7 +2485,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private async Task ResetBrowseConditionsAsync()
     {
         CurrentPreviewCategory = "全部";
+        UnifiedSearchText = string.Empty;
         PreviewSearchText = string.Empty;
+        SemanticSearch.QueryText = string.Empty;
         PreviewRetouchFilter = "全部";
         RatingFilter = "全部评分";
         PreviewSortMode = 0;
@@ -1741,7 +2572,10 @@ public sealed class MainWindowViewModel : ObservableObject
         NotifyPreviewCountsChanged();
     }
 
-    private async Task RebuildRetouchTrackingAsync()
+    private async Task RebuildRetouchTrackingAsync(
+        CancellationToken cancellationToken = default,
+        int? expectedDateGeneration = null,
+        bool refresh = true)
     {
         // Run the heavy IO on a background thread so the UI stays responsive.
         var before = PreviewFiles.ToArray();
@@ -1749,6 +2583,36 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var standalone = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var editedFiles = new List<string>();
+
+            // Collect date directories from existing PreviewFiles
+            var dateDirs = new HashSet<string>(
+                before.Select(f =>
+                {
+                    var dir = Path.GetDirectoryName(f.FullPath);
+                    return dir is not null ? Path.GetDirectoryName(dir) : null;
+                }).Where(d => d is not null)!,
+                StringComparer.OrdinalIgnoreCase);
+
+            // Recursively scan "修后" subdirectories under each date directory
+            foreach (var dateDir in dateDirs)
+            {
+                var editedDir = Path.Combine(dateDir, "修后");
+                if (!Directory.Exists(editedDir)) continue;
+                foreach (var file in Directory.EnumerateFiles(
+                    editedDir, "*", new EnumerationOptions
+                    {
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true,
+                        ReturnSpecialDirectories = false
+                    }))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    standalone.Add(file);
+                    editedFiles.Add(file);
+                }
+            }
+
             // Group by date directory so each date builds exactly one consistent index.
             var byRetouchDir = before
                 .GroupBy(f =>
@@ -1759,22 +2623,34 @@ public sealed class MainWindowViewModel : ObservableObject
                 .Where(g => !string.IsNullOrWhiteSpace(g.Key));
             foreach (var group in byRetouchDir)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 if (group.Key is null) continue;
                 var snapshot = _retouchedMediaIndex.Build(
                     group.Key,
-                    group.Where(IsRawOrJpegPreview).Select(file => file.FullPath).ToArray());
+                    group.Where(IsRawOrJpegPreview).Select(file => file.FullPath).ToArray(),
+                    editedFiles.Where(path => path.StartsWith(
+                        Path.Combine(group.Key, "修后") + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase)).ToArray());
                 foreach (var pair in snapshot.RetouchedByOriginal)
                 {
                     map[pair.Key] = pair.Value;
                 }
                 standalone.UnionWith(snapshot.StandaloneRetouchedFiles);
             }
-            return (Map: map, Standalone: standalone);
-        }).ConfigureAwait(true);
+            return (Map: map, Standalone: standalone, EditedFiles: editedFiles);
+        }, cancellationToken).ConfigureAwait(true);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (expectedDateGeneration is { } generation &&
+            generation != _dateLoadGeneration)
+        {
+            return;
+        }
 
         RetouchedFiles.Clear();
         for (var i = 0; i < PreviewFiles.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var file = PreviewFiles[i];
             var previousPreviewPath = file.PreviewPath;
             var isStandaloneOutput = retouchMap.Standalone.Contains(file.FullPath) ||
@@ -1793,11 +2669,47 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         }
 
+        // Merge standalone retouched files (from index + recursive scan) into PreviewFiles
+        var existingPaths = new HashSet<string>(
+            PreviewFiles.Select(f => f.FullPath), StringComparer.OrdinalIgnoreCase);
+        foreach (var standalonePath in retouchMap.Standalone)
+        {
+            if (!existingPaths.Add(standalonePath) || !System.IO.File.Exists(standalonePath))
+            {
+                continue;
+            }
+
+            try
+            {
+                var info = new System.IO.FileInfo(standalonePath);
+                var extension = (info.Extension.Length > 1
+                    ? info.Extension.TrimStart('.').ToUpperInvariant()
+                    : Path.GetExtension(standalonePath).TrimStart('.').ToUpperInvariant());
+                var merged = new PreviewFileViewModel(
+                    info.Name, "修后", standalonePath,
+                    FormatBytes(info.Length), extension, null, info.Length)
+                {
+                    IsRetouched = true,
+                    RetouchedPath = standalonePath
+                };
+                PreviewFiles.Add(merged);
+                RetouchedFiles.Add(merged);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Failed to merge retouched file {standalonePath}: {ex.Message}");
+            }
+        }
+
         OnPropertyChanged(nameof(HasRetouchedFiles));
         OnPropertyChanged(nameof(RetouchedGroupCount));
         OnPropertyChanged(nameof(TotalPhotoGroupCount));
         RecalcDateNodeStats();
-        RefreshFilteredCache();
+        if (refresh)
+        {
+            RefreshFilteredCache();
+        }
         if (IsHomePage)
         {
             StartPreviewThumbnailLoading(HomePreviewFiles);
@@ -1877,14 +2789,63 @@ public sealed class MainWindowViewModel : ObservableObject
     private void RecalcDateNodeStats()
     {
         var flatNodes = FlattenDateNodes(LibraryDates);
+        var datePaths = new HashSet<string>(
+            flatNodes.Where(node => node.Date is not null).Select(node => node.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+        var retouchedPaths = new HashSet<string>(
+            RetouchedFiles.Select(file => file.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+        var groupsByDate = new Dictionary<string, (HashSet<string> Total, HashSet<string> Retouched)>(
+            StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in PreviewFiles.Where(IsRawOrJpegPreview))
+        {
+            var dateDirectory = TryResolvePreviewDateDirectory(file.FullPath, datePaths);
+            if (dateDirectory is null)
+            {
+                continue;
+            }
+
+            if (!groupsByDate.TryGetValue(dateDirectory, out var groups))
+            {
+                groups = (new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+                    new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+                groupsByDate[dateDirectory] = groups;
+            }
+
+            var groupKey = Path.GetFileNameWithoutExtension(file.FullPath);
+            groups.Total.Add(groupKey);
+            if (retouchedPaths.Contains(file.FullPath))
+            {
+                groups.Retouched.Add(groupKey);
+            }
+        }
+
         foreach (var node in flatNodes)
         {
-            if (node.Date is null || !Directory.Exists(node.FullPath)) continue;
-            var total = CountPhotoGroups(PreviewFiles.Where(f => f.FullPath.StartsWith(node.FullPath, StringComparison.OrdinalIgnoreCase)));
-            var retouched = CountPhotoGroups(RetouchedFiles.Where(f => f.FullPath.StartsWith(node.FullPath, StringComparison.OrdinalIgnoreCase)));
-            node.TotalFiles = total;
-            node.RetouchedFiles = retouched;
+            if (node.Date is null) continue;
+            var groups = groupsByDate.GetValueOrDefault(node.FullPath);
+            node.TotalFiles = groups.Total?.Count ?? 0;
+            node.RetouchedFiles = groups.Retouched?.Count ?? 0;
         }
+    }
+
+    private static string? TryResolvePreviewDateDirectory(
+        string filePath,
+        IReadOnlySet<string> dateDirectories)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        while (!string.IsNullOrWhiteSpace(directory))
+        {
+            if (dateDirectories.Contains(directory))
+            {
+                return directory;
+            }
+
+            directory = Path.GetDirectoryName(directory);
+        }
+
+        return null;
     }
 
     private CancellationTokenSource BeginCancelableTask(ActiveTaskKind taskKind)
@@ -1893,6 +2854,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _activeTaskCancellation?.Dispose();
         _activeTaskCancellation = new CancellationTokenSource();
         _activeTaskKind = taskKind;
+        OnPropertyChanged(nameof(IsImportRunning));
         _operationStartedAt = DateTimeOffset.UtcNow;
         CancelCurrentTaskCommand.NotifyCanExecuteChanged();
         return _activeTaskCancellation;
@@ -1905,6 +2867,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _activeTaskCancellation.Dispose();
             _activeTaskCancellation = null;
             _activeTaskKind = ActiveTaskKind.None;
+            OnPropertyChanged(nameof(IsImportRunning));
             CancelCurrentTaskCommand.NotifyCanExecuteChanged();
         }
     }
@@ -2035,6 +2998,7 @@ public sealed class MainWindowViewModel : ObservableObject
         CancelImportThumbnailLoading();
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = "来源已选择，尚未开始分析。";
         ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与分类”。";
@@ -2069,6 +3033,7 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusMessage = "正在分析来源，请稍候…";
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         ImportActionHint = "正在分析来源，识别完成后会显示可导入内容。";
         ImportReport = "正在分析文件…";
 
@@ -2197,6 +3162,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             ImportItems.Clear();
             ImportSections.Clear();
+            SetImportSummary(0, 0, 0);
             ImportReport = "已停止分析。";
             ImportActionHint = "来源分析已停止。你可以重新选择来源或重新分析。";
             StatusMessage = "来源分析已停止。";
@@ -2293,6 +3259,31 @@ public sealed class MainWindowViewModel : ObservableObject
 
         try
         {
+            ProgressLabel = "正在扫描图库已有内容…";
+            Dictionary<long, List<string>>? librarySizeMap = null;
+            try
+            {
+                librarySizeMap = await _contentScanner.BuildSizeMapAsync(
+                    LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception) { /* library scan failure is non-fatal; import continues without cross-library dedup */ }
+
+            ProgressLabel = "正在检查重复内容…";
+            var duplicateBatch = await PrepareDuplicateBatchAsync(items, librarySizeMap, cancellationToken).ConfigureAwait(true);
+            var progress = ImportProgress.Create(items.Sum(item => 1 + item.ToMediaGroup().Sidecars.Count));
+            void UpdateProgress(ImportPlanItem item, bool completed)
+            {
+                if (completed)
+                {
+                    progress = progress.Complete(item.Files.Count);
+                }
+
+                var current = completed ? progress.CompletedUnits : Math.Min(progress.CompletedUnits + 1, progress.TotalUnits);
+                ProgressValue = progress.Percentage;
+                ProgressLabel = $"正在导入 {current}/{progress.TotalUnits}（{progress.Percentage:0}%）：{item.Group.GroupKey}";
+            }
+
             var dateGroups = items
                 .Where(item => item.TargetDate is not null)
                 .GroupBy(item => item.TargetDate!.Value)
@@ -2309,6 +3300,9 @@ public sealed class MainWindowViewModel : ObservableObject
                     dateGroup.Select(item => item.ToMediaGroup()).ToArray(),
                     dateGroup.Key,
                     deleteSourcesAfterVerify,
+                    duplicateBatch.Matches,
+                    duplicateBatch.Decision,
+                    UpdateProgress,
                     cancellationToken).ConfigureAwait(true);
 
                 success += result.Success;
@@ -2316,11 +3310,11 @@ public sealed class MainWindowViewModel : ObservableObject
                 failed += result.Failed;
                 lines.AddRange(result.Lines);
                 completedDateGroups++;
-                ProgressValue = dateGroups.Length == 0 ? 100 : completedDateGroups * 100d / dateGroups.Length;
             }
 
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             StatusMessage = "导入流程结束。";
             EndCancelableTask(cancellation);
@@ -2340,12 +3334,15 @@ public sealed class MainWindowViewModel : ObservableObject
                 ResetPreviewState("预览未加载");
                 StatusMessage = "导入完成。预览已标记为待刷新；进入预览页时再读取缩略图。";
             }
+
+            await AuditLibraryDuplicatesAsync(cancellationToken).ConfigureAwait(true);
         }
         catch (OperationCanceledException)
         {
             stopped = true;
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
+            SetImportSummary(success, skipped, failed);
             ImportReport = $"导入已停止：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             StatusMessage = "传输已停止。已完成的文件会保留，未完成的临时文件已尽量清理。";
         }
@@ -2366,7 +3363,14 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private async Task<ImportRunResult> RunImportDateAsync(IReadOnlyList<MediaGroup> groups, LibraryDate date, bool deleteSourcesAfterVerify, CancellationToken cancellationToken)
+    private async Task<ImportRunResult> RunImportDateAsync(
+        IReadOnlyList<MediaGroup> groups,
+        LibraryDate date,
+        bool deleteSourcesAfterVerify,
+        IReadOnlyDictionary<string, ImportDuplicateMatch> duplicateMatches,
+        ImportDuplicateBatchDecision duplicateBatchDecision,
+        Action<ImportPlanItem, bool> updateProgress,
+        CancellationToken cancellationToken)
     {
         var success = 0;
         var failed = 0;
@@ -2385,38 +3389,169 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             cancellationToken.ThrowIfCancellationRequested();
             var item = plan.Items[index];
-            ProgressLabel = $"正在处理 {date.Month:00}.{date.Day:00} · {index + 1}/{plan.Items.Count}：{item.Group.GroupKey}";
-            ProgressValue = plan.Items.Count == 0 ? 100 : index * 100d / plan.Items.Count;
+            updateProgress(item, false);
 
-            if (item.Conflict == ConflictKind.SameNameDifferentContent)
+            try
             {
-                failed++;
-                lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
-                continue;
-            }
+                if (item.Conflict == ConflictKind.SameNameDifferentContent)
+                {
+                    failed++;
+                    lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
+                    continue;
+                }
 
-            var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
-            if (result.Success)
-            {
-                if (item.Conflict == ConflictKind.Identical)
+                if (duplicateMatches.TryGetValue(item.Group.Primary.FullPath, out var duplicateMatch)
+                    && !ShouldTransferDuplicate(duplicateMatch, duplicateBatchDecision))
                 {
                     skipped++;
-                    lines.Add($"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。");
+                    lines.Add($"内容重复：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 与 {Path.GetFileName(duplicateMatch.ExistingPath)} 内容相同，已跳过。");
+                    continue;
+                }
+
+                var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
+                if (result.Success)
+                {
+                    if (item.Conflict == ConflictKind.Identical)
+                    {
+                        skipped++;
+                        lines.Add($"已存在：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 内容相同，跳过复制。");
+                    }
+                    else
+                    {
+                        success++;
+                        lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                    }
                 }
                 else
                 {
-                    success++;
-                    lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                    failed++;
+                    lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
                 }
             }
-            else
+            finally
             {
-                failed++;
-                lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
+                updateProgress(item, true);
             }
         }
 
         return new ImportRunResult(success, skipped, failed, lines);
+    }
+
+    private async Task AuditLibraryDuplicatesAsync(CancellationToken cancellationToken, bool reportOutcome = false)
+    {
+        if (string.IsNullOrWhiteSpace(LibraryRoot) || !Directory.Exists(LibraryRoot))
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    "请先在首页选择图库根目录，再扫描重复内容。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        IsBusy = true;
+        IsProgressIndeterminate = true;
+        IsDuplicateScanRunning = true;
+        ProgressValue = 0;
+        ProgressLabel = "正在扫描重复内容…";
+        StatusMessage = "正在比对文件哈希与视觉指纹，请稍候…";
+
+        List<List<string>> exactGroups;
+        List<List<string>> visualGroups;
+        try
+        {
+            exactGroups = await _contentScanner.FindAllDuplicatesAsync(
+                LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+
+            var covered = exactGroups
+                .SelectMany(group => group)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
+                LibraryRoot, ContentScanExtensions, covered, cancellationToken).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception ex)
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    $"扫描重复内容时出错：{ex.Message}", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        finally
+        {
+            IsBusy = false;
+            IsProgressIndeterminate = false;
+            IsDuplicateScanRunning = false;
+        }
+
+        var candidates = new List<DuplicateCandidateGroup>();
+        foreach (var group in exactGroups)
+            candidates.Add(new DuplicateCandidateGroup(group, false));
+        foreach (var group in visualGroups)
+            candidates.Add(new DuplicateCandidateGroup(group, true));
+
+        if (candidates.Count == 0)
+        {
+            if (reportOutcome)
+                System.Windows.MessageBox.Show(
+                    "扫描完成，未发现重复内容。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var filesToDelete = ShowDuplicateReviewDialog(candidates);
+        if (filesToDelete is null || filesToDelete.Count == 0)
+            return;
+
+        var deletedCount = 0;
+        foreach (var path in filesToDelete)
+        {
+            if (RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(LibraryRoot, path))
+                continue;
+
+            try { if (File.Exists(path)) File.Delete(path); deletedCount++; }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        if (deletedCount > 0)
+        {
+            LibraryResequenceService.ResequenceLibrary(LibraryRoot);
+            if (CurrentPage == "Preview")
+                await RefreshLibraryAsync().ConfigureAwait(true);
+            StatusMessage = $"已清理 {deletedCount} 个重复文件，序列已重新排列。";
+        }
+    }
+
+    private HashSet<string>? ShowDuplicateReviewDialog(List<DuplicateCandidateGroup> candidates)
+    {
+        var window = new DuplicateReviewWindow(candidates, LibraryRoot)
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        return window.ShowDialog() == true ? window.FilesToDelete : null;
+    }
+
+    private ImportDuplicateDecision ShowImportDuplicateDecision(string incomingPath, string existingPath)
+    {
+        var window = new ImportDuplicateDecisionWindow(
+            incomingPath,
+            existingPath,
+            RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(LibraryRoot, existingPath))
+        {
+            Owner = System.Windows.Application.Current.MainWindow
+        };
+        return window.ShowDialog() == true ? window.Decision : ImportDuplicateDecision.Skip;
+    }
+
+    private async Task ScanLibraryDuplicatesAsync()
+    {
+        using var cancellation = BeginCancelableTask(ActiveTaskKind.Preview);
+        try
+        {
+            await AuditLibraryDuplicatesAsync(cancellation.Token, reportOutcome: true).ConfigureAwait(true);
+        }
+        finally
+        {
+            EndCancelableTask(cancellation);
+        }
     }
 
     private async Task AskForDateRemarksAsync(IReadOnlyList<LibraryDate> dates)
@@ -2647,10 +3782,21 @@ public sealed class MainWindowViewModel : ObservableObject
             var dateSw = System.Diagnostics.Stopwatch.StartNew();
             LibraryDates.Clear();
             ProgressValue = 2;
-            ProgressLabel = "正在清理空日期目录…";
-            var maintenance = await _libraryMaintenanceService
-                .RemoveEmptyDateDirectoriesAsync(LibraryRoot, cancellationToken)
-                .ConfigureAwait(true);
+            var isNetworkLibrary = LibraryMaintenanceService.IsNetworkLibraryRoot(LibraryRoot);
+            var maintenance = new LibraryMaintenanceResult([], []);
+            if (isNetworkLibrary)
+            {
+                // Avoid a destructive all-directory walk before the real scan on a UNC share.
+                // Import workflows still run their normal maintenance; startup remains read-only.
+                ProgressLabel = "网络照片库：跳过启动时空目录清理…";
+            }
+            else
+            {
+                ProgressLabel = "正在清理空日期目录…";
+                maintenance = await _libraryMaintenanceService
+                    .RemoveEmptyDateDirectoriesAsync(LibraryRoot, cancellationToken)
+                    .ConfigureAwait(true);
+            }
             ProgressValue = 5;
             foreach (var node in DiscoverDates(LibraryRoot))
             {
@@ -2668,7 +3814,9 @@ public sealed class MainWindowViewModel : ObservableObject
             await ApplyStoredMetadataAsync(cancellationToken).ConfigureAwait(true);
             streamSw.Stop();
             var capSw = System.Diagnostics.Stopwatch.StartNew();
-            await RefreshCapacityAsync(LibraryRoot).ConfigureAwait(true);
+            await RefreshCapacityAsync(
+                LibraryRoot,
+                isNetworkLibrary ? PreviewFiles.Sum(file => file.Length) : null).ConfigureAwait(true);
             capSw.Stop();
             _ = RebuildRetouchTrackingAsync().ConfigureAwait(true);
             totalSw.Stop();
@@ -2730,6 +3878,15 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
+        _dateLoadCancellation?.Cancel();
+        _dateLoadCancellation?.Dispose();
+        _dateCapacityCancellation?.Cancel();
+        _dateCapacityCancellation?.Dispose();
+        var cancellation = new CancellationTokenSource();
+        _dateLoadCancellation = cancellation;
+        var cancellationToken = cancellation.Token;
+        var generation = ++_dateLoadGeneration;
+        var treemapGeneration = TreemapBrowser.BeginScan(node.FullPath);
         ++_previewScanVersion;
         SelectedDateTitle = node.Title;
         SelectedDatePath = node.FullPath;
@@ -2743,37 +3900,165 @@ public sealed class MainWindowViewModel : ObservableObject
         NotifyPreviewCountsChanged();
         ProgressValue = 0;
         ProgressLabel = "正在读取所选日期…";
+        IsProgressIndeterminate = true;
 
-        foreach (var category in CategoryFolderNames)
+        var firstBatchRendered = false;
+        var displayedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var progress = new Progress<LibraryDateSnapshotBatch>(batch =>
         {
-            var path = Path.Combine(node.FullPath, category);
-            var files = Directory.Exists(path)
-                ? Directory.EnumerateFiles(path, "*", SearchOption.TopDirectoryOnly)
-                    .Where(IsLibraryPreviewFile)
-                    .ToArray()
-                : [];
-            var totalSize = files.Sum(file => new FileInfo(file).Length);
-            CategorySummaries.Add(new CategorySummaryViewModel(category, path, files.Length, FormatBytes(totalSize)));
-
-            foreach (var file in files)
+            if (generation != _dateLoadGeneration || cancellationToken.IsCancellationRequested)
             {
-                AddPreviewFile(file, category);
+                return;
             }
 
-            ProgressValue += 100d / CategoryFolderNames.Length;
-            await Task.Yield();
-        }
+            TreemapBrowser.ApplyBatch(treemapGeneration, batch);
 
-        ProgressValue = 100;
-        ProgressLabel = $"日期读取完成：{PreviewFiles.Count:N0} 个媒体文件";
-        foreach (var preview in PreviewFiles.Take(PreviewLoadingPolicy.HomeRecentItemLimit))
+            var previews = batch.Items
+                .Where(item => displayedPaths.Add(item.FullPath))
+                .Select(CreatePreviewFile)
+                .Where(preview => preview is not null)
+                .Cast<PreviewFileViewModel>()
+                .ToArray();
+            PreviewFiles.AddRange(previews);
+            ProgressLabel = batch.FromCache
+                ? $"正在从缓存显示照片… {batch.DiscoveredCount:N0}"
+                : $"正在读取所选日期… {batch.DiscoveredCount:N0}";
+
+            if (!firstBatchRendered && previews.Length > 0)
+            {
+                firstBatchRendered = true;
+                RefreshFilteredCache(resetPage: true);
+            }
+        });
+
+        try
         {
-            HomePreviewFiles.Add(preview);
+            var snapshot = await _libraryDateSnapshotService
+                .LoadAsync(node.FullPath, progress, cancellationToken)
+                .ConfigureAwait(true);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation != _dateLoadGeneration)
+            {
+                return;
+            }
+
+            // Progress<T> callbacks normally arrive before this continuation on WPF's
+            // dispatcher. Add any missing tail defensively without duplicating paths.
+            var missing = snapshot.Items
+                .Where(item => displayedPaths.Add(item.FullPath))
+                .Select(CreatePreviewFile)
+                .Where(preview => preview is not null)
+                .Cast<PreviewFileViewModel>()
+                .ToArray();
+            PreviewFiles.AddRange(missing);
+
+            CategorySummaries.Clear();
+            foreach (var category in snapshot.Categories)
+            {
+                CategorySummaries.Add(new CategorySummaryViewModel(
+                    category.Name,
+                    category.DirectoryPath,
+                    category.FileCount,
+                    FormatBytes(category.TotalBytes)));
+            }
+
+            foreach (var preview in PreviewFiles.Take(PreviewLoadingPolicy.HomeRecentItemLimit))
+            {
+                HomePreviewFiles.Add(preview);
+            }
+
+            ProgressValue = 100;
+            ProgressLabel = snapshot.IsPartial
+                ? $"日期读取完成：{PreviewFiles.Count:N0} 个媒体文件，部分内容不可用"
+                : $"日期读取完成：{PreviewFiles.Count:N0} 个媒体文件";
+            TreemapBrowser.Complete(treemapGeneration, snapshot.IsPartial);
+            IsProgressIndeterminate = false;
+            RefreshFilteredCache(resetPage: true);
+            StartSelectedDateCapacityRefresh(node.FullPath, generation, cancellationToken);
+
+            await ApplyStoredMetadataAsync(cancellationToken, refresh: false).ConfigureAwait(true);
+            await RebuildRetouchTrackingAsync(
+                    cancellationToken,
+                    expectedDateGeneration: generation,
+                    refresh: false)
+                .ConfigureAwait(true);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation == _dateLoadGeneration)
+            {
+                RefreshFilteredCache(resetPage: false);
+                NotifyPreviewCountsChanged();
+            }
         }
-        await RebuildRetouchTrackingAsync().ConfigureAwait(true);
-        await ApplyStoredMetadataAsync().ConfigureAwait(true);
-        NotifyPreviewCountsChanged();
-        await RefreshCapacityAsync(node.FullPath).ConfigureAwait(true);
+        catch (OperationCanceledException)
+        {
+            TreemapBrowser.Complete(treemapGeneration, isPartial: true);
+            if (generation == _dateLoadGeneration)
+            {
+                ProgressLabel = "日期读取已取消";
+                IsProgressIndeterminate = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            TreemapBrowser.Complete(treemapGeneration, isPartial: true);
+            if (generation == _dateLoadGeneration)
+            {
+                ProgressLabel = "日期读取失败";
+                StatusMessage = $"无法读取所选日期：{ex.Message}";
+                IsProgressIndeterminate = false;
+            }
+        }
+    }
+
+    private void StartSelectedDateCapacityRefresh(
+        string selectedPath,
+        int generation,
+        CancellationToken dateLoadToken)
+    {
+        _dateCapacityCancellation?.Cancel();
+        _dateCapacityCancellation?.Dispose();
+        _dateCapacityCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(dateLoadToken);
+        _ = RefreshSelectedDateCapacityAsync(
+            selectedPath,
+            generation,
+            _dateCapacityCancellation.Token);
+    }
+
+    private async Task RefreshSelectedDateCapacityAsync(
+        string selectedPath,
+        int generation,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            SelectedFolderSize = "计算中…";
+            SelectedFolderPercent = "计算中…";
+            var result = await _libraryDateSnapshotService
+                .CalculateCapacityAsync(selectedPath, cancellationToken)
+                .ConfigureAwait(true);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (generation != _dateLoadGeneration)
+            {
+                return;
+            }
+
+            SelectedFolderSize = result.IsPartial
+                ? $"{FormatBytes(result.TotalBytes)}（部分）"
+                : FormatBytes(result.TotalBytes);
+            SelectedFolderPercent = TryGetVolumePercent(selectedPath, result.TotalBytes);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch
+        {
+            if (generation == _dateLoadGeneration)
+            {
+                SelectedFolderSize = "容量暂不可用";
+                SelectedFolderPercent = "网络共享容量暂不可读";
+            }
+        }
     }
 
     private static IEnumerable<string> EnumerateLibraryPreviewFiles(string root)
@@ -2785,6 +4070,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private async Task StreamLibraryPreviewAsync(string root, int scanVersion, CancellationToken cancellationToken)
     {
         var scanned = 0;
+        var treemapGeneration = TreemapBrowser.BeginScan(root);
         var categoryStats = new Dictionary<string, (int Count, long Size)>(StringComparer.OrdinalIgnoreCase);
 
         IsProgressIndeterminate = true;
@@ -2829,20 +4115,21 @@ public sealed class MainWindowViewModel : ObservableObject
                 var ready = batch.ToArray();
                 batch.Clear();
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    AddPreviewMetadataBatch(ready, scanned, scanVersion));
+                    AddPreviewMetadataBatch(ready, scanned, scanVersion, treemapGeneration));
             }
 
             if (batch.Count > 0)
             {
                 var ready = batch.ToArray();
                 await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
-                    AddPreviewMetadataBatch(ready, scanned, scanVersion));
+                    AddPreviewMetadataBatch(ready, scanned, scanVersion, treemapGeneration));
             }
         }).ConfigureAwait(true);
 
         IsProgressIndeterminate = false;
         ProgressValue = 100;
         ProgressLabel = scanned == 0 ? "没有发现可预览文件" : $"预读取完成：{scanned} 个媒体文件";
+        TreemapBrowser.Complete(treemapGeneration, isPartial: false);
         RebuildCategorySummaries(root, categoryStats);
         RefreshFilteredCache(resetPage: true);
         NotifyPreviewCountsChanged();
@@ -2851,7 +4138,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private void AddPreviewMetadataBatch(
         IReadOnlyList<PreviewFileViewModel> batch,
         int scanned,
-        int scanVersion)
+        int scanVersion,
+        int treemapGeneration)
     {
         if (scanVersion != _previewScanVersion)
         {
@@ -2867,6 +4155,17 @@ public sealed class MainWindowViewModel : ObservableObject
             }
         }
 
+        var treemapItems = batch.Select(preview => new LibraryDateMediaItem(
+            preview.FullPath,
+            preview.Name,
+            preview.Extension,
+            preview.Category,
+            preview.Length,
+            DateTime.MinValue)).ToArray();
+        TreemapBrowser.ApplyBatch(
+            treemapGeneration,
+            new LibraryDateSnapshotBatch(treemapItems, scanned, FromCache: false));
+
         ProgressLabel = $"正在扫描媒体文件：已找到 {scanned:N0} 个";
         NotifyPreviewCountsChanged();
     }
@@ -2874,6 +4173,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void NotifyPreviewCountsChanged()
     {
         OnPropertyChanged(nameof(FilteredPreviewCount));
+        OnPropertyChanged(nameof(CurrentViewItemCount));
         OnPropertyChanged(nameof(PreviewSummaryText));
         OnPropertyChanged(nameof(HasPreviousPreviewPage));
         OnPropertyChanged(nameof(HasNextPreviewPage));
@@ -2933,10 +4233,12 @@ public sealed class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsHomePage));
                 OnPropertyChanged(nameof(IsImportPage));
                 OnPropertyChanged(nameof(IsPreviewPage));
+                OnPropertyChanged(nameof(IsCustomAlbumsPage));
                 OnPropertyChanged(nameof(IsFaceSearchPage));
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
                 OnPropertyChanged(nameof(IsWatermarkPage));
+                OnPropertyChanged(nameof(IsCloudPage));
                 OnPropertyChanged(nameof(IsBaiduCloudPage));
                 OnPropertyChanged(nameof(IsQuarkCloudPage));
                 OnPropertyChanged(nameof(IsContestOpenPage));
@@ -2947,7 +4249,11 @@ public sealed class MainWindowViewModel : ObservableObject
 
                 if (IsPreviewPage)
                 {
-                    StartPreviewThumbnailLoading(VisiblePreviewFiles);
+                    StartPreviewThumbnailLoading(VisiblePreviewFiles, ResolveThumbnailDecodeWidth());
+                }
+                else if (IsHomePage)
+                {
+                    StartPreviewThumbnailLoading(HomePreviewFiles);
                 }
                 else
                 {
@@ -2967,7 +4273,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public bool IsPreviewPage => CurrentPage == "Preview";
 
+    public bool IsCustomAlbumsPage => CurrentPage == "CustomAlbums";
+
     public bool IsFaceSearchPage => CurrentPage == "FaceSearch";
+
 
     public bool IsMapPhotosPage => CurrentPage == "MapPhotos";
 
@@ -2975,8 +4284,34 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public bool IsWatermarkPage => CurrentPage == "Watermark";
 
-    public bool IsBaiduCloudPage => CurrentPage == "BaiduCloud";
-    public bool IsQuarkCloudPage => CurrentPage == "QuarkCloud";
+    public CloudProviderChoice SelectedCloudProvider
+    {
+        get => _selectedCloudProvider;
+        set
+        {
+            if (!SetProperty(ref _selectedCloudProvider, value)) return;
+            OnPropertyChanged(nameof(IsBaiduCloudSelected));
+            OnPropertyChanged(nameof(IsQuarkCloudSelected));
+            OnPropertyChanged(nameof(IsBaiduCloudPage));
+            OnPropertyChanged(nameof(IsQuarkCloudPage));
+        }
+    }
+
+    public bool IsCloudPage => CurrentPage == "Cloud";
+    public bool IsBaiduCloudSelected => SelectedCloudProvider == CloudProviderChoice.Baidu;
+    public bool IsQuarkCloudSelected => SelectedCloudProvider == CloudProviderChoice.Quark;
+    public bool IsBaiduCloudPage => IsCloudPage && IsBaiduCloudSelected;
+    public bool IsQuarkCloudPage => IsCloudPage && IsQuarkCloudSelected;
+
+    private void SelectCloudProvider(CloudProviderChoice provider)
+    {
+        var changed = SelectedCloudProvider != provider;
+        SelectedCloudProvider = provider;
+        if (!changed)
+            OnPropertyChanged(nameof(SelectedCloudProvider));
+        CurrentPage = "Cloud";
+    }
+
     public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
     public bool IsContestOpenPage => CurrentPage == "ContestOpen";
     public bool IsContestJudgedPage => CurrentPage == "ContestJudged";
@@ -3092,12 +4427,12 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         "Import" => "导入",
         "Preview" => "浏览",
+        "CustomAlbums" => "自定义相册",
         "FaceSearch" => "人物查找",
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
         "Watermark" => "批量水印",
-        "BaiduCloud" => "百度网盘",
-        "QuarkCloud" => "夸克网盘",
+        "Cloud" => "网盘",
         "ContestOpen" => "投稿项目",
         "ContestJudged" => "欣赏项目",
         "Settings" => "设置",
@@ -3108,12 +4443,12 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         "Import" => "把相机文件夹拖进来，它会自动分类、建目录、导入。",
         "Preview" => "照片墙、分类筛选、缩略图缩放，专心看内容。",
+        "CustomAlbums" => "添加任意文件夹作为虚拟相册；所有管理操作都不会改动磁盘文件。",
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
-        "BaiduCloud" => "百度网盘内嵌浏览器，会话自动保持，登录后直接浏览文件。",
-        "QuarkCloud" => "夸克网盘内嵌浏览器，会话自动保持，登录后直接浏览文件。",
+        "Cloud" => "在百度网盘和夸克网盘之间横向切换；两边登录会话分别保存。",
         "ContestOpen" => "征稿中的摄影大赛，点击右侧打开投稿页面。",
         "ContestJudged" => "已评奖的摄影大赛获奖作品，支持批量下载到本地。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
@@ -3154,11 +4489,21 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void RebuildVisiblePreviewPage()
     {
-        CancelPreviewThumbnailLoading();
-        var oldItems = VisiblePreviewFiles.ToArray();
-        foreach (var item in oldItems.Where(item => !HomePreviewFiles.Contains(item)))
+        // Don't cancel treemap loading when rebuilding the grid page
+        if (!IsTreemapBrowseMode)
         {
-            item.Thumbnail = null;
+            CancelPreviewThumbnailLoading();
+        }
+
+        var oldItems = VisiblePreviewFiles.ToArray();
+
+        // Don't clear thumbnails if the treemap is using them
+        if (!IsTreemapBrowseMode)
+        {
+            foreach (var item in oldItems.Where(item => !HomePreviewFiles.Contains(item)))
+            {
+                item.Thumbnail = null;
+            }
         }
 
         RebuildVisiblePreviewSections();
@@ -3206,6 +4551,14 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void RebuildExpandedPreviewFiles()
     {
+        if (IsTreemapBrowseMode)
+        {
+            // The hidden grid must not materialize or decode every file while the
+            // treemap owns thumbnail loading through its viewport queue.
+            VisiblePreviewFiles.Clear();
+            return;
+        }
+
         CancelPreviewThumbnailLoading();
         var oldItems = VisiblePreviewFiles.ToArray();
         VisiblePreviewFiles.Clear();
@@ -3225,7 +4578,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (IsPreviewPage)
         {
-            StartPreviewThumbnailLoading(VisiblePreviewFiles);
+            StartPreviewThumbnailLoading(VisiblePreviewFiles, ResolveThumbnailDecodeWidth());
         }
     }
 
@@ -3271,21 +4624,66 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null)
+    private void StartPreviewThumbnailLoading(IEnumerable<PreviewFileViewModel>? source = null, int decodeWidth = 260, bool skipCancel = false)
     {
-        CancelPreviewThumbnailLoading();
+        if (!skipCancel)
+        {
+            CancelPreviewThumbnailLoading();
+        }
+
         var unloaded = (source ?? VisiblePreviewFiles).Where(item => item.Thumbnail is null).ToArray();
         if (unloaded.Length == 0) return;
 
         _previewThumbnailCancellation = new CancellationTokenSource();
-        _ = LoadPreviewThumbnailsAsync(unloaded, _previewThumbnailCancellation.Token);
+        Interlocked.Exchange(ref _treemapLoadActive, 1);
+        _ = LoadPreviewThumbnailsAsync(unloaded, decodeWidth, _previewThumbnailCancellation.Token)
+            .ContinueWith(_ => Interlocked.Exchange(ref _treemapLoadActive, 0),
+                TaskScheduler.Default);
     }
 
-    private static async Task LoadPreviewThumbnailsAsync(
+    /// <summary>
+    /// Re-evaluates whether current thumbnails are sharp enough for the current
+    /// grid zoom level and reloads higher/lower resolution copies as needed.
+    /// </summary>
+    private void RefreshPreviewThumbnailsForZoom()
+    {
+        if (!IsPreviewPage)
+        {
+            return;
+        }
+
+        CancelPreviewThumbnailLoading();
+        var decodeWidth = ResolveThumbnailDecodeWidth();
+        var reload = VisiblePreviewFiles
+            .Where(item => item.Thumbnail is null || item.LoadedThumbnailDecodeWidth < decodeWidth)
+            .ToArray();
+        if (reload.Length == 0) return;
+
+        _previewThumbnailCancellation = new CancellationTokenSource();
+        _ = LoadPreviewThumbnailsAsync(reload, decodeWidth, _previewThumbnailCancellation.Token);
+    }
+
+    private int ResolveThumbnailDecodeWidth()
+    {
+        return _zoomableGridTileSize switch
+        {
+            <= 96 => 128,
+            <= 180 => 180,
+            <= 260 => 260,
+            _ => 512
+        };
+    }
+
+    private async Task LoadPreviewThumbnailsAsync(
         IReadOnlyList<PreviewFileViewModel> items,
+        int decodeWidth,
         CancellationToken cancellationToken)
     {
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] LoadPreviewThumbnailsAsync — {items.Count} items, decodeWidth={decodeWidth}");
         using var gate = new SemaphoreSlim(PreviewLoadingPolicy.ThumbnailConcurrency);
+        var successCount = 0;
+        var failCount = 0;
         var tasks = items.Select(async item =>
         {
             var entered = false;
@@ -3293,15 +4691,31 @@ public sealed class MainWindowViewModel : ObservableObject
             {
                 await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
                 entered = true;
-                var thumbnail = await Task.Run(() => TryLoadThumbnail(item.PreviewPath), cancellationToken)
+                var thumbnail = await Task.Run(() => TryLoadThumbnail(item.PreviewPath, decodeWidth), cancellationToken)
                     .WaitAsync(TimeSpan.FromSeconds(3), cancellationToken)
                     .ConfigureAwait(false);
                 cancellationToken.ThrowIfCancellationRequested();
-                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() => item.Thumbnail = thumbnail);
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
+                {
+                    item.Thumbnail = thumbnail;
+                    if (thumbnail is not null)
+                    {
+                        item.LoadedThumbnailDecodeWidth = decodeWidth;
+                    }
+
+                    TreemapBrowser.UpdateThumbnail(item.FullPath, thumbnail);
+                    if (thumbnail is not null) Interlocked.Increment(ref successCount);
+                    else Interlocked.Increment(ref failCount);
+                });
             }
-            catch (TimeoutException) { }
+            catch (TimeoutException) { Interlocked.Increment(ref failCount); }
             catch (OperationCanceledException) { }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Trace.WriteLine(
+                    $"[Treemap] Thumbnail load failed: {item.PreviewPath} — {ex.GetType().Name}: {ex.Message}");
+                Interlocked.Increment(ref failCount);
+            }
             finally
             {
                 if (entered) gate.Release();
@@ -3309,13 +4723,24 @@ public sealed class MainWindowViewModel : ObservableObject
         });
 
         await Task.WhenAll(tasks).ConfigureAwait(false);
+        System.Diagnostics.Trace.WriteLine(
+            $"[Treemap] Thumbnail load done — success={successCount}, fail={failCount}/{items.Count}");
     }
 
     private void CancelPreviewThumbnailLoading()
     {
+        Interlocked.Increment(ref _treemapLoadGeneration);
+        lock (_pendingTreemapThumbnailPaths)
+        {
+            _pendingTreemapThumbnailPaths.Clear();
+        }
+        Interlocked.Exchange(ref _treemapLoadActive, 0);
         _previewThumbnailCancellation?.Cancel();
         _previewThumbnailCancellation?.Dispose();
         _previewThumbnailCancellation = null;
+        _treemapDimensionCancellation?.Cancel();
+        _treemapDimensionCancellation?.Dispose();
+        _treemapDimensionCancellation = null;
     }
 
     private static PreviewFileViewModel? CreatePreviewFile(string file, string category)
@@ -3333,8 +4758,19 @@ public sealed class MainWindowViewModel : ObservableObject
             info.FullName,
             FormatBytes(info.Length),
             extension,
-            null); // load thumbnail async later
+            null,
+            info.Length); // load thumbnail async later
     }
+
+    private static PreviewFileViewModel CreatePreviewFile(LibraryDateMediaItem item) =>
+        new(
+            item.Name,
+            item.Category,
+            item.FullPath,
+            FormatBytes(item.Length),
+            item.Extension,
+            null,
+            item.Length);
 
     private void DeleteSelectedFiles()
     {
@@ -3353,6 +4789,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public void NotifyPreviewSelectionChanged()
     {
         OnPropertyChanged(nameof(HasSelectedFiles));
+        OnPropertyChanged(nameof(SelectedFileCount));
+        OnPropertyChanged(nameof(IsMultiSelection));
         DeleteSelectedFilesCommand.NotifyCanExecuteChanged();
     }
 
@@ -3452,7 +4890,9 @@ public sealed class MainWindowViewModel : ObservableObject
         StatusMessage = $"已为 {paths.Count} 张照片添加“{tag}”。";
     }
 
-    private async Task ApplyStoredMetadataAsync(CancellationToken cancellationToken = default)
+    private async Task ApplyStoredMetadataAsync(
+        CancellationToken cancellationToken = default,
+        bool refresh = true)
     {
         var snapshot = await _mediaMetadataStore.LoadAsync(cancellationToken).ConfigureAwait(true);
         var lookup = (snapshot.Entries ?? [])
@@ -3462,6 +4902,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         foreach (var file in PreviewFiles)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (lookup.TryGetValue(Path.GetFullPath(file.FullPath), out var entry))
             {
                 file.SmartCategory = entry.EffectiveCategory;
@@ -3473,7 +4914,10 @@ public sealed class MainWindowViewModel : ObservableObject
                 file.ManualTagsDisplay = string.Empty;
             }
         }
-        RefreshFilteredCache(resetPage: false);
+        if (refresh)
+        {
+            RefreshFilteredCache(resetPage: false);
+        }
     }
 
     private void DeletePreviewFiles(
@@ -3730,7 +5174,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _importThumbnailCancellation = null;
     }
 
-    private static ImageSource? TryLoadThumbnail(string path)
+    private static ImageSource? TryLoadThumbnail(string path, int decodeWidth = 260)
     {
         var extension = Path.GetExtension(path);
         if (!ThumbnailCandidateExtensions.Contains(extension))
@@ -3738,14 +5182,15 @@ public sealed class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        // Cache check — keyed on path + mtime + size so edits from other apps invalidate.
-        var cacheKey = TryGetThumbnailCacheKey(path);
+        // Cache check — keyed on path + mtime + size + decode width so edits
+        // from other apps invalidate and each resolution tier is cached separately.
+        var cacheKey = TryGetThumbnailCacheKey(path, decodeWidth);
         if (cacheKey is not null && ThumbnailCache.TryGetValue(cacheKey, out var cached))
         {
             return cached;
         }
 
-        var wpfThumbnail = TryLoadWpfThumbnail(path);
+        var wpfThumbnail = TryLoadWpfThumbnail(path, decodeWidth);
         if (wpfThumbnail is not null)
         {
             if (cacheKey is not null) CacheThumbnail(cacheKey, wpfThumbnail);
@@ -3760,7 +5205,7 @@ public sealed class MainWindowViewModel : ObservableObject
             var pairedJpg = TryFindPairedJpg(path);
             if (pairedJpg is not null)
             {
-                var jpgThumbnail = TryLoadWpfThumbnail(pairedJpg);
+                var jpgThumbnail = TryLoadWpfThumbnail(pairedJpg, decodeWidth);
                 if (jpgThumbnail is not null)
                 {
                     if (cacheKey is not null) CacheThumbnail(cacheKey, jpgThumbnail);
@@ -3773,7 +5218,12 @@ public sealed class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path);
+        // Videos have no decodable first frame via WPF/WIC, so the Shell is the
+        // only source. allowExtraction lets the Shell seek into the file and
+        // generate a real first-frame thumbnail instead of returning the generic
+        // file-type icon (gray film placeholder). Runs on a background thread and
+        // is cached in memory, so the seek cost is paid once per file.
+        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path, decodeWidth, allowExtraction: VideoExtensions.Contains(extension));
         if (shellThumbnail is not null && cacheKey is not null)
         {
             CacheThumbnail(cacheKey, shellThumbnail);
@@ -3828,7 +5278,7 @@ public sealed class MainWindowViewModel : ObservableObject
         return null;
     }
 
-    private static string? TryGetThumbnailCacheKey(string path)
+    private static string? TryGetThumbnailCacheKey(string path, int decodeWidth)
     {
         try
         {
@@ -3838,7 +5288,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 return null;
             }
 
-            return $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}";
+            return $"{path}|{info.Length}|{info.LastWriteTimeUtc.Ticks}|{decodeWidth}";
         }
         catch
         {
@@ -3846,7 +5296,7 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static ImageSource? TryLoadWpfThumbnail(string path)
+    private static ImageSource? TryLoadWpfThumbnail(string path, int decodePixelWidth)
     {
         try
         {
@@ -3854,7 +5304,7 @@ public sealed class MainWindowViewModel : ObservableObject
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
-            image.DecodePixelWidth = 260;
+            image.DecodePixelWidth = decodePixelWidth;
             image.UriSource = new Uri(path, UriKind.Absolute);
             image.EndInit();
             image.Freeze();
@@ -3911,13 +5361,16 @@ public sealed class MainWindowViewModel : ObservableObject
         return "素材";
     }
 
-    private async Task RefreshCapacityAsync(string selectedPath)
+    private async Task RefreshCapacityAsync(string selectedPath, long? knownMediaSize = null)
     {
         SelectedFolderSize = "计算中…";
         SelectedFolderPercent = "计算中…";
-        var size = await Task.Run(() => Directory.Exists(selectedPath) ? GetDirectorySize(selectedPath) : 0).ConfigureAwait(true);
+        var size = knownMediaSize ?? await Task.Run(
+            () => Directory.Exists(selectedPath) ? GetDirectorySize(selectedPath) : 0).ConfigureAwait(true);
         SelectedFolderSize = FormatBytes(size);
-        SelectedFolderPercent = TryGetVolumePercent(selectedPath, size);
+        SelectedFolderPercent = knownMediaSize is null
+            ? TryGetVolumePercent(selectedPath, size)
+            : "网络库：使用本次媒体扫描统计，未重复遍历全部文件";
     }
 
     private void SelectDateByValue(LibraryDate date)
@@ -4130,11 +5583,17 @@ public sealed class MainWindowViewModel : ObservableObject
             9 => "MapPhotos",
             10 => "ContestOpen",
             11 => "ContestJudged",
-            12 => "BaiduCloud",
-            13 => "QuarkCloud",
+            12 => SelectOnboardingCloudProvider(CloudProviderChoice.Baidu),
+            13 => SelectOnboardingCloudProvider(CloudProviderChoice.Quark),
             14 => "Settings",
             _ => CurrentPage
         };
+    }
+
+    private string SelectOnboardingCloudProvider(CloudProviderChoice provider)
+    {
+        SelectedCloudProvider = provider;
+        return "Cloud";
     }
 
     private async Task SaveSettingsAsync()
@@ -4153,6 +5612,8 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.NavigationDisplayMode = NavigationDisplayMode;
             settings.LibraryRoot = LibraryRoot;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
+            settings.ZoomableGridTileSize = ZoomableGridTileSize;
+            settings.TreemapZoom = TreemapZoom;
             settings.GlassIntensity = GlassIntensity;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
@@ -4180,6 +5641,12 @@ public sealed class MainWindowViewModel : ObservableObject
             settings.RestoreWindowState = RestoreWindowState;
             settings.BrowseEntryMode = BrowseEntryModeSetting.ToString();
             settings.BrowseSnapshot = CaptureBrowseSnapshot();
+            settings.BrowseDisplayMode = BrowseDisplayMode.ToString();
+            settings.TreemapWeightMode = TreemapWeightMode.ToString();
+            settings.IsTreemapBorderless = IsTreemapBorderless;
+            settings.ShowPsdFiles = IsShowingPsdFiles;
+            settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
+            settings.IsAdvancedFiltersExpanded = IsAdvancedFiltersExpanded;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -4228,11 +5695,11 @@ public sealed class MainWindowViewModel : ObservableObject
         "Home" => new(key, "主页", "Icon.Home", ShowHomeCommand, order),
         "Import" => new(key, "导入照片", "Icon.Import", ShowImportCommand, order),
         "Preview" => new(key, "照片图库", "Icon.Library", ShowPreviewCommand, order),
+        "CustomAlbums" => new(key, "自定义相册", "Icon.Library", ShowCustomAlbumsCommand, order),
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),
-        "BaiduCloud" => new(key, "百度网盘", "Icon.BaiduCloud", ShowBaiduCloudCommand, order),
-        "QuarkCloud" => new(key, "夸克网盘", "Icon.QuarkCloud", ShowQuarkCloudCommand, order),
+        "Cloud" => new(key, "网盘", "Icon.Cloud", ShowCloudCommand, order),
         "ContestOpen" => new(key, "投稿项目", "Icon.ContestOpen", ShowContestOpenCommand, order),
         "ContestJudged" => new(key, "欣赏项目", "Icon.ContestJudged", ShowContestJudgedCommand, order),
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown navigation destination.")
@@ -4316,6 +5783,7 @@ public sealed class MainWindowViewModel : ObservableObject
         SourceFolder = importRoots.Length == 1 ? importRoots[0] : device.Path;
         ImportItems.Clear();
         ImportSections.Clear();
+        SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = importRoots.Length > 1
             ? $"已选择 {device.Name}，分析时会包含：{string.Join("、", importRoots.Select(Path.GetFileName))}。"
@@ -5513,6 +6981,15 @@ public sealed record PreviewSortChoice(int Value, string Label)
     public override string ToString() => Label;
 }
 
+public enum BrowseSearchMode
+{
+    Auto,
+    File,
+    Semantic
+}
+
+public sealed record BrowseSearchModeChoice(BrowseSearchMode Value, string Label);
+
 public sealed record InferenceDeviceChoice(string Value, string Label)
 {
     public override string ToString() => Label;
@@ -5533,12 +7010,18 @@ public sealed record BrowseEntryChoice(BrowseEntryMode Value, string Label, stri
     public override string ToString() => Label;
 }
 
+public sealed record BrowseDisplayChoice(BrowseDisplayMode Value, string Label);
+
+public sealed record TreemapWeightChoice(TreemapWeightMode Value, string Label);
+
 public sealed record CalendarDayViewModel(
     DateOnly? Date,
     string DayText,
     bool IsAvailable,
     bool IsCurrentMonth,
     bool IsSelected);
+
+public sealed record GridBreadcrumbViewModel(string? Key, string Label);
 
 public sealed class PreviewDateSectionViewModel : ObservableObject
 {
@@ -5598,6 +7081,12 @@ public sealed partial class PreviewFileViewModel : ObservableObject
     public string Extension { get; init; }
     [ObservableProperty] private ImageSource? _thumbnail;
 
+    /// <summary>
+    /// Resolution (decode pixel width) of the currently loaded thumbnail. Used
+    /// by the zoomable grid to decide whether a sharper copy is needed.
+    /// </summary>
+    public int LoadedThumbnailDecodeWidth { get; set; }
+
     [ObservableProperty] private bool _isSelected;
 
     [ObservableProperty] private string _smartCategory = "待分类";
@@ -5608,7 +7097,7 @@ public sealed partial class PreviewFileViewModel : ObservableObject
 
     partial void OnManualTagsDisplayChanged(string value) => OnPropertyChanged(nameof(HasManualTags));
 
-    public PreviewFileViewModel(string name, string category, string fullPath, string sizeText, string extension, ImageSource? thumbnail)
+    public PreviewFileViewModel(string name, string category, string fullPath, string sizeText, string extension, ImageSource? thumbnail, long length = 0)
     {
         Name = name;
         Category = category;
@@ -5616,7 +7105,10 @@ public sealed partial class PreviewFileViewModel : ObservableObject
         SizeText = sizeText;
         Extension = extension;
         Thumbnail = thumbnail;
+        Length = length;
     }
+
+    public long Length { get; }
 
     public string Caption => IsRetouched
         ? $"{Category} · 显示修后成品"
@@ -5742,6 +7234,7 @@ public sealed class ImportPreviewItemViewModel : ObservableObject
     }
 
     public event Action? SelectionChanged;
+
 
     public MediaGroup Group { get; }
 

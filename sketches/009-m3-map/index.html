@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 地图照片 · M3 浓烈版（预设计 009）</title>
+<style>
+/* ============================================================
+   Variant 009: 地图照片（Leaflet 地图 × 地点浏览 / 手动标记）
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector 320px + FAB + 状态层）
+   功能来源 = MapPage.xaml + MapPhotosViewModel + assets/map.js（Leaflet 标记聚合）
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #4355B9;  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;  --on-primary-container: #00105C;
+  --secondary: #5B5D72;  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;  --on-tertiary-container: #271900;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FBF8FF;  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;  --on-surface-variant: #45464F;
+  --outline: #75767F;  --outline-variant: #C5C5CF;
+  --state-hover: rgba(27, 27, 31, 0.08);  --state-pressed: rgba(27, 27, 31, 0.12);
+  --radius-small: 8px;  --radius-medium: 12px;  --radius-large: 16px;
+  --radius-extra-large: 28px;  --radius-full: 999px;
+  --motion-fast: 150ms;  --motion-normal: 180ms;  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  font-size: 16px;
+}
+
+/* ============ 6 套主题（与 007/008 一致） ============ */
+:root[data-theme="dynamic-dark"] {
+  --primary: #BCC3FF;  --on-primary: #1E2768;
+  --primary-container: #2A3585;  --on-primary-container: #DEE0FF;
+  --secondary: #C4C6DE;  --on-secondary: #2A2B40;
+  --secondary-container: #434459;  --on-secondary-container: #E0E1F9;
+  --tertiary: #FFC34F;  --on-tertiary: #442C00;
+  --tertiary-container: #5E4100;  --on-tertiary-container: #FFDF9E;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121318;  --surface-dim: #121318;
+  --surface-container-lowest: #0D0E12;  --surface-container-low: #17181E;
+  --surface-container: #1D1E24;  --surface-container-high: #27282F;
+  --surface-container-highest: #32333B;
+  --on-surface: #E3E1E9;  --on-surface-variant: #C6C5D0;
+  --outline: #90919B;  --outline-variant: #45464F;
+  --state-hover: rgba(227, 225, 233, 0.08);  --state-pressed: rgba(227, 225, 233, 0.12);
+}
+:root[data-theme="forest-light"] {
+  --primary: #1D6B50;  --on-primary: #FFFFFF;
+  --primary-container: #A8F2CD;  --on-primary-container: #002110;
+  --secondary: #4F6357;  --on-secondary: #FFFFFF;
+  --secondary-container: #D2E8DA;  --on-secondary-container: #0E2018;
+  --tertiary: #3E6373;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #C2E8FB;  --on-tertiary-container: #001F2C;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FCFDF7;  --surface-dim: #DCE3DB;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #F6F9F4;
+  --surface-container: #F0F5EE;  --surface-container-high: #EAEFE9;
+  --surface-container-highest: #E4EAE3;
+  --on-surface: #1B1D1B;  --on-surface-variant: #444844;
+  --outline: #757A75;  --outline-variant: #C4C9C3;
+  --state-hover: rgba(27, 29, 27, 0.08);  --state-pressed: rgba(27, 29, 27, 0.12);
+}
+:root[data-theme="forest-dark"] {
+  --primary: #8CD5B2;  --on-primary: #003420;
+  --primary-container: #004930;  --on-primary-container: #A8F2CD;
+  --secondary: #B5CCBD;  --on-secondary: #21352A;
+  --secondary-container: #374B3F;  --on-secondary-container: #D2E8DA;
+  --tertiary: #A6CCDE;  --on-tertiary: #0A3343;
+  --tertiary-container: #244B5B;  --on-tertiary-container: #C2E8FB;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121412;  --surface-dim: #121412;
+  --surface-container-lowest: #0C0E0C;  --surface-container-low: #181B18;
+  --surface-container: #1D201D;  --surface-container-high: #272A27;
+  --surface-container-highest: #32352F;
+  --on-surface: #E1E3DE;  --on-surface-variant: #C2C8C2;
+  --outline: #8C928C;  --outline-variant: #434943;
+  --state-hover: rgba(225, 227, 222, 0.08);  --state-pressed: rgba(225, 227, 222, 0.12);
+}
+:root[data-theme="violet-light"] {
+  --primary: #8B4AA6;  --on-primary: #FFFFFF;
+  --primary-container: #F7D8FF;  --on-primary-container: #3A0051;
+  --secondary: #6B5D71;  --on-secondary: #FFFFFF;
+  --secondary-container: #F3DFF8;  --on-secondary-container: #271B2B;
+  --tertiary: #006A6A;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #9CF0F0;  --on-tertiary-container: #003737;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FEF7FF;  --surface-dim: #DED8E1;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #FAF2FC;
+  --surface-container: #F5ECF7;  --surface-container-high: #EFE6F1;
+  --surface-container-highest: #E9E2EA;
+  --on-surface: #1D1B1E;  --on-surface-variant: #49454E;
+  --outline: #7A757E;  --outline-variant: #CAC4CF;
+  --state-hover: rgba(29, 27, 30, 0.08);  --state-pressed: rgba(29, 27, 30, 0.12);
+}
+:root[data-theme="violet-dark"] {
+  --primary: #E3AEF7;  --on-primary: #4B1160;
+  --primary-container: #6F2B89;  --on-primary-container: #F7D8FF;
+  --secondary: #D9C2DE;  --on-secondary: #3A2D3F;
+  --secondary-container: #524359;  --on-secondary-container: #F3DFF8;
+  --tertiary: #77D3D3;  --on-tertiary: #003738;
+  --tertiary-container: #00504F;  --on-tertiary-container: #9CF0F0;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #151316;  --surface-dim: #151316;
+  --surface-container-lowest: #100E11;  --surface-container-low: #1B191C;
+  --surface-container: #201E21;  --surface-container-high: #2B282C;
+  --surface-container-highest: #343138;
+  --on-surface: #E7E1E8;  --on-surface-variant: #CAC4CF;
+  --outline: #948F98;  --outline-variant: #49454E;
+  --state-hover: rgba(231, 225, 232, 0.08);  --state-pressed: rgba(231, 225, 232, 0.12);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface); color: var(--on-surface);
+  line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.app { display: flex; height: 100vh; padding: 12px; gap: 12px; background: var(--surface-dim); transition: background var(--motion-slow) var(--ease); }
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background var(--motion-slow) var(--ease);
+}
+.rail-logo {
+  width: 44px; height: 44px; border-radius: var(--radius-medium);
+  background: var(--primary-container); color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px; margin-bottom: 12px; position: relative; overflow: hidden;
+}
+.rail-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%); }
+.rail-item {
+  width: 64px; border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant); font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full); font-size: 16px;
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.rail-item.active .rail-icon { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* ===================== Main ===================== */
+.main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface-container-low); border-radius: var(--radius-extra-large);
+  padding: 14px 20px; transition: background var(--motion-slow) var(--ease);
+}
+.topbar-title { font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.search-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 9px 16px; width: 280px; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease);
+}
+.search-field:focus-within { outline: 2px solid var(--primary); outline-offset: 1px; }
+.search-field input {
+  border: none; outline: none; background: transparent; color: var(--on-surface);
+  font-size: 13.5px; width: 100%; font-family: inherit;
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+.theme-chip {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 8px 14px; font-size: 12.5px; color: var(--on-surface-variant);
+  user-select: none; transition: background var(--motion-fast) var(--ease);
+}
+.theme-chip:hover { background: var(--surface-container-high); }
+.theme-chip .tc-dots { display: flex; gap: 3px; }
+.theme-chip .tc-dots span { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ===================== Content ===================== */
+.content { flex: 1; display: flex; gap: 12px; min-height: 0; }
+.workspace {
+  flex: 1; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large); overflow: hidden; min-width: 0; position: relative;
+  transition: background var(--motion-slow) var(--ease);
+}
+.inspector {
+  width: 340px; background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large); padding: 18px;
+  overflow-y: auto; flex-shrink: 0; transition: background var(--motion-slow) var(--ease);
+}
+.statusbar {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-container); border-radius: var(--radius-large);
+  padding: 10px 18px; font-size: 12.5px; color: var(--on-surface-variant);
+  transition: background var(--motion-slow) var(--ease);
+}
+.statusbar b { color: var(--primary); font-weight: 600; }
+.statusbar > span:last-child { white-space: nowrap; flex-shrink: 0; }
+.progress { flex: 1; height: 5px; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
+.progress .fill { height: 100%; width: 0%; border-radius: var(--radius-full); background: var(--primary); transition: width var(--motion-normal) var(--ease); }
+.fab {
+  position: fixed; right: 32px; bottom: 28px; width: 56px; height: 56px;
+  border-radius: var(--radius-large); border: none; cursor: pointer;
+  background: var(--primary); color: var(--on-primary); font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  transition: transform var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+  z-index: 50;
+}
+.fab:hover { transform: scale(1.06); }
+.fab:active { transform: scale(0.96); }
+
+/* ===================== 通用组件 ===================== */
+.card { background: var(--surface-container-low); border-radius: var(--radius-large); padding: 16px; margin-bottom: 12px; transition: background var(--motion-slow) var(--ease); }
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.card-desc { font-size: 12.5px; color: var(--on-surface-variant); margin-bottom: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+  border-radius: var(--radius-full); padding: 9px 18px;
+  background: var(--surface-container-high); color: var(--on-surface);
+  transition: background var(--motion-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-container-highest); }
+.btn:active { background: var(--state-pressed); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.secondary { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.secondary:hover { filter: brightness(0.98); }
+.btn.tertiary { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.btn.ghost { background: transparent; color: var(--on-surface-variant); }
+.btn.ghost:hover { background: var(--state-hover); }
+.btn.sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.input {
+  width: 100%; background: var(--surface-container-high);
+  border: 1px solid transparent; border-radius: var(--radius-medium);
+  padding: 10px 12px; color: var(--on-surface); font-size: 13px; font-family: inherit;
+  outline: none; transition: border var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+}
+.input:focus { border-color: var(--primary); background: var(--surface-container-lowest); }
+.field-label { display: block; font-size: 12.5px; font-weight: 600; color: var(--on-surface-variant); margin: 12px 0 6px; }
+.seg { display: flex; gap: 4px; background: var(--surface-container); border-radius: var(--radius-full); padding: 4px; margin-bottom: 12px; }
+.seg-item {
+  flex: 1; text-align: center; padding: 8px 6px; font-size: 12.5px; font-weight: 600;
+  border-radius: var(--radius-full); cursor: pointer; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active { background: var(--surface-container-lowest); color: var(--on-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+  background: transparent; color: var(--on-surface-variant); border: 1px solid var(--outline-variant);
+  transition: background var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--state-hover); }
+.chip.active { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+
+/* ===================== 009 特有：地图 ===================== */
+.map-stage { position: absolute; inset: 0; overflow: hidden; }
+.map-tiles {
+  position: absolute; inset: 0;
+  background-color: #E8ECEF;
+  background-image:
+    linear-gradient(rgba(120,144,156,0.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120,144,156,0.10) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+.map-land {
+  position: absolute; border-radius: 38% 62% 55% 45% / 45% 40% 60% 55%;
+  background: linear-gradient(135deg, #CFE3C9, #A9CD9F);
+  box-shadow: inset 0 0 40px rgba(90,140,80,0.25);
+}
+.map-water { position: absolute; border-radius: 50%; background: linear-gradient(135deg, #C7E3F0, #9BCBE2); }
+.map-road {
+  position: absolute; height: 5px; background: rgba(255,255,255,0.85);
+  border-radius: 3px; transform-origin: left center; box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.map-label { position: absolute; font-size: 11px; color: rgba(60,80,90,0.75); font-weight: 600; letter-spacing: 1px; }
+
+/* 标记点：照片堆叠 + 数量徽标（对应 map.js 的 divIcon） */
+.map-marker {
+  position: absolute; transform: translate(-50%, -100%); cursor: pointer; z-index: 10;
+  transition: transform var(--motion-fast) var(--ease);
+}
+.map-marker:hover { transform: translate(-50%, -100%) scale(1.12); z-index: 20; }
+.marker-stack { position: relative; width: 74px; height: 54px; }
+.marker-stack .mk {
+  position: absolute; width: 42px; height: 42px; border-radius: 10px; border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center; font-size: 18px;
+}
+.marker-stack .mk.m0 { left: 0; top: 6px; transform: rotate(-8deg); }
+.marker-stack .mk.m1 { left: 13px; top: 2px; transform: rotate(3deg); }
+.marker-stack .mk.m2 { left: 26px; top: 8px; transform: rotate(9deg); }
+.marker-stack .mk.fallback { background: var(--secondary-container); color: var(--on-secondary-container); font-size: 12px; font-weight: 700; }
+.marker-stack .count {
+  position: absolute; right: -2px; bottom: -2px; min-width: 22px; height: 22px; padding: 0 6px;
+  border-radius: var(--radius-full); background: var(--error); color: #fff;
+  font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3); border: 2px solid #fff;
+}
+.marker-pin {
+  position: absolute; transform: translate(-50%, -100%); width: 30px; height: 30px;
+  background: var(--primary); border: 3px solid #fff; border-radius: 50% 50% 50% 4px;
+  transform-origin: bottom; cursor: pointer; box-shadow: 0 3px 8px rgba(0,0,0,0.3); z-index: 15;
+  transition: transform var(--motion-fast) var(--ease);
+}
+.marker-pin::after { content: attr(data-count); position: absolute; top: -8px; left: 50%; transform: translateX(-50%); background: var(--error); color: #fff; font-size: 10px; font-weight: 800; border-radius: var(--radius-full); padding: 0 6px; border: 2px solid #fff; }
+.marker-pin:hover { transform: translate(-50%, -100%) scale(1.15); }
+.selection-pin {
+  position: absolute; transform: translate(-50%, -100%); width: 16px; height: 16px;
+  border-radius: 50%; background: var(--error); border: 3px solid #fff;
+  box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.35), 0 3px 8px rgba(0,0,0,0.3);
+  z-index: 30; animation: pinPulse 1.6s ease-in-out infinite;
+}
+@keyframes pinPulse { 0%,100% { box-shadow: 0 0 0 4px rgba(244,63,94,0.35), 0 3px 8px rgba(0,0,0,0.3); } 50% { box-shadow: 0 0 0 9px rgba(244,63,94,0.12), 0 3px 8px rgba(0,0,0,0.3); } }
+
+.map-hint {
+  position: absolute; top: 14px; left: 14px; z-index: 40;
+  background: var(--surface-container-low); border-radius: var(--radius-full);
+  padding: 8px 16px; font-size: 12px; color: var(--on-surface-variant);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14); display: flex; align-items: center; gap: 8px;
+  pointer-events: none;
+}
+.map-zoom {
+  position: absolute; right: 14px; top: 14px; z-index: 40; display: flex; flex-direction: column; gap: 4px;
+}
+.map-zoom button {
+  width: 34px; height: 34px; border-radius: var(--radius-medium); border: none; cursor: pointer;
+  background: var(--surface-container-low); color: var(--on-surface); font-size: 16px; font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.16); transition: background var(--motion-fast) var(--ease);
+}
+.map-zoom button:hover { background: var(--surface-container); }
+
+/* 聚合点弹窗（对应 map.js 的 photo-popover） */
+.cluster-popup {
+  position: absolute; z-index: 60; width: 300px;
+  background: var(--surface-container-lowest); border-radius: var(--radius-large);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.28); padding: 14px; display: none;
+  animation: fadeIn var(--motion-normal) var(--ease);
+}
+.cluster-popup.show { display: block; }
+.cluster-popup .cp-head { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.cluster-popup .cp-head .x { cursor: pointer; color: var(--on-surface-variant); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.cluster-popup .cp-head .x:hover { background: var(--state-hover); }
+.cluster-popup .cp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cluster-popup .cp-photo { aspect-ratio: 1; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: transform var(--motion-fast) var(--ease); }
+.cluster-popup .cp-photo:hover { transform: scale(1.06); }
+.cluster-popup .cp-more { font-size: 11.5px; color: var(--on-surface-variant); margin-top: 8px; }
+
+/* ===================== Inspector ===================== */
+.mp-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; }
+.mp-item {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+  border-radius: var(--radius-medium); cursor: pointer; font-size: 13px;
+  transition: background var(--motion-fast) var(--ease);
+}
+.mp-item:hover { background: var(--state-hover); }
+.mp-item.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+.mp-item .thumb { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.mp-item .mi-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.mp-item .mi-check { width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--outline); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.mp-item.selected .mi-check { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+.exif-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 12.5px; border-bottom: 1px solid var(--outline-variant); }
+.exif-row:last-child { border-bottom: none; }
+.exif-row .k { color: var(--on-surface-variant); }
+.exif-row .v { font-weight: 600; text-align: right; }
+.gps-chip {
+  display: inline-flex; align-items: center; gap: 6px; background: var(--primary-container);
+  color: var(--on-primary-container); border-radius: var(--radius-full); padding: 6px 12px;
+  font-size: 12px; font-weight: 700; margin-top: 8px;
+}
+.mini-stats { display: flex; gap: 8px; margin-bottom: 12px; }
+.mini-stat { flex: 1; background: var(--surface-container); border-radius: var(--radius-large); padding: 10px 6px; text-align: center; }
+.mini-stat .big { font-size: 18px; font-weight: 800; color: var(--primary); }
+.mini-stat .lbl { font-size: 11px; color: var(--on-surface-variant); margin-top: 2px; }
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 14px; text-align: center; color: var(--on-surface-variant); }
+.empty-state .big { font-size: 42px; margin-bottom: 10px; }
+.empty-state .t { font-size: 15px; font-weight: 700; color: var(--on-surface); margin-bottom: 4px; }
+.empty-state .d { font-size: 12.5px; }
+
+/* 缩略图配色 */
+.t1 { background: linear-gradient(135deg, #FFD3E0, #FF9EB8); }
+.t2 { background: linear-gradient(135deg, #BFE6FF, #7CC8F5); }
+.t3 { background: linear-gradient(135deg, #C9F2D8, #7AD9A0); }
+.t4 { background: linear-gradient(135deg, #FFF0BF, #FFD36B); }
+.t5 { background: linear-gradient(135deg, #E4D9FF, #B7A1F0); }
+.t6 { background: linear-gradient(135deg, #FFE0CC, #FFB27A); }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item" title="图片小工具"><span class="rail-icon">🧰</span>工具</div>
+    <div class="rail-item active" title="地图照片"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">地图照片</div>
+        <div class="topbar-sub" id="topbar-sub">已定位 <b style="color:var(--primary);">1,286</b> 张 · 选择聚合点浏览照片，或在地图上选取手动位置</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="search-field"><span>🔍</span><input type="text" placeholder="搜索地点、文件名或经纬度…（演示）"></div>
+        <div class="theme-chip" id="theme-chip" title="点击切换主题（6 套预览）">
+          <span class="tc-dots"><span style="background:#4355B9;"></span><span style="background:#5B5D72;"></span><span style="background:#7A5700;"></span></span>
+          <span id="theme-label">动态色彩</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- ============ 地图工作区 ============ -->
+      <div class="workspace">
+        <div class="map-stage">
+          <div class="map-tiles"></div>
+          <!-- 示意地形 -->
+          <div class="map-land" style="width:340px;height:260px;left:8%;top:14%;"></div>
+          <div class="map-land" style="width:280px;height:200px;left:55%;top:8%;"></div>
+          <div class="map-land" style="width:240px;height:170px;left:34%;top:58%;"></div>
+          <div class="map-land" style="width:200px;height:150px;left:68%;top:55%;"></div>
+          <div class="map-water" style="width:120px;height:90px;left:30%;top:28%;"></div>
+          <div class="map-water" style="width:80px;height:60px;left:58%;top:38%;"></div>
+          <div class="map-road" style="width:44%;left:24%;top:42%;transform:rotate(10deg);opacity:0.8;"></div>
+          <div class="map-road" style="width:30%;left:38%;top:70%;transform:rotate(-8deg);opacity:0.8;"></div>
+          <div class="map-label" style="left:9%;top:21%;">翠湖国家湿地公园</div>
+          <div class="map-label" style="left:58%;top:13%;">云顶山风景区</div>
+          <div class="map-label" style="left:36%;top:64%;">旧城老街</div>
+          <div class="map-label" style="left:64%;top:62%;">滨海大道</div>
+
+          <!-- 聚合标记点（照片堆叠 + 数量） -->
+          <div class="map-marker" data-marker="m1" style="left:30%;top:40%;">
+            <div class="marker-stack">
+              <div class="mk m0 t1">🌄</div>
+              <div class="mk m1 t2">🏞️</div>
+              <div class="mk m2 t3">🌿</div>
+              <span class="count">24</span>
+            </div>
+          </div>
+          <div class="map-marker" data-marker="m2" style="left:66%;top:30%;">
+            <div class="marker-stack">
+              <div class="mk m0 t4">🌇</div>
+              <div class="mk m1 t5">🏔️</div>
+              <div class="mk m2 t6">🌸</div>
+              <span class="count">58</span>
+            </div>
+          </div>
+          <div class="map-marker" data-marker="m3" style="left:46%;top:68%;">
+            <div class="marker-stack">
+              <div class="mk m0 t6">🏮</div>
+              <div class="mk m1 t1">🎐</div>
+              <div class="mk m2 t2">🛖</div>
+              <span class="count">12</span>
+            </div>
+          </div>
+          <div class="map-marker" data-marker="m4" style="left:78%;top:64%;">
+            <div class="marker-stack">
+              <div class="mk m0 t3">🌊</div>
+              <div class="mk m1 t4">⛵</div>
+              <span class="count">9</span>
+            </div>
+          </div>
+          <!-- 单个照片地点（pin） -->
+          <div class="marker-pin" data-marker="m5" data-count="1" style="left:20%;top:60%;"></div>
+
+          <!-- 手动标记选择点（手动标记模式出现） -->
+          <div class="selection-pin" id="selection-pin" style="left:52%;top:50%;display:none;"></div>
+
+          <!-- 聚合弹窗 -->
+          <div class="cluster-popup" id="cluster-popup" style="left:24%;top:26%;">
+            <div class="cp-head"><span>翠湖湿地 · 24 张照片</span><span class="x" id="popup-close">✕</span></div>
+            <div class="cp-grid">
+              <div class="cp-photo t1">🌄</div><div class="cp-photo t2">🏞️</div><div class="cp-photo t3">🌿</div>
+              <div class="cp-photo t4">🌇</div><div class="cp-photo t5">🏔️</div><div class="cp-photo t6">🌸</div>
+            </div>
+            <div class="cp-more">显示前 6 张，共 24 张 · 单击照片可在查看器中放大浏览</div>
+          </div>
+
+          <div class="map-hint"><span>📍</span> 选择聚合点浏览照片，或在地图上选取手动位置。</div>
+          <div class="map-zoom"><button title="放大">＋</button><button title="缩小">－</button></div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector：地图照片 ============ -->
+      <aside class="inspector">
+        <div class="card" style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="card-title" style="margin:0;">地图照片</div>
+            <button class="btn secondary sm">⟳ 读取 EXIF</button>
+          </div>
+          <div class="card-desc" style="margin:6px 0 12px;">位置索引已建立 · 1,286 张已定位 · 扫描于 08-14 09:32</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn secondary" style="flex:1;">选择照片</button>
+            <button class="btn secondary" style="flex:1;">选择文件夹</button>
+          </div>
+        </div>
+
+        <div class="seg">
+          <div class="seg-item active" data-mode="browse">地点浏览</div>
+          <div class="seg-item" data-mode="manual">手动标记</div>
+        </div>
+
+        <!-- 地点浏览 -->
+        <div id="panel-browse">
+          <div class="mini-stats">
+            <div class="mini-stat"><div class="big">24</div><div class="lbl">当前地点</div></div>
+            <div class="mini-stat"><div class="big">1286</div><div class="lbl">已定位</div></div>
+            <div class="mini-stat"><div class="big">47</div><div class="lbl">聚合点</div></div>
+          </div>
+          <div class="card-title" style="font-size:14px;">当前位置照片 · 翠湖湿地</div>
+          <div class="card-desc" style="margin:2px 0 10px;">选择地图上的聚合点；单击文件可放大浏览。</div>
+          <div class="mp-list" id="location-list">
+            <div class="mp-item selected"><div class="thumb t1">🌄</div><div class="mi-name">IMG_4817.jpg · 08-12 07:14</div></div>
+            <div class="mp-item"><div class="thumb t2">🏞️</div><div class="mi-name">IMG_4818.jpg · 08-12 07:16</div></div>
+            <div class="mp-item"><div class="thumb t3">🌿</div><div class="mi-name">IMG_4819.jpg · 08-12 07:21</div></div>
+            <div class="mp-item"><div class="thumb t4">🌇</div><div class="mi-name">IMG_4820.jpg · 08-12 07:33</div></div>
+            <div class="mp-item"><div class="thumb t5">🏔️</div><div class="mi-name">IMG_4821.jpg · 08-12 07:40</div></div>
+            <div class="mp-item"><div class="thumb t6">🌸</div><div class="mi-name">IMG_4822.jpg · 08-12 07:52</div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--on-surface-variant);margin-top:8px;">已显示 6 / 24 张</div>
+        </div>
+
+        <!-- 手动标记 -->
+        <div id="panel-manual" style="display:none;">
+          <div class="mini-stats">
+            <div class="mini-stat"><div class="big">3</div><div class="lbl">待定位</div></div>
+            <div class="mini-stat"><div class="big">0</div><div class="lbl">已选</div></div>
+            <div class="mini-stat"><div class="big">−</div><div class="lbl">取点</div></div>
+          </div>
+          <div class="card-title" style="font-size:14px;">批量分配位置 · 待定位 3</div>
+          <div class="card-desc" style="margin:2px 0 10px;">支持 Ctrl / Shift 多选，再在地图上取点。</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+            <button class="chip sm">全选</button>
+            <button class="chip sm">反选</button>
+            <button class="chip sm">取消选择</button>
+            <button class="chip sm">移出所选</button>
+            <button class="chip sm">清空导入</button>
+          </div>
+          <div class="mp-list" id="manual-list">
+            <div class="mp-item selected"><div class="thumb t5">🏔️</div><div class="mi-name">IMG_4831.jpg</div><div class="mi-check">✓</div></div>
+            <div class="mp-item selected"><div class="thumb t6">🌸</div><div class="mi-name">IMG_4832.jpg</div><div class="mi-check">✓</div></div>
+            <div class="mp-item"><div class="thumb t1">🌄</div><div class="mi-name">IMG_4833.jpg</div><div class="mi-check"></div></div>
+          </div>
+          <label class="field-label">目标坐标（在地图上点击自动填入）</label>
+          <div style="display:flex;gap:8px;">
+            <input class="input" id="lat-input" placeholder="纬度 30.2741" value="30.2741">
+            <input class="input" id="lng-input" placeholder="经度 120.1551" value="120.1551">
+          </div>
+          <input class="input" style="margin-top:8px;" placeholder="地点名称（可选）" value="翠湖湿地">
+          <button class="btn primary" style="width:100%;margin-top:10px;" id="btn-assign">保存到所选照片（2 张）</button>
+          <div style="font-size:11.5px;color:var(--on-surface-variant);margin-top:8px;">提示：也可直接把图片/文件夹拖入左侧地图区域导入。</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>🗺️ 位置索引：<b id="sb-status">已定位 1,286 张 · 47 个聚合点</b></span>
+      <div class="progress"><div class="fill" style="width:100%;"></div></div>
+      <span id="sb-right">上次扫描 08-14 09:32 · 38ms</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="选择照片导入地图">＋</button>
+
+<script>
+/* ============ 主题切换（预览用） ============ */
+const THEMES = [
+  { key: 'dynamic-light', name: '动态色彩', dots: ['#4355B9','#5B5D72','#7A5700'] },
+  { key: 'dynamic-dark',  name: '动态色彩·深', dots: ['#BCC3FF','#C4C6DE','#FFC34F'] },
+  { key: 'forest-light',  name: '森林绿', dots: ['#1D6B50','#4F6357','#3E6373'] },
+  { key: 'forest-dark',   name: '森林绿·深', dots: ['#8CD5B2','#B5CCBD','#A6CCDE'] },
+  { key: 'violet-light',  name: '紫罗兰', dots: ['#8B4AA6','#6B5D71','#006A6A'] },
+  { key: 'violet-dark',   name: '紫罗兰·深', dots: ['#E3AEF7','#D9C2DE','#77D3D3'] },
+];
+let themeIdx = 0;
+document.getElementById('theme-chip').addEventListener('click', () => {
+  themeIdx = (themeIdx + 1) % THEMES.length;
+  const t = THEMES[themeIdx];
+  document.documentElement.dataset.theme = t.key;
+  document.getElementById('theme-label').textContent = t.name;
+  document.querySelector('#theme-chip .tc-dots').innerHTML = t.dots.map(c => `<span style="background:${c};"></span>`).join('');
+});
+
+/* ============ 聚合点 → 弹窗 ============ */
+const popup = document.getElementById('cluster-popup');
+const popupData = {
+  m1: { name: '翠湖湿地', total: 24 },
+  m2: { name: '云顶山', total: 58 },
+  m3: { name: '旧城老街', total: 12 },
+  m4: { name: '滨海大道', total: 9 },
+  m5: { name: '单人地点', total: 1 },
+};
+document.querySelectorAll('.map-marker, .marker-pin').forEach(mk => {
+  mk.addEventListener('click', e => {
+    e.stopPropagation();
+    const d = popupData[mk.dataset.marker];
+    popup.querySelector('.cp-head span').textContent = `${d.name} · ${d.total} 张照片`;
+    // 弹窗定位在标记附近
+    const stage = mk.closest('.map-stage');
+    const r = stage.getBoundingClientRect();
+    const m = mk.getBoundingClientRect();
+    let left = m.left - r.left - 40, top = m.top - r.top + 30;
+    left = Math.max(8, Math.min(left, r.width - 310));
+    top = Math.max(8, Math.min(top, r.height - 160));
+    popup.style.left = left + 'px';
+    popup.style.top = top + 'px';
+    popup.classList.add('show');
+    // 同步 Inspector 地点
+    document.getElementById('location-list').innerHTML = '';
+    const emojis = ['🌄','🏞️','🌿','🌇','🏔️','🌸'];
+    for (let i = 1; i <= 6; i++) {
+      const div = document.createElement('div');
+      div.className = 'mp-item' + (i === 1 ? ' selected' : '');
+      div.innerHTML = `<div class="thumb t${(i % 6) + 1}">${emojis[(i + d.total) % 6]}</div><div class="mi-name">IMG_48${i}0.jpg · 08-12 07:${10 + i}</div>`;
+      document.getElementById('location-list').appendChild(div);
+    }
+    document.getElementById('sb-status').textContent = `已选择 ${d.name} · ${d.total} 张照片`;
+    document.getElementById('sb-right').textContent = '单击文件可放大浏览';
+  });
+});
+document.getElementById('popup-close').addEventListener('click', () => popup.classList.remove('show'));
+document.querySelector('.map-stage').addEventListener('click', () => popup.classList.remove('show'));
+
+/* ============ 地点浏览 / 手动标记 切换 ============ */
+document.querySelectorAll('[data-mode]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('[data-mode]').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    const manual = item.dataset.mode === 'manual';
+    document.getElementById('panel-browse').style.display = manual ? 'none' : '';
+    document.getElementById('panel-manual').style.display = manual ? '' : 'none';
+    document.getElementById('selection-pin').style.display = manual ? 'block' : 'none';
+    document.getElementById('topbar-sub').innerHTML = manual
+      ? '手动标记模式 · 支持 Ctrl / Shift 多选，再在地图上取点'
+      : '已定位 <b style="color:var(--primary);">1,286</b> 张 · 选择聚合点浏览照片，或在地图上选取手动位置';
+    document.getElementById('sb-status').textContent = manual ? '手动标记模式 · 待定位 3 张' : '已定位 1,286 张 · 47 个聚合点';
+  });
+});
+
+/* ============ 地图取点（手动标记模式） ============ */
+const stage = document.querySelector('.map-stage');
+const selectionPin = document.getElementById('selection-pin');
+stage.addEventListener('click', e => {
+  if (selectionPin.style.display === 'none') return;
+  const r = stage.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  selectionPin.style.left = x + 'px';
+  selectionPin.style.top = y + 'px';
+  // 伪造经纬度
+  const lat = (29.5 + (y / r.height) * 1.5).toFixed(4);
+  const lng = (119.5 + (x / r.width) * 1.5).toFixed(4);
+  document.getElementById('lat-input').value = lat;
+  document.getElementById('lng-input').value = lng;
+  document.getElementById('sb-status').textContent = `已取点：${lat}, ${lng} · 将保存到所选照片`;
+});
+document.getElementById('btn-assign').addEventListener('click', () => {
+  document.getElementById('sb-status').textContent = '已保存坐标到 2 张照片 ✓';
+  document.getElementById('sb-right').textContent = '照片可在图库中查看新位置';
+});
+</script>
+</body>
+</html>

@@ -17,16 +17,20 @@ public sealed class RetouchedMediaIndex
         @"(?:-恢复的|_ExHiRes|_noeffect|[-_](?:修后|edited|edit|final|retouched))$",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
-    public RetouchedMediaSnapshot Build(string dateDirectory, IReadOnlyList<string> originalPaths)
+    public RetouchedMediaSnapshot Build(
+        string dateDirectory,
+        IReadOnlyList<string> originalPaths,
+        IReadOnlyList<string>? enumeratedOutputs = null)
     {
         var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var retouchedDirectory = Path.Combine(dateDirectory, "修后");
-        if (!Directory.Exists(retouchedDirectory))
+        if (enumeratedOutputs is null && !Directory.Exists(retouchedDirectory))
         {
             return new RetouchedMediaSnapshot(map, []);
         }
 
-        var outputs = Directory.EnumerateFiles(retouchedDirectory, "*", SearchOption.AllDirectories)
+        var outputs = (enumeratedOutputs ?? Directory.EnumerateFiles(
+                retouchedDirectory, "*", SearchOption.AllDirectories))
             .Where(IsSupported)
             .ToArray();
         var outputsByStem = outputs

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 网盘 · M3 浓烈版（预设计 010）</title>
+<style>
+/* ============================================================
+   Variant 010: 网盘（内嵌网盘浏览器 × 云盘总览 / 传输队列）
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector 320px + FAB + 状态层）
+   功能来源 = CloudPage.xaml（WebView2 内嵌浏览器 + 状态面板）
+            + CloudHubViewModel / CloudTransferJob / CloudAccountState
+            （云盘账户、容量、文件列表、传输队列基建，待接入 UI）
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #4355B9;  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;  --on-primary-container: #00105C;
+  --secondary: #5B5D72;  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;  --on-tertiary-container: #271900;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FBF8FF;  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;  --on-surface-variant: #45464F;
+  --outline: #75767F;  --outline-variant: #C5C5CF;
+  --state-hover: rgba(27, 27, 31, 0.08);  --state-pressed: rgba(27, 27, 31, 0.12);
+  --radius-small: 8px;  --radius-medium: 12px;  --radius-large: 16px;
+  --radius-extra-large: 28px;  --radius-full: 999px;
+  --motion-fast: 150ms;  --motion-normal: 180ms;  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  font-size: 16px;
+}
+
+/* ============ 6 套主题（与 007/008/009 一致） ============ */
+:root[data-theme="dynamic-dark"] {
+  --primary: #BCC3FF;  --on-primary: #1E2768;
+  --primary-container: #2A3585;  --on-primary-container: #DEE0FF;
+  --secondary: #C4C6DE;  --on-secondary: #2A2B40;
+  --secondary-container: #434459;  --on-secondary-container: #E0E1F9;
+  --tertiary: #FFC34F;  --on-tertiary: #442C00;
+  --tertiary-container: #5E4100;  --on-tertiary-container: #FFDF9E;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121318;  --surface-dim: #121318;
+  --surface-container-lowest: #0D0E12;  --surface-container-low: #17181E;
+  --surface-container: #1D1E24;  --surface-container-high: #27282F;
+  --surface-container-highest: #32333B;
+  --on-surface: #E3E1E9;  --on-surface-variant: #C6C5D0;
+  --outline: #90919B;  --outline-variant: #45464F;
+  --state-hover: rgba(227, 225, 233, 0.08);  --state-pressed: rgba(227, 225, 233, 0.12);
+}
+:root[data-theme="forest-light"] {
+  --primary: #1D6B50;  --on-primary: #FFFFFF;
+  --primary-container: #A8F2CD;  --on-primary-container: #002110;
+  --secondary: #4F6357;  --on-secondary: #FFFFFF;
+  --secondary-container: #D2E8DA;  --on-secondary-container: #0E2018;
+  --tertiary: #3E6373;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #C2E8FB;  --on-tertiary-container: #001F2C;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FCFDF7;  --surface-dim: #DCE3DB;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #F6F9F4;
+  --surface-container: #F0F5EE;  --surface-container-high: #EAEFE9;
+  --surface-container-highest: #E4EAE3;
+  --on-surface: #1B1D1B;  --on-surface-variant: #444844;
+  --outline: #757A75;  --outline-variant: #C4C9C3;
+  --state-hover: rgba(27, 29, 27, 0.08);  --state-pressed: rgba(27, 29, 27, 0.12);
+}
+:root[data-theme="forest-dark"] {
+  --primary: #8CD5B2;  --on-primary: #003420;
+  --primary-container: #004930;  --on-primary-container: #A8F2CD;
+  --secondary: #B5CCBD;  --on-secondary: #21352A;
+  --secondary-container: #374B3F;  --on-secondary-container: #D2E8DA;
+  --tertiary: #A6CCDE;  --on-tertiary: #0A3343;
+  --tertiary-container: #244B5B;  --on-tertiary-container: #C2E8FB;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #121412;  --surface-dim: #121412;
+  --surface-container-lowest: #0C0E0C;  --surface-container-low: #181B18;
+  --surface-container: #1D201D;  --surface-container-high: #272A27;
+  --surface-container-highest: #32352F;
+  --on-surface: #E1E3DE;  --on-surface-variant: #C2C8C2;
+  --outline: #8C928C;  --outline-variant: #434943;
+  --state-hover: rgba(225, 227, 222, 0.08);  --state-pressed: rgba(225, 227, 222, 0.12);
+}
+:root[data-theme="violet-light"] {
+  --primary: #8B4AA6;  --on-primary: #FFFFFF;
+  --primary-container: #F7D8FF;  --on-primary-container: #3A0051;
+  --secondary: #6B5D71;  --on-secondary: #FFFFFF;
+  --secondary-container: #F3DFF8;  --on-secondary-container: #271B2B;
+  --tertiary: #006A6A;  --on-tertiary: #FFFFFF;
+  --tertiary-container: #9CF0F0;  --on-tertiary-container: #003737;
+  --error: #BA1A1A;  --error-container: #FFDAD6;  --on-error-container: #410002;
+  --surface: #FEF7FF;  --surface-dim: #DED8E1;
+  --surface-container-lowest: #FFFFFF;  --surface-container-low: #FAF2FC;
+  --surface-container: #F5ECF7;  --surface-container-high: #EFE6F1;
+  --surface-container-highest: #E9E2EA;
+  --on-surface: #1D1B1E;  --on-surface-variant: #49454E;
+  --outline: #7A757E;  --outline-variant: #CAC4CF;
+  --state-hover: rgba(29, 27, 30, 0.08);  --state-pressed: rgba(29, 27, 30, 0.12);
+}
+:root[data-theme="violet-dark"] {
+  --primary: #E3AEF7;  --on-primary: #4B1160;
+  --primary-container: #6F2B89;  --on-primary-container: #F7D8FF;
+  --secondary: #D9C2DE;  --on-secondary: #3A2D3F;
+  --secondary-container: #524359;  --on-secondary-container: #F3DFF8;
+  --tertiary: #77D3D3;  --on-tertiary: #003738;
+  --tertiary-container: #00504F;  --on-tertiary-container: #9CF0F0;
+  --error: #FFB4AB;  --error-container: #93000A;  --on-error-container: #FFDAD6;
+  --surface: #151316;  --surface-dim: #151316;
+  --surface-container-lowest: #100E11;  --surface-container-low: #1B191C;
+  --surface-container: #201E21;  --surface-container-high: #2B282C;
+  --surface-container-highest: #343138;
+  --on-surface: #E7E1E8;  --on-surface-variant: #CAC4CF;
+  --outline: #948F98;  --outline-variant: #49454E;
+  --state-hover: rgba(231, 225, 232, 0.08);  --state-pressed: rgba(231, 225, 232, 0.12);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface); color: var(--on-surface);
+  line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.app { display: flex; height: 100vh; padding: 12px; gap: 12px; background: var(--surface-dim); transition: background var(--motion-slow) var(--ease); }
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  transition: background var(--motion-slow) var(--ease);
+}
+.rail-logo {
+  width: 44px; height: 44px; border-radius: var(--radius-medium);
+  background: var(--primary-container); color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px; margin-bottom: 12px; position: relative; overflow: hidden;
+}
+.rail-logo::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%); }
+.rail-item {
+  width: 64px; border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant); font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full); font-size: 16px;
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.rail-item.active .rail-icon { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* ===================== Main ===================== */
+.main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.topbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--surface-container-low); border-radius: var(--radius-extra-large);
+  padding: 14px 20px; transition: background var(--motion-slow) var(--ease);
+}
+.topbar-title { font-size: 22px; font-weight: 700; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 12.5px; color: var(--on-surface-variant); margin-top: 2px; }
+.search-field {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 9px 16px; width: 280px; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease);
+}
+.search-field:focus-within { outline: 2px solid var(--primary); outline-offset: 1px; }
+.search-field input {
+  border: none; outline: none; background: transparent; color: var(--on-surface);
+  font-size: 13.5px; width: 100%; font-family: inherit;
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+.theme-chip {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 8px 14px; font-size: 12.5px; color: var(--on-surface-variant);
+  user-select: none; transition: background var(--motion-fast) var(--ease);
+}
+.theme-chip:hover { background: var(--surface-container-high); }
+.theme-chip .tc-dots { display: flex; gap: 3px; }
+.theme-chip .tc-dots span { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ===================== Content ===================== */
+.content { flex: 1; display: flex; gap: 12px; min-height: 0; }
+.workspace {
+  flex: 1; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large); overflow: hidden; min-width: 0;
+  display: flex; flex-direction: column;
+  transition: background var(--motion-slow) var(--ease);
+}
+.inspector {
+  width: 320px; background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large); padding: 18px;
+  overflow-y: auto; flex-shrink: 0; transition: background var(--motion-slow) var(--ease);
+}
+.statusbar {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-container); border-radius: var(--radius-large);
+  padding: 10px 18px; font-size: 12.5px; color: var(--on-surface-variant);
+  transition: background var(--motion-slow) var(--ease);
+}
+.statusbar b { color: var(--primary); font-weight: 600; }
+.statusbar > span:last-child { white-space: nowrap; flex-shrink: 0; }
+.progress { flex: 1; height: 5px; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
+.progress .fill { height: 100%; width: 0%; border-radius: var(--radius-full); background: var(--primary); transition: width var(--motion-normal) var(--ease); }
+.fab {
+  position: fixed; right: 32px; bottom: 28px; width: 56px; height: 56px;
+  border-radius: var(--radius-large); border: none; cursor: pointer;
+  background: var(--primary); color: var(--on-primary); font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  transition: transform var(--motion-fast) var(--ease), background var(--motion-fast) var(--ease);
+  z-index: 50;
+}
+.fab:hover { transform: scale(1.06); }
+.fab:active { transform: scale(0.96); }
+
+/* ===================== 通用组件 ===================== */
+.card { background: var(--surface-container-low); border-radius: var(--radius-large); padding: 16px; margin-bottom: 12px; transition: background var(--motion-slow) var(--ease); }
+.card-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.card-desc { font-size: 12.5px; color: var(--on-surface-variant); margin-bottom: 12px; }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+  border-radius: var(--radius-full); padding: 9px 18px;
+  background: var(--surface-container-high); color: var(--on-surface);
+  transition: background var(--motion-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-container-highest); }
+.btn:active { background: var(--state-pressed); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.secondary { background: var(--secondary-container); color: var(--on-secondary-container); }
+.btn.secondary:hover { filter: brightness(0.98); }
+.btn.ghost { background: transparent; color: var(--on-surface-variant); }
+.btn.ghost:hover { background: var(--state-hover); }
+.btn.sm { padding: 6px 12px; font-size: 12px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: var(--radius-full);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; user-select: none;
+  background: transparent; color: var(--on-surface-variant); border: 1px solid var(--outline-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--state-hover); }
+.chip.active { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+.seg { display: flex; gap: 4px; background: var(--surface-container); border-radius: var(--radius-full); padding: 4px; margin-bottom: 12px; }
+.seg-item {
+  flex: 1; text-align: center; padding: 8px 6px; font-size: 12.5px; font-weight: 600;
+  border-radius: var(--radius-full); cursor: pointer; color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active { background: var(--surface-container-lowest); color: var(--on-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+/* ===================== 010 特有：浏览器工具条 + 云盘页面 ===================== */
+.browser-bar {
+  display: flex; align-items: center; gap: 6px;
+  padding: 12px 14px; background: var(--surface-container-low);
+  border-bottom: 1px solid var(--outline-variant);
+}
+.browser-bar .bb-btn {
+  width: 32px; height: 32px; border-radius: var(--radius-full); border: none; cursor: pointer;
+  background: transparent; color: var(--on-surface-variant); font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--motion-fast) var(--ease);
+}
+.browser-bar .bb-btn:hover { background: var(--state-hover); }
+.browser-bar .bb-btn:disabled { opacity: 0.35; cursor: default; }
+.browser-bar .bb-url {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container); border-radius: var(--radius-full);
+  padding: 7px 14px; font-size: 12.5px; color: var(--on-surface-variant);
+}
+.browser-bar .bb-url .lock { font-size: 11px; }
+.browser-stage { flex: 1; position: relative; overflow: hidden; background: #F4F5F7; }
+.browser-stage.dark-bg { background: #121416; }
+
+/* 模拟网盘页面（pan.baidu.com 占位） */
+.pan-mock {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  color: #222; font-size: 13px;
+}
+.pan-mock .pm-top {
+  display: flex; align-items: center; gap: 14px; padding: 12px 22px;
+  background: #fff; border-bottom: 1px solid #E5E6EB;
+}
+.pan-mock .pm-logo { font-size: 18px; font-weight: 800; color: #1E6FFF; display: flex; align-items: center; gap: 8px; }
+.pan-mock .pm-logo span { color: #222; font-weight: 600; font-size: 14px; }
+.pan-mock .pm-search { flex: 1; max-width: 420px; background: #F2F3F5; border-radius: 999px; padding: 8px 16px; color: #999; }
+.pan-mock .pm-actions { display: flex; gap: 8px; margin-left: auto; color: #555; font-size: 12px; align-items: center; }
+.pan-mock .pm-actions b { color: #1E6FFF; background: #E8F0FF; padding: 6px 14px; border-radius: 999px; font-size: 12px; }
+.pan-mock .pm-side {
+  position: absolute; left: 0; top: 54px; bottom: 0; width: 160px;
+  background: #FAFAFB; border-right: 1px solid #EEF0F2; padding: 14px 10px;
+}
+.pan-mock .pm-side div { padding: 8px 12px; border-radius: 10px; color: #555; margin-bottom: 2px; font-size: 12.5px; }
+.pan-mock .pm-side div.active { background: #E8F0FF; color: #1E6FFF; font-weight: 600; }
+.pan-mock .pm-body { position: absolute; left: 160px; top: 54px; right: 0; bottom: 0; background: #fff; padding: 16px 22px; overflow: hidden; }
+.pan-mock .pm-breadcrumb { font-size: 12.5px; color: #555; margin-bottom: 12px; }
+.pan-mock .pm-breadcrumb b { color: #222; font-weight: 600; }
+.pan-mock .pm-toolbar { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+.pan-mock .pm-upload { background: #1E6FFF; color: #fff; padding: 8px 18px; border-radius: 8px; font-size: 12.5px; font-weight: 600; }
+.pan-mock .pm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 12px; }
+.pan-mock .pm-file { text-align: center; cursor: pointer; padding: 8px 4px; border-radius: 12px; }
+.pan-mock .pm-file:hover { background: #F5F6F8; }
+.pan-mock .pm-file .ico { font-size: 30px; margin-bottom: 6px; }
+.pan-mock .pm-file .nm { font-size: 11.5px; color: #444; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pan-mock .pm-file .sz { font-size: 10.5px; color: #999; margin-top: 2px; }
+
+/* 状态面板（加载中 / 失败 / 空） */
+.status-panel {
+  position: absolute; inset: 0; display: none; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+  background: var(--surface-container-low); z-index: 10;
+}
+.status-panel.show { display: flex; }
+.status-panel .sp-icon { font-size: 44px; margin-bottom: 12px; }
+.status-panel .sp-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.status-panel .sp-desc { font-size: 13px; color: var(--on-surface-variant); max-width: 420px; }
+.status-panel .sp-retry { margin-top: 16px; }
+
+/* ===================== Inspector：云盘总览 ===================== */
+.usage-ring {
+  width: 128px; height: 128px; border-radius: 50%; margin: 0 auto 12px;
+  background: conic-gradient(var(--primary) 0deg 247deg, var(--surface-container-high) 247deg 360deg);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.usage-ring::before {
+  content: ''; position: absolute; inset: 14px; border-radius: 50%;
+  background: var(--surface-container-low);
+}
+.usage-ring .ring-inner { position: relative; text-align: center; z-index: 2; }
+.usage-ring .ring-inner .pct { font-size: 24px; font-weight: 800; color: var(--primary); }
+.usage-ring .ring-inner .lbl { font-size: 11px; color: var(--on-surface-variant); }
+.usage-meta { text-align: center; font-size: 12.5px; color: var(--on-surface-variant); margin-bottom: 6px; }
+.usage-meta b { color: var(--on-surface); font-weight: 700; }
+
+.account-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: var(--radius-large); background: var(--surface-container); margin-bottom: 14px; }
+.account-card .avatar {
+  width: 44px; height: 44px; border-radius: 50%; background: var(--primary-container);
+  color: var(--on-primary-container); display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; flex-shrink: 0;
+}
+.account-card .ac-name { font-size: 14px; font-weight: 700; }
+.account-card .ac-meta { font-size: 11.5px; color: var(--on-surface-variant); }
+.account-card .ac-state {
+  margin-left: auto; display: flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 700; color: var(--primary);
+  background: var(--primary-container); padding: 4px 10px; border-radius: var(--radius-full);
+}
+
+/* 传输队列 */
+.tq-item { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--outline-variant); }
+.tq-item:last-child { border-bottom: none; }
+.tq-item .tq-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.tq-item .tq-main { flex: 1; min-width: 0; }
+.tq-item .tq-name { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tq-item .tq-meta { font-size: 11px; color: var(--on-surface-variant); }
+.tq-item .tq-progress { height: 4px; border-radius: var(--radius-full); background: var(--surface-container-high); margin-top: 5px; overflow: hidden; }
+.tq-item .tq-progress .fill { height: 100%; background: var(--primary); border-radius: var(--radius-full); }
+.tq-item .tq-state { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.st-running { color: var(--primary); }
+.st-queued { color: var(--tertiary); }
+.st-done { color: var(--primary); }
+.st-failed { color: var(--error); }
+.tq-icon.up { background: var(--primary-container); }
+.tq-icon.down { background: var(--tertiary-container); }
+.tq-icon.sync { background: var(--secondary-container); }
+
+.mini-stats { display: flex; gap: 8px; margin-bottom: 12px; }
+.mini-stat { flex: 1; background: var(--surface-container); border-radius: var(--radius-large); padding: 10px 6px; text-align: center; }
+.mini-stat .big { font-size: 17px; font-weight: 800; color: var(--primary); }
+.mini-stat .lbl { font-size: 11px; color: var(--on-surface-variant); margin-top: 2px; }
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item" title="图片小工具"><span class="rail-icon">🧰</span>工具</div>
+    <div class="rail-item" title="地图照片"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item active" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">网盘</div>
+        <div class="topbar-sub" id="topbar-sub">百度网盘 · 已连接 <b style="color:var(--primary);">hanabe@outlook.com</b> · 已同步 12,408 项</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div class="search-field"><span>🔍</span><input type="text" placeholder="搜索网盘文件…（演示）"></div>
+        <div class="theme-chip" id="theme-chip" title="点击切换主题（6 套预览）">
+          <span class="tc-dots"><span style="background:#4355B9;"></span><span style="background:#5B5D72;"></span><span style="background:#7A5700;"></span></span>
+          <span id="theme-label">动态色彩</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- ============ 内嵌网盘浏览器 ============ -->
+      <div class="workspace">
+        <div class="browser-bar">
+          <button class="bb-btn" title="后退">←</button>
+          <button class="bb-btn" title="前进" disabled>→</button>
+          <button class="bb-btn" title="刷新">⟳</button>
+          <button class="bb-btn" title="首页">⌂</button>
+          <div class="bb-url"><span class="lock">🔒</span> https://pan.baidu.com/disk/home#/all?path=%2F%E7%9B%B8%E5%86%8C</div>
+        </div>
+        <div class="browser-stage" id="browser-stage">
+          <!-- 模拟网盘页面 -->
+          <div class="pan-mock" id="pan-mock">
+            <div class="pm-top">
+              <div class="pm-logo">☁️ 百度网盘 <span>我的网盘</span></div>
+              <div class="pm-search">搜索全部文件…</div>
+              <div class="pm-actions"><span>📱</span><span>⚙️</span><b>上传</b><span>👤</span></div>
+            </div>
+            <div class="pm-side">
+              <div class="active">全部文件</div><div>图片</div><div>文档</div><div>视频</div><div>音乐</div><div>回收站</div><div>传输列表</div>
+            </div>
+            <div class="pm-body">
+              <div class="pm-breadcrumb">全部文件 / <b>相册</b> / <b>2026-08 夏日旅行</b></div>
+              <div class="pm-toolbar"><span class="pm-upload">⬆ 上传文件</span><span style="color:#888;font-size:12px;">共 24 项 · 3.6 GB</span></div>
+              <div class="pm-grid">
+                <div class="pm-file"><div class="ico">📁</div><div class="nm">2026-07 家庭聚会</div><div class="sz">42 项</div></div>
+                <div class="pm-file"><div class="ico">📁</div><div class="nm">2026-06 云南之行</div><div class="sz">87 项</div></div>
+                <div class="pm-file"><div class="ico">🖼️</div><div class="nm">IMG_4817.jpg</div><div class="sz">5.2 MB</div></div>
+                <div class="pm-file"><div class="ico">🖼️</div><div class="nm">IMG_4818.jpg</div><div class="sz">6.1 MB</div></div>
+                <div class="pm-file"><div class="ico">🖼️</div><div class="nm">IMG_4819.jpg</div><div class="sz">4.8 MB</div></div>
+                <div class="pm-file"><div class="ico">🖼️</div><div class="nm">IMG_4820.jpg</div><div class="sz">7.3 MB</div></div>
+                <div class="pm-file"><div class="ico">🖼️</div><div class="nm">IMG_4821.jpg</div><div class="sz">5.9 MB</div></div>
+                <div class="pm-file"><div class="ico">🎞️</div><div class="nm">旅行Vlog.mp4</div><div class="sz">1.2 GB</div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 状态面板（加载中 / 失败 / 空） -->
+          <div class="status-panel" id="status-panel">
+            <div class="sp-icon" id="sp-icon">⏳</div>
+            <div class="sp-title" id="sp-title">正在加载云服务</div>
+            <div class="sp-desc" id="sp-desc">正在准备安全的内嵌浏览器，请稍候。</div>
+            <button class="btn primary sp-retry" id="sp-retry" style="display:none;">重试</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector：云盘总览 + 传输队列 ============ -->
+      <aside class="inspector">
+        <div class="account-card">
+          <div class="avatar">H</div>
+          <div>
+            <div class="ac-name">百度网盘 · 超级会员</div>
+            <div class="ac-meta">hanabe@outlook.com · 上次同步 2 分钟前</div>
+          </div>
+          <div class="ac-state">● 已连接</div>
+        </div>
+
+        <div class="card-title" style="font-size:15px;">云存储总览</div>
+        <div class="card-desc" style="margin:2px 0 12px;">容量使用 · 自动同步照片与视频</div>
+        <div class="usage-ring">
+          <div class="ring-inner"><div class="pct">68%</div><div class="lbl">已用 214.6 GB</div></div>
+        </div>
+        <div class="usage-meta">总容量 <b>2 TB</b> · 剩余 <b>1,834.4 GB</b></div>
+
+        <div class="mini-stats" style="margin-top:12px;">
+          <div class="mini-stat"><div class="big">12,408</div><div class="lbl">已同步</div></div>
+          <div class="mini-stat"><div class="big">1,024</div><div class="lbl">本月上传</div></div>
+          <div class="mini-stat"><div class="big">3</div><div class="lbl">传输中</div></div>
+        </div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div class="card-title" style="font-size:15px;margin:0;">传输队列</div>
+          <button class="btn ghost sm">暂停全部</button>
+        </div>
+        <div class="card-desc" style="margin:2px 0 6px;">上传 / 下载 / 同步 · 优先任务先执行</div>
+
+        <div id="tq-list">
+          <div class="tq-item">
+            <div class="tq-icon up">⬆️</div>
+            <div class="tq-main">
+              <div class="tq-name">IMG_4821.jpg</div>
+              <div class="tq-meta">上传到 /相册/2026-08 · 3.6 / 5.9 MB</div>
+              <div class="tq-progress"><div class="fill" style="width:61%;"></div></div>
+            </div>
+            <div class="tq-state st-running">61%</div>
+          </div>
+          <div class="tq-item">
+            <div class="tq-icon up">⬆️</div>
+            <div class="tq-main">
+              <div class="tq-name">IMG_4822.jpg</div>
+              <div class="tq-meta">上传到 /相册/2026-08 · 0.4 / 4.2 MB</div>
+              <div class="tq-progress"><div class="fill" style="width:10%;"></div></div>
+            </div>
+            <div class="tq-state st-running">10%</div>
+          </div>
+          <div class="tq-item">
+            <div class="tq-icon sync">🔄</div>
+            <div class="tq-main">
+              <div class="tq-name">校验 3 个文件</div>
+              <div class="tq-meta">上传后内容校验 · 队列第 3 位</div>
+            </div>
+            <div class="tq-state st-queued">排队</div>
+          </div>
+          <div class="tq-item">
+            <div class="tq-icon down">⬇️</div>
+            <div class="tq-main">
+              <div class="tq-name">旅行Vlog.mp4</div>
+              <div class="tq-meta">下载到 D:\hanabephoto\下载 · 剩余约 4 分钟</div>
+              <div class="tq-progress"><div class="fill" style="width:34%;"></div></div>
+            </div>
+            <div class="tq-state st-running">34%</div>
+          </div>
+          <div class="tq-item">
+            <div class="tq-icon up">⬆️</div>
+            <div class="tq-main">
+              <div class="tq-name">IMG_4823.jpg … 共 6 项</div>
+              <div class="tq-meta">等待上传 · 优先任务</div>
+            </div>
+            <div class="tq-state st-queued">排队</div>
+          </div>
+          <div class="tq-item">
+            <div class="tq-icon sync">✅</div>
+            <div class="tq-main">
+              <div class="tq-name">今日已完成 312 项</div>
+              <div class="tq-meta">全部校验通过 · 无失败</div>
+            </div>
+            <div class="tq-state st-done">完成</div>
+          </div>
+        </div>
+
+        <div class="card-title" style="font-size:14px;margin-top:14px;">说明</div>
+        <div style="font-size:12.5px;color:var(--on-surface-variant);line-height:1.6;">
+          网盘页当前为内嵌浏览器（后退 / 前进 / 刷新 / 首页 + 加载状态面板）。右侧总览与传输队列基于已实现的云盘基建（账户容量、文件列表、传输任务），可后续接入。
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>☁️ 云服务：<b id="sb-status">已连接 · 正在上传 2 项</b></span>
+      <div class="progress"><div class="fill" style="width:61%;"></div></div>
+      <span id="sb-right">剩余约 40 秒 · 本月已用流量 8.2 GB</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="上传照片到网盘">⬆</button>
+
+<script>
+/* ============ 主题切换（预览用） ============ */
+const THEMES = [
+  { key: 'dynamic-light', name: '动态色彩', dots: ['#4355B9','#5B5D72','#7A5700'] },
+  { key: 'dynamic-dark',  name: '动态色彩·深', dots: ['#BCC3FF','#C4C6DE','#FFC34F'] },
+  { key: 'forest-light',  name: '森林绿', dots: ['#1D6B50','#4F6357','#3E6373'] },
+  { key: 'forest-dark',   name: '森林绿·深', dots: ['#8CD5B2','#B5CCBD','#A6CCDE'] },
+  { key: 'violet-light',  name: '紫罗兰', dots: ['#8B4AA6','#6B5D71','#006A6A'] },
+  { key: 'violet-dark',   name: '紫罗兰·深', dots: ['#E3AEF7','#D9C2DE','#77D3D3'] },
+];
+let themeIdx = 0;
+document.getElementById('theme-chip').addEventListener('click', () => {
+  themeIdx = (themeIdx + 1) % THEMES.length;
+  const t = THEMES[themeIdx];
+  document.documentElement.dataset.theme = t.key;
+  document.getElementById('theme-label').textContent = t.name;
+  document.querySelector('#theme-chip .tc-dots').innerHTML = t.dots.map(c => `<span style="background:${c};"></span>`).join('');
+});
+
+/* ============ 状态面板演示（加载中 → 成功；失败 / 超时） ============ */
+const statusPanel = document.getElementById('status-panel');
+const panMock = document.getElementById('pan-mock');
+function showStatus(icon, title, desc, retry) {
+  document.getElementById('sp-icon').textContent = icon;
+  document.getElementById('sp-title').textContent = title;
+  document.getElementById('sp-desc').textContent = desc;
+  document.getElementById('sp-retry').style.display = retry ? '' : 'none';
+  statusPanel.classList.add('show');
+  panMock.style.display = 'none';
+  document.getElementById('browser-stage').classList.add('dark-bg');
+}
+function showContent() {
+  statusPanel.classList.remove('show');
+  panMock.style.display = '';
+  document.getElementById('browser-stage').classList.remove('dark-bg');
+}
+
+/* 演示：加载中 1.2 秒后进入网盘页面 */
+showStatus('⏳', '正在加载云服务', '正在准备安全的内嵌浏览器，请稍候。', false);
+setTimeout(() => showContent(), 1200);
+
+/* 刷新按钮 → 加载中 → 成功 */
+document.querySelectorAll('.bb-btn')[2].addEventListener('click', () => {
+  showStatus('⏳', '正在连接云服务', '正在加载登录页面，请稍候。', false);
+  setTimeout(() => showContent(), 900);
+  document.getElementById('sb-status').textContent = '已连接 · 正在刷新当前目录';
+});
+document.querySelectorAll('.bb-btn')[3].addEventListener('click', () => {
+  showContent();
+  document.getElementById('sb-status').textContent = '已连接 · 回到网盘首页';
+});
+document.getElementById('sp-retry').addEventListener('click', () => {
+  showStatus('⏳', '正在连接云服务', '正在重新加载页面…', false);
+  setTimeout(() => showContent(), 900);
+});
+
+/* 传输队列演示：点第一项推进进度 */
+let tqDemo = 61;
+document.querySelector('.tq-item .tq-main').addEventListener('click', () => {
+  tqDemo = Math.min(tqDemo + 12, 100);
+  const first = document.querySelector('.tq-item');
+  first.querySelector('.tq-progress .fill').style.width = tqDemo + '%';
+  first.querySelector('.tq-state').textContent = tqDemo >= 100 ? '完成' : tqDemo + '%';
+  first.querySelector('.tq-meta').textContent = '上传到 /相册/2026-08 · ' + (3.6 + (5.9 - 3.6) * tqDemo / 100).toFixed(1) + ' / 5.9 MB';
+  document.querySelector('.statusbar .progress .fill').style.width = tqDemo + '%';
+  document.getElementById('sb-right').textContent = tqDemo >= 100 ? '全部传输完成 ✓' : '剩余约 40 秒 · 本月已用流量 8.2 GB';
+  if (tqDemo >= 100) document.getElementById('sb-status').textContent = '已连接 · 上传完成 3 项';
+});
+</script>
+</body>
+</html>

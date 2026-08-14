@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization xmlns="http://wixtoolset.org/schemas/v4/wxl" Culture="zh-CN" Codepage="936">
+  <String Id="DowngradeErrorMessage" Value="此计算机上已安装更高版本的 [ProductName]，不能降级安装。" />
+</WixLocalization>

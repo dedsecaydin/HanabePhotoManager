@@ -25,6 +25,42 @@ public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
     private async void MapPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (_initialized) { SendMarkers(); return; }
+
+        try
+        {
+            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder:
+                Path.Combine(AppDataPaths.Root, "WebView2", "Map"));
+            await MapWebView.EnsureCoreWebView2Async(environment);
+            var assetFolder = Path.Combine(AppContext.BaseDirectory, "Map", "assets");
+            MapWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "hanabe-map.local", assetFolder, CoreWebView2HostResourceAccessKind.DenyCors);
+            System.IO.Directory.CreateDirectory(_thumbnailCache.Directory);
+            MapWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+                "hanabe-thumbs.local", _thumbnailCache.Directory, CoreWebView2HostResourceAccessKind.DenyCors);
+            MapWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
+            MapWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
+            MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
+            MapWebView.CoreWebView2.NavigationCompleted += (_, _) => SendMarkers();
+            MapWebView.Source = new Uri("https://hanabe-map.local/index.html");
+            _initialized = true;
+        }
+        catch (System.Runtime.InteropServices.COMException ex) when ((uint)ex.HResult == 0x800700AA)
+        {
+            // ERROR_BUSY — parent window not ready for WebView2 yet. Defer init to next dispatcher cycle.
+            _ = Dispatcher.BeginInvoke(async () =>
+            {
+                try { await Task.Yield(); await InitializeWebViewAsync(); }
+                catch { /* leave _initialized=false; user can revisit the tab */ }
+            });
+        }
+        catch
+        {
+            // Swallow other WebView2 init failures so the app doesn't crash.
+        }
+    }
+
+    private async Task InitializeWebViewAsync()
+    {
         var environment = await CoreWebView2Environment.CreateAsync(userDataFolder:
             Path.Combine(AppDataPaths.Root, "WebView2", "Map"));
         await MapWebView.EnsureCoreWebView2Async(environment);

@@ -129,7 +129,7 @@ public sealed class DesignSystemResourceTests
 
         xaml.Should().Contain("x:Name=\"ImageToolModeTabs\"");
         xaml.Should().Contain("<WrapPanel");
-        xaml.Should().NotContain("<TextBlock Text=\"图片小工具\"");
+        xaml.Should().Contain("Text=\"图片小工具\" Style=\"{DynamicResource Layout.PageTitle}\"");
         xaml.Should().NotContain("<TextBlock Text=\"批量压缩\" Style=\"{DynamicResource Layout.SectionTitle}\"");
         xaml.Should().NotContain("<TextBlock Text=\"拼图\" Style=\"{DynamicResource Layout.SectionTitle}\"");
         watermark.Should().NotContain("<TextBlock Text=\"批量水印\" Style=\"{DynamicResource Layout.PageTitle}\"");

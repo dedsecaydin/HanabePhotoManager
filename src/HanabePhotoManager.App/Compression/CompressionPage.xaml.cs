@@ -6,8 +6,71 @@ namespace HanabePhotoManager.App.Compression;
 
 public partial class CompressionPage : System.Windows.Controls.UserControl
 {
-    public CompressionPage() => InitializeComponent();
+    private CompressionViewModel? _viewModel;
+
+    public CompressionPage()
+    {
+        InitializeComponent();
+        DataContextChanged += OnDataContextChanged;
+    }
+
     private CompressionViewModel? ViewModel => DataContext as CompressionViewModel;
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_viewModel is not null) _viewModel.PropertyChanged -= ViewModel_PropertyChanged;
+        _viewModel = e.NewValue as CompressionViewModel;
+        if (_viewModel is not null) _viewModel.PropertyChanged += ViewModel_PropertyChanged;
+    }
+
+    private void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // Deep-links (onboarding / ShowWatermarkCommand) set SelectedToolMode before
+        // navigating here; surface the tool workspace instead of the card grid.
+        if (e.PropertyName == nameof(CompressionViewModel.SelectedToolMode))
+            ShowDetail();
+    }
+
+    private void ToolCard_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button button) return;
+        switch (button.Tag as string)
+        {
+            case "Compression": ShowTool(ImageToolMode.Compression); break;
+            case "Collage": ShowTool(ImageToolMode.Collage); break;
+            case "Watermark": ShowTool(ImageToolMode.Watermark); break;
+            case "WeChat": ShowTool(ImageToolMode.WeChatSend); break;
+            case "ContestOpen": Navigate("ContestOpen"); break;
+            case "ContestJudged": Navigate("ContestJudged"); break;
+        }
+    }
+
+    private void ShowTool(ImageToolMode mode)
+    {
+        if (ViewModel is { } viewModel) viewModel.SelectedToolMode = mode;
+        ShowDetail();
+    }
+
+    private void ShowDetail()
+    {
+        if (ToolGridHost is null || ToolDetailHost is null) return;
+        ToolGridHost.Visibility = Visibility.Collapsed;
+        ToolDetailHost.Visibility = Visibility.Visible;
+    }
+
+    private void BackToGrid_Click(object sender, RoutedEventArgs e)
+    {
+        if (ToolGridHost is null || ToolDetailHost is null) return;
+        ToolGridHost.Visibility = Visibility.Visible;
+        ToolDetailHost.Visibility = Visibility.Collapsed;
+    }
+
+    private void Navigate(string page)
+    {
+        if (Window.GetWindow(this)?.DataContext is not MainWindowViewModel main) return;
+        if (page == "ContestOpen") main.ShowContestOpenCommand.Execute(null);
+        else main.ShowContestJudgedCommand.Execute(null);
+    }
 
     private async void ChooseFiles_Click(object sender, RoutedEventArgs e)
     {

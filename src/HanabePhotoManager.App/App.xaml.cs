@@ -54,6 +54,13 @@ public partial class App : System.Windows.Application
     /// </summary>
     internal static bool SelectFirstPersonForScreenshot { get; private set; }
 
+    /// <summary>
+    /// When set (with <c>--cloud-provider &lt;baidu|quark&gt;</c>), the cloud page
+    /// selects the given provider tab before the screenshot is rendered. Used to
+    /// capture each provider's real account overview.
+    /// </summary>
+    internal static string? ScreenshotCloudProvider { get; private set; }
+
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
         var args = e.Args;
@@ -85,6 +92,11 @@ public partial class App : System.Windows.Application
             else if (string.Equals(arg, "--select-first-person", StringComparison.OrdinalIgnoreCase))
             {
                 SelectFirstPersonForScreenshot = true;
+            }
+            else if (string.Equals(arg, "--cloud-provider", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+            {
+                ScreenshotCloudProvider = args[index + 1];
+                index++;
             }
         }
 

@@ -107,6 +107,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".psd", ".psb", ".mp4", ".mov"],
         StringComparer.OrdinalIgnoreCase);
 
+    // Video containers: their "thumbnail" is the first frame, which the Shell
+    // must extract from the file (it is never present in the thumbnail cache).
+    private static readonly HashSet<string> VideoExtensions = new(
+        [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v"],
+        StringComparer.OrdinalIgnoreCase);
+
     // RAW formats that Windows Shell cannot thumbnail without a third-party codec. Skipping
     // the Shell fallback for these avoids a multi-second probe per file every time the
     // preview page is reloaded; the WPF decoder (or a generic icon) is used instead.
@@ -5212,7 +5218,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return null;
         }
 
-        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path, decodeWidth);
+        // Videos have no decodable first frame via WPF/WIC, so the Shell is the
+        // only source. allowExtraction lets the Shell seek into the file and
+        // generate a real first-frame thumbnail instead of returning the generic
+        // file-type icon (gray film placeholder). Runs on a background thread and
+        // is cached in memory, so the seek cost is paid once per file.
+        var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path, decodeWidth, allowExtraction: VideoExtensions.Contains(extension));
         if (shellThumbnail is not null && cacheKey is not null)
         {
             CacheThumbnail(cacheKey, shellThumbnail);

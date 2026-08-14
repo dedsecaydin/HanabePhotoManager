@@ -1,10 +1,64 @@
 # Agent Handoff — Current Project State
 
 > **Purpose:** First-read document for any agent taking over this project.  
-> **Last Updated:** 2026-08-14
-> **Current Version:** `0.2.0-alpha.3`  
+> **Last Updated:** 2026-08-14  
+> **Current Version:** `0.3.0-alpha`（2026-08-14 开源发布完成）  
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
+
+## 2026-08-14 Current State — Master Guide 80% 进行中
+
+> 按 `docs/HERMES_MASTER_GUIDE.md` #68-#73 跟踪进度。50/60/70% 均已评审完成、917 测试全绿；当前阶段 = **80%（#71 Remaining Main Pages）进行中**，尚未正式宣布 80% 完成，因有 6 项 UI 修复待收尾。
+
+### 进度总览
+
+| 阶段 | 定义 | 状态 |
+|------|------|------|
+| 50% | #68 Home + Mid Review | ✅ 完成（已评审，6 项 P1 已修） |
+| 60% | #69 Primary Gallery | ✅ 完成 |
+| 70% | #70 Inspector + Contextual UI | ✅ 完成 |
+| **80%** | **#71 Remaining Main Pages** | **🔄 进行中** — 功能页重设计全部完成（人物/相册/导入/设置/工具/地图/网盘，mockup 004-010），待 6 项 UI 修复收尾后宣布完成 |
+| 90% | #72 Final Polish + Mandatory Final Review | ⏳ 计划中 |
+| 100% | #73 Final Verification | ⏳ 计划中 |
+
+### 80% 收尾清单（6 项 UI 修复，全部未完成）
+
+1. **左上角图标高清圆角** — 生成 512px PNG logo 替换 ico 引用
+2. **导入备注对话框保存按钮字体不明显** — 需增强对比/字重
+3. **全局字体对比度排查** — 全页面字号/颜色对比度巡检
+4. **网盘页右侧 CloudHubViewModel 真实接线** — 代码已完成接线；3 个测试断言待修（夸克显示「未连接」 vs 测试期望「夸克网盘」）
+5. **工具页卡片顶部色块圆角** — `CornerRadius="28,28,0,0"`
+6. **网盘页 WebView2 0x8007139F** — `UserDataFolder` 被锁，需独立子目录重试
+
+### 后续计划
+
+- **80% 收尾**：完成 6 项修复 → 回归（构建 + 917 测试 + 截图复核）→ 宣布 80% 完成
+- **90%（#72 Final Polish）**：Motion consistency / Spacing / Alignment / Typography / Icon / Hover / Focus / Loading / Empty / Error / Keyboard / Performance 12 项 + **强制 ChatGPT Desktop Final Review**
+- **100%（#73 Final Verification）**：Release Build / Full Tests / 主要用户流程 / Bug Hunt / Regression / Feature Inventory 对比 / 文档更新 / Handoff / 最终截图 / Known Issues
+- **发布**：版本升级 `0.3.0-alpha` + 开源发布（push + 转 public）
+
+### 开源并行线（不影响 master guide 主线）
+
+- ✅ 三语 README（中/英/日：`README.zh-CN.md` / `README.md` / `README.ja.md`）
+- ✅ LICENSE(MIT)（仓库根 `LICENSE`，未跟踪待提交）
+- ✅ 原创 icon（icon_2）
+- ✅ 赞助区块（微信赞赏码 + 爱发电 afdian.com/a/hanabededsec，三语 README 均已含）
+- ✅ 版本已升级 `0.3.0-alpha`（2026-08-14 开源发布）
+- ⏳ push + 转 public
+
+---
+
+## 2026-08-14 M3 功能页重设计第三批（工具页 + 地图页 + 网盘页，对齐 008/009/010 mockup）
+
+- 按用户确认的预设计（`sketches/008-m3-tools` / `009-m3-map` / `010-m3-cloud`）重做三个功能页，仅视觉/布局/交互组织，**零 VM 改动**；全程语义 Token；动效 150/180/220ms；分块构建验证（工具页 → 地图页 → 网盘页）。
+- **工具页**（`Compression/CompressionPage.xaml`+`.cs`）：新增工具卡片网格落地视图（「图片小工具」hero + 6 卡：压缩/拼图/水印/微信发送/投稿/欣赏，M3 tonal 容器纯色封面 + 大图标，刻意不用 mockup 线性渐变）+ 详情工作台（「← 返回工具」+ 原分段 chips + 左参数 360px + 中队列/预览 + 右 320px Inspector 运行统计 `Items.Count/OriginalTotalBytes/OutputTotalBytes/ProgressValue/Results`）。卡点击进详情；投稿/欣赏卡 → `ShowContestOpenCommand`/`ShowContestJudgedCommand` 导航。code-behind 订阅 `SelectedToolMode` 保持 onboarding/`ShowWatermarkCommand` 深链进详情。压缩/拼图/水印/微信四工具切换沿用既有 180ms 淡入。
+- **地图页**（`Map/MapPage.xaml`+`Map/assets/map.css`）：右列 380→320px；「地图照片」卡 `Inspector.Panel`；地点浏览加三格统计（当前地点/已定位/聚合点）+ 原列表；手动标记（Ctrl/Shift 多选 + 地图取点 + 经纬度/地点名 + 保存 `AssignSelectedCommand`）全保留；`map.js`/`MapPhotosViewModel` 零改动；map.css 聚合数量徽标蓝 `#0284c7`→红 `#f43f5e`。
+- **网盘页**（`Cloud/CloudPage.xaml`）：主区内嵌浏览器（后退/前进/刷新/首页 + WebView2 + 加载/失败/重试面板）行为不变；右侧新增 320px `Inspector.Panel` 云盘总览（账户卡 + 用量环 + 三格统计 + 传输队列 + 「可后续接入」说明）——因 `CloudHubViewModel`/`CloudTransferJob` 未接入 DataContext，为视觉占位并如实标注。
+- **合规修复（关键）**：CloudPage 页内新增 `{StaticResource Radius.*/Typography.*}` 在无主题资源的 STA 测试线程上 `InitializeComponent` 即时求值抛 `XamlParseException` → testhost 崩溃；改 `DynamicResource`（与旧 CloudPage 全 DynamicResource 一致）后恢复。`CompressionPage.xaml.cs` 的 `Button` 因 `global using System.Windows.Forms` 冲突全限定。
+- **测试更新**：`DesignSystemResourceTests.CompressionPage_IsPresentedAsImageToolsWithCollageControls` 原 `NotContain("图片小工具")` → `Contain(...Layout.PageTitle...)`；恢复「纵向拼接 · 横向拼接」hint。
+- 验证：`dotnet build -c Debug /warnaserror` 与 `-c Release /warnaserror` 均 0 警告 0 错误；`dotnet test` **917 全绿 exit 0**（Core 373 / Infra 164 / App 380）；截图 `.artifacts/capture-m3-tools-map-cloud.ps1` → `m3-tools/m3-map/m3-cloud-{light,dark}.png`（1344×986 非空白）。
+- 详见 `docs/agent-change-log.md` 2026-08-14「M3 功能页重设计第三批」条目、`docs/current-status.md`。
+- Next：M3-5 回归（构建 + 917 测试 + 大库实测 + 6 主题截图复核）；网盘页总览/传输队列可接入真实数据（需 VM 接线，行为改动需用户确认）。
 
 ## 2026-08-14 M3 导入页 + 设置页重新设计（对齐 006/007 mockup）
 

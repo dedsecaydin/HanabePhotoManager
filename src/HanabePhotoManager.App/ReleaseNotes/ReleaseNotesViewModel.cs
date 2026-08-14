@@ -108,6 +108,16 @@ public static class ReleaseNotesCatalog
     public static IReadOnlyList<ReleaseVersionInfo> Versions { get; } =
     [
         new(
+            "0.3.0-alpha",
+            new DateOnly(2026, 8, 14),
+            [
+                "全面 Material Design 3 视觉重构：动态色彩 6 套主题（靛蓝/森林绿/紫罗兰 × 浅/深）、Navigation Rail 导航、大圆角 Surface 与彩色状态层。",
+                "功能页重新设计：人物页（人物相册 + 按脸查找双 Tab，照片虚拟化）、相册页（卡片流 + 详情 + 网格/列表切换）、导入页（三栏 Lightroom 导入模块）、设置页（分区导航 + 主题色卡实时换肤）、工具/地图/网盘页全新工作台。",
+                "网盘页云盘总览真实接线：百度/夸克账户状态、用量环、传输队列（未接入连接器如实显示空态）。",
+                "修复网格角标对比度、视频首帧缩略图提取、Inspector 单击 EXIF 不显示、工具卡片圆角等问题。",
+                "开源准备：三语 README（英/中/日）、MIT 许可证、原创应用图标、微信赞赏 + 爱发电赞助入口。"
+            ]),
+        new(
             "0.2.0-alpha.3",
             new DateOnly(2026, 8, 6),
             [

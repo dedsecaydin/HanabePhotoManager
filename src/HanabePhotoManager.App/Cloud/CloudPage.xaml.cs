@@ -1,9 +1,13 @@
 using System;
+using System.IO;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.Core.Cloud;
+using HanabePhotoManager.Infrastructure.Cloud;
 using Microsoft.Web.WebView2.Core;
 
 namespace HanabePhotoManager.App.Cloud;
@@ -66,6 +70,8 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
     private readonly SemaphoreSlim _themeGate = new(1, 1);
     private string? _themeScriptId;
     private int _themeVersion;
+    private CoreWebView2Environment? _environment;
+    private CloudHubViewModel? _viewModel;
 
     public CloudPage()
     {
@@ -124,11 +130,17 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
             {
                 _hasBeenVisible = true;
                 await InitializeBrowserAsync();
+                await InitializeCloudOverviewAsync();
             }
             else
             {
                 CloudLoginBrowser.CoreWebView2?.Resume();
                 await ApplyThemeAsync(Interlocked.Increment(ref _themeVersion));
+                if (_viewModel is not null)
+                {
+                    // 百度 ↔ 夸克 切换（或重新进入网盘页）时刷新当前账户状态。
+                    await _viewModel.RefreshAsync();
+                }
             }
         }
         else if (_browserInitialized && CloudLoginBrowser.CoreWebView2 is not null)
@@ -144,6 +156,94 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
         }
     }
 
+    /// <summary>
+    /// Lazily creates the page-scoped <see cref="CloudHubViewModel"/> (one per
+    /// provider host: Baidu vs Quark) and binds the right-hand overview
+    /// inspector to it. Provider selection reads the real encrypted session
+    /// store, so a missing session yields an honest "not logged in" state.
+    /// </summary>
+    private async Task InitializeCloudOverviewAsync()
+    {
+        try
+        {
+            if (_viewModel is null)
+            {
+                _viewModel = await CreateCloudHubViewModelAsync();
+                CloudOverviewInspector.DataContext = _viewModel;
+            }
+
+            await _viewModel.InitializeAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowErrorState("云盘状态读取失败", ex.Message);
+            System.Diagnostics.Debug.WriteLine($"Cloud overview init failed: {ex.Message}");
+        }
+    }
+
+    private async Task<CloudHubViewModel> CreateCloudHubViewModelAsync()
+    {
+        var root = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "HanabePhotoManager", "Cloud");
+        return await CreateCloudHubViewModelAsync(root, IsQuarkHost, SynchronizationContext.Current);
+    }
+
+    /// <summary>
+    /// Builds the real cloud hub stack for one provider host: encrypted session
+    /// store, sqlite index, file cache and JSON transfer queue, plus the
+    /// provider chosen from the persisted session (honest unauthenticated state
+    /// when no data source exists). Exposed internally so tests can exercise the
+    /// exact production wiring against a temporary data root.
+    /// </summary>
+    internal static async Task<CloudHubViewModel> CreateCloudHubViewModelAsync(
+        string dataRoot,
+        bool isQuark,
+        SynchronizationContext? synchronizationContext = null)
+    {
+        Directory.CreateDirectory(dataRoot);
+        var sessions = new EncryptedCloudSessionStore(Path.Combine(dataRoot, "sessions.dat"));
+        var index = new SqliteCloudIndexStore(Path.Combine(dataRoot, "cloud-index.db"));
+        var cache = new FileCloudCacheStore(Path.Combine(dataRoot, "cache"), () => DateTimeOffset.UtcNow);
+        var queue = new JsonCloudTransferQueueStore(Path.Combine(dataRoot, "transfers.json"));
+        var provider = await CreateProviderAsync(sessions, isQuark);
+        return new CloudHubViewModel(provider, index, cache, synchronizationContext, queue);
+    }
+
+    private static async Task<ICloudProvider> CreateProviderAsync(
+        EncryptedCloudSessionStore sessions,
+        bool isQuark)
+    {
+        if (isQuark)
+        {
+            // 夸克网盘连接器尚未实现：如实显示未接入，不伪造任何账户数据。
+            return new UnauthenticatedCloudProvider(
+                CloudProviderKind.Quark,
+                "夸克网盘",
+                "未接入 · 夸克网盘连接器尚未实现");
+        }
+
+        var token = await sessions.LoadAsync(CloudProviderKind.Baidu);
+        if (token is null)
+        {
+            // 没有已保存的百度 API 会话：如实显示未登录，而不是伪造容量数据。
+            return new UnauthenticatedCloudProvider(
+                CloudProviderKind.Baidu,
+                "百度网盘",
+                "未登录 · 未找到已保存的 API 会话");
+        }
+
+        return new BaiduCloudProvider(
+            new HttpClient(),
+            () => LoadBaiduTokenAsync(sessions));
+    }
+
+    private static async Task<CloudAuthToken> LoadBaiduTokenAsync(EncryptedCloudSessionStore sessions) =>
+        await sessions.LoadAsync(CloudProviderKind.Baidu)
+        ?? throw new InvalidOperationException("百度网盘尚未登录，未找到已保存的 API 会话。");
+
+    private bool IsQuarkHost => InitialUrl.Contains("quark", StringComparison.OrdinalIgnoreCase);
+
     private async Task InitializeBrowserAsync()
     {
         if (_browserInitialized || _disposed) return;
@@ -152,30 +252,60 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
 
         try
         {
-            var userData = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "HanabePhotoManager", "WebView2", SafeFolderName(InitialUrl));
-            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userData);
-            await CloudLoginBrowser.EnsureCoreWebView2Async(environment);
-
-            var browser = CloudLoginBrowser.CoreWebView2;
-            browser.NavigationStarting -= CoreWebView2_NavigationStarting;
-            browser.NavigationCompleted -= CoreWebView2_NavigationCompleted;
-            browser.NavigationStarting += CoreWebView2_NavigationStarting;
-            browser.NavigationCompleted += CoreWebView2_NavigationCompleted;
-            browser.Settings.UserAgent =
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
-
-            await ApplyThemeAsync(Interlocked.Increment(ref _themeVersion));
-            browser.Navigate(InitialUrl);
+            await InitializeBrowserCoreAsync(useFallbackDirectory: false);
+            await FinishBrowserSetupAsync();
         }
         catch (Exception ex)
         {
-            _browserInitialized = false;
-            ShowErrorState("云服务暂时无法打开", $"内嵌浏览器初始化失败：{ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"WebView2 init failed: {ex.Message}");
+            // 0x8007139F (ERROR_INVALID_STATE)：UserDataFolder 常被未完全释放的前一实例/
+            // 锁文件占用。换用独立唯一子目录重试一次，绕开被占用的目录。
+            try
+            {
+                ShowLoadingState("正在加载云服务", "初始化目录被占用，正在改用独立目录重试…");
+                await InitializeBrowserCoreAsync(useFallbackDirectory: true);
+                await FinishBrowserSetupAsync();
+            }
+            catch (Exception retryEx)
+            {
+                _browserInitialized = false;
+                ShowErrorState("云服务暂时无法打开", $"内嵌浏览器初始化失败：{retryEx.Message}");
+                System.Diagnostics.Debug.WriteLine($"WebView2 init failed: {ex.Message}; retry failed: {retryEx.Message}");
+            }
         }
+    }
+
+    private async Task InitializeBrowserCoreAsync(bool useFallbackDirectory)
+    {
+        var userData = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "HanabePhotoManager", "WebView2", SafeFolderName(InitialUrl));
+        if (useFallbackDirectory)
+        {
+            // 独立唯一子目录：WebView2\Cloud\<host>\<进程ID>-<时间戳>
+            userData = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "HanabePhotoManager", "WebView2", "Cloud", SafeFolderName(InitialUrl),
+                $"{Environment.ProcessId}-{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}");
+        }
+
+        var environment = await CoreWebView2Environment.CreateAsync(userDataFolder: userData);
+        await CloudLoginBrowser.EnsureCoreWebView2Async(environment);
+        _environment = environment;
+    }
+
+    private async Task FinishBrowserSetupAsync()
+    {
+        var browser = CloudLoginBrowser.CoreWebView2;
+        browser.NavigationStarting -= CoreWebView2_NavigationStarting;
+        browser.NavigationCompleted -= CoreWebView2_NavigationCompleted;
+        browser.NavigationStarting += CoreWebView2_NavigationStarting;
+        browser.NavigationCompleted += CoreWebView2_NavigationCompleted;
+        browser.Settings.UserAgent =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+            "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+        await ApplyThemeAsync(Interlocked.Increment(ref _themeVersion));
+        browser.Navigate(InitialUrl);
     }
 
     private async Task ApplyThemeAsync(int version)
@@ -346,7 +476,17 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
         catch
         {
         }
+        // 显式释放环境 COM 引用，让浏览器进程尽快退出、释放 UserDataFolder 目录锁
+        // （降低下一实例初始化命中 0x8007139F 的概率；TrySuspend 在 WPF 包装的
+        // CoreWebView2 上无公开 API，不可直接调用）。
         CloudLoginBrowser.Dispose();
+        if (_environment is not null)
+        {
+            _environment = null;
+        }
+
         _browserInitialized = false;
+        _viewModel?.Dispose();
+        _viewModel = null;
     }
 }

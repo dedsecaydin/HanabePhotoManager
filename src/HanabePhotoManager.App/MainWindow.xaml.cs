@@ -162,6 +162,13 @@ public partial class MainWindow : Window
         {
             _viewModel.CurrentPage = page;
         }
+        if (App.ScreenshotCloudProvider is { } providerChoice)
+        {
+            _viewModel.SelectCloudProviderCommand.Execute(
+                providerChoice.Equals("quark", StringComparison.OrdinalIgnoreCase)
+                    ? CloudProviderChoice.Quark
+                    : CloudProviderChoice.Baidu);
+        }
         if (App.BrowseShowcaseForScreenshot)
         {
             _viewModel.BrowseDisplayMode = BrowseDisplayMode.Grid;

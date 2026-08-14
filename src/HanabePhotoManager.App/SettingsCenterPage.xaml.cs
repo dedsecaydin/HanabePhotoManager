@@ -93,4 +93,47 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         AppColorScheme.Violet => "紫罗兰",
         _ => "动态色彩",
     };
+
+    private void SponsorQr_Click(object sender, RoutedEventArgs e)
+    {
+        // Extract the embedded sponsor QR to a temp file and open it with the
+        // system's default image viewer (no external dependency, works after publish).
+        var uri = new Uri("pack://application:,,,/Assets/wechat-sponsor-qr.jpg", UriKind.Absolute);
+        using var stream = System.Windows.Application.GetResourceStream(uri)?.Stream;
+        if (stream is null)
+            return;
+
+        var tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "HanabePhotoManager-wechat-sponsor-qr.jpg");
+        try
+        {
+            using (var target = System.IO.File.Create(tempPath))
+                stream.CopyTo(target);
+        }
+        catch (System.IO.IOException)
+        {
+            return; // file already open elsewhere; the About card keeps showing the QR
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(tempPath) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // No default viewer registered — the QR stays visible in the About card.
+        }
+    }
+
+    private void AfdianLink_Click(object sender, RoutedEventArgs e)
+    {
+        // Open the author's Afdian (爱发电) homepage in the default browser.
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://afdian.com/a/hanabededsec") { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // No default browser registered.
+        }
+    }
 }

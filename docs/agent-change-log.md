@@ -1,5 +1,47 @@
 # Agent Change Log
 
+## 2026-08-14 — M3 功能页重设计第三批（工具页 + 地图页 + 网盘页，对齐 008/009/010 mockup）
+
+### Task
+按用户确认的预设计（`sketches/008-m3-tools` / `009-m3-map` / `010-m3-cloud`）重做「图片小工具」「地图照片」「网盘」三个功能页。铁律：仅改视觉/布局/交互组织，VM/Command/Binding 尽量不动（本轮零 VM 改动）；只用语义 Token；动效 150/180/220ms；禁 Card 套 Card / 粗边框 / 巨大圆角 / 强渐变 / 玻璃拟态 / Emoji 功能图标；分块构建验证（工具页 → 地图页 → 网盘页）。
+
+### A. 工具页（`Compression/CompressionPage.xaml` + `.xaml.cs`）
+- **工具卡片网格落地视图**（`ToolGridHost`）：`Layout.PageTitle`「图片小工具」hero + `WrapPanel` 6 张工具卡（压缩/拼图/水印/微信发送/投稿项目/欣赏项目，`ToolCardButton` keyed style：surface-container-low 大圆角 + hover/pressed/focus 状态层，`ClipToBounds` 封面 140px + 名称 + 描述）。封面用 **M3 tonal 容器纯色 + 大图标**（`Icon.Compress/Album/Watermark/Export/Star` + `Brush.PrimaryContainer/SecondaryContainer/TertiaryContainer` 循环），**刻意不用 mockup 的线性渐变**（遵铁律「无强渐变」）。
+- **详情工作台**（`ToolDetailHost`）：顶栏「← 返回工具」`Button.Secondary` + 原 `ImageToolModeTabs` 分段 chips（restyle 为全圆角 `secondary-container` 选中态，`ToolModes`/`SelectedToolMode` 绑定不动）；下方 `* / 16 / 320` 三列 = 左参数区（360px 原「添加图片/压缩设置/拼图设置/输出目录」卡原样保留，全部命令/绑定不动）+ 中队列/预览（压缩/拼图队列原样；`watermark:WatermarkPage` 与 `wechat:WeChatSenderView` 子页原样嵌入）+ 右 320px `Inspector.Panel` 运行统计（输入项 `Items.Count` / 原始字节 `OriginalTotalBytes` / 输出字节 `OutputTotalBytes` / 进度 `ProgressValue` 四格统计 + 处理结果 `Results` 列表 + 提示，**零 VM 新增**）。
+- **code-behind 新增**：`ToolCard_Click`（Tag 分发：4 工具 → `ShowTool`；投稿/欣赏 → `ShowContestOpenCommand`/`ShowContestJudgedCommand` 导航）、`BackToGrid_Click`、`ShowDetail`；**`SelectedToolMode` PropertyChanged 订阅**：onboarding 第 8 步 / `ShowWatermarkCommand` 深链先设 `SelectedToolMode` 再导航时，自动进详情工作台而非卡片网格（保持深链行为）。
+- 压缩/拼图/水印/微信四工具切换沿用既有 `DataTrigger.EnterActions` 180ms 淡入。
+
+### B. 地图页（`Map/MapPage.xaml` + `Map/assets/map.css`）
+- 右列 380px → **320px**（对齐 M3 Inspector 标准）。「地图照片」卡改 `Inspector.Panel`（`Inspector.Header` + 读取 EXIF `RefreshCommand` + 选择照片/文件夹 + `StatusText`）。
+- **地点浏览面板**新增三格统计（当前地点 `SelectedLocationPhotos.Count` / 已定位 `LocatedPhotos.Count` / 聚合点 `Markers.Count`，`MapStatBlock` tonal 块）+ 原「当前位置照片」列表（`SelectedLocationPhotos` + 单击放大浏览）。
+- **手动标记面板**保留：全选/反选/取消选择/移出所选/清空导入 chips + `ManualPhotosList`（Ctrl/Shift 多选）+ 目标坐标（`PendingLatitude`/`PendingLongitude`）+ 地点名（`PendingDisplayName`）+ 保存 `AssignSelectedCommand`。
+- **map.css**：聚合数量徽标由蓝 `#0284c7` → 红 `#f43f5e`（对齐 mockup 红色数量徽标）；`map.js`/`MapPhotosViewModel`/`MapPage.xaml.cs` 逻辑零改动（标记堆叠缩略图 + 数量徽标 + 弹窗照片网格为既有 map.js 行为）。
+
+### C. 网盘页（`Cloud/CloudPage.xaml`）
+- **主区保留**：后退/前进/刷新/首页条 + WebView2 `CloudLoginBrowser` + 加载/失败/空/重试状态面板（`CloudStatusPanel/Title/Description/RetryButton` 与 `CloudPage.xaml.cs` 全部行为不动）。
+- **右侧新增 320px `Inspector.Panel` 云盘总览**：账户卡（头像/「百度网盘 · 超级会员」/邮箱 + 「已连接」徽章）+ 云存储总览（用量环 68% `Ellipse`+`Path` 弧线 + 已用/总容量）+ 三格统计（已同步 12,408 / 本月上传 1,024 / 传输中 3）+ 传输队列（上传/下载/校验/完成 4 行含进度条，`CloudTqIcon` tonal 图标块）+ 「说明」明确标注「当前为视觉占位，可后续接入真实数据」。
+- **数据说明**：`CloudHubViewModel`（`CloudAccountState`）与 `Core/Infrastructure` 的 `CloudTransferJob`/`JsonCloudTransferQueueStore` 基建**未接入** `CloudPage` 的 DataContext（CloudPage 为 WebView2 内嵌浏览器，无 VM 绑定），故总览/队列为视觉适配 + 「可后续接入」标注，未伪造可交互假数据。
+- **合规修复（关键）**：CloudPage 因 `CloudPageTests` 在无 Application 主题资源的 STA 线程上运行时构造（`RunOnSta`），页内新增的 `{StaticResource Radius.*/Typography.*}` 在 `InitializeComponent` 即时求值抛 `XamlParseException`（未处理异常落在后台线程 → testhost 崩溃）。改为 `{DynamicResource Radius.Control/Radius.Full/Typography.Caption/Typography.BodySmall}`（与旧 CloudPage 全 DynamicResource 一致，延迟求值）；本地 keyed style（`CloudStatBlock`/`CloudTqIcon`）与 `Inspector.Panel` 等保持正常。
+
+### 合规（测试驱动）
+- `DesignSystemResourceTests.CompressionPage_IsPresentedAsImageToolsWithCollageControls`：原断言 `NotContain("图片小工具")` 与新版网格落地视图 hero 冲突 → 改为 `Contain("Text=\"图片小工具\" Style=\"{DynamicResource Layout.PageTitle}\"")`；同时恢复被误删的「纵向拼接 · 横向拼接」hint（测试断言依赖）。
+- `ApplicationXaml_HasNoRawColorsOutsideThemeColorDictionaries`：三页 XAML 零 `#hex`；map.css 属 WebView2 独立资源（既有暗色硬编码风格），仅调徽标色，不在该回归测试范围。
+- code-behind 二义性：`CompressionPage.xaml.cs` 的 `Button` 因 `global using System.Windows.Forms` 冲突，全限定 `System.Windows.Controls.Button`。
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Debug /warnaserror`：0 警告 / 0 错误。
+- `dotnet build HanabePhotoManager.sln -c Release /warnaserror`：0 警告 / 0 错误。
+- `dotnet test HanabePhotoManager.sln -c Debug --no-build`：**917 全绿，exit 0**（Core 373 / Infra 164 / App 380）。
+- 截图 `.artifacts/capture-m3-tools-map-cloud.ps1`（headless `--screenshot --page Compression/MapPhotos/Cloud`，播种 10 张小样图为 LibraryRoot）：`m3-tools/m3-map/m3-cloud-{light,dark}.png`（1344×986，像素采样确认非空白）。
+
+### Notes（诚实记录）
+- 工具卡封面**未用** mockup 的彩色线性渐变（铁律「无强渐变/霓虹」），改用 M3 tonal 容器纯色 + 图标；网盘用量环未用 mockup 的 conic-gradient，改用 `Path` 实色弧线（铁律「禁止彩色渐变」）。
+- 网盘右侧总览/传输队列为**视觉占位**（`CloudHubViewModel`/`CloudTransferJob` 未接入 CloudPage DataContext），如实标注「可后续接入」；未伪造可交互假数据、未改 WebView2 行为。
+- map 页地图本体为 Leaflet（WebView2），headless `RenderTargetBitmap` 只渲染 WPF 层（右侧 320px Inspector 完整呈现，地图瓦片区域可能空白）——这是 WebView2 截图固有局限，非布局缺陷。
+- 第一轮测试出现「test host process crashed」（App 372~374/380）并非 onnxruntime 预存在问题，而是 CloudPage 页内 StaticResource 在无主题资源的 STA 测试线程上即时求值抛 `XamlParseException` 所致；经上述 DynamicResource 修复后 917 全绿。onnxruntime 的 graph 初始化警告仅写入 stderr、不影响结果。
+
+---
+
 ## 2026-08-14 — M3 导入页 + 设置页重新设计（对齐 006/007 mockup）
 
 ### Task
@@ -671,3 +713,18 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Reused the first recursive retouched-output enumeration while building associations, eliminating the duplicate per-date network traversal after startup scan.
 - Added regression coverage for the browse Top 50 boundary, thumbnail-derived aspect ratios, and reuse of pre-enumerated retouched outputs.
 - Replaced per-date full-library rescans in retouch statistics with one pass that aggregates RAW/JPG groups by their owning date directory.
+
+## 2026-08-14 — 赞助区块补全：爱发电（Afdian）入口
+
+### Task
+把爱发电主页链接 `https://afdian.com/a/hanabededsec` 填入三语 README 赞助区块（替换 Buy Me a Coffee 占位）+ 软件设置页「支持作者」区块加爱发电入口按钮（M3 风格、语义 Token），构建 0 警告 + 917 测试全绿 + 截图。
+
+### 改动
+- `README.md` / `README.ja.md` / `README.zh-CN.md`：赞助小节 `Buy Me a Coffee — coming soon / 近日公開予定 / 敬请期待` 占位替换为爱发电链接（中/英/日文案），三语各 1 处 `afdian.com/a/hanabededsec`，无占位残留。
+- `src/HanabePhotoManager.App/SettingsCenterPage.xaml`：赞赏码卡片下方新增 `AfdianLinkCard` 按钮（复用 ThemeCard 样式 + 语义 Token，标题「爱发电 (Afdian)」+ 副行 `afdian.com/a/hanabededsec · 点击打开主页`）。
+- `src/HanabePhotoManager.App/SettingsCenterPage.xaml.cs`：`AfdianLink_Click` 用 `Process.Start(ProcessStartInfo{UseShellExecute=true})` 打开主页，Win32Exception 兜底（与 SponsorQr_Click 同模式）。
+- `.artifacts/capture-m3-settings-sponsor2.ps1`：截图脚本（播种 fixture + 临时抬高 WindowHeight 露出完整赞助区块 + 自动恢复 settings.json）。
+
+### 验证
+- `dotnet build -c Debug /warnaserror`：0 警告 0 错误；`dotnet test --no-build`：917 全绿（Core 373 / Infra 164 / App 380）。
+- 截图 `.artifacts/m3-settings-sponsor2-light.png`：二维码卡片 + 爱发电卡片均可见；settings.json 的 LibraryRoot/WindowHeight 恢复校验通过。

@@ -344,7 +344,7 @@
           <StackPanel DockPanel.Dock="Top">
             <Border Width="48" Height="48" Margin="0,0,0,16" HorizontalAlignment="Center" CornerRadius="16" Background="{DynamicResource Brush.PrimaryContainer}" ClipToBounds="True">
               <Grid>
-                <TextBlock Text="H" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource Brush.OnPrimaryContainer}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Image Stretch="UniformToFill" Source="pack://application:,,,/Assets/HanabeAppLogo.png" />
                 <Image Stretch="UniformToFill" Source="{Binding AppIconImage}" Visibility="{Binding HasCustomAppIcon, Converter={StaticResource BoolToVis}}" />
               </Grid>
             </Border>
@@ -1144,7 +1144,7 @@
                         <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding PeopleAlbums.ScanProgressValue, Mode=OneWay}" Visibility="{Binding PeopleAlbums.IsScanning, Converter={StaticResource BoolToVis}}" />
                         <Button Margin="0,6,0,8" Content="取消扫描" Command="{Binding PeopleAlbums.CancelScanCommand}" Visibility="{Binding PeopleAlbums.IsScanning, Converter={StaticResource BoolToVis}}" />
                         <TextBlock Text="{Binding PeopleAlbums.SummaryText}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,8" />
-                        <Button Content="返回全部照片" Margin="0,0,0,8" Command="{Binding PeopleAlbums.ClearSelectionCommand}" Visibility="{Binding PeopleAlbums.SelectedAlbum, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="返回全部照片" Margin="0,0,0,8" Command="{Binding PeopleAlbums.ClearSelectionCommand}" Visibility="{Binding PeopleAlbums.SelectedAlbum, Converter={StaticResource NullToVis}}" />
                         <Border x:Name="PeopleRecognitionModelPanel" Padding="9" Margin="0,0,0,8" CornerRadius="10" Background="Transparent" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
                           <StackPanel>
                             <TextBlock Text="{Binding PeopleAlbums.RecognitionEngineText}" FontSize="11" FontWeight="SemiBold" TextWrapping="Wrap" />
@@ -1177,7 +1177,7 @@
                           </ItemsControl.ItemTemplate>
                            </ItemsControl>
                         </Border>
-                        <Button Content="清除人物筛选" Margin="0,6,0,0" Command="{Binding PeopleAlbums.ClearSelectionCommand}" Visibility="{Binding PeopleAlbums.SelectedAlbum, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="清除人物筛选" Margin="0,6,0,0" Command="{Binding PeopleAlbums.ClearSelectionCommand}" Visibility="{Binding PeopleAlbums.SelectedAlbum, Converter={StaticResource NullToVis}}" />
                       </StackPanel>
                     </Border>
                   </StackPanel>
@@ -1485,24 +1485,50 @@
                                               </Border>
                                               <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Width="22" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" />
                                               <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8">
-                                                <Border Padding="7,3" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.82" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
-                                                  <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" />
+                                                <Border Padding="10,4" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Primary}" IsHitTestVisible="False">
+                                                  <TextBlock Text="{Binding Extension, Converter={StaticResource ExtensionBadgeConverter}}" FontSize="{StaticResource Typography.BodySmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.OnPrimary}" />
                                                 </Border>
-                                                <Border Margin="0,4,0,0" Padding="7,3" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.82" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
-                                                  <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}">
-                                                    <FrameworkElement.Style>
+                                                <Border Margin="0,6,0,0" Padding="10,4" CornerRadius="{StaticResource Radius.Full}" IsHitTestVisible="False">
+                                                  <Border.Style>
+                                                    <Style TargetType="{x:Type Border}">
+                                                      <Setter Property="Background" Value="{DynamicResource Brush.TertiaryContainer}" />
+                                                      <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsRetouched}" Value="True">
+                                                          <Setter Property="Background" Value="{DynamicResource Brush.SecondaryContainer}" />
+                                                        </DataTrigger>
+                                                      </Style.Triggers>
+                                                    </Style>
+                                                  </Border.Style>
+                                                  <TextBlock FontSize="{StaticResource Typography.BodySmall}" FontWeight="SemiBold">
+                                                    <TextBlock.Style>
                                                       <Style TargetType="{x:Type TextBlock}">
                                                         <Setter Property="Text" Value="未修" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource Brush.OnTertiaryContainer}" />
                                                         <Style.Triggers>
-                                                          <DataTrigger Value="True" Binding="{Binding IsRetouched}">
+                                                          <DataTrigger Binding="{Binding IsRetouched}" Value="True">
                                                             <Setter Property="Text" Value="已修" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource Brush.OnSecondaryContainer}" />
                                                           </DataTrigger>
                                                         </Style.Triggers>
                                                       </Style>
-                                                    </FrameworkElement.Style>
+                                                    </TextBlock.Style>
                                                   </TextBlock>
                                                 </Border>
                                               </StackPanel>
+                                              <Grid>
+                                                <Grid.Style>
+                                                  <Style TargetType="{x:Type Grid}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                      <DataTrigger Binding="{Binding Extension}" Value="MP4"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                                      <DataTrigger Binding="{Binding Extension}" Value="MOV"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                                                    </Style.Triggers>
+                                                  </Style>
+                                                </Grid.Style>
+                                                <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource Brush.Overlay.Scrim}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+                                                  <Path Data="{StaticResource Icon.Play}" Fill="{DynamicResource Brush.Viewer.Text}" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0,0,0" />
+                                                </Border>
+                                              </Grid>
                                               <Border VerticalAlignment="Bottom" Padding="10,8" CornerRadius="0,0,9,9">
                                                 <Border.Background>
                                                   <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
@@ -1521,16 +1547,16 @@
                                                   </Style>
                                                 </Border.Style>
                                                 <StackPanel>
-                                                  <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding Name}" ToolTip="{Binding Name}" />
+                                                  <TextBlock TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Viewer.Text}" Text="{Binding Name}" ToolTip="{Binding Name}" />
                                                   <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                                    <TextBlock Opacity="0.82" FontSize="{StaticResource Typography.Caption}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Primary}" FontWeight="Medium" Text="{Binding Caption}" />
+                                                    <TextBlock Opacity="0.82" FontSize="{StaticResource Typography.Caption}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Viewer.Text}" FontWeight="Medium" Text="{Binding Caption}" />
                                                   </StackPanel>
                                                   <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                                                    <Border CornerRadius="{StaticResource Radius.Small}" Padding="6,2" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.78" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
-                                                      <TextBlock FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding SmartCategory}" />
+                                                    <Border CornerRadius="{StaticResource Radius.Full}" Padding="8,3" Background="{DynamicResource Brush.Surface.ContainerHigh}" IsHitTestVisible="False">
+                                                      <TextBlock FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.OnSurface}" Text="{Binding SmartCategory}" />
                                                     </Border>
-                                                    <Border CornerRadius="{StaticResource Radius.Small}" Padding="6,2" Margin="4,0,0,0" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.78" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1" Visibility="{Binding HasManualTags, Converter={StaticResource BoolToVis}}">
-                                                      <TextBlock MaxWidth="90" FontSize="10" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding ManualTagsDisplay}" ToolTip="{Binding ManualTagsDisplay}" />
+                                                    <Border CornerRadius="{StaticResource Radius.Full}" Padding="8,3" Margin="5,0,0,0" Background="{DynamicResource Brush.Surface.ContainerHigh}" IsHitTestVisible="False" Visibility="{Binding HasManualTags, Converter={StaticResource BoolToVis}}">
+                                                      <TextBlock MaxWidth="90" FontSize="{StaticResource Typography.Caption}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" Foreground="{DynamicResource Brush.OnSurface}" Text="{Binding ManualTagsDisplay}" ToolTip="{Binding ManualTagsDisplay}" />
                                                     </Border>
                                                   </StackPanel>
                                                 </StackPanel>
@@ -1590,7 +1616,7 @@
                       <TextBlock Text="未选择照片" Style="{StaticResource Inspector.Header}" HorizontalAlignment="Center" Margin="0,14,0,0" />
                       <TextBlock Text="在照片墙中选择一张照片，这里会显示它的拍摄信息与快捷操作。" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     </StackPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="{DynamicResource Brush.Surface.ContainerLow}" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource BoolToVis}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="{DynamicResource Brush.Surface.ContainerLow}" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource NullToVis}}">
                       <StackPanel>
                         <DockPanel Margin="0,0,0,12">
                           <Border DockPanel.Dock="Right" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Surface.ContainerHigh}" Padding="8,4" VerticalAlignment="Center" Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="CloseExifPanel_Click">
@@ -2124,7 +2150,7 @@
                           </LinearGradientBrush>
                         </Border.Background>
                         <Grid>
-                          <TextBlock Text="花" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                          <Image Stretch="UniformToFill" Source="pack://application:,,,/Assets/HanabeAppLogo.png" />
                           <Image Stretch="UniformToFill" Source="{Binding AppIconImage}" Visibility="{Binding HasCustomAppIcon, Converter={StaticResource BoolToVis}}" />
                         </Grid>
                       </Border>

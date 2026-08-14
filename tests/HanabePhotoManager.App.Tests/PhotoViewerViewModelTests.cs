@@ -93,6 +93,36 @@ public sealed class PhotoViewerViewModelTests
         viewer.ZoomScale.Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("clip.mp4", true)]
+    [InlineData("clip.MOV", true)]
+    [InlineData("clip.mkv", true)]
+    [InlineData("clip.avi", true)]
+    [InlineData("photo.jpg", false)]
+    [InlineData("photo.jpeg", false)]
+    [InlineData("photo.png", false)]
+    [InlineData("photo.arw", false)]
+    public void IsVideo_DetectsVideoExtensionsByExtension(string name, bool expected)
+    {
+        var viewer = new PhotoViewerViewModel(new StubReader());
+        viewer.Open([name], name);
+
+        viewer.IsVideo.Should().Be(expected);
+        viewer.FileName.Should().Be(name);
+    }
+
+    [Fact]
+    public void IsVideo_RefreshesWhenNavigatingBetweenPhotoAndVideo()
+    {
+        var viewer = new PhotoViewerViewModel(new StubReader());
+        viewer.Open(["a.jpg", "clip.mp4"], "a.jpg");
+
+        viewer.IsVideo.Should().BeFalse();
+        viewer.Next();
+        viewer.IsVideo.Should().BeTrue();
+        viewer.FileName.Should().Be("clip.mp4");
+    }
+
     private sealed class StubReader : IPhotoDetailMetadataReader
     {
         public PhotoDetailMetadata Read(string path) => PhotoDetailMetadata.Empty(path);

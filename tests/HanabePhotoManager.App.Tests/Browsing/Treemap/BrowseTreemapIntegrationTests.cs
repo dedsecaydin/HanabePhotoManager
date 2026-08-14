@@ -17,7 +17,7 @@ public sealed class BrowseTreemapIntegrationTests
 
         xaml.Should().Contain("xmlns:treemap=\"clr-namespace:HanabePhotoManager.App.Browsing.Treemap\"");
         xaml.Should().Contain("x:Name=\"BrowseDisplayModeSelector\"");
-        xaml.Should().Contain("ItemsSource=\"{Binding VisiblePreviewSections}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
         xaml.Should().Contain("<treemap:PhotoTreemapControl");
         xaml.Should().Contain("ItemsSource=\"{Binding TreemapBrowser.Items}\"");
         xaml.Should().Contain("SelectedPath=\"{Binding SelectedTreemapPath, Mode=TwoWay}\"");
@@ -52,12 +52,12 @@ public sealed class BrowseTreemapIntegrationTests
     }
 
     [Fact]
-    public void ViewModel_DefaultsToTreemapAndSupportsBothWeightModes()
+    public void ViewModel_DefaultsToGridAndSupportsBothWeightModes()
     {
         var viewModel = new MainWindowViewModel();
 
-        viewModel.BrowseDisplayMode.Should().Be(BrowseDisplayMode.Treemap);
-        viewModel.IsTreemapBrowseMode.Should().BeTrue();
+        viewModel.BrowseDisplayMode.Should().Be(BrowseDisplayMode.Grid);
+        viewModel.IsGridBrowseMode.Should().BeTrue();
         viewModel.TreemapBrowser.WeightMode = TreemapWeightMode.PhotoCount;
         viewModel.TreemapBrowser.WeightMode.Should().Be(TreemapWeightMode.PhotoCount);
     }
@@ -85,11 +85,11 @@ public sealed class BrowseTreemapIntegrationTests
     }
 
     [Fact]
-    public void Settings_DefaultToTheAllLibraryTreemap()
+    public void Settings_DefaultToTheAllLibraryGrid()
     {
         var settings = new AppSettings();
 
-        settings.BrowseDisplayMode.Should().Be(nameof(BrowseDisplayMode.Treemap));
+        settings.BrowseDisplayMode.Should().Be(nameof(BrowseDisplayMode.Grid));
         settings.TreemapWeightMode.Should().Be(nameof(TreemapWeightMode.FileSize));
     }
 
@@ -100,7 +100,7 @@ public sealed class BrowseTreemapIntegrationTests
             "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("private string _currentPage = \"Preview\"");
-        source.Should().Contain("BrowseDisplayMode = BrowseDisplayMode.Treemap;");
+        source.Should().Contain("BrowseDisplayMode = BrowseDisplayMode.Grid;");
         source.Should().Contain("PrepareStartupAllLibraryTreemap();");
         source.Should().Contain("_selectedFileTypeFilters.Clear();");
     }

@@ -140,6 +140,7 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
                 {
                     // 百度 ↔ 夸克 切换（或重新进入网盘页）时刷新当前账户状态。
                     await _viewModel.RefreshAsync();
+                    UpdateQuarkLoginButtonVisibility();
                 }
             }
         }
@@ -173,6 +174,7 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
             }
 
             await _viewModel.InitializeAsync();
+            UpdateQuarkLoginButtonVisibility();
         }
         catch (Exception ex)
         {
@@ -216,11 +218,9 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
     {
         if (isQuark)
         {
-            // 夸克网盘连接器尚未实现：如实显示未接入，不伪造任何账户数据。
-            return new UnauthenticatedCloudProvider(
-                CloudProviderKind.Quark,
-                "夸克网盘",
-                "未接入 · 夸克网盘连接器尚未实现");
+            // 夸克网盘连接器：通过官方 quark-drive CLI 读取真实账户状态；
+            // 未授权时 CLI 返回 -103，provider 如实报告"未登录"，不再显示未接入占位。
+            return new QuarkCloudProvider();
         }
 
         var token = await sessions.LoadAsync(CloudProviderKind.Baidu);
@@ -427,6 +427,55 @@ public partial class CloudPage : System.Windows.Controls.UserControl, IDisposabl
         }
         _browserInitialized = false;
         await InitializeBrowserAsync();
+    }
+
+    /// <summary>
+    /// 夸克页未登录时显示"登录夸克网盘"按钮；百度页 / 已连接时不显示。
+    /// </summary>
+    private void UpdateQuarkLoginButtonVisibility()
+    {
+        if (_disposed) return;
+        var show = IsQuarkHost && _viewModel is not null && !_viewModel.IsAccountConnected;
+        QuarkLoginButton.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// 点击后异步执行 quark-drive.cjs login：CLI 启动本地授权服务器并自动打开
+    /// 浏览器完成 OAuth（阻塞等待授权），成功后刷新右侧总览账户状态。
+    /// </summary>
+    private async void QuarkLogin_Click(object sender, RoutedEventArgs e)
+    {
+        if (_disposed) return;
+        QuarkLoginButton.IsEnabled = false;
+        QuarkLoginButton.Content = "等待浏览器授权…";
+
+        try
+        {
+            var provider = new QuarkCloudProvider();
+            var succeeded = await provider.LoginAsync();
+
+            if (!succeeded)
+            {
+                ShowErrorState("夸克网盘授权未完成", "浏览器授权未完成或已超时。请重试，或在浏览器中手动完成授权后返回本页刷新。");
+                return;
+            }
+
+            if (_viewModel is not null)
+            {
+                await _viewModel.InitializeAsync();
+                UpdateQuarkLoginButtonVisibility();
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorState("夸克网盘授权失败", $"登录夸克网盘失败：{ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Quark login failed: {ex.Message}");
+        }
+        finally
+        {
+            QuarkLoginButton.IsEnabled = true;
+            QuarkLoginButton.Content = "登录夸克网盘";
+        }
     }
 
     private static string SafeFolderName(string url)

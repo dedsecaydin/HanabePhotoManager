@@ -45,9 +45,8 @@ Hanabe Photo Manager 是一个面向摄影师（尤其 Cosplay 摄影）的 Wind
 - 自定义相册 / 文件夹引用，卡片流浏览 + 网格/列表切换
 - 修后只读保护（防止误覆盖原图）
 
-### ☁️ 网盘与投稿
+### ☁️ 网盘
 - 内嵌 WebView2 网盘客户端（百度云 OAuth），传输队列管理
-- 投稿 / 欣赏项目：WebView2 浏览器 + 本地照片联动
 
 ### 🎨 Material Design 3 设计系统
 - **6 套主题**：动态色彩（靛蓝）/ 森林绿 / 紫罗兰 × 浅色/深色，应用内一键切换
@@ -114,7 +113,6 @@ src/
     ├── People/                       # 人物识别与相册
     ├── Compression/ Watermark/       # 批量工具
     ├── Cloud/                        # 网盘客户端
-    ├── Contest/                      # 投稿/欣赏项目
     └── Themes/                       # Material Design 3 六套主题 Token
 ```
 

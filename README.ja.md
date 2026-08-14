@@ -114,7 +114,6 @@ src/
     ├── People/                       # 人物認識とアルバム
     ├── Compression/ Watermark/       # バッチツール
     ├── Cloud/                        # クラウドクライアント
-    ├── Contest/                      # 投稿/展示プロジェクト
     └── Themes/                       # Material Design 3 の6テーマトークン
 ```
 

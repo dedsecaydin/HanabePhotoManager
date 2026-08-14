@@ -113,7 +113,7 @@
             </TextBlock>
           </StackPanel>
           <TextBlock DockPanel.Dock="Right" Text="{Binding Items.Count, StringFormat={}{0:N0} 张}"
-                     FontSize="18" FontWeight="SemiBold"/>
+                     FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"/>
         </DockPanel>
         <StackPanel Grid.Row="1" Margin="0,16,0,12">
           <ProgressBar Height="8" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/>
@@ -142,6 +142,24 @@
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
+        <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" IsHitTestVisible="False">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Items.Count}" Value="0">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <StackPanel>
+            <TextBlock Text="发送队列为空" FontSize="{DynamicResource Typography.BodySmall}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center"/>
+            <TextBlock Text="选择照片或文件夹后加入发送队列。" Foreground="{DynamicResource Brush.Text.Tertiary}"
+                       FontSize="{DynamicResource Typography.Caption}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+          </StackPanel>
+        </Border>
       </Grid>
     </Border>
   </Grid>

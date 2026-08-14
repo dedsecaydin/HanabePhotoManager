@@ -134,7 +134,7 @@ public sealed class DesignSystemResourceTests
         xaml.Should().NotContain("<TextBlock Text=\"拼图\" Style=\"{DynamicResource Layout.SectionTitle}\"");
         watermark.Should().NotContain("<TextBlock Text=\"批量水印\" Style=\"{DynamicResource Layout.PageTitle}\"");
         xaml.Should().Contain("DataTrigger.EnterActions");
-        xaml.Split("Duration=\"0:0:0.18\"").Length.Should().BeGreaterThanOrEqualTo(4);
+        xaml.Split("Duration=\"{StaticResource Motion.Duration.Normal}\"").Length.Should().BeGreaterThanOrEqualTo(4);
         xaml.Should().Contain("ItemsSource=\"{Binding ToolModes}\"");
         xaml.Should().Contain("纵向拼接");
         xaml.Should().Contain("横向拼接");
@@ -145,7 +145,6 @@ public sealed class DesignSystemResourceTests
     [Theory]
     [InlineData("DeleteConfirmationWindow.xaml")]
     [InlineData("RemarkPromptWindow.xaml")]
-    [InlineData("Contest", "ContestPickerWindow.xaml")]
     public void Dialogs_UseSharedResourcesWithoutRawColors(params string[] parts)
     {
         var xaml = Read(parts);

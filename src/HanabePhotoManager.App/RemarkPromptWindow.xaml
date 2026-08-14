@@ -3,7 +3,7 @@
     <StackPanel>
       <TextBlock Name="TitleText" Text="要给这个日期加备注吗？" Style="{DynamicResource Dialog.Title}" />
       <TextBlock Text="例如输入“毕业典礼”，文件夹会变成 07.14_毕业典礼。留空则不改名。" Style="{DynamicResource Dialog.Body}" Margin="0,8,0,16" />
-      <TextBox Name="RemarkBox" Style="{DynamicResource Input.TextBox}" FontSize="15" />
+      <TextBox Name="RemarkBox" Style="{DynamicResource Input.TextBox}" FontSize="{DynamicResource Typography.Body}" />
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
         <Button Content="跳过" Width="88" Margin="0,0,8,0" Style="{DynamicResource Button.Secondary}" Click="Skip_Click" />
         <Button Content="保存备注" Width="108" Style="{DynamicResource Button.Primary}" Click="Save_Click" />

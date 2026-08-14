@@ -1,4 +1,4 @@
-# Current Status — Feature-by-Feature Implementation State
+﻿# Current Status — Feature-by-Feature Implementation State
 
 > **Purpose:** Real-time overview of what's done, what's partial, and what's planned.  
 > **Last Updated:** 2026-08-14  
@@ -27,9 +27,9 @@
 | 1 | 左上角图标高清圆角 | 未完成 | 生成 512px PNG logo 替换 ico 引用 |
 | 2 | 导入备注对话框保存按钮字体不明显 | 未完成 | 需增强对比/字重 |
 | 3 | 全局字体对比度排查 | 未完成 | 全页面字号/颜色对比度巡检 |
-| 4 | 网盘页右侧 CloudHubViewModel 真实接线 | 代码完成，测试待修 | 代码已接线；3 个测试断言待修：夸克显示「未连接」 vs 测试期望「夸克网盘」 |
+| 4 | 网盘页右侧 CloudHubViewModel 真实接线 | ✅ 完成 | 百度/夸克均接入 CloudHubViewModel；夸克 QuarkCloudProvider + 登录按钮已实现（962 测试全绿） |
 | 5 | 工具页卡片顶部色块圆角 | 未完成 | `CornerRadius="28,28,0,0"` |
-| 6 | 网盘页 WebView2 0x8007139F | 未完成 | `UserDataFolder` 被锁，需独立子目录重试 |
+| 6 | 网盘页 WebView2 0x8007139F | ✅ 完成 | `UserDataFolder` 被锁时自动改用独立唯一子目录重试 |
 
 ### 后续计划（master guide 定义）
 

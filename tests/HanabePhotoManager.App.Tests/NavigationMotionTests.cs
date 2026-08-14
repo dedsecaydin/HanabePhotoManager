@@ -10,7 +10,7 @@ public sealed class NavigationMotionTests
     private static readonly string[] AllPages =
     [
         "Home", "Import", "Preview", "CustomAlbums", "FaceSearch", "MapPhotos",
-        "Compression", "Watermark", "Cloud", "ContestOpen", "ContestJudged", "Settings"
+        "Compression", "Watermark", "Cloud", "Settings"
     ];
 
     [Fact]
@@ -28,8 +28,6 @@ public sealed class NavigationMotionTests
         code.Should().Contain("\"Settings\" => SettingsCenterPageHost");
         code.Should().Contain("\"CustomAlbums\" => CustomAlbumsPageHost");
         code.Should().Contain("\"Watermark\" => WatermarkPageHost");
-        code.Should().Contain("\"ContestOpen\" => ContestOpenPageHost");
-        code.Should().Contain("\"ContestJudged\" => ContestJudgedPageHost");
 
         // The deprecated collapsed ScrollViewer must no longer be the animation target.
         code.Should().NotContain("\"Settings\" => SettingsPage");
@@ -121,8 +119,6 @@ public sealed class NavigationMotionTests
         "Compression" => viewModel.IsCompressionPage,
         "Watermark" => viewModel.IsWatermarkPage,
         "Cloud" => viewModel.IsCloudPage,
-        "ContestOpen" => viewModel.IsContestOpenPage,
-        "ContestJudged" => viewModel.IsContestJudgedPage,
         "Settings" => viewModel.IsSettingsPage,
         _ => false
     };

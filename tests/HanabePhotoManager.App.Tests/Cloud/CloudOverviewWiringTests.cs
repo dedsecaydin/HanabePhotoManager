@@ -166,7 +166,7 @@ public sealed class CloudOverviewWiringTests
     }
 
     [Fact]
-    public async Task CloudPageFactory_Quark_ReportsNotIntegratedState()
+    public async Task CloudPageFactory_Quark_ReportsUnauthenticatedStateFromCli()
     {
         var root = Path.Combine(Path.GetTempPath(), "HanabePhotoManager.Tests", $"cloud-root-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
@@ -184,9 +184,10 @@ public sealed class CloudOverviewWiringTests
 
             await viewModel.InitializeAsync();
 
-            // 夸克连接器尚未实现：标题仍是真实网盘名，未接入原因由副标题如实说明，不伪造数据。
+            // 夸克连接器已接入 quark-drive CLI：未授权时标题仍是真实网盘名，
+            // 副标题如实说明"未登录"（CLI 不可用时同样回退为未登录），不伪造容量。
             viewModel.AccountTitle.Should().Be("夸克网盘");
-            viewModel.AccountSubtitle.Should().Be("未接入 · 夸克网盘连接器尚未实现");
+            viewModel.AccountSubtitle.Should().Contain("未登录");
             viewModel.AccountBadgeText.Should().Be("未接入");
             viewModel.IsAccountConnected.Should().BeFalse();
             viewModel.UsedPercentText.Should().Be("—");

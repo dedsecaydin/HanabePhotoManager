@@ -114,7 +114,6 @@ src/
     ├── People/                       # Face recognition & albums
     ├── Compression/ Watermark/       # Batch tools
     ├── Cloud/                        # Cloud drive client
-    ├── Contest/                      # Submission/showcase projects
     └── Themes/                       # Six Material Design 3 theme tokens
 ```
 

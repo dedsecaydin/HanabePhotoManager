@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -7,6 +8,17 @@ using Size = System.Windows.Size;
 using Point = System.Windows.Point;
 
 namespace HanabePhotoManager.App.Controls;
+
+/// <summary>
+/// Marks an item that should occupy an entire row in a
+/// <see cref="VirtualizingWrapPanel"/> (e.g. a date-section header between
+/// rows of photo tiles). Such items are laid out at full panel width with a
+/// fixed <see cref="VirtualizingWrapPanel.HeaderHeight"/> while every other
+/// item keeps the uniform tile size.
+/// </summary>
+public interface IWallSectionHeader
+{
+}
 
 /// <summary>
 /// A virtualizing WrapPanel that lays out uniformly-sized items left-to-right
@@ -22,6 +34,9 @@ namespace HanabePhotoManager.App.Controls;
 /// This panel keeps the responsive multi-column wrap layout while recycling
 /// only the visible rows. The tiles are fixed-size (see <see cref="ItemWidth"/>
 /// and <see cref="ItemHeight"/>), which the person photo grid already uses.
+/// Items implementing <see cref="IWallSectionHeader"/> are laid out as full
+/// width rows (see <see cref="HeaderHeight"/>) so a flattened photo wall can
+/// keep per-date section headers inside the same virtualizing surface.
 /// </remarks>
 public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
@@ -31,6 +46,20 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     private Size _viewport = new();
     private Point _offset = new();
     private ScrollViewer? _scrollOwner;
+
+    // Row table: one entry per laid-out row (a header row or a row of tiles).
+    // Rebuilt on every measure pass (O(n), n = item count, which is cheap
+    // compared with realizing containers) so collection reshuffles — e.g. a
+    // section collapsing or re-expanding with the same item count — never
+    // leave a stale layout behind.
+    private List<RowInfo> _rows = [];
+
+    private readonly struct RowInfo(int startIndex, int count, bool isHeader)
+    {
+        public int StartIndex { get; } = startIndex;
+        public int Count { get; } = count;
+        public bool IsHeader { get; } = isHeader;
+    }
 
     public static readonly DependencyProperty ItemWidthProperty = DependencyProperty.Register(
         nameof(ItemWidth),
@@ -44,6 +73,16 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         typeof(VirtualizingWrapPanel),
         new FrameworkPropertyMetadata(142d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
+    /// <summary>
+    /// Height reserved for items implementing <see cref="IWallSectionHeader"/>.
+    /// Header items are arranged at the full panel width.
+    /// </summary>
+    public static readonly DependencyProperty HeaderHeightProperty = DependencyProperty.Register(
+        nameof(HeaderHeight),
+        typeof(double),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(44d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
+
     public double ItemWidth
     {
         get => (double)GetValue(ItemWidthProperty);
@@ -54,6 +93,12 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     {
         get => (double)GetValue(ItemHeightProperty);
         set => SetValue(ItemHeightProperty, value);
+    }
+
+    public double HeaderHeight
+    {
+        get => (double)GetValue(HeaderHeightProperty);
+        set => SetValue(HeaderHeightProperty, value);
     }
 
     private int ItemCount => ItemsControl.GetItemsOwner(this)?.Items.Count ?? 0;
@@ -129,16 +174,15 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             var itemIndex = ContainerGenerator?.IndexFromContainer(element) ?? -1;
             if (itemIndex >= 0)
             {
-                var itemHeight = Math.Max(1d, ItemHeight);
-                var row = itemIndex / ItemsPerRow;
-                var top = row * itemHeight;
+                var top = GetRowTopForItem(itemIndex);
+                var height = IsHeaderItem(itemIndex) ? Math.Max(1d, HeaderHeight) : Math.Max(1d, ItemHeight);
                 if (top < VerticalOffset)
                 {
                     SetVerticalOffset(top);
                 }
-                else if (top + itemHeight > VerticalOffset + ViewportHeight)
+                else if (top + height > VerticalOffset + ViewportHeight)
                 {
-                    SetVerticalOffset(top + itemHeight - ViewportHeight);
+                    SetVerticalOffset(top + height - ViewportHeight);
                 }
 
                 break;
@@ -150,14 +194,114 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         return rectangle;
     }
 
+    // ---- Row table ----
+
+    private bool IsHeaderItem(int itemIndex)
+    {
+        var items = ItemsOwner?.Items;
+        return items is not null && itemIndex >= 0 && itemIndex < items.Count && items[itemIndex] is IWallSectionHeader;
+    }
+
+    private double RowHeight(RowInfo row) => row.IsHeader ? Math.Max(1d, HeaderHeight) : Math.Max(1d, ItemHeight);
+
+    private void EnsureRowTable()
+    {
+        var itemCount = ItemCount;
+        var viewportWidth = double.IsInfinity(ViewportWidth) || ViewportWidth <= 0
+            ? Math.Max(1d, ItemWidth)
+            : ViewportWidth;
+        _rows = BuildRows(itemCount, viewportWidth);
+    }
+
+    private List<RowInfo> BuildRows(int itemCount, double viewportWidth)
+    {
+        var rows = new List<RowInfo>();
+        if (itemCount == 0)
+        {
+            return rows;
+        }
+
+        var itemsPerRow = Math.Max(1, (int)Math.Floor(viewportWidth / Math.Max(1d, ItemWidth)));
+        var items = ItemsOwner?.Items;
+        var rowStart = 0;
+        var rowCount = 0;
+        var isHeaderRow = false;
+
+        for (var i = 0; i < itemCount; i++)
+        {
+            var isHeader = items is not null && items[i] is IWallSectionHeader;
+            if (isHeader)
+            {
+                // Flush the pending tile row (if any) before starting a header row.
+                if (rowCount > 0)
+                {
+                    rows.Add(new RowInfo(rowStart, rowCount, isHeaderRow));
+                }
+
+                rows.Add(new RowInfo(i, 1, true));
+                rowStart = i + 1;
+                rowCount = 0;
+                isHeaderRow = false;
+            }
+            else
+            {
+                if (rowCount == 0)
+                {
+                    rowStart = i;
+                    isHeaderRow = false;
+                }
+
+                rowCount++;
+                if (rowCount >= itemsPerRow)
+                {
+                    rows.Add(new RowInfo(rowStart, rowCount, false));
+                    rowStart = i + 1;
+                    rowCount = 0;
+                }
+            }
+        }
+
+        if (rowCount > 0)
+        {
+            rows.Add(new RowInfo(rowStart, rowCount, false));
+        }
+
+        return rows;
+    }
+
+    private double GetRowTopForItem(int itemIndex)
+    {
+        EnsureRowTable();
+        var y = 0d;
+        foreach (var row in _rows)
+        {
+            if (itemIndex >= row.StartIndex && itemIndex < row.StartIndex + row.Count)
+            {
+                return y;
+            }
+
+            y += RowHeight(row);
+        }
+
+        return 0;
+    }
+
     // ---- Measure / Arrange ----
 
     protected override Size MeasureOverride(Size availableSize)
     {
         UpdateScrollInfo(availableSize);
-        GetVisibleRange(out var firstVisibleItemIndex, out var lastVisibleItemIndex);
+        EnsureRowTable();
 
         var generator = ItemContainerGenerator;
+        var itemCount = ItemCount;
+        if (itemCount == 0)
+        {
+            CleanUpItems(0, -1);
+            return ClampToFinite(availableSize);
+        }
+
+        GetVisibleRange(out var firstVisibleItemIndex, out var lastVisibleItemIndex);
         if (firstVisibleItemIndex < 0 || lastVisibleItemIndex < firstVisibleItemIndex)
         {
             CleanUpItems(0, -1);
@@ -166,6 +310,9 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
         var startPosition = generator.GeneratorPositionFromIndex(firstVisibleItemIndex);
         var childIndex = startPosition.Offset == 0 ? startPosition.Index : startPosition.Index + 1;
+        var viewportWidth = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0
+            ? Math.Max(1d, ItemWidth)
+            : availableSize.Width;
 
         using (generator.StartAt(startPosition, GeneratorDirection.Forward, true))
         {
@@ -186,7 +333,9 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                     generator.PrepareItemContainer(child);
                 }
 
-                child?.Measure(new Size(Math.Max(1d, ItemWidth), Math.Max(1d, ItemHeight)));
+                var measureWidth = IsHeaderItem(itemIndex) ? viewportWidth : Math.Max(1d, ItemWidth);
+                var measureHeight = IsHeaderItem(itemIndex) ? Math.Max(1d, HeaderHeight) : Math.Max(1d, ItemHeight);
+                child?.Measure(new Size(measureWidth, measureHeight));
             }
         }
 
@@ -196,29 +345,130 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        GetVisibleRange(out var firstVisibleItemIndex, out var lastVisibleItemIndex);
+        EnsureRowTable();
+
+        // Pre-compute the top of every row so children can be placed cheaply.
+        var rowTops = new double[_rows.Count];
+        var y = 0d;
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            rowTops[r] = y;
+            y += RowHeight(_rows[r]);
+        }
+
+        var viewportWidth = double.IsInfinity(finalSize.Width) || finalSize.Width <= 0
+            ? Math.Max(1d, ItemWidth)
+            : finalSize.Width;
 
         foreach (UIElement child in InternalChildren)
         {
             var itemIndex = ContainerGenerator?.IndexFromContainer(child) ?? -1;
-            if (itemIndex < firstVisibleItemIndex || itemIndex > lastVisibleItemIndex)
+            if (itemIndex < 0)
             {
                 child.Arrange(new Rect(0, 0, 0, 0));
                 continue;
             }
 
+            var rowIndex = FindRowIndex(itemIndex);
+            if (rowIndex < 0)
+            {
+                child.Arrange(new Rect(0, 0, 0, 0));
+                continue;
+            }
+
+            var row = _rows[rowIndex];
+            var rowTop = rowTops[rowIndex];
+            if (row.IsHeader)
+            {
+                child.Arrange(new Rect(
+                    -HorizontalOffset,
+                    rowTop - VerticalOffset,
+                    viewportWidth,
+                    Math.Max(1d, HeaderHeight)));
+                continue;
+            }
+
             var itemWidth = Math.Max(1d, ItemWidth);
             var itemHeight = Math.Max(1d, ItemHeight);
-            var row = itemIndex / ItemsPerRow;
-            var column = itemIndex % ItemsPerRow;
+            var column = itemIndex - row.StartIndex;
             child.Arrange(new Rect(
                 column * itemWidth - HorizontalOffset,
-                row * itemHeight - VerticalOffset,
+                rowTop - VerticalOffset,
                 child.DesiredSize.Width,
                 child.DesiredSize.Height));
         }
 
         return finalSize;
+    }
+
+    private int FindRowIndex(int itemIndex)
+    {
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            var row = _rows[r];
+            if (itemIndex >= row.StartIndex && itemIndex < row.StartIndex + row.Count)
+            {
+                return r;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// Returns the laid-out bounds of every item — including items that are not
+    /// currently realized — in panel coordinates (already offset by the current
+    /// scroll position, i.e. viewport-relative). Consumers such as the browse
+    /// page's rubber-band selection use this to hit-test against the whole
+    /// virtualized wall instead of only the realized window that exists in the
+    /// visual tree. Header items report <paramref name="isHeader"/> as
+    /// <c>true</c> so callers can skip them.
+    /// </summary>
+    public IReadOnlyList<(int ItemIndex, Rect Bounds, bool IsHeader)> GetItemBounds()
+    {
+        EnsureRowTable();
+        var result = new List<(int, Rect, bool)>(_rows.Count * 2);
+        if (_rows.Count == 0)
+        {
+            return result;
+        }
+
+        var viewportWidth = double.IsInfinity(ViewportWidth) || ViewportWidth <= 0
+            ? Math.Max(1d, ItemWidth)
+            : ViewportWidth;
+        var itemWidth = Math.Max(1d, ItemWidth);
+        var itemHeight = Math.Max(1d, ItemHeight);
+        var headerHeight = Math.Max(1d, HeaderHeight);
+
+        var rowTops = new double[_rows.Count];
+        var y = 0d;
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            rowTops[r] = y;
+            y += RowHeight(_rows[r]);
+        }
+
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            var row = _rows[r];
+            var top = rowTops[r] - VerticalOffset;
+            if (row.IsHeader)
+            {
+                result.Add((row.StartIndex, new Rect(-HorizontalOffset, top, viewportWidth, headerHeight), true));
+            }
+            else
+            {
+                for (var c = 0; c < row.Count; c++)
+                {
+                    result.Add((
+                        row.StartIndex + c,
+                        new Rect(c * itemWidth - HorizontalOffset, top, itemWidth, itemHeight),
+                        false));
+                }
+            }
+        }
+
+        return result;
     }
 
     private void UpdateScrollInfo(Size availableSize)
@@ -251,11 +501,14 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             return new Size(viewportWidth, 0);
         }
 
-        var itemWidth = Math.Max(1d, ItemWidth);
-        var itemHeight = Math.Max(1d, ItemHeight);
-        var itemsPerRow = Math.Max(1, (int)Math.Floor(viewportWidth / itemWidth));
-        var rowCount = (int)Math.Ceiling((double)itemCount / itemsPerRow);
-        return new Size(viewportWidth, Math.Max(rowCount * itemHeight, viewportHeight));
+        EnsureRowTable();
+        var totalHeight = 0d;
+        foreach (var row in _rows)
+        {
+            totalHeight += RowHeight(row);
+        }
+
+        return new Size(viewportWidth, Math.Max(totalHeight, viewportHeight));
     }
 
     private void GetVisibleRange(out int firstVisibleItemIndex, out int lastVisibleItemIndex)
@@ -268,18 +521,50 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             return;
         }
 
-        var itemHeight = Math.Max(1d, ItemHeight);
-        var itemsPerRow = ItemsPerRow;
-        var firstVisibleRow = (int)Math.Floor(VerticalOffset / itemHeight);
-        var lastVisibleRow = (int)Math.Ceiling((VerticalOffset + ViewportHeight) / itemHeight) - 1;
+        EnsureRowTable();
 
-        // Realize one extra row on each side so fast scrolling never shows blanks.
-        firstVisibleRow = Math.Max(0, firstVisibleRow - 1);
-        var totalRows = (int)Math.Ceiling((double)itemCount / itemsPerRow) - 1;
-        lastVisibleRow = Math.Min(totalRows, lastVisibleRow + 1);
+        // Find the first row whose bottom edge is below the scroll offset.
+        var firstRow = -1;
+        var y = 0d;
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            var h = RowHeight(_rows[r]);
+            if (y + h > VerticalOffset)
+            {
+                firstRow = r;
+                break;
+            }
 
-        firstVisibleItemIndex = firstVisibleRow * itemsPerRow;
-        lastVisibleItemIndex = Math.Min(itemCount - 1, (lastVisibleRow + 1) * itemsPerRow - 1);
+            y += h;
+        }
+
+        if (firstRow < 0)
+        {
+            firstRow = _rows.Count - 1;
+        }
+
+        // Realize one extra row above so fast scrolling never shows blanks.
+        firstRow = Math.Max(0, firstRow - 1);
+
+        // Find the last row that starts before the bottom of the viewport.
+        var lastRow = firstRow;
+        y = 0d;
+        for (var r = 0; r < _rows.Count; r++)
+        {
+            var h = RowHeight(_rows[r]);
+            if (r >= firstRow && y <= VerticalOffset + ViewportHeight)
+            {
+                lastRow = r;
+            }
+
+            y += h;
+        }
+
+        // Realize one extra row below.
+        lastRow = Math.Min(_rows.Count - 1, lastRow + 1);
+
+        firstVisibleItemIndex = _rows[firstRow].StartIndex;
+        lastVisibleItemIndex = Math.Min(itemCount - 1, _rows[lastRow].StartIndex + _rows[lastRow].Count - 1);
     }
 
     private void CleanUpItems(int firstChildIndex, int lastChildIndex)

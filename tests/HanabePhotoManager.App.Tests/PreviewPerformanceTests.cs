@@ -73,8 +73,9 @@ public sealed class PreviewPerformanceTests
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("ItemsSource=\"{Binding HomePreviewFiles}\"");
-        xaml.Should().Contain("ItemsSource=\"{Binding VisiblePreviewSections}\"");
-        xaml.Should().Contain("ItemsSource=\"{Binding Items}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
+        xaml.Should().Contain("controls:VirtualizingWrapPanel");
+        xaml.Should().Contain("x:Name=\"PreviewWallItemsControl\"");
         xaml.Should().NotContain("ItemsSource=\"{Binding FilteredPreviewFiles}\"");
         xaml.Should().Contain("PreviewContextMenu_Rate5");
         xaml.Should().Contain("PreviewContextMenu_TagPortrait");
@@ -84,6 +85,13 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("PreviewSelectionSurface_MouseLeftButtonDown");
         xaml.Should().Contain("PreviewSelectionRectangle");
         xaml.Should().NotContain("RepeatBehavior=\"Forever\"");
+
+        var panelSource = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "Controls", "VirtualizingWrapPanel.cs"));
+        panelSource.Should().Contain("IScrollInfo");
+        panelSource.Should().Contain("GetItemBounds");
+        panelSource.Should().Contain("HeaderHeight");
+        panelSource.Should().Contain("IWallSectionHeader");
     }
 
     [Fact]
@@ -278,10 +286,11 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("ItemsSource=\"{Binding VisiblePreviewSections}\"");
-        xaml.Should().Contain("Visibility=\"{Binding IsExpanded, Converter={StaticResource BoolToVis}}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
+        xaml.Should().Contain("HeaderHeight=\"56\"");
         xaml.Should().Contain("Style=\"{StaticResource PreviewDateHeaderButton}\"");
         xaml.Should().Contain("Command=\"{Binding ToggleCommand}\"");
+        xaml.Should().Contain("DataType=\"{x:Type vm:PreviewDateSectionViewModel}\"");
         xaml.Should().NotContain("<Expander IsExpanded=\"{Binding IsExpanded");
         xaml.Should().NotContain("Content=\"上一批\"");
         xaml.Should().NotContain("Content=\"下一批\"");
@@ -336,6 +345,7 @@ public sealed class PreviewPerformanceTests
         viewModel.SetPreviewRetouchFilterCommand.Execute("已修");
         viewModel.PreviewRetouchFilter.Should().Be("已修");
         viewModel.PreviewSortChoices.Select(choice => choice.Label).Should().Contain(["评分从高到低", "评分从低到高"]);
+        viewModel.PreviewSortChoices.Select(choice => choice.Label).Should().Contain(["拍摄时间从新到旧", "拍摄时间从旧到新"]);
         viewModel.RatingFilters.Should().Equal("全部评分", "未评分", "1★", "2★", "3★", "4★", "5★");
         xaml.Should().Contain("Style=\"{StaticResource PreviewSegmentButton}\"");
         xaml.Should().Contain("Style=\"{StaticResource PreviewSortComboBox}\"");
@@ -367,9 +377,47 @@ public sealed class PreviewPerformanceTests
         viewModel.SemanticSearch.QueryText.Should().BeEmpty();
         viewModel.PreviewRetouchFilter.Should().Be("全部");
         viewModel.RatingFilter.Should().Be("全部评分");
-        viewModel.PreviewSortMode.Should().Be(0);
+        viewModel.PreviewSortMode.Should().Be(9);
         viewModel.SmartCategoryFilter.Should().Be("全部智能类别");
         viewModel.IsBrowseConditionsExpanded.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TimeSort_OrdersByCapturedAtNewestFirstAndOldestFirst()
+    {
+        var viewModel = new MainWindowViewModel();
+        var older = new PreviewFileViewModel(
+            "older.jpg", "JPG生图", @"D:\photos\older.jpg", "1 KB", ".jpg", null,
+            0, new DateTime(2020, 5, 1, 12, 0, 0));
+        var middle = new PreviewFileViewModel(
+            "middle.jpg", "JPG生图", @"D:\photos\middle.jpg", "1 KB", ".jpg", null,
+            0, new DateTime(2022, 5, 1, 12, 0, 0));
+        var newer = new PreviewFileViewModel(
+            "newer.jpg", "JPG生图", @"D:\photos\newer.jpg", "1 KB", ".jpg", null,
+            0, new DateTime(2024, 5, 1, 12, 0, 0));
+        viewModel.PreviewFiles.Add(older);
+        viewModel.PreviewFiles.Add(middle);
+        viewModel.PreviewFiles.Add(newer);
+
+        // 拍摄时间从新到旧 (9): newest first
+        viewModel.PreviewSortMode = 9;
+        viewModel.FilteredPreviewFiles.Select(file => file.Name)
+            .Should().Equal("newer.jpg", "middle.jpg", "older.jpg");
+
+        // 拍摄时间从旧到新 (10): oldest first
+        viewModel.PreviewSortMode = 10;
+        viewModel.FilteredPreviewFiles.Select(file => file.Name)
+            .Should().Equal("older.jpg", "middle.jpg", "newer.jpg");
+    }
+
+    [Fact]
+    public async Task DefaultPreviewSort_IsCaptureTimeNewestFirst()
+    {
+        // The persisted default (settings "默认排序") must be 拍摄时间从新到旧 (9),
+        // so a fresh install opens the browse page in time order.
+        var store = new HanabePhotoManager.App.Services.AppSettingsStore(
+            Path.Combine(Path.GetTempPath(), $"hpm-settings-{Guid.NewGuid():N}.json"));
+        (await store.LoadAsync()).DefaultPreviewSort.Should().Be(9);
     }
 
     [Fact]
@@ -416,7 +464,7 @@ public sealed class PreviewPerformanceTests
 
         xaml.Should().Contain("Tag=\"PreviewCard\"");
         xaml.Should().Contain("Name=\"ThumbnailClip\"");
-        xaml.Should().Contain("CornerRadius=\"14\" ClipToBounds=\"True\"");
+        xaml.Should().Contain("CornerRadius=\"12\" ClipToBounds=\"True\"");
         xaml.Should().Contain("ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\"");
         xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }

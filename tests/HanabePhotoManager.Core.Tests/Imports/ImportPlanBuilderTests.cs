@@ -190,6 +190,88 @@ public sealed class ImportPlanBuilderTests
         call.Destination.Should().Be(Path.Combine(@"E:\library", "7月", "07.11", "JPG生图", "JK0001.JPG"));
     }
 
+    [Fact]
+    public async Task BuildAsync_NormalizesRootRelativeLibraryRootToFullyQualifiedDestinations()
+    {
+        // 回归：settings.json 里 LibraryRoot 曾为 "\Hanabe\拍照"（根相对路径、无盘符），
+        // 旧代码直接 Path.Combine 产出 "\Hanabe\拍照\8月\08.15\..." 无盘符目标，
+        // 下游 VerifiedFileTransfer 抛 "Transfer paths must be fully qualified." 中断整批导入。
+        // GetFullPath 会把根相对路径解析成当前盘符的绝对路径（本机为 C:\Hanabe\拍照）。
+        var root = @"\HanabePhotoTests\拍照";
+        var group = new MediaGroup("photo", MediaCategory.Jpeg, CreateSource(@"D:\camera\photo.JPG"), Array.Empty<SourceMediaFile>());
+        var probe = new RecordingProbe(_ => ConflictKind.None);
+
+        var plan = await new ImportPlanBuilder(probe)
+            .BuildAsync(root, new LibraryDate(2026, 8, 15), TransferMode.CopyKeepSource, [group], CancellationToken.None);
+
+        var expectedRoot = Path.GetFullPath(root);
+        Path.IsPathFullyQualified(expectedRoot).Should().BeTrue();
+        plan.LibraryRoot.Should().Be(expectedRoot);
+
+        var file = plan.Items.Should().ContainSingle().Subject.Files.Should().ContainSingle().Subject;
+        Path.IsPathFullyQualified(file.DestinationPath).Should().BeTrue();
+        Path.IsPathFullyQualified(file.TemporaryPath).Should().BeTrue();
+        file.DestinationPath.Should().Be(Path.Combine(expectedRoot, "8月", "08.15", "JPG生图", "JK0001.JPG"));
+    }
+
+    [Fact]
+    public async Task BuildAsync_KeepsFullyQualifiedLibraryRootUnchanged()
+    {
+        // 已完全限定的根（含盘符/UNC）保持原样，GetFullPath 不改变其语义。
+        var root = @"E:\library";
+        var group = new MediaGroup("photo", MediaCategory.Jpeg, CreateSource(@"D:\camera\photo.JPG"), Array.Empty<SourceMediaFile>());
+
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(root, new LibraryDate(2026, 7, 11), TransferMode.CopyKeepSource, [group], CancellationToken.None);
+
+        plan.LibraryRoot.Should().Be(@"E:\library");
+        var file = plan.Items.Single().Files.Single();
+        file.DestinationPath.Should().Be(Path.Combine(@"E:\library", "7月", "07.11", "JPG生图", "JK0001.JPG"));
+    }
+
+    [Fact]
+    public async Task BuildAsync_KeepsUncLibraryRootAndProducesUncDestinations()
+    {
+        // 回归：真实照片库是 UNC 共享 "\\Hanabe\拍照"（另一台电脑 HANABE），
+        // 根与 Destination 必须保持 UNC 前缀，绝不变成 "C:\..." 盘路径。
+        var root = @"\\Hanabe\拍照";
+        var group = new MediaGroup("photo", MediaCategory.Jpeg, CreateSource(@"D:\camera\photo.JPG"), Array.Empty<SourceMediaFile>());
+
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(root, new LibraryDate(2026, 8, 15), TransferMode.CopyKeepSource, [group], CancellationToken.None);
+
+        plan.LibraryRoot.Should().Be(root);
+        var file = plan.Items.Single().Files.Single();
+        file.DestinationPath.Should().Be(Path.Combine(root, "8月", "08.15", "JPG生图", "JK0001.JPG"));
+        file.DestinationPath.Should().StartWith(@"\\Hanabe\拍照");
+        file.DestinationPath.Should().NotStartWith(@"C:\");
+        Path.IsPathFullyQualified(file.DestinationPath).Should().BeTrue();
+        Path.IsPathFullyQualified(file.TemporaryPath).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task BuildAsync_SingleBackslashRootRelative_PrefersReachableUnc()
+    {
+        // 根相对路径 "\Hanabe\拍照"（丢失反斜杠的 UNC）：真实共享可访问时应产出 UNC
+        // Destination，而不是 GetFullPath 成的 C 盘路径（C:\Hanabe\拍照 只是本机残留副本）。
+        if (!Directory.Exists(@"\\Hanabe\拍照"))
+        {
+            return; // 环境无该 UNC 共享时跳过端到端验证（分支逻辑由 LibraryRootNormalizerTests 确定性覆盖）
+        }
+
+        var group = new MediaGroup("photo", MediaCategory.Jpeg, CreateSource(@"D:\camera\photo.JPG"), Array.Empty<SourceMediaFile>());
+
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(@"\Hanabe\拍照", new LibraryDate(2026, 8, 15), TransferMode.CopyKeepSource, [group], CancellationToken.None);
+
+        plan.LibraryRoot.Should().Be(@"\\Hanabe\拍照");
+        plan.LibraryRoot.Should().NotBe(Path.GetFullPath(@"\Hanabe\拍照"));
+        var file = plan.Items.Single().Files.Single();
+        file.DestinationPath.Should().StartWith(@"\\Hanabe\拍照\8月\08.15\JPG生图\");
+        file.DestinationPath.Should().NotStartWith(@"C:\");
+        Path.IsPathFullyQualified(file.DestinationPath).Should().BeTrue();
+    }
+
     private static string FileNameFor(ImportPlan plan, MediaGroup group)
     {
         return Path.GetFileName(plan.Items.Single(item => ReferenceEquals(item.Group, group)).Files.Single().DestinationPath);

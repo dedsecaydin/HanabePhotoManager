@@ -8,6 +8,12 @@ namespace HanabePhotoManager.App.ViewModels;
 
 public sealed class PhotoViewerViewModel : ObservableObject
 {
+    private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".mov", ".mkv", ".avi", ".wmv", ".flv", ".webm", ".m4v",
+        ".ts", ".mts", ".m2ts", ".3gp", ".mpg", ".mpeg", ".rm", ".rmvb", ".divx", ".ogv"
+    };
+
     private readonly IPhotoDetailMetadataReader _reader;
     private readonly Func<string, int> _ratingReader;
     private readonly Action<string, int> _ratingWriter;
@@ -55,6 +61,8 @@ public sealed class PhotoViewerViewModel : ObservableObject
     public bool CanPrevious => IsOpen && _index > 0;
     public bool CanNext => IsOpen && _index >= 0 && _index < _paths.Count - 1;
     public string PositionText => _index < 0 ? "0 / 0" : $"{_index + 1} / {_paths.Count}";
+    public string? FileName => CurrentPath is { } path ? System.IO.Path.GetFileName(path) : null;
+    public bool IsVideo => CurrentPath is { } path && VideoExtensions.Contains(System.IO.Path.GetExtension(path));
     public int Rating { get => _rating; private set => SetProperty(ref _rating, value); }
     public double ZoomScale { get => _zoomScale; private set => SetProperty(ref _zoomScale, value); }
     public string ErrorText { get => _errorText; private set => SetProperty(ref _errorText, value); }
@@ -82,6 +90,9 @@ public sealed class PhotoViewerViewModel : ObservableObject
         ZoomScale = Math.Clamp(ZoomScale * (direction > 0 ? 1.12 : 1 / 1.12), 0.25, 8);
     }
     public void ResetZoom() => ZoomScale = 1;
+
+    /// <summary>查看器（如视频引擎初始化失败）用来把错误展示到信息面板。</summary>
+    public void ReportError(string message) => ErrorText = message;
 
     public void DeleteCurrent()
     {
@@ -118,8 +129,10 @@ public sealed class PhotoViewerViewModel : ObservableObject
         Metadata = _reader.Read(path);
         Rating = Math.Clamp(_ratingReader(path), 0, 5);
         ErrorText = string.Empty;
-        Image = Load(path);
+        Image = IsVideo ? null : Load(path);
         OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(IsVideo));
+        OnPropertyChanged(nameof(FileName));
         OnPropertyChanged(nameof(PositionText));
         NotifyNavigation();
     }

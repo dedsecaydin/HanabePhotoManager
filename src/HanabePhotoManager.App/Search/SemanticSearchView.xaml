@@ -6,7 +6,7 @@
     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
     <StackPanel Margin="0,0,0,16">
       <DockPanel>
-        <TextBlock Text="语义搜索" FontSize="22" FontWeight="SemiBold" />
+        <TextBlock Text="语义搜索" FontSize="{StaticResource Typography.Title}" FontWeight="SemiBold" />
         <Button DockPanel.Dock="Right" Content="重新索引" Command="{Binding ReindexCommand}" />
         <Button DockPanel.Dock="Right" Content="停止" Command="{Binding CancelCommand}" />
       </DockPanel>
@@ -17,22 +17,66 @@
       <ProgressBar Height="6" Minimum="0" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}" />
       <TextBlock Margin="0,7,0,0" Opacity="0.74" TextWrapping="Wrap" Text="{Binding StatusText}" />
     </StackPanel>
-    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-      <ItemsControl ItemsSource="{Binding Results}">
-        <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate DataType="{x:Type search:SearchResultItemViewModel}">
-            <Border Width="210" Margin="0,0,14,14" Padding="8" Style="{DynamicResource Card.Default}" Cursor="Hand" MouseLeftButtonDown="Result_MouseLeftButtonDown">
-              <StackPanel>
-                <Border Height="180" ClipToBounds="True" Background="{DynamicResource Brush.Surface.Subtle}"><Image Source="{Binding Thumbnail}" Stretch="UniformToFill" /></Border>
-                <TextBlock Margin="4,8,4,0" FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                <TextBlock Margin="4,3,4,0" FontSize="11" Opacity="0.68" Text="{Binding ScoreText}" />
-                <TextBlock Margin="4,3,4,0" FontSize="11" Opacity="0.62" Text="{Binding Folder}" TextTrimming="CharacterEllipsis" />
-              </StackPanel>
-            </Border>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </ScrollViewer>
+    <Grid Grid.Row="1">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Results}">
+          <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type search:SearchResultItemViewModel}">
+              <Border Width="210" Margin="0,0,14,14" Padding="8" Style="{DynamicResource Card.Default}" Cursor="Hand" MouseLeftButtonDown="Result_MouseLeftButtonDown">
+                <StackPanel>
+                  <Border Height="180" ClipToBounds="True" Background="{DynamicResource Brush.Surface.Subtle}"><Image Source="{Binding Thumbnail}" Stretch="UniformToFill" /></Border>
+                  <TextBlock Margin="4,8,4,0" FontWeight="SemiBold" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Margin="4,3,4,0" FontSize="{StaticResource Typography.Caption}" Opacity="0.68" Text="{Binding ScoreText}" />
+                  <TextBlock Margin="4,3,4,0" FontSize="{StaticResource Typography.Caption}" Opacity="0.62" Text="{Binding Folder}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+      <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32,28" IsHitTestVisible="False">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding HasResults}" Value="False">
+                <Setter Property="Visibility" Value="Visible"/>
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <StackPanel>
+          <StackPanel>
+            <StackPanel.Style>
+              <Style TargetType="StackPanel">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding HasActiveQuery}" Value="False">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </StackPanel.Style>
+            <TextBlock Text="输入描述，开始语义搜索" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" HorizontalAlignment="Center" />
+            <TextBlock Text="例如“海边日落”或“红色连衣裙”，在本机照片库中查找。" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.BodySmall}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+          </StackPanel>
+          <StackPanel>
+            <StackPanel.Style>
+              <Style TargetType="StackPanel">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding HasActiveQuery}" Value="True">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </StackPanel.Style>
+            <TextBlock Text="没有找到相关照片" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" HorizontalAlignment="Center" />
+            <TextBlock Text="换个说法试试，或点击右上角“重新索引”确保照片已入库。" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.BodySmall}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

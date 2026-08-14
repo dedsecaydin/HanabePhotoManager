@@ -144,6 +144,51 @@ public sealed class LibraryContentScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildSizeMapAsync_ScopedToDateFolder_ExcludesOtherDateFolders()
+    {
+        // 模拟图库：两个日期目录，各自含分类子文件夹。
+        var dateA = Path.Combine(_root, "08月", "08.08");
+        var dateB = Path.Combine(_root, "08月", "08.09");
+        foreach (var dateDir in new[] { dateA, dateB })
+        {
+            foreach (var category in new[] { "RAW生图", "JPG生图", "修后", "视频", "action视频", "素材" })
+            {
+                Directory.CreateDirectory(Path.Combine(dateDir, category));
+            }
+        }
+
+        await File.WriteAllBytesAsync(Path.Combine(dateA, "JPG生图", "same.jpg"), [1, 2, 3]);
+        await File.WriteAllBytesAsync(Path.Combine(dateB, "JPG生图", "same.jpg"), [1, 2, 3]);
+
+        var map = await _scanner.BuildSizeMapAsync(dateA, Extensions, default);
+
+        map.Values.SelectMany(paths => paths).Should().ContainSingle()
+            .Which.Should().Contain("08.08");
+        map.Values.SelectMany(paths => paths).Should().NotContain(path => path.Contains("08.09"));
+    }
+
+    [Fact]
+    public async Task FindContentDuplicateAsync_FindsMatchOnlyWithinScopedDateFolder()
+    {
+        // 只扫目标日期目录：同内容的文件在别的日期目录时不构成重复，只有目标日期目录内的才算。
+        var dateA = Path.Combine(_root, "08月", "08.08", "JPG生图");
+        var dateB = Path.Combine(_root, "08月", "08.09", "JPG生图");
+        Directory.CreateDirectory(dateA);
+        Directory.CreateDirectory(dateB);
+
+        var data = new byte[] { 10, 20, 30 };
+        await File.WriteAllBytesAsync(Path.Combine(dateA, "existing.jpg"), data);
+        await File.WriteAllBytesAsync(Path.Combine(dateB, "other.jpg"), data);
+        var incoming = Path.Combine(_root, "incoming.jpg");
+        await File.WriteAllBytesAsync(incoming, data);
+
+        var map = await _scanner.BuildSizeMapAsync(dateA, Extensions, default);
+        var duplicate = await _scanner.FindContentDuplicateAsync(incoming, map, default);
+
+        duplicate.Should().Be(Path.Combine(dateA, "existing.jpg"));
+    }
+
+    [Fact]
     public async Task FindAllDuplicatesAsync_ScansSubdirectories()
     {
         var subDir = Path.Combine(_root, "sub");

@@ -11,7 +11,7 @@ public partial class ImportDuplicateBatchDecisionWindow : Window
     {
         ArgumentNullException.ThrowIfNull(matches);
         InitializeComponent();
-        DescriptionText.Text = $"本次导入中有 {matches.Count} 个文件与图库或本次选择的文件内容完全相同。请选择统一处理方式。";
+        DescriptionText.Text = $"本次导入中有 {matches.Count} 个文件与目标日期文件夹或本次选择的文件内容完全相同。请选择统一处理方式。";
         MatchesList.ItemsSource = matches
             .Take(100)
             .Select(match => $"{Path.GetFileName(match.IncomingPath)}  =  {Path.GetFileName(match.ExistingPath)}" +

@@ -43,7 +43,7 @@ public sealed class OnboardingViewModelTests
         var viewModel = new MainWindowViewModel();
         viewModel.ReplayOnboardingCommand.Execute(null);
 
-        while (viewModel.OnboardingStep < 12)
+        while (viewModel.OnboardingStep < 10)
         {
             if (viewModel.IsOnboardingContinuationChoiceStep)
                 viewModel.ContinueOnboardingCommand.Execute(null);

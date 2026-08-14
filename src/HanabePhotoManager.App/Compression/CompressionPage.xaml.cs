@@ -40,8 +40,6 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
             case "Collage": ShowTool(ImageToolMode.Collage); break;
             case "Watermark": ShowTool(ImageToolMode.Watermark); break;
             case "WeChat": ShowTool(ImageToolMode.WeChatSend); break;
-            case "ContestOpen": Navigate("ContestOpen"); break;
-            case "ContestJudged": Navigate("ContestJudged"); break;
         }
     }
 
@@ -63,13 +61,6 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
         if (ToolGridHost is null || ToolDetailHost is null) return;
         ToolGridHost.Visibility = Visibility.Visible;
         ToolDetailHost.Visibility = Visibility.Collapsed;
-    }
-
-    private void Navigate(string page)
-    {
-        if (Window.GetWindow(this)?.DataContext is not MainWindowViewModel main) return;
-        if (page == "ContestOpen") main.ShowContestOpenCommand.Execute(null);
-        else main.ShowContestJudgedCommand.Execute(null);
     }
 
     private async void ChooseFiles_Click(object sender, RoutedEventArgs e)

@@ -67,7 +67,7 @@
             <Style TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
                 <Setter Property="FontFamily" Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"   Value="13.6" />
+                <Setter Property="FontSize"   Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight" Value="Medium" />
                 <Setter Property="TextOptions.TextRenderingMode"  Value="ClearType" />
                 <Setter Property="TextOptions.TextFormattingMode" Value="Ideal" />
@@ -76,7 +76,7 @@
 
             <Style TargetType="Button">
                 <Setter Property="FontFamily"        Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"          Value="14" />
+                <Setter Property="FontSize"          Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"        Value="SemiBold" />
                 <Setter Property="Padding"           Value="16,10" />
                 <Setter Property="Margin"            Value="0,0,10,0" />
@@ -104,6 +104,10 @@
                                 <Trigger Property="IsPressed" Value="True">
                                     <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
                                 </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" />
+                                    <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
+                                </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
                                     <Setter Property="Opacity" Value="0.45" />
                                 </Trigger>
@@ -116,7 +120,7 @@
             <Style TargetType="TextBox">
                 <Setter Property="Foreground"  Value="{StaticResource TextPrimary}" />
                 <Setter Property="FontFamily"  Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"    Value="13.6" />
+                <Setter Property="FontSize"    Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"  Value="Medium" />
                 <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
                 <Setter Property="BorderBrush" Value="{StaticResource BorderStrong}" />
@@ -127,7 +131,7 @@
             <Style TargetType="PasswordBox">
                 <Setter Property="Foreground"  Value="{StaticResource TextPrimary}" />
                 <Setter Property="FontFamily"  Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"    Value="13.6" />
+                <Setter Property="FontSize"    Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"  Value="Medium" />
                 <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
                 <Setter Property="BorderBrush" Value="{StaticResource BorderStrong}" />
@@ -137,7 +141,7 @@
 
             <Style TargetType="ComboBox">
                 <Setter Property="FontFamily"  Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"    Value="13.6" />
+                <Setter Property="FontSize"    Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"  Value="SemiBold" />
                 <Setter Property="Foreground"  Value="{StaticResource TextPrimary}" />
                 <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
@@ -254,13 +258,13 @@
             <Style TargetType="CheckBox">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
                 <Setter Property="FontFamily" Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"   Value="13.6" />
+                <Setter Property="FontSize"   Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight" Value="Medium" />
             </Style>
 
             <Style TargetType="TreeView">
                 <Setter Property="FontFamily"      Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"        Value="13.6" />
+                <Setter Property="FontSize"        Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"      Value="Medium" />
                 <Setter Property="Foreground"      Value="{StaticResource TextPrimary}" />
                 <Setter Property="Background"      Value="Transparent" />
@@ -270,7 +274,7 @@
             <Style TargetType="TreeViewItem">
                 <Setter Property="Foreground" Value="{StaticResource TextPrimary}" />
                 <Setter Property="FontFamily" Value="{StaticResource FontPrimary}" />
-                <Setter Property="FontSize"   Value="13.6" />
+                <Setter Property="FontSize"   Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight" Value="SemiBold" />
             </Style>
 

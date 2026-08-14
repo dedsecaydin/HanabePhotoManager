@@ -25,6 +25,21 @@ public partial class App : System.Windows.Application
     internal static string? ScreenshotPage { get; private set; }
 
     /// <summary>
+    /// When launched with <c>--viewer &lt;path&gt;</c>, the app opens the immersive
+    /// PhotoViewerWindow on that file after the main window loads (used both for
+    /// interactive verification and, combined with <c>--screenshot</c>, for
+    /// headless-safe viewer screenshots).
+    /// </summary>
+    internal static string? ViewerFile { get; private set; }
+
+    /// <summary>
+    /// With <c>--viewer</c> + <c>--screenshot</c>: show the floating toolbars in
+    /// the captured PNG. Without it the viewer is captured in its zero-identifier
+    /// immersive state (bare photo/video).
+    /// </summary>
+    internal static bool ViewerOverlaysForScreenshot { get; private set; }
+
+    /// <summary>
     /// When set (with <c>--select-first</c>), the main window selects the first
     /// library photo before rendering the screenshot. Used to capture the
     /// contextual Inspector panel in the headless-safe screenshot workflow.
@@ -97,6 +112,15 @@ public partial class App : System.Windows.Application
             {
                 ScreenshotCloudProvider = args[index + 1];
                 index++;
+            }
+            else if (string.Equals(arg, "--viewer", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+            {
+                ViewerFile = args[index + 1];
+                index++;
+            }
+            else if (string.Equals(arg, "--viewer-overlays", StringComparison.OrdinalIgnoreCase))
+            {
+                ViewerOverlaysForScreenshot = true;
             }
         }
 

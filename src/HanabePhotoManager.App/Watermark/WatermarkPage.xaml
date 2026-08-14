@@ -115,7 +115,7 @@
                   </ImageBrush>
                 </Rectangle.Fill>
               </Rectangle>
-              <TextBlock Text="选择或拖入图片后实时预览" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <TextBlock Text="选择或拖入图片后实时预览" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Title}" HorizontalAlignment="Center" VerticalAlignment="Center">
                 <TextBlock.Style>
                   <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
                     <Setter Property="Visibility" Value="Visible" />
@@ -192,7 +192,7 @@
       </Border>
       <Border Grid.Column="4" Panel.ZIndex="2" VerticalAlignment="Bottom" Margin="10" Padding="12" CornerRadius="12" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" Visibility="{Binding HasSelectedItem, Converter={StaticResource BoolToVis}}">
         <StackPanel>
-          <TextBlock Text="单张特别调整" FontWeight="SemiBold" FontSize="14" />
+          <TextBlock Text="单张特别调整" FontWeight="SemiBold" FontSize="{StaticResource Typography.Body}" />
           <TextBlock Text="{Binding SelectedItem.Name}" TextTrimming="CharacterEllipsis" Opacity="0.7" Margin="0,3,0,8" />
           <CheckBox Content="为这张照片使用独立参数" IsChecked="{Binding SelectedItem.UseIndividualSettings, Mode=TwoWay}" />
           <Grid Margin="0,8,0,0" IsEnabled="{Binding SelectedItem.UseIndividualSettings}">

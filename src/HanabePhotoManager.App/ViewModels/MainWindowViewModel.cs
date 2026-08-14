@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Albums;
 using HanabePhotoManager.App.Collections;
+using HanabePhotoManager.App.Controls;
 using HanabePhotoManager.App.Duplicates;
 using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Models;
@@ -94,9 +95,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch",
         "MapPhotos",
         "Compression",
-        "Cloud",
-        "ContestOpen",
-        "ContestJudged"
+        "Cloud"
     ];
 
     private static readonly HashSet<string> WpfImageExtensions = new(
@@ -158,7 +157,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _backgroundImageLayout = "填充";
     private string _currentPage = "Preview";
     private CloudProviderChoice _selectedCloudProvider = CloudProviderChoice.Baidu;
-    private BrowseDisplayMode _browseDisplayMode = BrowseDisplayMode.Treemap;
+    private BrowseDisplayMode _browseDisplayMode = BrowseDisplayMode.Grid;
+    private bool _isMultiSelectMode;
     private string _currentPreviewCategory = "全部";
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
@@ -167,6 +167,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _selectedDeviceSummary = "点击设备组中的磁盘、相机或照片库后，这里会显示文件夹和媒体文件概览。";
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
+    // 本次会话已弹过「添加备注」窗口的日期：同批日期只提示一次，避免拖入分析后
+    // 再点“开始分析与导入”重复弹窗。
+    private readonly HashSet<LibraryDate> _dateRemarksPromptedFor = [];
     private readonly IImportSourcePicker _importSourcePicker = new WinFormsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
@@ -192,8 +195,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private double _treemapZoom = 1.0;
     private ObservableCollection<GridBreadcrumbViewModel> _gridBreadcrumbs = [];
     private string _defaultRatingFilter = "全部评分";
-    private int _defaultPreviewSort;
+    private int _defaultPreviewSort = 9;
     private double _glassIntensity = 0.62;
+    private bool _isAcrylicEnabled = true;
     private double _windowWidth = 1600;
     private double _windowHeight = 980;
     private bool _isBusy;
@@ -209,6 +213,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _previewHasLoaded;
     private bool _isBrowseConditionsExpanded;
     private bool _isAdvancedFiltersExpanded;
+    private bool _isImportAdvancedExpanded;
+    private bool _checkDuplicatesOnImport;
     private bool _isInitialized;
     private bool _isOnboardingVisible;
     private int _onboardingStep;
@@ -268,7 +274,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         Compression = new CompressionViewModel();
         Watermark = new WatermarkViewModel();
         CustomAlbums = new CustomAlbumsViewModel(
-            new JsonCustomAlbumStore(Path.Combine(AppDataPaths.Root, "custom-albums.json")),
+            new JsonCustomAlbumStore(AppDataPaths.CustomAlbumsFile),
             new CustomAlbumPhotoScanner());
         PhotoViewer = new PhotoViewerViewModel();
         TreemapBrowser = new ProgressiveTreemapViewModel();
@@ -278,6 +284,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 or nameof(TreemapBrowser.CurrentContainerKey))
             {
                 OnPropertyChanged(nameof(CurrentViewItemCount));
+                OnPropertyChanged(nameof(HasNoPreviewItems));
             }
         };
         ReleaseNotes = new ReleaseNotesViewModel();
@@ -322,6 +329,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         BrowseSourceFilesCommand = new AsyncRelayCommand(BrowseSourceFilesAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
+        AnalyzeAndImportCommand = new AsyncRelayCommand(AnalyzeAndImportAsync, CanAnalyzeAndImport);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
         ScanLibraryDuplicatesCommand = new AsyncRelayCommand(ScanLibraryDuplicatesAsync, CanRunCommand);
         OpenSelectedDateCommand = new RelayCommand(OpenSelectedDate, () => Directory.Exists(SelectedDatePath));
@@ -358,14 +366,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(key)) TreemapBrowser.ZoomTo(key);
         });
         NavigateTreemapCommand = new RelayCommand<string?>(TreemapBrowser.NavigateToAncestor);
-        ShowContestOpenCommand = new RelayCommand(() => CurrentPage = "ContestOpen");
-        ShowContestJudgedCommand = new RelayCommand(() => CurrentPage = "ContestJudged");
         ShowSettingsCommand = new RelayCommand(() => CurrentPage = "Settings");
         ResetNavigationItems(null);
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
         NavigateGridCategoryCommand = new RelayCommand<string?>(NavigateGridCategory);
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
         ToggleAdvancedFiltersCommand = new RelayCommand(() => IsAdvancedFiltersExpanded = !IsAdvancedFiltersExpanded);
+        ToggleImportAdvancedCommand = new RelayCommand(() => IsImportAdvancedExpanded = !IsImportAdvancedExpanded);
         OpenQuarkOfficialCommand = new RelayCommand(OpenQuarkOfficial);
         OpenBaiduConsoleCommand = new RelayCommand(OpenBaiduConsole);
         SaveBaiduCredentialsCommand = new AsyncRelayCommand(SaveBaiduCredentialsAsync, CanSaveBaiduCredentials);
@@ -464,7 +471,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public int OnboardingStepCount => 15;
+    public int OnboardingStepCount => 13;
     public string OnboardingTitle => OnboardingStep switch
     {
         0 => "第一步：设置图库根目录",
@@ -477,10 +484,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         7 => "图片小工具",
         8 => "批量水印",
         9 => "地图照片",
-        10 => "投稿项目：开放投稿",
-        11 => "投稿项目：已评选作品",
-        12 => "百度网盘",
-        13 => "夸克网盘",
+        10 => "百度网盘",
+        11 => "夸克网盘",
         _ => "设置、外观与高级选项"
     };
 
@@ -488,7 +493,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         0 => "图库根目录是整理后照片的唯一存放位置。请在本步骤直接选择或更改目录，然后再继续。",
         1 => "来源文件夹是相机、存储卡或待整理照片所在的位置。请直接选择来源，应用会进入导入页面。",
-        2 => "现在直接操作导入页面。箭头会提示“开始分析与分类”和“手动开始 / 继续导入”；先检查右侧队列，再执行导入。",
+        2 => "现在直接操作导入页面。点「开始分析与导入」会先分析生成队列、再自动继续导入；先检查右侧队列，再执行导入。",
         3 => "主页汇总照片库容量、日期和近期照片，是进入常用工作流的起点。",
         4 => "照片图库支持按日期、分类、评分、标签和已修状态筛选；双击照片可进入查看器。",
         5 => "人物查找使用清晰参考人脸搜索相似照片；人物相册在本机扫描聚类，不同模型向量不会混用。",
@@ -496,10 +501,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         7 => "图片小工具支持批量压缩，以及不限张数的纵向或横向拼图；任务支持取消。",
         8 => "批量水印支持签名水印和满屏平铺，可预览位置、透明度、旋转角度并批量导出。",
         9 => "地图照片读取本地照片的位置元数据，在地图上按地点浏览；没有定位的照片会单独列出。",
-        10 => "开放投稿用于准备和管理待提交作品，适合按项目组织照片。",
-        11 => "已评选作品用于整理评选结果，并与开放投稿项目分开管理。",
-        12 => "百度网盘页面用于网页登录与浏览；应用设置中还可配置本地加密保存的授权信息。",
-        13 => "夸克网盘通过独立页面进入；没有公开 API 的能力会明确提示，不会模拟不存在的接口。",
+        10 => "百度网盘页面用于网页登录与浏览；应用设置中还可配置本地加密保存的授权信息。",
+        11 => "夸克网盘通过独立页面进入；没有公开 API 的能力会明确提示，不会模拟不存在的接口。",
         _ => "设置集中管理启动、图库、AI、人脸引擎、主题背景和诊断。完成后可从“设置 → 常规”再次打开指南。"
     };
 
@@ -569,6 +572,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<PreviewFileViewModel> VisiblePreviewFiles { get; } = [];
 
     public ObservableCollection<PreviewDateSectionViewModel> VisiblePreviewSections { get; } = [];
+
+    /// <summary>
+    /// Flat, presentation-ready view of the preview wall: date-section headers
+    /// (which implement <see cref="Controls.IWallSectionHeader"/> and render as
+    /// full-width rows) interleaved with the photo tiles of every expanded
+    /// section. Bound by the photo-wall ItemsControl whose panel is a
+    /// <see cref="Controls.VirtualizingWrapPanel"/>, so a large library never
+    /// realizes every tile at once.
+    /// </summary>
+    public ObservableCollection<object> PreviewWallItems { get; } = [];
 
     public ObservableCollection<CalendarDayViewModel> CalendarDays { get; } = [];
 
@@ -734,7 +747,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         new(5, "分类 A–Z"),
         new(6, "分类 Z–A"),
         new(7, "评分从高到低"),
-        new(8, "评分从低到高")
+        new(8, "评分从低到高"),
+        new(9, "拍摄时间从新到旧"),
+        new(10, "拍摄时间从旧到新")
     ];
 
     public IReadOnlyList<string> RatingFilters { get; } =
@@ -820,7 +835,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
     public IReadOnlyList<int> SemanticLabelCounts { get; } = [1, 2, 3, 4, 5];
     public string DefaultRatingFilter { get => _defaultRatingFilter; set { if (SetProperty(ref _defaultRatingFilter, RatingFilters.Contains(value) ? value : "全部评分")) _ = SaveSettingsAsync(); } }
-    public int DefaultPreviewSort { get => _defaultPreviewSort; set { if (SetProperty(ref _defaultPreviewSort, Math.Clamp(value, 0, 8))) _ = SaveSettingsAsync(); } }
+    public int DefaultPreviewSort { get => _defaultPreviewSort; set { if (SetProperty(ref _defaultPreviewSort, Math.Clamp(value, 0, 10))) _ = SaveSettingsAsync(); } }
     public double DefaultThumbnailSize { get => _defaultThumbnailSize; set { if (SetProperty(ref _defaultThumbnailSize, Math.Clamp(value, 96, 260))) _ = SaveSettingsAsync(); } }
     public string InferenceDevice
     {
@@ -867,6 +882,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand AnalyzeSourceCommand { get; }
 
     public IAsyncRelayCommand ImportSelectedCommand { get; }
+
+    public IAsyncRelayCommand AnalyzeAndImportCommand { get; }
 
     public IAsyncRelayCommand RefreshLibraryCommand { get; }
 
@@ -935,8 +952,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IRelayCommand<string> OpenTreemapItemCommand { get; }
     public IRelayCommand<string> ZoomTreemapCommand { get; }
     public IRelayCommand<string?> NavigateTreemapCommand { get; }
-    public IRelayCommand ShowContestOpenCommand { get; }
-    public IRelayCommand ShowContestJudgedCommand { get; }
 
     public IRelayCommand ShowSettingsCommand { get; }
 
@@ -966,6 +981,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ToggleAdvancedFiltersCommand { get; }
 
+    public IRelayCommand ToggleImportAdvancedCommand { get; }
+
     public event Action? TreemapRepopulated;
 
     public bool IsBrowseConditionsExpanded
@@ -986,6 +1003,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    public bool IsImportAdvancedExpanded
+    {
+        get => _isImportAdvancedExpanded;
+        set => SetProperty(ref _isImportAdvancedExpanded, value);
+    }
+
     public BrowseDisplayMode BrowseDisplayMode
     {
         get => _browseDisplayMode;
@@ -999,6 +1022,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(IsGridBrowseMode));
             OnPropertyChanged(nameof(IsTreemapBrowseMode));
             OnPropertyChanged(nameof(CurrentViewItemCount));
+            OnPropertyChanged(nameof(HasNoPreviewItems));
             if (value == BrowseDisplayMode.Treemap)
             {
                 // The grid section collection may contain an entire date range.
@@ -1035,6 +1059,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsGridBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Grid;
 
     public bool IsTreemapBrowseMode => BrowseDisplayMode == BrowseDisplayMode.Treemap;
+
+    /// <summary>
+    /// Manual multi-select mode. When enabled, a plain single click on a
+    /// thumbnail toggles its selection checkbox instead of only previewing.
+    /// Off by default: single click never touches IsSelected.
+    /// </summary>
+    public bool IsMultiSelectMode
+    {
+        get => _isMultiSelectMode;
+        set => SetProperty(ref _isMultiSelectMode, value);
+    }
 
     private bool _isTreemapBorderless = true;
     public bool IsTreemapBorderless
@@ -1525,6 +1560,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
 
             OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
+            OnPropertyChanged(nameof(ZoomableGridTileStride));
             RefreshPreviewThumbnailsForZoom();
             if (_isInitialized)
             {
@@ -1534,6 +1570,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool IsGridTileLargeEnoughForLabels => _zoomableGridTileSize >= 140;
+
+    /// <summary>
+    /// Layout stride for the virtualized photo wall: the tile size plus the
+    /// 12px gutter between tiles. Used as the cell size of the
+    /// <see cref="Controls.VirtualizingWrapPanel"/> so tiles keep the same
+    /// density as the legacy <c>UniformSquarePanel</c> (TileSize + Spacing).
+    /// </summary>
+    public double ZoomableGridTileStride => _zoomableGridTileSize + 12;
 
     public ObservableCollection<GridBreadcrumbViewModel> GridBreadcrumbs => _gridBreadcrumbs;
 
@@ -1580,6 +1624,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public double PanelOpacity => Math.Clamp(0.46 + (GlassIntensity * 0.42), 0.56, 0.86);
 
     public double BackgroundOverlayOpacity => Math.Clamp(0.18 + (GlassIntensity * 0.45), 0.29, 0.61);
+
+    /// <summary>
+    /// 主窗口是否启用 DWM 系统级亚克力/Blur 背景材质。窗口代码在切换时重试
+    /// DWM 原生材质，失败自动降级为现有半透明玻璃方案。
+    /// </summary>
+    public bool IsAcrylicEnabled
+    {
+        get => _isAcrylicEnabled;
+        set
+        {
+            if (SetProperty(ref _isAcrylicEnabled, value))
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
 
     public string EffectiveBackgroundPath => BackgroundMode switch
     {
@@ -1865,6 +1925,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 导入时是否对来源文件做全库 SHA-256 哈希查重并弹窗确认（设置页可开关，默认关闭）。
+    /// </summary>
+    public bool CheckDuplicatesOnImport
+    {
+        get => _checkDuplicatesOnImport;
+        set
+        {
+            if (SetProperty(ref _checkDuplicatesOnImport, value))
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
     public void ToggleFileTypeFilter(string typeGroup)
     {
         if (string.Equals(typeGroup, "全部", StringComparison.OrdinalIgnoreCase))
@@ -2076,6 +2151,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             6 => result.OrderByDescending(f => f.Category),            // Category ↓
             7 => result.OrderByDescending(f => f.Rating).ThenBy(f => f.Name),
             8 => result.OrderBy(f => f.Rating).ThenBy(f => f.Name),
+            9 => result.OrderByDescending(f => f.CapturedAt).ThenBy(f => f.Name), // 拍摄时间从新到旧
+            10 => result.OrderBy(f => f.CapturedAt).ThenBy(f => f.Name),          // 拍摄时间从旧到新
             _ => result // Default: unsorted (by discovery order)
         };
 
@@ -2100,6 +2177,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             (TreemapBrowser.CurrentContainerKey is null ||
              string.Equals(item.ParentKey, TreemapBrowser.CurrentContainerKey, StringComparison.OrdinalIgnoreCase)))
         : _filteredCache.Count;
+
+    public bool HasPreviewItems => CurrentViewItemCount > 0;
+
+    public bool HasNoPreviewItems => !HasPreviewItems;
 
     public bool HasPreviousPreviewPage => _previewPage > 0;
 
@@ -2190,6 +2271,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsGridTileLargeEnoughForLabels));
         RebuildGridBreadcrumbs();
         GlassIntensity = settings.GlassIntensity;
+        IsAcrylicEnabled = settings.IsAcrylicEnabled;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
         PhotoAnalysis.SelectedEngine = string.IsNullOrWhiteSpace(settings.ClassificationEngine)
@@ -2210,7 +2292,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             MatchThreshold = Math.Clamp(settings.ArcFaceMatchThreshold, .2, .9)
         };
         _defaultRatingFilter = RatingFilters.Contains(settings.DefaultRatingFilter) ? settings.DefaultRatingFilter : "全部评分";
-        _defaultPreviewSort = settings.DefaultPreviewSort is >= 0 and <= 8 ? settings.DefaultPreviewSort : 0;
+        _defaultPreviewSort = settings.DefaultPreviewSort is >= 0 and <= 10 ? settings.DefaultPreviewSort : 9;
         RatingFilter = _defaultRatingFilter;
         PreviewSortMode = _defaultPreviewSort;
         OnPropertyChanged(nameof(DefaultRatingFilter));
@@ -2252,6 +2334,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _isShowingPsdFiles = settings.ShowPsdFiles is true;
         _isAdvancedFiltersExpanded = settings.IsAdvancedFiltersExpanded is true;
         OnPropertyChanged(nameof(IsAdvancedFiltersExpanded));
+        CheckDuplicatesOnImport = settings.CheckDuplicatesOnImport;
         if (settings.SelectedFileTypeFilters is { Count: > 0 } savedTypes)
         {
             foreach (var t in savedTypes) _selectedFileTypeFilters.Add(t);
@@ -2316,10 +2399,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void PrepareStartupAllLibraryTreemap()
     {
         // A fresh application launch always opens the complete library in the
-        // treemap. Later filtering and date navigation still use their normal
-        // state transitions, but no persisted browse filter narrows the initial
-        // root scan.
-        BrowseDisplayMode = BrowseDisplayMode.Treemap;
+        // photo grid (the default display mode). Later filtering and date
+        // navigation still use their normal state transitions, but no persisted
+        // browse filter narrows the initial root scan.
+        BrowseDisplayMode = BrowseDisplayMode.Grid;
         _sessionBrowseSnapshot = null;
         _persistedBrowseSnapshot = null;
         _calendarSelectedDate = null;
@@ -2330,7 +2413,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SemanticSearch.QueryText = string.Empty;
         PreviewRetouchFilter = "全部";
         RatingFilter = "全部评分";
-        PreviewSortMode = 0;
+        PreviewSortMode = _defaultPreviewSort;
         SmartCategoryFilter = "全部智能类别";
         _selectedFileTypeFilters.Clear();
         OnPropertyChanged(nameof(FileTypeFilterSummary));
@@ -2490,7 +2573,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SemanticSearch.QueryText = string.Empty;
         PreviewRetouchFilter = "全部";
         RatingFilter = "全部评分";
-        PreviewSortMode = 0;
+        PreviewSortMode = _defaultPreviewSort;
         SmartCategoryFilter = "全部智能类别";
 
         if (HasLibraryRoot && !IsBusy)
@@ -2557,6 +2640,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         PreviewFiles.Clear();
         VisiblePreviewFiles.Clear();
         VisiblePreviewSections.Clear();
+        PreviewWallItems.Clear();
         HomePreviewFiles.Clear();
         CancelPreviewThumbnailLoading();
         _previewPage = 0;
@@ -2687,7 +2771,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     : Path.GetExtension(standalonePath).TrimStart('.').ToUpperInvariant());
                 var merged = new PreviewFileViewModel(
                     info.Name, "修后", standalonePath,
-                    FormatBytes(info.Length), extension, null, info.Length)
+                    FormatBytes(info.Length), extension, null, info.Length, info.LastWriteTime)
                 {
                     IsRetouched = true,
                     RetouchedPath = standalonePath
@@ -2922,9 +3006,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public async Task AutoImportDroppedSourceAsync(IEnumerable<string> paths)
     {
-        if (!HasLibraryRoot)
+        // LibraryRoot 为空时直接弹出文件夹选择框引导首次配置，选完自动保存，
+        // 后续导入直接用已保存的根目录，不再弹选择。
+        if (!HasLibraryRoot && !await PromptForLibraryRootAsync().ConfigureAwait(true))
         {
-            System.Windows.MessageBox.Show("请先选择 Hanabe 拍照库根目录。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -2971,18 +3056,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await ImportSelectedAsync().ConfigureAwait(true);
     }
 
-    private async Task BrowseLibraryAsync()
+    /// <summary>
+    /// 弹出文件夹选择框让用户指定/更换照片库根目录；选完自动保存（SaveSettingsAsync）。
+    /// 返回 true 表示根目录已可用（用户选完），false 表示用户取消。
+    /// </summary>
+    private async Task<bool> PromptForLibraryRootAsync()
     {
         var selected = PickFolder("选择 Hanabe 拍照库根目录", LibraryRoot);
         if (selected is null)
         {
-            return;
+            return false;
         }
 
         LibraryRoot = selected;
         await SaveSettingsAsync().ConfigureAwait(true);
         ResetPreviewState("预览未加载");
         StatusMessage = "根目录已保存。不会自动加载照片；进入预览页或点刷新时才读取缩略图。";
+        return true;
+    }
+
+    private async Task BrowseLibraryAsync()
+    {
+        await PromptForLibraryRootAsync().ConfigureAwait(true);
     }
 
     private Task BrowseSourceAsync()
@@ -3001,7 +3096,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = "来源已选择，尚未开始分析。";
-        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与分类”。";
+        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与导入”。";
         StatusMessage = "来源文件夹已选择，等待你开始分析。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
@@ -3019,6 +3114,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         var paths = _sourceScanPaths.Count > 0 ? _sourceScanPaths : [SourceFolder];
         await AnalyzeSourcePathsAsync(paths, SourceFolder).ConfigureAwait(true);
+    }
+
+    private async Task AnalyzeAndImportAsync()
+    {
+        // 队列已有分析结果（例如上次被“待确认项目”拦截）时直接继续导入，
+        // 避免重复分析重置用户对队列的勾选/分类调整。
+        if (ImportItems.Count == 0)
+        {
+            await AnalyzeSourceAsync().ConfigureAwait(true);
+        }
+
+        await ImportSelectedAsync().ConfigureAwait(true);
     }
 
     private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
@@ -3142,6 +3249,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             NotifyCommandStates();
 
             // Prompt for date remarks right after analysis, before the import copies any files.
+            // 同批日期只弹一次：本次会话已提示过的日期不再重复弹窗（拖入分析弹过后，
+            // 再点“开始分析与导入”不会重复弹）。
             if (HasLibraryRoot && dateCount > 0)
             {
                 var detectedDates = ImportItems
@@ -3150,9 +3259,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     .Select(date => date!.Value)
                     .Distinct()
                     .ToArray();
-                if (detectedDates.Length > 0)
+                var pendingDates = detectedDates
+                    .Where(date => !_dateRemarksPromptedFor.Contains(date))
+                    .ToArray();
+                if (pendingDates.Length > 0)
                 {
-                    await AskForDateRemarksAsync(detectedDates).ConfigureAwait(true);
+                    await AskForDateRemarksAsync(pendingDates).ConfigureAwait(true);
+                    foreach (var promptedDate in pendingDates)
+                    {
+                        _dateRemarksPromptedFor.Add(promptedDate);
+                    }
                 }
             }
 
@@ -3191,9 +3307,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task ImportSelectedAsync()
     {
-        if (!HasLibraryRoot)
+        // LibraryRoot 为空时直接弹出文件夹选择框引导首次配置，选完自动保存后继续导入。
+        if (!HasLibraryRoot && !await PromptForLibraryRootAsync().ConfigureAwait(true))
         {
-            System.Windows.MessageBox.Show("请先选择 Hanabe 拍照库根目录。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -3259,18 +3375,45 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            ProgressLabel = "正在扫描图库已有内容…";
-            Dictionary<long, List<string>>? librarySizeMap = null;
-            try
+            // 重复检查默认关闭（设置页「导入时检查重复」开关）：关闭时直接导入（更快）；
+            // 开启后只检查每个文件「目标日期文件夹」里已有的照片与本次导入是否重复
+            // （同大小同哈希比对，只扫 LibraryRoot/日期目录，不扫描整个图库）。
+            IReadOnlyDictionary<string, ImportDuplicateMatch> duplicateMatches =
+                new Dictionary<string, ImportDuplicateMatch>(StringComparer.OrdinalIgnoreCase);
+            var duplicateDecision = ImportDuplicateBatchDecision.ImportAll;
+            if (CheckDuplicatesOnImport)
             {
-                librarySizeMap = await _contentScanner.BuildSizeMapAsync(
-                    LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
-            }
-            catch (OperationCanceledException) { throw; }
-            catch (Exception) { /* library scan failure is non-fatal; import continues without cross-library dedup */ }
+                ProgressLabel = "正在检查目标日期文件夹重复…";
+                var dateSizeMapCache = new Dictionary<LibraryDate, IReadOnlyDictionary<long, List<string>>>();
+                async Task<IReadOnlyDictionary<long, List<string>>?> ResolveDateSizeMapAsync(
+                    ImportPreviewItemViewModel item,
+                    CancellationToken token)
+                {
+                    if (item.TargetDate is not { } date)
+                    {
+                        // 无目标日期：交给 PrepareDuplicateBatchAsync 跳过目标文件夹比对。
+                        return null;
+                    }
 
-            ProgressLabel = "正在检查重复内容…";
-            var duplicateBatch = await PrepareDuplicateBatchAsync(items, librarySizeMap, cancellationToken).ConfigureAwait(true);
+                    if (!dateSizeMapCache.TryGetValue(date, out var sizeMap))
+                    {
+                        sizeMap = await _contentScanner.BuildSizeMapAsync(
+                            Path.Combine(LibraryRoot, date.RelativePath),
+                            ContentScanExtensions,
+                            token).ConfigureAwait(true);
+                        dateSizeMapCache[date] = sizeMap;
+                    }
+
+                    return sizeMap;
+                }
+
+                var duplicateBatch = await PrepareDuplicateBatchAsync(
+                    items,
+                    ResolveDateSizeMapAsync,
+                    cancellationToken).ConfigureAwait(true);
+                duplicateMatches = duplicateBatch.Matches;
+                duplicateDecision = duplicateBatch.Decision;
+            }
             var progress = ImportProgress.Create(items.Sum(item => 1 + item.ToMediaGroup().Sidecars.Count));
             void UpdateProgress(ImportPlanItem item, bool completed)
             {
@@ -3300,8 +3443,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     dateGroup.Select(item => item.ToMediaGroup()).ToArray(),
                     dateGroup.Key,
                     deleteSourcesAfterVerify,
-                    duplicateBatch.Matches,
-                    duplicateBatch.Decision,
+                    duplicateMatches,
+                    duplicateDecision,
                     UpdateProgress,
                     cancellationToken).ConfigureAwait(true);
 
@@ -3766,6 +3909,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         PreviewFiles.Clear();
         VisiblePreviewFiles.Clear();
         VisiblePreviewSections.Clear();
+        PreviewWallItems.Clear();
         HomePreviewFiles.Clear();
         CancelPreviewThumbnailLoading();
         _previewPage = 0;
@@ -3852,6 +3996,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             PreviewFiles.Clear();
             VisiblePreviewFiles.Clear();
             VisiblePreviewSections.Clear();
+            PreviewWallItems.Clear();
             HomePreviewFiles.Clear();
             CancelPreviewThumbnailLoading();
             NotifyPreviewCountsChanged();
@@ -3894,6 +4039,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         PreviewFiles.Clear();
         VisiblePreviewFiles.Clear();
         VisiblePreviewSections.Clear();
+        PreviewWallItems.Clear();
         HomePreviewFiles.Clear();
         CancelPreviewThumbnailLoading();
         _previewPage = 0;
@@ -4174,6 +4320,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(FilteredPreviewCount));
         OnPropertyChanged(nameof(CurrentViewItemCount));
+        OnPropertyChanged(nameof(HasNoPreviewItems));
         OnPropertyChanged(nameof(PreviewSummaryText));
         OnPropertyChanged(nameof(HasPreviousPreviewPage));
         OnPropertyChanged(nameof(HasNextPreviewPage));
@@ -4241,8 +4388,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsCloudPage));
                 OnPropertyChanged(nameof(IsBaiduCloudPage));
                 OnPropertyChanged(nameof(IsQuarkCloudPage));
-                OnPropertyChanged(nameof(IsContestOpenPage));
-                OnPropertyChanged(nameof(IsContestJudgedPage));
                 OnPropertyChanged(nameof(IsSettingsPage));
                 OnPropertyChanged(nameof(PageTitle));
                 OnPropertyChanged(nameof(PageSubtitle));
@@ -4313,8 +4458,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
-    public bool IsContestOpenPage => CurrentPage == "ContestOpen";
-    public bool IsContestJudgedPage => CurrentPage == "ContestJudged";
 
     public string DiagnosticsText
     {
@@ -4433,8 +4576,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "Compression" => "图片小工具",
         "Watermark" => "批量水印",
         "Cloud" => "网盘",
-        "ContestOpen" => "投稿项目",
-        "ContestJudged" => "欣赏项目",
         "Settings" => "设置",
         _ => "主界面"
     };
@@ -4449,8 +4590,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
         "Cloud" => "在百度网盘和夸克网盘之间横向切换；两边登录会话分别保存。",
-        "ContestOpen" => "征稿中的摄影大赛，点击右侧打开投稿页面。",
-        "ContestJudged" => "已评奖的摄影大赛获奖作品，支持批量下载到本地。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
         _ => "设备连接、照片库状态和常用入口。"
     };
@@ -4540,6 +4679,35 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RebuildExpandedPreviewFiles();
     }
 
+    /// <summary>
+    /// Rebuilds the flat <see cref="PreviewWallItems"/> collection that feeds the
+    /// virtualized photo wall: for each visible date section a header item
+    /// (which renders as a full-width row) followed by the tiles of that
+    /// section when it is expanded. Collapsed sections contribute only their
+    /// header so the section stays tappable while its photos stay virtualized.
+    /// Sections with <see cref="PreviewDateSectionViewModel.ShowHeader"/>
+    /// disabled (single-date browsing) contribute only their tiles.
+    /// </summary>
+    private void RebuildPreviewWallItems()
+    {
+        PreviewWallItems.Clear();
+        foreach (var section in VisiblePreviewSections)
+        {
+            if (section.ShowHeader)
+            {
+                PreviewWallItems.Add(section);
+            }
+
+            if (section.IsExpanded)
+            {
+                foreach (var item in section.Items)
+                {
+                    PreviewWallItems.Add(item);
+                }
+            }
+        }
+    }
+
     private void OnPreviewDateSectionExpansionChanged(PreviewDateSectionViewModel section, bool expanded)
     {
         _previewDateExpansion[section.Key] = expanded;
@@ -4556,6 +4724,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             // The hidden grid must not materialize or decode every file while the
             // treemap owns thumbnail loading through its viewport queue.
             VisiblePreviewFiles.Clear();
+            PreviewWallItems.Clear();
             return;
         }
 
@@ -4575,6 +4744,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             item.Thumbnail = null;
         }
+
+        RebuildPreviewWallItems();
 
         if (IsPreviewPage)
         {
@@ -4759,7 +4930,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             FormatBytes(info.Length),
             extension,
             null,
-            info.Length); // load thumbnail async later
+            info.Length,
+            info.LastWriteTime); // load thumbnail async later
     }
 
     private static PreviewFileViewModel CreatePreviewFile(LibraryDateMediaItem item) =>
@@ -4770,7 +4942,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             FormatBytes(item.Length),
             item.Extension,
             null,
-            item.Length);
+            item.Length,
+            item.LastWriteTimeUtc.ToLocalTime());
 
     private void DeleteSelectedFiles()
     {
@@ -5581,11 +5754,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             5 => "FaceSearch",
             7 => "Compression",
             9 => "MapPhotos",
-            10 => "ContestOpen",
-            11 => "ContestJudged",
-            12 => SelectOnboardingCloudProvider(CloudProviderChoice.Baidu),
-            13 => SelectOnboardingCloudProvider(CloudProviderChoice.Quark),
-            14 => "Settings",
+            10 => SelectOnboardingCloudProvider(CloudProviderChoice.Baidu),
+            11 => SelectOnboardingCloudProvider(CloudProviderChoice.Quark),
+            12 => "Settings",
             _ => CurrentPage
         };
     }
@@ -5615,6 +5786,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.ZoomableGridTileSize = ZoomableGridTileSize;
             settings.TreemapZoom = TreemapZoom;
             settings.GlassIntensity = GlassIntensity;
+            settings.IsAcrylicEnabled = IsAcrylicEnabled;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
             settings.ClassificationEngine = PhotoAnalysis.SelectedEngine;
@@ -5647,6 +5819,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.ShowPsdFiles = IsShowingPsdFiles;
             settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
             settings.IsAdvancedFiltersExpanded = IsAdvancedFiltersExpanded;
+            settings.CheckDuplicatesOnImport = CheckDuplicatesOnImport;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -5700,8 +5873,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),
         "Cloud" => new(key, "网盘", "Icon.Cloud", ShowCloudCommand, order),
-        "ContestOpen" => new(key, "投稿项目", "Icon.ContestOpen", ShowContestOpenCommand, order),
-        "ContestJudged" => new(key, "欣赏项目", "Icon.ContestJudged", ShowContestJudgedCommand, order),
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown navigation destination.")
     };
 
@@ -5788,7 +5959,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ImportReport = importRoots.Length > 1
             ? $"已选择 {device.Name}，分析时会包含：{string.Join("、", importRoots.Select(Path.GetFileName))}。"
             : $"已选择 {device.Name}：{SourceFolder}";
-        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与分类”。";
+        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与导入”。";
         StatusMessage = $"已选择设备 {device.Name}，尚未开始扫描。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
@@ -6504,6 +6675,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool CanAnalyzeSource() => !IsBusy && Directory.Exists(SourceFolder);
 
+    private bool CanAnalyzeAndImport() => !IsBusy && HasLibraryRoot && Directory.Exists(SourceFolder);
+
     private bool CanImportSelected() => !IsBusy && HasLibraryRoot && ImportItems.Any(item => item.IsSelected);
 
     private bool CanImportFromDevice(ConnectedDeviceViewModel? device) => !IsBusy && device is { IsConnected: true } && Directory.Exists(device.Path);
@@ -6514,6 +6687,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         BrowseSourceCommand.NotifyCanExecuteChanged();
         AnalyzeSourceCommand.NotifyCanExecuteChanged();
         ImportSelectedCommand.NotifyCanExecuteChanged();
+        AnalyzeAndImportCommand.NotifyCanExecuteChanged();
         RefreshLibraryCommand.NotifyCanExecuteChanged();
         ImportFromDeviceCommand.NotifyCanExecuteChanged();
         ImportActionHint = !HasLibraryRoot
@@ -7023,7 +7197,7 @@ public sealed record CalendarDayViewModel(
 
 public sealed record GridBreadcrumbViewModel(string? Key, string Label);
 
-public sealed class PreviewDateSectionViewModel : ObservableObject
+public sealed class PreviewDateSectionViewModel : ObservableObject, IWallSectionHeader
 {
     private bool _isExpanded;
     private readonly Action<PreviewDateSectionViewModel, bool>? _expandedChanged;
@@ -7097,7 +7271,7 @@ public sealed partial class PreviewFileViewModel : ObservableObject
 
     partial void OnManualTagsDisplayChanged(string value) => OnPropertyChanged(nameof(HasManualTags));
 
-    public PreviewFileViewModel(string name, string category, string fullPath, string sizeText, string extension, ImageSource? thumbnail, long length = 0)
+    public PreviewFileViewModel(string name, string category, string fullPath, string sizeText, string extension, ImageSource? thumbnail, long length = 0, DateTime capturedAt = default)
     {
         Name = name;
         Category = category;
@@ -7106,9 +7280,20 @@ public sealed partial class PreviewFileViewModel : ObservableObject
         Extension = extension;
         Thumbnail = thumbnail;
         Length = length;
+        CapturedAt = capturedAt == default ? DateTime.MinValue : capturedAt;
     }
 
     public long Length { get; }
+
+    /// <summary>
+    /// Capture time used for time-based sorting (拍摄时间从新到旧/从旧到新).
+    /// Filled from the file's last-write time at scan time so sorting a large
+    /// library never triggers per-item file IO. EXIF DateTimeOriginal is not
+    /// cached anywhere in the metadata store, so per-file EXIF reads are not
+    /// viable for full-library sorts (13k+ files over SMB); the library's
+    /// date-folder layout keeps file mtime a faithful capture proxy.
+    /// </summary>
+    public DateTime CapturedAt { get; init; }
 
     public string Caption => IsRetouched
         ? $"{Category} · 显示修后成品"
@@ -7116,7 +7301,13 @@ public sealed partial class PreviewFileViewModel : ObservableObject
 
     public bool HasThumbnail => Thumbnail is not null;
 
-    partial void OnThumbnailChanged(ImageSource? value) => OnPropertyChanged(nameof(HasThumbnail));
+    public bool HasNoThumbnail => !HasThumbnail;
+
+    partial void OnThumbnailChanged(ImageSource? value)
+    {
+        OnPropertyChanged(nameof(HasThumbnail));
+        OnPropertyChanged(nameof(HasNoThumbnail));
+    }
 
     [ObservableProperty] private bool _isRetouched;
 

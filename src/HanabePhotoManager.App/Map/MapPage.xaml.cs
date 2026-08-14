@@ -26,23 +26,10 @@ public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
     {
         if (_initialized) { SendMarkers(); return; }
 
+        ShowLoadingState("正在加载地图", "正在初始化地图引擎，请稍候。");
         try
         {
-            var environment = await CoreWebView2Environment.CreateAsync(userDataFolder:
-                Path.Combine(AppDataPaths.Root, "WebView2", "Map"));
-            await MapWebView.EnsureCoreWebView2Async(environment);
-            var assetFolder = Path.Combine(AppContext.BaseDirectory, "Map", "assets");
-            MapWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-                "hanabe-map.local", assetFolder, CoreWebView2HostResourceAccessKind.DenyCors);
-            System.IO.Directory.CreateDirectory(_thumbnailCache.Directory);
-            MapWebView.CoreWebView2.SetVirtualHostNameToFolderMapping(
-                "hanabe-thumbs.local", _thumbnailCache.Directory, CoreWebView2HostResourceAccessKind.DenyCors);
-            MapWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
-            MapWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
-            MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
-            MapWebView.CoreWebView2.NavigationCompleted += (_, _) => SendMarkers();
-            MapWebView.Source = new Uri("https://hanabe-map.local/index.html");
-            _initialized = true;
+            await InitializeWebViewAsync();
         }
         catch (System.Runtime.InteropServices.COMException ex) when ((uint)ex.HResult == 0x800700AA)
         {
@@ -50,12 +37,12 @@ public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
             _ = Dispatcher.BeginInvoke(async () =>
             {
                 try { await Task.Yield(); await InitializeWebViewAsync(); }
-                catch { /* leave _initialized=false; user can revisit the tab */ }
+                catch (Exception retryEx) { ShowErrorState("地图加载失败", retryEx.Message); }
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Swallow other WebView2 init failures so the app doesn't crash.
+            ShowErrorState("地图加载失败", ex.Message);
         }
     }
 
@@ -73,9 +60,65 @@ public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
         MapWebView.CoreWebView2.Settings.AreDevToolsEnabled = false;
         MapWebView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
         MapWebView.CoreWebView2.WebMessageReceived += CoreWebView2_WebMessageReceived;
-        MapWebView.CoreWebView2.NavigationCompleted += (_, _) => SendMarkers();
+        MapWebView.CoreWebView2.NavigationCompleted += (_, args) =>
+        {
+            if (args.IsSuccess) ShowContentState();
+            else ShowErrorState("地图加载失败", $"无法加载地图页面（{args.WebErrorStatus}）。");
+            SendMarkers();
+        };
         MapWebView.Source = new Uri("https://hanabe-map.local/index.html");
         _initialized = true;
+    }
+
+    private void ShowLoadingState(string title, string description)
+    {
+        MapStatusPanel.Visibility = Visibility.Visible;
+        MapStatusTitle.Text = title;
+        MapStatusDescription.Text = description;
+        MapRetryButton.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowContentState()
+    {
+        MapStatusPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void ShowErrorState(string title, string description)
+    {
+        MapStatusPanel.Visibility = Visibility.Visible;
+        MapStatusTitle.Text = title;
+        MapStatusDescription.Text = description;
+        MapRetryButton.Visibility = Visibility.Visible;
+    }
+
+    private async void MapRetry_Click(object sender, RoutedEventArgs e)
+    {
+        if (MapWebView.CoreWebView2 is not null)
+        {
+            // WebView2 runtime already up; only the page failed to load. Re-navigate.
+            ShowLoadingState("正在加载地图", "正在重新加载地图页面，请稍候。");
+            _initialized = true;
+            try
+            {
+                MapWebView.Source = new Uri("https://hanabe-map.local/index.html");
+                return;
+            }
+            catch (Exception)
+            {
+                // Fall through to a full re-initialization below.
+            }
+        }
+
+        _initialized = false;
+        ShowLoadingState("正在加载地图", "正在重新初始化地图引擎，请稍候。");
+        try
+        {
+            await InitializeWebViewAsync();
+        }
+        catch (Exception ex)
+        {
+            ShowErrorState("地图加载失败", ex.Message);
+        }
     }
 
     private void MapPage_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)

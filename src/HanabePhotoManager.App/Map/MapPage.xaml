@@ -22,6 +22,19 @@
             Background="{DynamicResource Brush.Surface.ContainerLowest}">
       <Grid>
         <wv2:WebView2 x:Name="MapWebView"/>
+        <Border x:Name="MapStatusPanel" Style="{DynamicResource Status.Panel}"
+                HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Margin="24"
+                Visibility="Collapsed">
+          <StackPanel>
+            <TextBlock x:Name="MapStatusTitle" Text="正在加载地图"
+                       Style="{DynamicResource Status.Title}" TextAlignment="Center"/>
+            <TextBlock x:Name="MapStatusDescription" Text="正在初始化地图引擎，请稍候。"
+                       Style="{DynamicResource Status.Description}" TextAlignment="Center"/>
+            <Button x:Name="MapRetryButton" Content="重试" Style="{DynamicResource Button.Primary}"
+                    HorizontalAlignment="Center" Margin="0,16,0,0" Visibility="Collapsed"
+                    Click="MapRetry_Click"/>
+          </StackPanel>
+        </Border>
         <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Padding="12,8"
                 CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerLow}"
                 IsHitTestVisible="False">
@@ -78,7 +91,7 @@
           <UniformGrid Columns="3">
             <Border Style="{StaticResource MapStatBlock}" Margin="0,0,8,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="{Binding SelectedLocationPhotos.Count}" FontSize="18" FontWeight="Bold"
+                <TextBlock Text="{Binding SelectedLocationPhotos.Count}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold"
                            Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="当前地点" FontSize="{StaticResource Typography.Caption}"
                            Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
@@ -86,7 +99,7 @@
             </Border>
             <Border Style="{StaticResource MapStatBlock}" Margin="4,0,4,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="{Binding LocatedPhotos.Count}" FontSize="18" FontWeight="Bold"
+                <TextBlock Text="{Binding LocatedPhotos.Count}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold"
                            Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="已定位" FontSize="{StaticResource Typography.Caption}"
                            Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
@@ -94,7 +107,7 @@
             </Border>
             <Border Style="{StaticResource MapStatBlock}" Margin="8,0,0,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="{Binding Markers.Count}" FontSize="18" FontWeight="Bold"
+                <TextBlock Text="{Binding Markers.Count}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Bold"
                            Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="聚合点" FontSize="{StaticResource Typography.Caption}"
                            Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
@@ -117,6 +130,20 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+          <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" IsHitTestVisible="False">
+            <Border.Style>
+              <Style TargetType="Border">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding SelectedLocationPhotos.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <TextBlock Text="暂无照片，点击地图上的聚合点查看。" Foreground="{DynamicResource Brush.Text.Secondary}"
+                       FontSize="{StaticResource Typography.BodySmall}" TextWrapping="Wrap" TextAlignment="Center"/>
+          </Border>
         </Grid>
 
         <Grid x:Name="ManualMarkContent" Visibility="Collapsed">
@@ -149,6 +176,20 @@
               </DataTemplate>
             </ListBox.ItemTemplate>
           </ListBox>
+          <Border Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="24,20" IsHitTestVisible="False">
+            <Border.Style>
+              <Style TargetType="Border">
+                <Setter Property="Visibility" Value="Collapsed"/>
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding UnlocatedPhotos.Count}" Value="0">
+                    <Setter Property="Visibility" Value="Visible"/>
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <TextBlock Text="暂无待定位照片，点击上方按钮或拖拽照片到此处。" Foreground="{DynamicResource Brush.Text.Secondary}"
+                       FontSize="{StaticResource Typography.BodySmall}" TextWrapping="Wrap" TextAlignment="Center"/>
+          </Border>
           <StackPanel Grid.Row="3" Margin="0,10,0,0">
             <TextBlock Text="目标坐标（在地图上点击自动填入）" Style="{DynamicResource Inspector.SectionLabel}" Margin="0,0,0,6"/>
             <Grid>

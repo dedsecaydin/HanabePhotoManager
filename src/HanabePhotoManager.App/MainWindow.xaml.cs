@@ -25,6 +25,14 @@ public partial class MainWindow : Window
     private readonly EdgeAutoScrollPolicy _edgeAutoScrollPolicy = new();
     private readonly DispatcherTimer _rubberBandAutoScrollTimer;
     private readonly DispatcherTimer _windowStateSaveTimer;
+
+    // Single-click vs double-click disambiguation: a plain single click only
+    // previews in the Inspector, but it must not fire before a double click is
+    // ruled out (the user explicitly rejected "double click = click + open").
+    private readonly DispatcherTimer _singleClickPreviewTimer;
+    private PreviewFileViewModel? _pendingSingleClickFile;
+    private bool _pendingSingleClickControl;
+    private bool _pendingSingleClickShift;
     private System.Windows.Point? _navigationDragStart;
     private NavigationItemViewModel? _navigationDragSource;
     private CancellationTokenSource? _cloudTransitionCts;
@@ -51,6 +59,255 @@ public partial class MainWindow : Window
     [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
     private static extern int DwmSetWindowAttribute(System.IntPtr hwnd, int attribute, ref int value, int valueSize);
 
+    // ---------- DWM 亚克力/Blur 背景材质（DWM 优先 + 降级） ----------
+    // 优先级：① Win11 22000+ 的 DWMWA_SYSTEMBACKDROP_TYPE（3=亚克力 / 2=Blur）
+    //        ② Win10 1803+ 的 SetWindowCompositionAttribute ACCENT_ENABLE_ACRYLICBLURBEHIND
+    //        ③ 均失败 → 保持现有应用内半透明玻璃方案（PanelOpacity 由 GlassIntensity 驱动）。
+    private const int DwmwaSystemBackdropType = 38;
+    private const int DwmSystemBackdropNone = 0;
+    private const int DwmSystemBackdropBlur = 2;    // DWMSBT_TRANSIENTWINDOW
+    private const int DwmSystemBackdropAcrylic = 3; // DWMSBT_TABBEDWINDOW（亚克力）
+
+    private const int WcaAccentPolicy = 19;
+    private const int AccentDisable = 0;
+    private const int AccentEnableAcrylicBlurBehind = 4;
+
+    private bool _dwmMaterialActive;
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct AccentPolicy
+    {
+        public int AccentState;
+        public int AccentFlags;
+        public uint GradientColor; // ABGR
+        public int AnimationId;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct WindowCompositionAttributeData
+    {
+        public int Attribute;
+        public System.IntPtr Data;
+        public int SizeOfData;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll", PreserveSig = true)]
+    private static extern int SetWindowCompositionAttribute(System.IntPtr hwnd, ref WindowCompositionAttributeData data);
+
+    /// <summary>应用主窗口背景材质：DWM 亚克力/Blur 优先，失败自动降级为半透明方案。</summary>
+    private void ApplyWindowMaterial()
+    {
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == System.IntPtr.Zero) return;
+
+            var enable = _viewModel.IsAcrylicEnabled;
+            // 截图模式：RenderTargetBitmap 抓不到 DWM 背景，保持不透明底避免截图失真。
+            if (App.ScreenshotPath is not null) enable = false;
+
+            _dwmMaterialActive = false;
+            if (enable)
+            {
+                _dwmMaterialActive = TryApplySystemBackdrop(hwnd) || TryApplyAccentAcrylic(hwnd);
+            }
+            else
+            {
+                ResetSystemBackdrop(hwnd);
+                DisableAccentAcrylic(hwnd);
+            }
+
+            // 亚克力生效时窗口底层透出 DWM 背景；否则恢复不透明画布色（半透明降级方案）。
+            if (_dwmMaterialActive)
+            {
+                Background = System.Windows.Media.Brushes.Transparent;
+            }
+            else
+            {
+                SetResourceReference(BackgroundProperty, "Brush.Background.Canvas");
+            }
+        }
+        catch
+        {
+            // Non-fatal：任何 DWM 调用失败都回退现有半透明玻璃方案。
+            _dwmMaterialActive = false;
+            try { SetResourceReference(BackgroundProperty, "Brush.Background.Canvas"); } catch { }
+        }
+    }
+
+    private bool TryApplySystemBackdrop(System.IntPtr hwnd)
+    {
+        // Win11 22000+：先试系统亚克力（3），失败再试 Blur（2）。
+        var backdrop = DwmSystemBackdropAcrylic;
+        if (DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdrop, sizeof(int)) == 0) return true;
+        backdrop = DwmSystemBackdropBlur;
+        return DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdrop, sizeof(int)) == 0;
+    }
+
+    private bool TryApplyAccentAcrylic(System.IntPtr hwnd)
+    {
+        // Win10 1803+：ACCENT_ENABLE_ACRYLICBLURBEHIND，色调跟随主题（深色近黑 / 浅色近白）。
+        var useDark = ThemeManager.Current == AppTheme.Dark;
+        var gradient = useDark ? 0x99000000u : 0x99F3F3F3u;
+        return SetAccentPolicy(hwnd, AccentEnableAcrylicBlurBehind, gradient);
+    }
+
+    private bool SetAccentPolicy(System.IntPtr hwnd, int accentState, uint gradientColor)
+    {
+        var size = System.Runtime.InteropServices.Marshal.SizeOf<AccentPolicy>();
+        var data = new WindowCompositionAttributeData
+        {
+            Attribute = WcaAccentPolicy,
+            SizeOfData = size,
+            Data = System.Runtime.InteropServices.Marshal.AllocHGlobal(size)
+        };
+        try
+        {
+            var accent = new AccentPolicy { AccentState = accentState, GradientColor = gradientColor };
+            System.Runtime.InteropServices.Marshal.StructureToPtr(accent, data.Data, false);
+            return SetWindowCompositionAttribute(hwnd, ref data) == 0;
+        }
+        finally
+        {
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(data.Data);
+        }
+    }
+
+    private void ResetSystemBackdrop(System.IntPtr hwnd)
+    {
+        var backdrop = DwmSystemBackdropNone;
+        _ = DwmSetWindowAttribute(hwnd, DwmwaSystemBackdropType, ref backdrop, sizeof(int));
+    }
+
+    private void DisableAccentAcrylic(System.IntPtr hwnd) => _ = SetAccentPolicy(hwnd, AccentDisable, 0);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+
+    // ---------- 一体化标题栏（Memory Diary 风格）：WM_GETMINMAXINFO 钳制最大化到工作区 ----------
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct MinMaxInfo
+    {
+        public NativePoint Reserved;
+        public NativePoint MaxSize;
+        public NativePoint MaxPosition;
+        public NativePoint MinTrackSize;
+        public NativePoint MaxTrackSize;
+    }
+
+    private const int WmGetMinMaxInfo = 0x0024;
+
+    protected override void OnSourceInitialized(System.EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        if (hwnd != System.IntPtr.Zero)
+        {
+            System.Windows.Interop.HwndSource.FromHwnd(hwnd)?.AddHook(WindowChromeWndProc);
+        }
+    }
+
+    private System.IntPtr WindowChromeWndProc(System.IntPtr hwnd, int msg, System.IntPtr wParam, System.IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmGetMinMaxInfo)
+        {
+            // WindowStyle=None 最大化时会盖住任务栏：把最大化尺寸/位置钳制到当前监视器工作区
+            var mmi = (MinMaxInfo)System.Runtime.InteropServices.Marshal.PtrToStructure(lParam, typeof(MinMaxInfo))!;
+            var area = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
+            mmi.MaxPosition.X = area.Left;
+            mmi.MaxPosition.Y = area.Top;
+            mmi.MaxSize.X = area.Width;
+            mmi.MaxSize.Y = area.Height;
+            mmi.MaxTrackSize.X = area.Width;
+            mmi.MaxTrackSize.Y = area.Height;
+            System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
+            handled = true;
+        }
+        return System.IntPtr.Zero;
+    }
+
+    // ---------- 一体化标题栏窗口控制按钮 ----------
+    private void WindowMinimize_Click(object sender, RoutedEventArgs e) => SystemCommands.MinimizeWindow(this);
+
+    private void WindowMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        if (WindowState == WindowState.Maximized)
+        {
+            SystemCommands.RestoreWindow(this);
+        }
+        else
+        {
+            SystemCommands.MaximizeWindow(this);
+        }
+        UpdateWindowCaptionGlyphs();
+    }
+
+    private void WindowClose_Click(object sender, RoutedEventArgs e) => Close();
+
+    private void UpdateWindowCaptionGlyphs()
+    {
+        if (WindowMaximizeGlyph is null || WindowRestoreGlyph is null) return;
+        var maximized = WindowState == WindowState.Maximized;
+        WindowMaximizeGlyph.Visibility = maximized ? Visibility.Collapsed : Visibility.Visible;
+        WindowRestoreGlyph.Visibility = maximized ? Visibility.Visible : Visibility.Collapsed;
+        if (WindowMaximizeButton is not null)
+        {
+            WindowMaximizeButton.ToolTip = maximized ? "还原" : "最大化";
+        }
+    }
+
+    // 顶栏空白处拖拽移动窗口；双击空白切换最大化/还原；点击按钮（ButtonBase）不拖拽
+    private void TopBarSurface_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+        if (FindVisualAncestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null)
+        {
+            return;
+        }
+        if (e.ClickCount == 2)
+        {
+            if (WindowState == WindowState.Maximized)
+            {
+                SystemCommands.RestoreWindow(this);
+            }
+            else
+            {
+                SystemCommands.MaximizeWindow(this);
+            }
+            UpdateWindowCaptionGlyphs();
+            e.Handled = true;
+            return;
+        }
+        try
+        {
+            DragMove();
+        }
+        catch (System.InvalidOperationException)
+        {
+            // 拖拽期间状态变化等偶发情况，忽略
+        }
+    }
+
+    // 侧栏顶部 logo 区域拖拽移动窗口
+    private void SidebarLogoSurface_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+        try
+        {
+            DragMove();
+        }
+        catch (System.InvalidOperationException)
+        {
+        }
+    }
+
     private readonly DispatcherTimer _treemapViewportDebounceTimer;
 
     public MainWindow()
@@ -67,6 +324,11 @@ public partial class MainWindow : Window
         _treemapViewportDebounceTimer.Tick += TreemapViewportDebounceTimer_Tick;
         _windowStateSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
         _windowStateSaveTimer.Tick += (_, _) => { _windowStateSaveTimer.Stop(); PersistWindowState(); };
+        _singleClickPreviewTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime())
+        };
+        _singleClickPreviewTimer.Tick += (_, _) => ApplyPendingSingleClick();
         InitializeComponent();
         DataContext = _viewModel;
         Loaded += MainWindow_Loaded;
@@ -74,6 +336,7 @@ public partial class MainWindow : Window
         Deactivated += (_, _) => EndRubberBandSelection();
         LocationChanged += (_, _) => ScheduleWindowStateSave();
         StateChanged += (_, _) => ScheduleWindowStateSave();
+        StateChanged += (_, _) => UpdateWindowCaptionGlyphs();
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
         _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
         {
@@ -84,7 +347,11 @@ public partial class MainWindow : Window
         ThemeManager.ThemeChanged += OnThemeChanged;
     }
 
-    private void OnThemeChanged(object? sender, AppTheme theme) => ApplyTitleBarTheme();
+    private void OnThemeChanged(object? sender, AppTheme theme)
+    {
+        ApplyTitleBarTheme();
+        ApplyWindowMaterial(); // 重新按主题色调应用亚克力（深色/浅色渐变不同）
+    }
 
     private void ApplyTitleBarTheme()
     {
@@ -158,6 +425,7 @@ public partial class MainWindow : Window
         RestoreSafeWindowState();
         ApplyCustomWindowIcon();
         ApplyTitleBarTheme();
+        ApplyWindowMaterial();
         if (App.ScreenshotPage is { } page)
         {
             _viewModel.CurrentPage = page;
@@ -180,13 +448,37 @@ public partial class MainWindow : Window
         }
         AnimateVisiblePage();
 
-        if (App.ScreenshotPath is { } screenshotPath)
+        if (App.ScreenshotPath is { } screenshotPath && App.ViewerFile is null)
         {
             // Headless-safe screenshot: let the async library scan and the
             // viewport thumbnail queue settle, then render the window's visual
             // tree to a PNG and exit.
             _ = CaptureScreenshotAfterDelayAsync(screenshotPath);
         }
+        if (App.ViewerFile is { } viewerFile)
+        {
+            OpenViewerForScreenshotOrInspect(viewerFile);
+        }
+    }
+
+    private void OpenViewerForScreenshotOrInspect(string viewerFile)
+    {
+        var viewer = new PhotoViewerWindow(new[] { viewerFile }, viewerFile)
+        {
+            Owner = this
+        };
+        viewer.Show();
+        if (App.ScreenshotPath is { } shot)
+        {
+            _ = CaptureViewerScreenshotAfterDelayAsync(viewer, shot);
+        }
+    }
+
+    private static async Task CaptureViewerScreenshotAfterDelayAsync(PhotoViewerWindow viewer, string shot)
+    {
+        // Let the video start and decode a few frames before grabbing a VLC snapshot.
+        await Task.Delay(TimeSpan.FromSeconds(3));
+        await viewer.CaptureScreenshotAsync(shot, App.ViewerOverlaysForScreenshot);
     }
 
     private async Task CaptureScreenshotAfterDelayAsync(string path)
@@ -247,6 +539,10 @@ public partial class MainWindow : Window
         {
             AnimateCloudProvider();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.IsAcrylicEnabled))
+        {
+            ApplyWindowMaterial();
+        }
     }
 
     private void ApplyCustomWindowIcon()
@@ -300,8 +596,6 @@ public partial class MainWindow : Window
         "Compression" => CompressionPageHost,
         "Watermark" => WatermarkPageHost,
         "Cloud" => CloudPageContainer,
-        "ContestOpen" => ContestOpenPageHost,
-        "ContestJudged" => ContestJudgedPageHost,
         "Settings" => SettingsCenterPageHost,
         _ => HomePage
     };
@@ -421,7 +715,11 @@ public partial class MainWindow : Window
     {
         if (e.ClickCount == 2 && sender is FrameworkElement { DataContext: PersonPhotoViewModel item } && System.IO.File.Exists(item.Path))
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(item.Path) { UseShellExecute = true });
+            // Double click opens inside the app (PhotoViewerWindow), matching
+            // the browse-page interaction model. The system default program
+            // stays reachable via context menu / Explorer.
+            var window = new PhotoViewerWindow(new[] { item.Path }, item.Path, _viewModel.RemoveDeletedViewerPhoto) { Owner = this };
+            window.Show();
             e.Handled = true;
         }
     }
@@ -1008,6 +1306,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Ctrl+1..9 = switch to the Nth navigation page (current sidebar order).
+        if (e.Key >= Key.D1 && e.Key <= Key.D9 && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            var index = e.Key - Key.D1;
+            var items = _viewModel.NavigationItems;
+            if (index < items.Count && items[index].Command.CanExecute(null))
+            {
+                items[index].Command.Execute(null);
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         var file = _viewModel.SelectedPreviewFile;
         if (Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase)
         {
@@ -1016,6 +1328,9 @@ public partial class MainWindow : Window
 
         if (_viewModel.PhotoViewer.IsOpen)
         {
+            // Ctrl 组合键（如 Ctrl+1..9 切换页面）已在上方处理，这里只响应纯方向/数字键。
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control)) return;
+
             if (e.Key is Key.Left or Key.Up) _viewModel.PhotoViewer.Previous();
             else if (e.Key is Key.Right or Key.Down) _viewModel.PhotoViewer.Next();
             else if (e.Key == Key.Escape) _viewModel.PhotoViewer.Close();
@@ -1063,6 +1378,14 @@ public partial class MainWindow : Window
             _viewModel.StatusMessage = $"评分：{file.Name} → {(num == 0 ? "✕ 删除标记" : new string('★', num))}";
             e.Handled = true;
         }
+        else if (e.Key == System.Windows.Input.Key.Enter && file is not null
+                 && Keyboard.FocusedElement is not System.Windows.Controls.Primitives.ButtonBase
+                 && System.IO.File.Exists(file.PreviewPath))
+        {
+            // 回车：打开选中照片（独立查看器窗口），与双击行为一致。
+            OpenIndependentViewer(file);
+            e.Handled = true;
+        }
     }
 
     private void MainWindow_KeyUp(object sender, System.Windows.Input.KeyEventArgs e)
@@ -1102,43 +1425,84 @@ public partial class MainWindow : Window
         {
             if (FindVisualAncestor<System.Windows.Controls.CheckBox>(e.OriginalSource as DependencyObject) is not null)
             {
+                // The selection checkbox handles its own toggle. A pending
+                // single-click preview from a previous card must not fire over
+                // the checkbox interaction.
+                CancelPendingSingleClick();
                 return;
             }
 
-            _viewModel.SelectedPreviewFile = file;
-            var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
-            var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
-
-            if (!control && !shift && e.ClickCount == 1)
+            // Double click: open inside the app (PhotoViewerWindow). It is
+            // mutually exclusive with the single-click preview — no selection
+            // or Inspector side effect runs first.
+            if (e.ClickCount == 2)
             {
-                OpenIndependentViewer(file);
+                CancelPendingSingleClick();
+                if (System.IO.File.Exists(file.PreviewPath))
+                {
+                    OpenIndependentViewer(file);
+                }
                 e.Handled = true;
                 return;
             }
 
-            if (shift)
-            {
-                SelectPreviewRange(file, additive: control);
-            }
-            else if (control)
-            {
-                file.IsSelected = !file.IsSelected;
-                _selectionAnchor = file;
-            }
-            else
-            {
-                foreach (var item in _viewModel.PreviewFiles) item.IsSelected = ReferenceEquals(item, file);
-                _selectionAnchor = file;
-            }
-
-            _viewModel.NotifyPreviewSelectionChanged();
-
-            // Double click: open file
-            if (e.ClickCount == 2 && System.IO.File.Exists(file.PreviewPath))
-            {
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file.PreviewPath) { UseShellExecute = true });
-            }
+            // Single click: defer the preview until a double click can be
+            // ruled out. Shift/Ctrl modifiers are captured at press time.
+            var control = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+            var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+            _singleClickPreviewTimer.Stop();
+            _pendingSingleClickFile = file;
+            _pendingSingleClickControl = control;
+            _pendingSingleClickShift = shift;
+            _singleClickPreviewTimer.Start();
         }
+    }
+
+    private void CancelPendingSingleClick()
+    {
+        _singleClickPreviewTimer.Stop();
+        _pendingSingleClickFile = null;
+    }
+
+    private void ApplyPendingSingleClick()
+    {
+        _singleClickPreviewTimer.Stop();
+        var file = _pendingSingleClickFile;
+        _pendingSingleClickFile = null;
+        if (file is null)
+        {
+            return;
+        }
+
+        _viewModel.SelectedPreviewFile = file;
+        var control = _pendingSingleClickControl;
+        var shift = _pendingSingleClickShift;
+
+        // Shift: range selection (additive with Ctrl). Ctrl: toggle selection.
+        if (shift)
+        {
+            SelectPreviewRange(file, additive: control);
+        }
+        else if (control)
+        {
+            file.IsSelected = !file.IsSelected;
+            _selectionAnchor = file;
+        }
+        else if (_viewModel.IsMultiSelectMode)
+        {
+            // Manual multi-select mode: plain single clicks toggle the checkbox.
+            file.IsSelected = !file.IsSelected;
+            _selectionAnchor = file;
+        }
+        else
+        {
+            // Single click outside multi-select mode: preview only. Never
+            // auto-checks the selection box, never enters multi-select.
+            foreach (var item in _viewModel.PreviewFiles) item.IsSelected = false;
+            _selectionAnchor = file;
+        }
+
+        _viewModel.NotifyPreviewSelectionChanged();
     }
 
     private void SelectPreviewRange(PreviewFileViewModel clicked, bool additive)
@@ -1177,6 +1541,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Starting a rubber-band drag supersedes any pending single-click preview.
+        CancelPendingSingleClick();
         _rubberBandStart = e.GetPosition(PreviewSelectionSurface);
         _rubberBandBaseline = _viewModel.VisiblePreviewFiles.ToDictionary(item => item, item => item.IsSelected);
         if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
@@ -1214,18 +1580,52 @@ public partial class MainWindow : Window
         PreviewSelectionRectangle.Height = selection.Height;
 
         var toggle = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
+
+        // Virtualized wall: hit-test against the whole item set through the
+        // panel's row table so cards outside the realized window (which are not
+        // in the visual tree at all) still participate in the rubber band.
+        // The panel reports bounds in its own viewport-relative coordinates, so
+        // translate them to the selection surface before intersecting.
+        var wallPanel = FindVisualDescendants<HanabePhotoManager.App.Controls.VirtualizingWrapPanel>(PreviewWallItemsControl)
+            .FirstOrDefault();
+        var wallItems = _viewModel.PreviewWallItems;
+        var handled = new HashSet<PreviewFileViewModel>();
+        if (wallPanel is not null)
+        {
+            var panelOrigin = wallPanel.TranslatePoint(new System.Windows.Point(0, 0), PreviewSelectionSurface);
+            foreach (var (itemIndex, bounds, isHeader) in wallPanel.GetItemBounds())
+            {
+                if (isHeader || itemIndex < 0 || itemIndex >= wallItems.Count) continue;
+                if (wallItems[itemIndex] is not PreviewFileViewModel item) continue;
+                handled.Add(item);
+                var surfaceBounds = new Rect(
+                    bounds.X + panelOrigin.X,
+                    bounds.Y + panelOrigin.Y,
+                    bounds.Width,
+                    bounds.Height);
+                ApplyRubberBandHit(item, selection, surfaceBounds, toggle);
+            }
+        }
+
+        // Fallback for realized cards the row table did not cover (e.g. the
+        // panel has not laid out yet): keep the previous visual-tree hit test.
         foreach (var card in FindVisualDescendants<FrameworkElement>(PreviewSelectionSurface)
                      .Where(element => Equals(element.Tag, "PreviewCard")))
         {
-            if (card.DataContext is not PreviewFileViewModel item) continue;
+            if (card.DataContext is not PreviewFileViewModel item || !handled.Add(item)) continue;
             var bounds = card.TransformToAncestor(PreviewSelectionSurface)
                 .TransformBounds(new Rect(new System.Windows.Point(0, 0), card.RenderSize));
-            var hit = selection.IntersectsWith(bounds);
-            var baseline = _rubberBandBaseline.GetValueOrDefault(item);
-            item.IsSelected = toggle ? hit != baseline : hit;
+            ApplyRubberBandHit(item, selection, bounds, toggle);
         }
 
         _viewModel.NotifyPreviewSelectionChanged();
+    }
+
+    private void ApplyRubberBandHit(PreviewFileViewModel item, Rect selection, Rect bounds, bool toggle)
+    {
+        var hit = selection.IntersectsWith(bounds);
+        var baseline = _rubberBandBaseline.GetValueOrDefault(item);
+        item.IsSelected = toggle ? hit != baseline : hit;
     }
 
     private void PreviewSelectionSurface_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)

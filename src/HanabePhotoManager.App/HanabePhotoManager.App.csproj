@@ -17,6 +17,9 @@
     <PackageReference Include="OpenCvSharp4" Version="4.10.0.20240616" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.10.0.20240616" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageReference Include="LibVLCSharp" Version="3.10.1" />
+    <PackageReference Include="LibVLCSharp.WPF" Version="3.10.1" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -60,9 +63,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.3.0-alpha</HanabeVersion>
+    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.3.1</HanabeVersion>
     <Version>$(HanabeVersion)</Version>
     <Product>Hanabe Photo Manager Alpha</Product>
+    <!-- libvlc 原生库只部署 win-x64（应用实际以 x64 运行），裁剪 x86/arm64 省 ~180MB -->
+    <VlcWindowsX86Enabled>false</VlcWindowsX86Enabled>
+    <VlcWindowsArm64Enabled>false</VlcWindowsArm64Enabled>
   </PropertyGroup>
 
   <ItemGroup>

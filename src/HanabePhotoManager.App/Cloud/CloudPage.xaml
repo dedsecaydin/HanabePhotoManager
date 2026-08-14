@@ -68,7 +68,7 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <Border Width="44" Height="44" CornerRadius="{DynamicResource Radius.Full}"
                       Background="{DynamicResource Brush.PrimaryContainer}" VerticalAlignment="Center">
-                <TextBlock Text="云" Foreground="{DynamicResource Brush.OnPrimaryContainer}" FontSize="18" FontWeight="Bold"
+                <TextBlock Text="云" Foreground="{DynamicResource Brush.OnPrimaryContainer}" FontSize="{DynamicResource Typography.TitleSmall}" FontWeight="Bold"
                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
               </Border>
               <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
@@ -106,6 +106,10 @@
             </Grid>
           </Border>
 
+          <Button x:Name="QuarkLoginButton" Content="登录夸克网盘" Style="{DynamicResource Button.Primary}"
+                  HorizontalAlignment="Stretch" Margin="0,0,0,12" Visibility="Collapsed"
+                  Click="QuarkLogin_Click"/>
+
           <TextBlock Text="云存储总览" Style="{DynamicResource Inspector.Header}"/>
           <TextBlock Text="容量使用 · 自动同步照片与视频" Style="{DynamicResource Status.Description}" Margin="0,2,0,12"/>
 
@@ -114,7 +118,7 @@
             <Path Stroke="{DynamicResource Brush.Primary}" StrokeThickness="12" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                   Data="{Binding UsedPercent, Converter={StaticResource PercentToArc}}"/>
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-              <TextBlock Text="{Binding UsedPercentText}" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+              <TextBlock Text="{Binding UsedPercentText}" FontSize="{DynamicResource Typography.Title}" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
               <TextBlock Text="{Binding UsedBytesText}" FontSize="{DynamicResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center"/>
             </StackPanel>
           </Grid>
@@ -124,19 +128,19 @@
           <UniformGrid Columns="3">
             <Border Style="{StaticResource CloudStatBlock}" Margin="0,0,8,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="—" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="—" FontSize="{DynamicResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="已同步" FontSize="{DynamicResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
               </StackPanel>
             </Border>
             <Border Style="{StaticResource CloudStatBlock}" Margin="4,0,4,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="—" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="—" FontSize="{DynamicResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="本月上传" FontSize="{DynamicResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
               </StackPanel>
             </Border>
             <Border Style="{StaticResource CloudStatBlock}" Margin="8,0,0,0">
               <StackPanel HorizontalAlignment="Center">
-                <TextBlock Text="{Binding ActiveTransferCount}" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding ActiveTransferCount}" FontSize="{DynamicResource Typography.TitleSmall}" FontWeight="Bold" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Center"/>
                 <TextBlock Text="传输中" FontSize="{DynamicResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,2,0,0"/>
               </StackPanel>
             </Border>
@@ -190,7 +194,7 @@
           </Border>
 
           <TextBlock Text="说明" Style="{DynamicResource Inspector.SectionLabel}" Margin="0,16,0,6"/>
-          <TextBlock Text="右侧云盘总览已接入 CloudHubViewModel：账户与容量来自当前网盘 provider 实时读取（GetAccountStateAsync），传输队列来自本地 JsonCloudTransferQueueStore。百度网盘需要已保存的 API 会话；夸克网盘连接器尚未实现，如实显示未接入。切换百度 / 夸克标签时自动刷新对应账户状态。"
+          <TextBlock Text="右侧云盘总览已接入 CloudHubViewModel：账户与容量来自当前网盘 provider 实时读取（GetAccountStateAsync），传输队列来自本地 JsonCloudTransferQueueStore。百度网盘需要已保存的 API 会话；夸克网盘基于官方 quark-drive CLI 读取真实账户状态（未授权时如实显示未登录，可点击“登录夸克网盘”按钮完成浏览器授权）。切换百度 / 夸克标签时自动刷新对应账户状态。"
                      Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" FontSize="{DynamicResource Typography.BodySmall}"/>
         </StackPanel>
       </ScrollViewer>

@@ -27,7 +27,7 @@ public sealed partial class MainWindowViewModel
         SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = $"已选择 {selectedPaths.Length} 个文件，尚未开始分析。";
-        ImportActionHint = "已保留 Ctrl/Shift 多选文件；点击“开始分析与分类”后加入同一导入队列。";
+        ImportActionHint = "已保留 Ctrl/Shift 多选文件；点击“开始分析与导入”后加入同一导入队列。";
         StatusMessage = $"已选择 {selectedPaths.Length} 个来源文件。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
@@ -38,7 +38,7 @@ public sealed partial class MainWindowViewModel
     private async Task<(IReadOnlyDictionary<string, ImportDuplicateMatch> Matches, ImportDuplicateBatchDecision Decision)>
         PrepareDuplicateBatchAsync(
             IReadOnlyList<ImportPreviewItemViewModel> items,
-            IReadOnlyDictionary<long, List<string>>? librarySizeMap,
+            Func<ImportPreviewItemViewModel, CancellationToken, Task<IReadOnlyDictionary<long, List<string>>?>>? dateSizeMapResolver,
             CancellationToken cancellationToken)
     {
         var matches = new Dictionary<string, ImportDuplicateMatch>(StringComparer.OrdinalIgnoreCase);
@@ -47,12 +47,28 @@ public sealed partial class MainWindowViewModel
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        if (librarySizeMap is not null)
+        if (dateSizeMapResolver is not null)
         {
+            var itemByPath = items
+                .GroupBy(item => item.ToMediaGroup().Primary.FullPath, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
             foreach (var sourcePath in sourcePaths)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var existingPath = await _contentScanner.FindContentDuplicateAsync(sourcePath, librarySizeMap, cancellationToken)
+                if (!itemByPath.TryGetValue(sourcePath, out var item) || item.TargetDate is null)
+                {
+                    // 无目标日期：跳过目标文件夹比对（只保留下方源内查重）。
+                    continue;
+                }
+
+                var dateSizeMap = await dateSizeMapResolver(item, cancellationToken).ConfigureAwait(true);
+                if (dateSizeMap is null)
+                {
+                    continue;
+                }
+
+                var existingPath = await _contentScanner.FindContentDuplicateAsync(sourcePath, dateSizeMap, cancellationToken)
                     .ConfigureAwait(true);
                 if (existingPath is not null)
                 {

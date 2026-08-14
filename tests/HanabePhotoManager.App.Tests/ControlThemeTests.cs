@@ -247,8 +247,10 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("IsOnboardingVisible");
         mainXaml.Should().Contain("PreviousOnboardingStepCommand");
         mainXaml.Should().Contain("NextOnboardingStepCommand");
-        mainXaml.Should().Contain("PlacementTarget=\"{Binding ElementName=OnboardingAnalyzeButton}\"");
-        mainXaml.Should().Contain("PlacementTarget=\"{Binding ElementName=OnboardingImportButton}\"");
+        mainXaml.Should().Contain("开始分析与导入");
+        mainXaml.Should().Contain("AnalyzeAndImportCommand");
+        mainXaml.Should().NotContain("OnboardingAnalyzeButton");
+        mainXaml.Should().NotContain("OnboardingImportButton");
         mainXaml.Should().Contain("选择图库根目录");
         mainXaml.Should().Contain("选择来源文件夹");
         mainXaml.Should().Contain("暂时不用介绍了");
@@ -286,6 +288,77 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("x:Name=\"FaceReferenceClipSurface\"");
         mainXaml.Should().Contain("<Grid.OpacityMask>");
         mainXaml.Should().Contain("CornerRadius=\"21\"");
+    }
+
+    [Fact]
+    public void BrowsePage_ShowsEmptyStateWhenNoPreviewItems()
+    {
+        var mainXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var vm = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        vm.Should().Contain("public bool HasNoPreviewItems => !HasPreviewItems;");
+        mainXaml.Should().Contain("HasNoPreviewItems, Converter={StaticResource BoolToVis}");
+        mainXaml.Should().Contain("暂无照片");
+        mainXaml.Should().Contain("调整筛选条件试试");
+    }
+
+    [Fact]
+    public void MapPage_AlwaysProvidesLoadingErrorAndRetryFeedback()
+    {
+        var xaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Map", "MapPage.xaml"));
+        var code = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Map", "MapPage.xaml.cs"));
+
+        xaml.Should().Contain("x:Name=\"MapStatusPanel\"");
+        xaml.Should().Contain("x:Name=\"MapStatusTitle\"");
+        xaml.Should().Contain("x:Name=\"MapStatusDescription\"");
+        xaml.Should().Contain("x:Name=\"MapRetryButton\"");
+        code.Should().Contain("ShowLoadingState");
+        code.Should().Contain("ShowErrorState(\"地图加载失败\"");
+        code.Should().Contain("MapRetry_Click");
+        code.Should().NotContain("Swallow other WebView2 init failures");
+    }
+
+    [Fact]
+    public void PhotoWallThumbnails_ProvideLoadingPlaceholder()
+    {
+        var mainXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var vm = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        vm.Should().Contain("public bool HasNoThumbnail => !HasThumbnail;");
+        mainXaml.Should().Contain("HasNoThumbnail, Converter={StaticResource BoolToVis}");
+        mainXaml.Should().Contain("暂无缩略图");
+    }
+
+    [Fact]
+    public void SmallLists_ProvideEmptyStateHints()
+    {
+        var semantic = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Search", "SemanticSearchView.xaml"));
+        var map = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Map", "MapPage.xaml"));
+        var compression = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Compression", "CompressionPage.xaml"));
+        var wechat = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "WeChat", "WeChatSenderView.xaml"));
+        var albums = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Albums", "CustomAlbumsPage.xaml"));
+
+        semantic.Should().Contain("DataTrigger Binding=\"{Binding HasResults}\" Value=\"False\"");
+        semantic.Should().Contain("没有找到相关照片");
+        map.Should().Contain("DataTrigger Binding=\"{Binding SelectedLocationPhotos.Count}\" Value=\"0\"");
+        map.Should().Contain("DataTrigger Binding=\"{Binding UnlocatedPhotos.Count}\" Value=\"0\"");
+        compression.Should().Contain("DataTrigger Binding=\"{Binding Items.Count}\" Value=\"0\"");
+        compression.Should().Contain("暂未添加压缩图片");
+        wechat.Should().Contain("DataTrigger Binding=\"{Binding Items.Count}\" Value=\"0\"");
+        wechat.Should().Contain("发送队列为空");
+        albums.Should().Contain("DataTrigger Binding=\"{Binding Albums.Count}\" Value=\"0\"");
+        albums.Should().Contain("还没有自定义相册");
     }
 
     private static string FindSourceRoot()

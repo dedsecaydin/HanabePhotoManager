@@ -97,13 +97,35 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- 空相册引导文案 -->
+        <Border Margin="0,36,0,8" Padding="32,28" CornerRadius="{StaticResource Radius.Container}"
+                HorizontalAlignment="Center" IsHitTestVisible="False">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Visibility" Value="Collapsed"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Albums.Count}" Value="0">
+                  <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <StackPanel>
+            <TextBlock Text="还没有自定义相册" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"
+                       Foreground="{DynamicResource Brush.Text.Primary}" HorizontalAlignment="Center" />
+            <TextBlock Text="点击下方「＋ 新建相册」添加磁盘文件夹作为相册引用；移除相册不会删除文件夹或照片。"
+                       Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.BodySmall}"
+                       TextWrapping="Wrap" TextAlignment="Center" Margin="0,8,0,0" />
+          </StackPanel>
+        </Border>
+
         <!-- 末尾虚线「＋新建相册」卡 -->
         <Button Width="232" Margin="0,0,16,16" Padding="10" HorizontalContentAlignment="Stretch" Cursor="Hand" FocusVisualStyle="{x:Null}" Click="AddFolder_Click" AutomationProperties.Name="新建相册">
           <Button.Template>
             <ControlTemplate TargetType="Button">
               <Border x:Name="Chrome" Height="128" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLow}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                  <TextBlock Text="＋" FontSize="30" FontWeight="Light" Foreground="{DynamicResource Brush.OnSurfaceVariant}" HorizontalAlignment="Center" />
+                  <TextBlock Text="＋" FontSize="{StaticResource Typography.Display}" FontWeight="Light" Foreground="{DynamicResource Brush.OnSurfaceVariant}" HorizontalAlignment="Center" />
                   <TextBlock Text="新建相册" FontSize="{StaticResource Typography.Label}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.OnSurfaceVariant}" HorizontalAlignment="Center" Margin="0,6,0,0" />
                 </StackPanel>
               </Border>
@@ -111,6 +133,10 @@
                 <Trigger Property="IsMouseOver" Value="True">
                   <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.PrimaryContainer}" />
                   <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Primary}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocused" Value="True">
+                  <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" />
+                  <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
                 </Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>

@@ -32,7 +32,15 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         var inputGroups = groups.ToArray();
         ValidateGroups(inputGroups, nameof(groups));
 
-        var sequenceByGroup = BuildSequenceMap(root, date, inputGroups);
+        // root 可能是 "\Hanabe\拍照" 这种根相对路径（单反斜杠、无盘符，Path.IsPathFullyQualified=false）。
+        // 直接拼接会产出 "\Hanabe\拍照\8月\08.15\..." 这类无盘符目标路径，下游
+        // VerifiedFileTransfer.ValidatePlannedFile 会以 "Transfer paths must be fully qualified."
+        // 拒绝整批导入。规范化优先按"丢失反斜杠的 UNC"识别：真实照片库是另一台电脑上的 UNC 共享
+        // "\\Hanabe\拍照"，补双反斜杠后若可访问则按 UNC 保留（绝不 GetFullPath 成 C:\ 盘路径）；
+        // 已完全限定的 UNC/盘符路径原样保留；仅当 UNC 候选不可访问时才回退 GetFullPath。
+        var normalizedRoot = LibraryRootNormalizer.Normalize(root) ?? root;
+
+        var sequenceByGroup = BuildSequenceMap(normalizedRoot, date, inputGroups);
         var items = new List<ImportPlanItem>();
         var plannedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in inputGroups)
@@ -46,7 +54,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
             foreach (var source in EnumerateGroupFiles(group))
             {
                 var destinationFileName = BuildRenamedFileName(sequenceName, source.FullPath, extensionCounts);
-                var destination = Path.Combine(root, date.RelativePath, categoryFolder, destinationFileName);
+                var destination = Path.Combine(normalizedRoot, date.RelativePath, categoryFolder, destinationFileName);
                 var normalizedDestination = NormalizeDestinationIdentity(destination);
                 var conflict = plannedDestinations.Add(normalizedDestination)
                     ? await _destinationProbe.CheckAsync(source, destination, cancellationToken).ConfigureAwait(false)
@@ -67,7 +75,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
                 ImportItemState.Planned));
         }
 
-        return new ImportPlan(root, date, mode, items);
+        return new ImportPlan(normalizedRoot, date, mode, items);
     }
 
     private static void ValidateGroups(IReadOnlyList<MediaGroup> groups, string parameterName)

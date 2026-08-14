@@ -114,10 +114,10 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        mainXaml.Should().Contain("<ColumnDefinition Width=\"232\" />");
+        mainXaml.Should().Contain("<ColumnDefinition Width=\"100\" />");
         mainXaml.Should().Contain("Style=\"{StaticResource Sidebar.Container}\"");
         mainXaml.Should().Contain("ItemsSource=\"{Binding NavigationItems}\"");
-        mainXaml.Should().Contain("Style=\"{StaticResource Navigation.ReorderableItem}\"");
+        mainXaml.Should().Contain("Style=\"{StaticResource Navigation.RailItem}\"");
         mainXaml.Should().Contain("AutomationProperties.Name=\"{Binding Label}\"");
         mainXaml.Should().Contain("PrimaryNavigationItem_PreviewMouseMove");
         mainXaml.Should().Contain("x:Name=\"ThemeToggleButton\"");
@@ -134,15 +134,11 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("AutomationProperties.Name=\"设置\"");
         mainXaml.Should().NotContain("Text=\"Hanabe Photos\"");
         mainXaml.Should().Contain("Stretch=\"Uniform\"");
-        mainXaml.Should().Contain("Tag=\"{StaticResource Icon.Theme}\"");
-        mainXaml.Should().Contain("Tag=\"{StaticResource Icon.Settings}\"");
-        mainXaml.Should().Contain("x:Key=\"SidebarFooterContentTemplate\"");
-        mainXaml.Should().Contain("FooterNavigationLabel");
-        mainXaml.Should().Contain("HorizontalContentAlignment=\"Stretch\" Content=\"深色模式\"");
-        mainXaml.Should().Contain("HorizontalContentAlignment=\"Stretch\" Content=\"设置\"");
-        mainXaml.Should().Contain("Width=\"104\" Height=\"104\"");
-        mainXaml.Should().Contain("RectangleGeometry Rect=\"0,0,100,100\" RadiusX=\"12\" RadiusY=\"12\"");
-        mainXaml.Should().Contain("Panel.ZIndex=\"3\"");
+        mainXaml.Should().Contain("Data=\"{StaticResource Icon.Theme}\"");
+        mainXaml.Should().Contain("Data=\"{StaticResource Icon.Settings}\"");
+        mainXaml.Should().Contain("x:Name=\"ThemeToggleLabel\"");
+        mainXaml.Should().Contain("x:Name=\"ThemeToggleButton\"");
+        mainXaml.Should().Contain("Background=\"{DynamicResource Brush.PrimaryContainer}\"");
     }
 
     [Fact]
@@ -221,15 +217,20 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
-    public void SettingsWorkspace_ConnectsTopBarTabsAndBottomEdgeWithoutOuterGaps()
+    public void ShellChrome_UsesRoundedM3ContainersAndSettingsWorkspaceResetsPadding()
     {
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var layoutXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Layout.xaml"));
 
         mainXaml.Should().Contain("DataTrigger Binding=\"{Binding IsSettingsPage}\" Value=\"True\"");
         mainXaml.Should().Contain("Setter Property=\"Padding\" Value=\"0\"");
-        mainXaml.Should().Contain("Setter Property=\"Padding\" Value=\"24,20,24,18\"");
-        mainXaml.Should().Contain("Setter Property=\"Margin\" Value=\"0\"");
+        mainXaml.Should().Contain("Style=\"{StaticResource Layout.TopBar}\"");
+        mainXaml.Should().Contain("Style=\"{StaticResource Layout.StatusBar}\"");
+        layoutXaml.Should().Contain("x:Key=\"Layout.TopBar\"");
+        layoutXaml.Should().Contain("Radius.Container");
+        layoutXaml.Should().Contain("Property=\"Height\" Value=\"44\"");
     }
 
     [Fact]

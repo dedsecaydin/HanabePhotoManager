@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · M3 Surface-Tonal 层次版</title>
+<style>
+/* ============================================================
+   Variant 002: M3 Surface-Tonal（柔和层次版）
+   设计 stance：靠 surface 容器层级与 tonal 明度区分，
+   而非高饱和彩色。克制、安静、照片优先。
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #1D6B50;
+  --on-primary: #FFFFFF;
+  --primary-container: #A8F2CD;
+  --on-primary-container: #002114;
+  --secondary: #4F6357;
+  --secondary-container: #D2E8DA;
+  --on-secondary-container: #0B1F16;
+  --tertiary: #3E6373;
+  --tertiary-container: #C2E8FB;
+  --on-tertiary-container: #001F2A;
+  --surface: #FCFDF7;
+  --surface-dim: #DCE3DB;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F6FAF3;
+  --surface-container: #F0F5EE;
+  --surface-container-high: #EAEFE9;
+  --surface-container-highest: #E4E9E3;
+  --on-surface: #1B1D1B;
+  --on-surface-variant: #444844;
+  --outline: #757A75;
+  --outline-variant: #C4C9C3;
+
+  --state-hover: rgba(27, 29, 27, 0.06);
+  --state-pressed: rgba(27, 29, 27, 0.12);
+
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 20px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface-dim);
+  color: var(--on-surface);
+  line-height: 1.5;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app { display: flex; height: 100vh; gap: 8px; padding: 8px; }
+
+/* ============ Navigation drawer（宽版，更 Lightroom） ============ */
+.drawer {
+  width: 240px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  overflow-y: auto;
+}
+.drawer .brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; margin-bottom: 12px;
+}
+.drawer .brand .logo {
+  width: 36px; height: 36px; border-radius: var(--radius-medium);
+  background: var(--primary); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+}
+.drawer .brand span { font-weight: 600; font-size: 16px; }
+
+.drawer .section-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--on-surface-variant);
+  padding: 12px 12px 4px;
+  text-transform: uppercase;
+}
+.drawer-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-full);
+  font-size: 14px; font-weight: 500;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.drawer-item .ic { width: 22px; text-align: center; opacity: 0.75; }
+.drawer-item:hover { background: var(--state-hover); }
+.drawer-item:active { background: var(--state-pressed); }
+.drawer-item.active { background: var(--secondary-container); color: var(--on-secondary-container); font-weight: 600; }
+
+/* ============ Main ============ */
+.main { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.topbar {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 16px;
+  min-height: 60px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.topbar h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+
+.seg {
+  display: inline-flex; background: var(--surface-container-high);
+  border-radius: var(--radius-full); padding: 3px;
+  gap: 2px;
+}
+.seg .seg-item {
+  padding: 7px 16px; border-radius: var(--radius-full);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  color: var(--on-surface-variant);
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.seg .seg-item:hover { background: var(--state-hover); }
+.seg .seg-item.active { background: var(--surface-container-lowest); color: var(--on-surface); box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+
+/* ============ Photo browser ============ */
+.browser {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: auto;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.browser-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.breadcrumb { font-size: 13px; color: var(--on-surface-variant); }
+.breadcrumb b { color: var(--on-surface); font-weight: 600; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.photo {
+  border-radius: var(--radius-large);
+  overflow: hidden; aspect-ratio: 4/3;
+  position: relative; cursor: pointer;
+  background: var(--surface-container-high);
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.photo:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+.photo .inner {
+  width: 100%; height: 100%;
+  background: linear-gradient(145deg,
+    var(--surface-container-high) 0%,
+    var(--surface-container) 55%,
+    var(--surface-container-low) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; color: var(--on-surface-variant); opacity: 0.85;
+}
+.photo .meta {
+  position: absolute; inset: auto 0 0 0;
+  padding: 20px 10px 8px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.55));
+  color: #fff; font-size: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+  opacity: 0; transition: opacity var(--motion-normal) var(--ease);
+}
+.photo:hover .meta { opacity: 1; }
+.photo.selected { outline: 3px solid var(--primary); outline-offset: -3px; }
+
+/* ============ Bottom sheet / FAB ============ */
+.fab {
+  position: fixed; right: 28px; bottom: 28px;
+  width: 56px; height: 56px; border-radius: var(--radius-large);
+  background: var(--primary); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; cursor: pointer; border: none;
+  box-shadow: 0 6px 16px rgba(29,107,80,0.35);
+  transition: transform var(--motion-normal) var(--ease);
+}
+.fab:active { transform: scale(0.94); }
+
+.statusbar {
+  height: 40px; background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; font-size: 12px; color: var(--on-surface-variant);
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="drawer">
+    <div class="brand"><div class="logo">H</div><span>HanabePhoto</span></div>
+
+    <div class="section-label">图库</div>
+    <div class="drawer-item active"><span class="ic">🖼️</span>照片图库</div>
+    <div class="drawer-item"><span class="ic">👤</span>人物查找</div>
+    <div class="drawer-item"><span class="ic">🗺️</span>地图照片</div>
+
+    <div class="section-label">创建</div>
+    <div class="drawer-item"><span class="ic">📁</span>自定义相册</div>
+    <div class="drawer-item"><span class="ic">➕</span>导入照片</div>
+
+    <div class="section-label">工具</div>
+    <div class="drawer-item"><span class="ic">🛠️</span>图片小工具</div>
+    <div class="drawer-item"><span class="ic">☁️</span>网盘</div>
+
+    <div style="flex:1"></div>
+    <div class="section-label">系统</div>
+    <div class="drawer-item"><span class="ic">🌙</span>深色模式</div>
+    <div class="drawer-item"><span class="ic">⚙️</span>设置</div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <h1>照片图库</h1>
+      <div class="seg">
+        <div class="seg-item active">全部</div>
+        <div class="seg-item">收藏</div>
+        <div class="seg-item">视频</div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="breadcrumb">6217 张 · 38 个日期</div>
+    </header>
+
+    <div class="browser">
+      <div class="browser-toolbar">
+        <div class="breadcrumb"><b>2026</b> / 8月 / 13日 · 42 张</div>
+        <div style="display:flex;gap:8px;">
+          <span style="font-size:12px;color:var(--on-surface-variant);align-self:center;">⬡ 按日期</span>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="photo"><div class="inner">🌅</div><div class="meta"><span>21:47</span><span>★</span></div></div>
+        <div class="photo"><div class="inner">🏔️</div><div class="meta"><span>20:11</span><span>★</span></div></div>
+        <div class="photo"><div class="inner">📷</div><div class="meta"><span>19:02</span></div></div>
+        <div class="photo selected"><div class="inner">🎬</div><div class="meta"><span>18:44</span><span>0:42</span></div></div>
+        <div class="photo"><div class="inner">🌸</div><div class="meta"><span>17:30</span></div></div>
+        <div class="photo"><div class="inner">🌊</div><div class="meta"><span>16:15</span><span>★</span></div></div>
+        <div class="photo"><div class="inner">🦋</div><div class="meta"><span>15:08</span></div></div>
+        <div class="photo"><div class="inner">🌙</div><div class="meta"><span>14:44</span></div></div>
+        <div class="photo"><div class="inner">🎨</div><div class="meta"><span>13:20</span></div></div>
+        <div class="photo"><div class="inner">🌄</div><div class="meta"><span>12:03</span><span>★</span></div></div>
+        <div class="photo"><div class="inner">🪐</div><div class="meta"><span>11:47</span></div></div>
+        <div class="photo"><div class="inner">🦢</div><div class="meta"><span>10:22</span></div></div>
+        <div class="photo"><div class="inner">🌿</div><div class="meta"><span>09:41</span></div></div>
+        <div class="photo"><div class="inner">🎞️</div><div class="meta"><span>08:15</span><span>1:05</span></div></div>
+        <div class="photo"><div class="inner">☁️</div><div class="meta"><span>07:30</span></div></div>
+        <div class="photo"><div class="inner">🌺</div><div class="meta"><span>06:48</span></div></div>
+      </div>
+    </div>
+
+    <footer class="statusbar">
+      <span>已索引 6217 · 后台扫描中</span>
+      <span>✓ 无重复 · 62%</span>
+    </footer>
+  </div>
+</div>
+<button class="fab">＋</button>
+</body>
+</html>

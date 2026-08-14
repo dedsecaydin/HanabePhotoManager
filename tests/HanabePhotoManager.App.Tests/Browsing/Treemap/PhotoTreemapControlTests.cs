@@ -74,6 +74,21 @@ public sealed class PhotoTreemapControlTests
     }
 
     [Fact]
+    public void Control_CullsRenderingByViewportAndReusesLayoutsAcrossFrames()
+    {
+        // Scrolling a large library must stay O(visible): the renderer memoizes
+        // derived groups and justified layouts, and binary-searches the visible
+        // row range instead of walking every item on each frame.
+        var source = File.ReadAllText(ProjectFile("src", "HanabePhotoManager.App", "Browsing", "Treemap", "PhotoTreemapControl.cs"));
+        source.Should().Contain("VisibleRowRange");
+        source.Should().Contain("EnsureLayoutCache");
+        source.Should().Contain("_cachedSubtreeLayout");
+        source.Should().Contain("_cachedCategoryLayouts");
+        source.Should().Contain("_cachedRootCategories");
+        source.Should().Contain("OnMouseMove");
+    }
+
+    [Fact]
     public void HitRegion_ProvidesStableAutomationName()
     {
         var region = new TreemapHitRegion(

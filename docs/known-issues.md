@@ -18,13 +18,13 @@
 
 ### KI-01 — Treemap only loads first batch of thumbnails, then stops
 
-- **Status:** Fix Attempted
+- **Status:** Resolved (2026-08-13)
 - **Symptom:** After opening treemap, a few thumbnails appear then loading stops permanently. Remaining tiles stay as placeholders.
 - **Impact:** Most visible tiles never show their photo content.
 - **Clue:** Multiple `CancelPreviewThumbnailLoading()` calls from `BrowseDisplayMode` setter + `SelfHealTreemapThumbnailsAsync`. Also `RebuildVisiblePreviewPage` clearing thumbnails.
-- **Fix applied:** Removed duplicate cancel calls; added `skipCancel` parameter; `_treemapLoadActive` guard.
-- **Verification:** Not yet verified at scale.
-- **Files:** `MainWindowViewModel.cs` (StartPreviewThumbnailLoading, SelfHealTreemapThumbnailsAsync)
+- **Fix applied:** Removed duplicate cancel calls; added `skipCancel` parameter; `_treemapLoadActive` guard + `_treemapLoadGeneration` generation counter so only the current drain loop re-queues on completion.
+- **Verification:** `DrainTreemapThumbnailQueue` is single-flight and drains the pending set on each batch completion; `CompleteTreemapThumbnailBatch` drops stale generations after `CancelPreviewThumbnailLoading`.
+- **Files:** `MainWindowViewModel.cs` (StartPreviewThumbnailLoading, SelfHealTreemapThumbnailsAsync, DrainTreemapThumbnailQueue)
 
 ### KI-02 — Thumbnails once appeared only in single column
 
@@ -40,6 +40,7 @@
 - **Symptom:** After `JustifiedGalleryLayout` implementation, tiles still appear near-square with internal whitespace. Not forming tight photo-wall.
 - **Clue:** `AspectRatio` defaults to 1.0 until thumbnails load. Layout computed before real ratios arrive. No re-layout trigger after ratio updates.
 - **Impact:** Justified gallery effect not visible to user.
+- **Note (2026-08-13):** the layout itself is now memoized per (ItemsSource + RootKey + width), so re-layout after aspect-ratio arrivals no longer costs O(n) per scroll frame — but the visual "still resembles grid" tuning (row height / min-fill) remains outstanding.
 - **Files:** `JustifiedGalleryLayout.cs`, `TreemapItemViewModel.cs`, `ProgressiveTreemapViewModel.cs`, `PhotoTreemapControl.cs`
 
 ### KI-04 — Large white gaps inside tile rects
@@ -52,17 +53,19 @@
 
 ### KI-05 — 6217+ items only show first ~dozen
 
-- **Status:** Partial
+- **Status:** Resolved (2026-08-13)
 - **Symptom:** When subtree has 6217 items, only the first ~visual tiles are rendered. Remainder invisible/cropped.
 - **Clue:** `DrawSubtreeWithJustifiedLayout` + `ContentHeight` implemented. `UpdateTreemapSize` sets `Height = Max(vpHeight, ContentHeight)`. May not work at large scale.
+- **Fix applied:** `ContentHeight → ScrollViewer.ExtentHeight` sizing, plus 60% `VisibleRowRange` (binary search over Y-monotonic justified rows) so only viewport-intersecting rows are walked/drawn regardless of item count.
 - **Files:** `PhotoTreemapControl.cs`, `MainWindow.xaml.cs`
 
 ### KI-06 — Bottom items clipped to thin slivers
 
-- **Status:** Partial
+- **Status:** Resolved (2026-08-13)
 - **Symptom:** Last few rows of tiles appear as 1-2px horizontal lines instead of full tiles.
 - **Clue:** `ClipToBounds` or bounds clipping in `DrawRoot`. Content height calculation may be off.
 - **Related:** KI-05
+- **Fix applied:** Same viewport-row range culling + content-height sizing as KI-05.
 - **Files:** `PhotoTreemapControl.cs`
 
 ### KI-07 — UI hang on large treemap open

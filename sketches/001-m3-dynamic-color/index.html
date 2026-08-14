@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · M3 动态色彩浓烈版</title>
+<style>
+/* ============================================================
+   Variant 001: M3 Dynamic Color（浓烈版）
+   设计 stance：Google 原生 M3 —— 大圆角 surface + 动态色彩 tonal 层次
+   + 彩色状态层 + 克制动效(150/180/220ms)
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* M3 动态色彩 tonal palette（主色：摄影感靛蓝→紫，tertiary 暖橙） */
+  --primary: #4355B9;          /* primary40 */
+  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;
+  --on-primary-container: #00105C;
+  --secondary: #5B5D72;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;
+  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;
+  --on-tertiary-container: #271900;
+  --error: #BA1A1A;
+  --on-error: #FFFFFF;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
+
+  /* surface 层级（M3 tonal elevation） */
+  --surface: #FBF8FF;
+  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;
+  --on-surface-variant: #45464F;
+  --outline: #75767F;
+  --outline-variant: #C5C5CF;
+
+  /* 状态层 opacity */
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-focus: rgba(27, 27, 31, 0.12);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+  --state-dragged: rgba(27, 27, 31, 0.16);
+
+  /* M3 圆角 */
+  --radius-extra-small: 4px;
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  /* 动效 */
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  font-size: 16px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+  background: var(--surface-dim);
+}
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+.rail-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-medium);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.rail-logo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%);
+}
+
+.rail-item {
+  width: 64px;
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant);
+  font-size: 11px; font-weight: 500;
+  position: relative;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+
+.rail-item .rail-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.rail-item.active .rail-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* ===================== Main ===================== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Top app bar */
+.topbar {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+.topbar-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+
+.search-field {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  color: var(--on-surface-variant);
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.search-field:hover { background: var(--surface-container-highest); }
+.search-field:focus-within {
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.search-field input {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; flex: 1; color: var(--on-surface);
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+
+/* Content area */
+.content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Photo grid workspace */
+.workspace {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workspace-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+.filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-small);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip:active { background: var(--state-pressed); }
+.chip.selected {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.chip.filter-active {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border-color: var(--primary);
+}
+
+/* Photo grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.photo-tile {
+  aspect-ratio: 1;
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--surface-container);
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.photo-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+.photo-tile:active { transform: scale(0.98); }
+
+.photo-tile .img {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  background:
+    linear-gradient(135deg,
+      var(--primary-container) 0%,
+      var(--tertiary-container) 45%,
+      var(--secondary-container) 100%);
+  color: var(--on-primary-container);
+}
+.photo-tile.selected {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+.photo-tile.selected::after {
+  content: '✓';
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.photo-tile .duration {
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(0,0,0,0.65);
+  color: #fff; font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* ===================== Inspector panel ===================== */
+.inspector {
+  width: 320px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.inspector h3 {
+  font-size: 14px; font-weight: 600;
+  color: var(--on-surface);
+}
+.inspector .sub { font-size: 12px; color: var(--on-surface-variant); }
+
+.info-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px; padding: 6px 0;
+  border-bottom: 1px solid var(--outline-variant);
+}
+.info-row .k { color: var(--on-surface-variant); }
+.info-row .v { font-weight: 500; }
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 356px; bottom: 28px;
+  width: 56px; height: 56px;
+  border-radius: var(--radius-large);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 6px 16px rgba(67, 85, 185, 0.35);
+  cursor: pointer; border: none;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.fab:hover { box-shadow: 0 8px 24px rgba(67, 85, 185, 0.45); }
+.fab:active { transform: scale(0.94); }
+
+/* ===================== Status bar ===================== */
+.statusbar {
+  height: 44px;
+  background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px; color: var(--on-surface-variant);
+}
+.statusbar .progress {
+  height: 6px; width: 180px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.statusbar .progress .fill {
+  height: 100%; width: 62%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item active" title="主页">
+      <span class="rail-icon">🏠</span>主页
+    </div>
+    <div class="rail-item" title="照片图库">
+      <span class="rail-icon">🖼️</span>图库
+    </div>
+    <div class="rail-item" title="人物">
+      <span class="rail-icon">👤</span>人物
+    </div>
+    <div class="rail-item" title="相册">
+      <span class="rail-icon">📁</span>相册
+    </div>
+    <div class="rail-item" title="地图">
+      <span class="rail-icon">🗺️</span>地图
+    </div>
+    <div class="rail-item" title="网盘">
+      <span class="rail-icon">☁️</span>网盘
+    </div>
+    <div class="rail-item" title="设置" style="margin-top:auto;">
+      <span class="rail-icon">⚙️</span>设置
+    </div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">照片图库</div>
+        <div class="topbar-sub">6217 张照片 · 38 个日期 · 最近扫描 14:02</div>
+      </div>
+      <div class="search-field">
+        <span>🔍</span>
+        <input type="text" placeholder="搜索照片、描述、相机参数…">
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <div class="workspace-head">
+          <div class="filter-chips">
+            <div class="chip filter-active">全部</div>
+            <div class="chip">今天</div>
+            <div class="chip selected">本月</div>
+            <div class="chip">视频</div>
+            <div class="chip">★ 收藏</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div class="chip">网格 ▾</div>
+            <div class="chip">树图</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="photo-tile"><div class="img">🌅</div></div>
+          <div class="photo-tile"><div class="img">🏔️</div></div>
+          <div class="photo-tile"><div class="img">📷</div></div>
+          <div class="photo-tile selected"><div class="img">🎬</div><span class="duration">0:42</span></div>
+          <div class="photo-tile"><div class="img">🌸</div></div>
+          <div class="photo-tile"><div class="img">🌊</div></div>
+          <div class="photo-tile"><div class="img">🦋</div></div>
+          <div class="photo-tile"><div class="img">🌙</div></div>
+          <div class="photo-tile"><div class="img">🎨</div></div>
+          <div class="photo-tile"><div class="img">🌄</div></div>
+          <div class="photo-tile"><div class="img">🪐</div></div>
+          <div class="photo-tile"><div class="img">🌸</div></div>
+          <div class="photo-tile"><div class="img">🦢</div></div>
+          <div class="photo-tile"><div class="img">🌿</div></div>
+          <div class="photo-tile"><div class="img">🎞️</div><span class="duration">1:05</span></div>
+          <div class="photo-tile"><div class="img">☁️</div></div>
+        </div>
+      </div>
+
+      <!-- Inspector -->
+      <aside class="inspector">
+        <h3>选中的照片</h3>
+        <div style="height:120px;border-radius:var(--radius-medium);background:linear-gradient(135deg,var(--primary-container),var(--tertiary-container));display:flex;align-items:center;justify-content:center;font-size:40px;">🎬</div>
+        <div class="sub">IMG_4785_展台_final.mp4</div>
+
+        <div class="info-row"><span class="k">尺寸</span><span class="v">3840 × 2160</span></div>
+        <div class="info-row"><span class="k">拍摄时间</span><span class="v">2026-08-13 21:47</span></div>
+        <div class="info-row"><span class="k">相机</span><span class="v">Sony α7 IV</span></div>
+        <div class="info-row"><span class="k">镜头</span><span class="v">FE 24-70mm F2.8</span></div>
+        <div class="info-row"><span class="k">ISO / 光圈</span><span class="v">800 / f/2.8</span></div>
+        <div class="info-row"><span class="k">人物</span><span class="v">花火 · 露娜</span></div>
+
+        <h3 style="margin-top:8px;">操作</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+          <div class="chip">加入相册</div>
+          <div class="chip">导出</div>
+          <div class="chip selected">收藏 ★</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>已索引 6217 张 · 正在后台扫描</span>
+      <div class="progress"><div class="fill"></div></div>
+      <span>62%</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="导入照片">＋</button>
+</body>
+</html>

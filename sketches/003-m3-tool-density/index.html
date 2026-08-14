@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · M3 工具密度版</title>
+<style>
+/* ============================================================
+   Variant 003: M3 Tool-Density（工具密度版）
+   设计 stance：保留桌面工具高信息密度（Lightroom/Eagle 密度），
+   但用 M3 组件语言（tonal surface / 状态层 / 大圆角 / FAB / chips）。
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #8B4AA6;
+  --on-primary: #FFFFFF;
+  --primary-container: #F7D8FF;
+  --on-primary-container: #340046;
+  --secondary: #6B5D71;
+  --secondary-container: #F3DFF8;
+  --on-secondary-container: #251A2B;
+  --tertiary: #006A6A;
+  --tertiary-container: #9CF0F0;
+  --on-tertiary-container: #002020;
+  --surface: #FEF7FF;
+  --surface-dim: #DED8E1;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #FBF2FD;
+  --surface-container: #F5ECF7;
+  --surface-container-high: #EFE6F1;
+  --surface-container-highest: #E9E0EB;
+  --on-surface: #1D1B1E;
+  --on-surface-variant: #49454E;
+  --outline: #7A757E;
+  --outline-variant: #CAC4CF;
+
+  --state-hover: rgba(29, 27, 30, 0.07);
+  --state-pressed: rgba(29, 27, 30, 0.12);
+
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 16px;
+  --radius-extra-large: 24px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface-dim);
+  color: var(--on-surface);
+  line-height: 1.45;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+}
+
+.app { display: flex; height: 100vh; gap: 6px; padding: 6px; }
+
+/* ============ 窄 rail（高密度） ============ */
+.rail {
+  width: 72px; background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  padding: 8px 0; gap: 2px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+}
+.rail .logo {
+  width: 40px; height: 40px; border-radius: var(--radius-medium);
+  background: var(--primary-container); color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 17px; margin-bottom: 8px;
+}
+.rail-item {
+  width: 56px; border-radius: var(--radius-full);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1px; padding: 7px 0 5px;
+  cursor: pointer; color: var(--on-surface-variant); font-size: 10px;
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item .ic { font-size: 18px; }
+.rail-item.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+.rail-item.active .ic { color: var(--primary); }
+
+/* ============ Main ============ */
+.main { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+/* Compact topbar */
+.topbar {
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  padding: 6px 12px;
+  display: flex; align-items: center; gap: 10px;
+  min-height: 48px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.topbar h1 { font-size: 16px; font-weight: 600; }
+
+.search {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 6px 12px; width: 260px;
+}
+.search input { border: none; outline: none; background: transparent; font-size: 13px; flex: 1; color: var(--on-surface); }
+
+.stat-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface-container);
+  border-radius: var(--radius-full);
+  padding: 5px 12px; font-size: 12px;
+  color: var(--on-surface-variant);
+}
+
+/* ============ Content: 树图 + 细节 ============ */
+.content { flex: 1; display: flex; gap: 6px; min-height: 0; }
+
+.workspace {
+  flex: 1; background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  padding: 10px; overflow: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.workspace-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap;
+}
+.workspace-toolbar .lbl { font-size: 12px; font-weight: 600; color: var(--on-surface-variant); }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 10px; border-radius: var(--radius-small);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: background var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip.selected { background: var(--primary-container); color: var(--on-primary-container); }
+
+/* Treemap-style blocks */
+.treemap {
+  flex: 1; display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px; min-height: 0;
+}
+.tm {
+  border-radius: var(--radius-medium);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; cursor: pointer; position: relative;
+  font-size: 12px; font-weight: 600;
+  transition: transform var(--motion-fast) var(--ease), filter var(--motion-fast) var(--ease);
+}
+.tm:hover { filter: brightness(1.04); transform: scale(1.005); }
+.tm small { font-size: 10px; font-weight: 400; opacity: 0.8; }
+.tm.b1 { background: var(--primary-container); color: var(--on-primary-container); grid-row: 1 / 3; }
+.tm.b2 { background: var(--tertiary-container); color: var(--on-tertiary-container); }
+.tm.b3 { background: var(--secondary-container); color: var(--on-secondary-container); }
+.tm.b4 { background: #FFE0B2; color: #3E1D00; }
+.tm.b5 { background: var(--surface-container-high); color: var(--on-surface-variant); }
+
+/* ============ Right inspector（高密度） ============ */
+.inspector {
+  width: 300px; background: var(--surface-container-lowest);
+  border-radius: var(--radius-large);
+  padding: 10px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.inspector h3 {
+  font-size: 13px; font-weight: 600;
+  padding-bottom: 6px; border-bottom: 1px solid var(--outline-variant);
+}
+.inspector .thumb {
+  height: 90px; border-radius: var(--radius-medium);
+  background: linear-gradient(135deg, var(--primary-container), var(--tertiary-container));
+  display: flex; align-items: center; justify-content: center; font-size: 30px;
+}
+.kv {
+  display: grid; grid-template-columns: 84px 1fr;
+  gap: 4px 8px; font-size: 12px;
+}
+.kv .k { color: var(--on-surface-variant); }
+.kv .v { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius-medium);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  background: var(--surface-container-high); color: var(--on-surface);
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.btn:hover { background: var(--surface-container-highest); }
+.btn.primary { background: var(--primary); color: var(--on-primary); }
+.btn.primary:hover { box-shadow: 0 3px 8px rgba(139,74,166,0.35); }
+
+/* ============ FAB + status ============ */
+.fab {
+  position: fixed; right: 320px; bottom: 54px;
+  width: 52px; height: 52px; border-radius: var(--radius-large);
+  background: var(--primary); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; cursor: pointer; border: none;
+  box-shadow: 0 6px 14px rgba(139,74,166,0.35);
+}
+.statusbar {
+  height: 34px; background: var(--surface-container);
+  border-radius: var(--radius-medium);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 12px; font-size: 11px; color: var(--on-surface-variant);
+}
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="rail">
+    <div class="logo">H</div>
+    <div class="rail-item active"><span class="ic">🖼️</span>图库</div>
+    <div class="rail-item"><span class="ic">👤</span>人物</div>
+    <div class="rail-item"><span class="ic">📁</span>相册</div>
+    <div class="rail-item"><span class="ic">🗺️</span>地图</div>
+    <div class="rail-item"><span class="ic">🛠️</span>工具</div>
+    <div class="rail-item"><span class="ic">☁️</span>网盘</div>
+    <div style="flex:1"></div>
+    <div class="rail-item"><span class="ic">⚙️</span>设置</div>
+  </nav>
+
+  <div class="main">
+    <header class="topbar">
+      <h1>照片图库</h1>
+      <div class="search"><span>🔍</span><input placeholder="搜索…"></div>
+      <div style="flex:1"></div>
+      <div class="stat-pill">📷 6217</div>
+      <div class="stat-pill">🗓️ 38</div>
+      <div class="stat-pill">🧹 0 重复</div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <div class="workspace-toolbar">
+          <span class="lbl">空间树图 · 按日期分组</span>
+          <div style="display:flex;gap:6px;">
+            <div class="chip selected">树图</div>
+            <div class="chip">网格</div>
+            <div class="chip">时间线</div>
+          </div>
+        </div>
+        <div class="treemap">
+          <div class="tm b1">2026<br><small>534 张</small></div>
+          <div class="tm b2">2025<br><small>579 张</small></div>
+          <div class="tm b3">2024<br><small>598 张</small></div>
+          <div class="tm b4">2023<br><small>532 张</small></div>
+          <div class="tm b5">2022 及以前<br><small>538 张</small></div>
+        </div>
+      </div>
+
+      <aside class="inspector">
+        <h3>详情</h3>
+        <div class="thumb">📷</div>
+        <div class="kv">
+          <span class="k">文件</span><span class="v">DSC_0217.NEF</span>
+          <span class="k">尺寸</span><span class="v">6000 × 4000</span>
+          <span class="k">拍摄</span><span class="v">2026-08-13 21:47</span>
+          <span class="k">相机</span><span class="v">Nikon Z6 II</span>
+          <span class="k">参数</span><span class="v">f/2.8 · 1/125 · ISO 640</span>
+          <span class="k">人物</span><span class="v">露娜 · 花火</span>
+          <span class="k">评分</span><span class="v">★★★★☆</span>
+        </div>
+        <h3>批量操作</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <div class="btn primary">加入相册</div>
+          <div class="btn">导出</div>
+          <div class="btn">评分</div>
+          <div class="btn">删除</div>
+        </div>
+        <h3>最近扫描</h3>
+        <div style="font-size:12px;color:var(--on-surface-variant);">
+          已索引 6217/6217 · 语义索引 89% · 人物 12 人<br>
+          <span style="display:inline-block;height:6px;width:100%;background:var(--surface-container-high);border-radius:999px;margin-top:6px;overflow:hidden;"><span style="display:block;height:100%;width:89%;background:var(--tertiary);border-radius:999px;"></span></span>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>✓ 就绪 · 后台扫描运行中</span>
+      <span>2026-08-14 12:00</span>
+    </footer>
+  </div>
+</div>
+<button class="fab">＋</button>
+</body>
+</html>

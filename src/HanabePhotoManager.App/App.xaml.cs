@@ -1,4 +1,4 @@
-﻿namespace HanabePhotoManager.App;
+namespace HanabePhotoManager.App;
 
 /// <summary>
 /// Interaction logic for App.xaml
@@ -9,8 +9,85 @@ public partial class App : System.Windows.Application
     private Mutex? _singleInstanceMutex;
     private bool _ownsSingleInstanceMutex;
 
+    /// <summary>
+    /// When the app is launched with <c>--screenshot &lt;path&gt;</c>, the main
+    /// window renders itself to a PNG at that path (headless-safe) and exits.
+    /// Used by the milestone screenshot workflow instead of PrintWindow, which
+    /// returns blank in headless/remote desktop sessions.
+    /// </summary>
+    internal static string? ScreenshotPath { get; private set; }
+
+    /// <summary>
+    /// When set (with <c>--page &lt;Name&gt;</c>), the main window navigates to
+    /// this page before the screenshot is rendered. Used to capture non-default
+    /// pages (e.g. Home) in the headless-safe screenshot workflow.
+    /// </summary>
+    internal static string? ScreenshotPage { get; private set; }
+
+    /// <summary>
+    /// When set (with <c>--select-first</c>), the main window selects the first
+    /// library photo before rendering the screenshot. Used to capture the
+    /// contextual Inspector panel in the headless-safe screenshot workflow.
+    /// </summary>
+    internal static bool SelectFirstForScreenshot { get; private set; }
+
+    /// <summary>
+    /// When set (with <c>--browse-showcase</c>), the browse page is switched to the
+    /// grid display mode and the browse-condition filter chips are expanded before
+    /// the screenshot is rendered. Used to capture the M3 variant-001 browse layout
+    /// (workspace grid + filter chips + 320px inspector + FAB) in one pass.
+    /// </summary>
+    internal static bool BrowseShowcaseForScreenshot { get; private set; }
+
+    /// <summary>
+    /// When set (with <c>--advanced-filters</c>), the browse page's advanced filter
+    /// section is expanded before the screenshot is rendered. Used to capture the
+    /// expanded state of the collapsed advanced-filter section.
+    /// </summary>
+    internal static bool AdvancedFiltersForScreenshot { get; private set; }
+
+    /// <summary>
+    /// When set (with <c>--select-first-person</c>), the people page selects the
+    /// first person album before the screenshot is rendered, so the person detail
+    /// (hero + merge entry + virtualized photo grid) is captured instead of the
+    /// avatar-grid overview.
+    /// </summary>
+    internal static bool SelectFirstPersonForScreenshot { get; private set; }
+
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
+        var args = e.Args;
+        for (var index = 0; index < args.Length; index++)
+        {
+            var arg = args[index];
+            if (string.Equals(arg, "--screenshot", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+            {
+                ScreenshotPath = args[index + 1];
+                index++;
+            }
+            else if (string.Equals(arg, "--page", StringComparison.OrdinalIgnoreCase) && index + 1 < args.Length)
+            {
+                ScreenshotPage = args[index + 1];
+                index++;
+            }
+            else if (string.Equals(arg, "--select-first", StringComparison.OrdinalIgnoreCase))
+            {
+                SelectFirstForScreenshot = true;
+            }
+            else if (string.Equals(arg, "--browse-showcase", StringComparison.OrdinalIgnoreCase))
+            {
+                BrowseShowcaseForScreenshot = true;
+            }
+            else if (string.Equals(arg, "--advanced-filters", StringComparison.OrdinalIgnoreCase))
+            {
+                AdvancedFiltersForScreenshot = true;
+            }
+            else if (string.Equals(arg, "--select-first-person", StringComparison.OrdinalIgnoreCase))
+            {
+                SelectFirstPersonForScreenshot = true;
+            }
+        }
+
         _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
         _ownsSingleInstanceMutex = createdNew;
         if (!createdNew)

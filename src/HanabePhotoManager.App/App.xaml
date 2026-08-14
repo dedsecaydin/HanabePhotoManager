@@ -5,7 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes/Themes/Light.xaml" />
+                <ResourceDictionary Source="Themes/Themes/Dynamic.Light.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- ════════════════════════════════════════════

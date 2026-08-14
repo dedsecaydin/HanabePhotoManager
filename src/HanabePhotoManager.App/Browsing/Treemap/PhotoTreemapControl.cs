@@ -35,6 +35,21 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private double _contentHeight;
     private double _contentWidth;
 
+    // Memoization for the custom-rendered treemap. The derived item groups
+    // (root categories / per-category children) and the justified layouts depend
+    // only on the ItemsSource identity, the active RootKey, and the container
+    // width. Reusing them across scroll frames keeps OnRender O(visible) instead
+    // of re-walking and re-laying out every item on each frame.
+    private object? _layoutCacheItemsSource;
+    private string? _layoutCacheRootKey;
+    private double _layoutCacheWidth = double.NaN;
+    private IReadOnlyList<TreemapItemViewModel>? _cachedRootCategories;
+    private Dictionary<string, IReadOnlyList<TreemapItemViewModel>>? _cachedChildrenByCategory;
+    private IReadOnlyList<JustifiedItem>? _cachedSubtreeLayout;
+    private Dictionary<string, (double ChildWidth, IReadOnlyList<JustifiedItem> Items)>? _cachedCategoryLayouts;
+
+    private string? _hoveredKey;
+
     /// <summary>
     /// Total content height of all items. Used by the code-behind's
     /// UpdateTreemapSize to grow the control beyond the viewport.
@@ -274,8 +289,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
         }
         else
         {
-            var children = ItemsSource.Where(item => item.ParentKey == RootKey).ToArray();
-            if (children.Length > 0)
+            EnsureLayoutCache(bounds.Width);
+            var children = ChildrenOf(RootKey!);
+            if (children.Count > 0)
             {
                 DrawSubtreeWithJustifiedLayout(drawingContext, children, bounds, regions, padded);
             }
@@ -324,7 +340,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
         _contentHeight = Math.Max(ActualHeight, panorama.ContentHeight);
         var gap = ResourceDouble("Spacing.Hairline", 2);
 
-        for (var index = 0; index < photos.Count && index < panorama.Items.Count; index++)
+        var (start, end) = VisibleRowRange(panorama.Items, visibleRect.Top, visibleRect.Bottom);
+        for (var index = start; index < end && index < photos.Count; index++)
         {
             var item = photos[index];
             var layout = panorama.Items[index];
@@ -384,15 +401,41 @@ public sealed class PhotoTreemapControl : FrameworkElement
         }
     }
 
+    protected override void OnMouseMove(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        var point = e.GetPosition(this);
+        var item = FindItemAt(_hitRegions, point.X, point.Y);
+        var hoveredKey = item?.Key;
+        if (string.Equals(_hoveredKey, hoveredKey, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _hoveredKey = hoveredKey;
+        InvalidateVisual();
+    }
+
+    protected override void OnMouseLeave(System.Windows.Input.MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        if (_hoveredKey is null)
+        {
+            return;
+        }
+
+        _hoveredKey = null;
+        InvalidateVisual();
+    }
+
     private void DrawRoot(
         DrawingContext drawingContext,
         TreemapBounds bounds,
         ICollection<TreemapHitRegion> regions,
         Rect visibleRect)
     {
-        var categories = ItemsSource
-            .Where(item => item.ParentKey is null && item.IsContainer)
-            .ToArray();
+        EnsureLayoutCache(bounds.Width);
+        var categories = RootCategories;
         double maxRight = 0;
         double maxBottom = 0;
         foreach (var categoryTile in CalculateLayout(categories, bounds))
@@ -424,10 +467,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 continue;
             }
 
-            var children = ItemsSource
-                .Where(item => item.ParentKey == categoryTile.Item.Key)
-                .ToArray();
-            if (children.Length == 0) continue;
+            var children = ChildrenOf(categoryTile.Item.Key);
+            if (children.Count == 0) continue;
 
             // Semantic zoom: very small category cells stay as labelled area
             // summaries.  Rendering photo strips there is both illegible and
@@ -437,17 +478,18 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 continue;
             }
 
-            // Justified gallery layout for inner category tiles
-            var childAspects = children
-                .Select(c => (aspectRatio: c.AspectRatio, key: (string?)c.Key))
-                .ToArray();
-            var justifiedItems = _galleryLayout.Arrange(childAspects, childWidth);
+            // Justified gallery layout for inner category tiles (memoized).
+            var justifiedItems = GetCategoryLayout(categoryTile.Item.Key, children, childWidth);
 
             var childOffsetX = categoryTile.Bounds.X + inset;
             var childOffsetY = categoryTile.Bounds.Y + headerHeight;
             drawingContext.PushClip(new RectangleGeometry(
                 new Rect(childOffsetX, childOffsetY, childWidth, childHeight)));
-            for (var i = 0; i < children.Length && i < justifiedItems.Count; i++)
+            var (start, end) = VisibleRowRange(
+                justifiedItems,
+                visibleRect.Top - childOffsetY,
+                visibleRect.Bottom - childOffsetY);
+            for (var i = start; i < end && i < children.Count; i++)
             {
                 var child = children[i];
                 var jItem = justifiedItems[i];
@@ -496,10 +538,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
         ICollection<TreemapHitRegion> regions,
         Rect visibleRect)
     {
-        var childAspects = children
-            .Select(c => (aspectRatio: c.AspectRatio, key: (string?)c.Key))
-            .ToArray();
-        var justifiedItems = _galleryLayout.Arrange(childAspects, bounds.Width);
+        var justifiedItems = GetSubtreeLayout(children, bounds.Width);
         var gap = ResourceDouble("Spacing.Hairline", 2);
 
         // Calculate full content dimensions
@@ -519,7 +558,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
         _contentHeight = totalHeight;
         if (maxRight > _contentWidth) _contentWidth = maxRight;
 
-        for (var i = 0; i < children.Count && i < justifiedItems.Count; i++)
+        var (start, end) = VisibleRowRange(justifiedItems, visibleRect.Top, visibleRect.Bottom);
+        for (var i = start; i < end && i < children.Count; i++)
         {
             var child = children[i];
             var jItem = justifiedItems[i];
@@ -556,6 +596,133 @@ public sealed class PhotoTreemapControl : FrameworkElement
             .ToArray();
     }
 
+    /// <summary>
+    /// Resets the derived-group and layout memo caches whenever the ItemsSource
+    /// identity, the active RootKey, or the container width changes.
+    /// </summary>
+    private void EnsureLayoutCache(double width)
+    {
+        if (ReferenceEquals(_layoutCacheItemsSource, ItemsSource) &&
+            string.Equals(_layoutCacheRootKey, RootKey, StringComparison.Ordinal) &&
+            _layoutCacheWidth.Equals(width))
+        {
+            return;
+        }
+
+        _layoutCacheItemsSource = ItemsSource;
+        _layoutCacheRootKey = RootKey;
+        _layoutCacheWidth = width;
+        _cachedRootCategories = null;
+        _cachedChildrenByCategory = null;
+        _cachedSubtreeLayout = null;
+        _cachedCategoryLayouts = null;
+    }
+
+    private IReadOnlyList<TreemapItemViewModel> RootCategories
+    {
+        get
+        {
+            _cachedRootCategories ??= ItemsSource
+                .Where(item => item.ParentKey is null && item.IsContainer)
+                .ToArray();
+            return _cachedRootCategories;
+        }
+    }
+
+    private IReadOnlyList<TreemapItemViewModel> ChildrenOf(string parentKey)
+    {
+        _cachedChildrenByCategory ??= new Dictionary<string, IReadOnlyList<TreemapItemViewModel>>(
+            StringComparer.OrdinalIgnoreCase);
+        if (!_cachedChildrenByCategory.TryGetValue(parentKey, out var children))
+        {
+            children = ItemsSource
+                .Where(item => item.ParentKey == parentKey)
+                .ToArray();
+            _cachedChildrenByCategory[parentKey] = children;
+        }
+
+        return children;
+    }
+
+    private IReadOnlyList<JustifiedItem> GetSubtreeLayout(
+        IReadOnlyList<TreemapItemViewModel> children,
+        double width)
+    {
+        if (_cachedSubtreeLayout is not null)
+        {
+            return _cachedSubtreeLayout;
+        }
+
+        var aspects = children
+            .Select(item => (aspectRatio: item.AspectRatio, key: (string?)item.Key))
+            .ToArray();
+        _cachedSubtreeLayout = _galleryLayout.Arrange(aspects, width);
+        return _cachedSubtreeLayout;
+    }
+
+    private IReadOnlyList<JustifiedItem> GetCategoryLayout(
+        string categoryKey,
+        IReadOnlyList<TreemapItemViewModel> children,
+        double childWidth)
+    {
+        _cachedCategoryLayouts ??= new Dictionary<string, (double ChildWidth, IReadOnlyList<JustifiedItem> Items)>(
+            StringComparer.OrdinalIgnoreCase);
+        if (_cachedCategoryLayouts.TryGetValue(categoryKey, out var entry) &&
+            entry.ChildWidth.Equals(childWidth))
+        {
+            return entry.Items;
+        }
+
+        var aspects = children
+            .Select(item => (aspectRatio: item.AspectRatio, key: (string?)item.Key))
+            .ToArray();
+        var arranged = _galleryLayout.Arrange(aspects, childWidth);
+        _cachedCategoryLayouts[categoryKey] = (childWidth, arranged);
+        return arranged;
+    }
+
+    /// <summary>
+    /// Returns the index range [start, end) of a justified item list whose rows
+    /// vertically overlap the span [topY, bottomY]. Justified rows are laid out
+    /// top-to-bottom with monotonically non-decreasing Y, so a binary search
+    /// skips the off-screen prefix instead of walking every item on each frame.
+    /// </summary>
+    private static (int Start, int End) VisibleRowRange(
+        IReadOnlyList<JustifiedItem> items,
+        double topY,
+        double bottomY)
+    {
+        if (items.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        var low = 0;
+        var high = items.Count - 1;
+        var start = items.Count;
+        while (low <= high)
+        {
+            var mid = (low + high) / 2;
+            if (items[mid].Y + items[mid].Height >= topY)
+            {
+                start = mid;
+                high = mid - 1;
+            }
+            else
+            {
+                low = mid + 1;
+            }
+        }
+
+        var end = start;
+        while (end < items.Count && items[end].Y <= bottomY)
+        {
+            end++;
+        }
+
+        return (start, end);
+    }
+
     private void DrawTile(
         DrawingContext drawingContext,
         TreemapItemViewModel item,
@@ -588,6 +755,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         var isSelected = !item.IsContainer &&
             string.Equals(item.FullPath, SelectedPath, StringComparison.OrdinalIgnoreCase);
+        var isHovered = !item.IsContainer &&
+            string.Equals(item.Key, _hoveredKey, StringComparison.Ordinal);
 
         // In justified/borderless mode, skip background fill for non-container tiles
         // so images flow seamlessly edge-to-edge
@@ -605,6 +774,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 var selBorder = FindBrush("Brush.Border.Focus", WpfSystemColors.HighlightBrush);
                 drawingContext.DrawRectangle(null, new MediaPen(selBorder, 2), rect);
             }
+            else if (isHovered)
+            {
+                var hoverBorder = FindBrush("Brush.Border.Strong", WpfSystemColors.ControlDarkBrush);
+                drawingContext.DrawRectangle(null, new MediaPen(hoverBorder, 1.5), rect);
+            }
 
             // Extension badge
             if (!isPanorama)
@@ -616,10 +790,14 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         var fill = item.IsContainer
             ? FindBrush("Brush.Surface.Default", WpfSystemColors.ControlBrush)
-            : FindBrush("Brush.Surface.Subtle", WpfSystemColors.ControlLightBrush);
+            : FindBrush(
+                isHovered ? "Brush.Surface.Interactive" : "Brush.Surface.Subtle",
+                WpfSystemColors.ControlLightBrush);
         var border = isSelected
             ? FindBrush("Brush.Border.Focus", WpfSystemColors.HighlightBrush)
-            : FindBrush("Brush.Border.Default", WpfSystemColors.ControlDarkBrush);
+            : FindBrush(
+                isHovered ? "Brush.Border.Strong" : "Brush.Border.Default",
+                WpfSystemColors.ControlDarkBrush);
         var radius = ResourceDouble("Radius.Control", 6);
         var drawBorder = !IsBorderless || isSelected;
         drawingContext.DrawRoundedRectangle(

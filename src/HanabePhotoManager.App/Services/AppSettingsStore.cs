@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using HanabePhotoManager.App.Navigation;
@@ -83,7 +83,7 @@ public sealed class AppSettings
 
     public List<string> NavigationOrder { get; set; } = [];
 
-    public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.Text;
+    public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.IconAndText;
 
     public string? LibraryRoot { get; set; }
 
@@ -160,6 +160,12 @@ public sealed class AppSettings
     public bool ShowPsdFiles { get; set; } = false;
 
     public List<string> SelectedFileTypeFilters { get; set; } = [];
+
+    /// <summary>
+    /// Whether the browse page's advanced filter section is expanded. Defaults to
+    /// collapsed so the filter panel stays compact for the 90% high-frequency use.
+    /// </summary>
+    public bool IsAdvancedFiltersExpanded { get; set; }
 
     /// <summary>
     /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored

@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HanabePhoto · 相册 · M3 浓烈版（预设计 005）</title>
+<style>
+/* ============================================================
+   Variant 005: 相册页（自定义文件夹相册）M3 浓烈版
+   排版基准 = 001-m3-dynamic-color（Rail 88px + Topbar + Workspace + Inspector）
+   设计 stance：Google Photos 相册卡片 × M3 大圆角/动态色彩/状态层
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* M3 动态色彩 tonal palette（与 001 完全一致） */
+  --primary: #4355B9;
+  --on-primary: #FFFFFF;
+  --primary-container: #DEE0FF;
+  --on-primary-container: #00105C;
+  --secondary: #5B5D72;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #E0E1F9;
+  --on-secondary-container: #181A2C;
+  --tertiary: #7A5700;
+  --on-tertiary: #FFFFFF;
+  --tertiary-container: #FFDF9E;
+  --on-tertiary-container: #271900;
+  --error: #BA1A1A;
+  --error-container: #FFDAD6;
+  --on-error-container: #410002;
+
+  --surface: #FBF8FF;
+  --surface-dim: #DAD8E4;
+  --surface-container-lowest: #FFFFFF;
+  --surface-container-low: #F5F2FC;
+  --surface-container: #EFECF7;
+  --surface-container-high: #E9E7F1;
+  --surface-container-highest: #E3E1EC;
+  --on-surface: #1A1B21;
+  --on-surface-variant: #45464F;
+  --outline: #75767F;
+  --outline-variant: #C5C5CF;
+
+  --state-hover: rgba(27, 27, 31, 0.08);
+  --state-pressed: rgba(27, 27, 31, 0.12);
+
+  --radius-small: 8px;
+  --radius-medium: 12px;
+  --radius-large: 16px;
+  --radius-extra-large: 28px;
+  --radius-full: 999px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 180ms;
+  --motion-slow: 220ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  font-size: 16px;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  background: var(--surface);
+  color: var(--on-surface);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  height: 100vh;
+  padding: 12px;
+  gap: 12px;
+  background: var(--surface-dim);
+}
+
+/* ===================== Navigation Rail ===================== */
+.rail {
+  width: 88px;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.rail-logo {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-medium);
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  margin-bottom: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.rail-logo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.35), transparent 50%);
+}
+.rail-item {
+  width: 64px;
+  border-radius: var(--radius-extra-large);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 10px 0 8px;
+  cursor: pointer; color: var(--on-surface-variant);
+  font-size: 11px; font-weight: 500;
+  transition: background var(--motion-fast) var(--ease), color var(--motion-fast) var(--ease);
+}
+.rail-item:hover { background: var(--state-hover); }
+.rail-item:active { background: var(--state-pressed); }
+.rail-item .rail-icon {
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-full);
+  transition: background var(--motion-fast) var(--ease);
+}
+.rail-item.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+.rail-item.active .rail-icon {
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+}
+
+/* ===================== Main ===================== */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Top app bar */
+.topbar {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+}
+.topbar-title { font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
+.topbar-sub { font-size: 13px; color: var(--on-surface-variant); margin-top: 1px; }
+.search-field {
+  flex: 1; max-width: 420px;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 10px 16px;
+  color: var(--on-surface-variant);
+  cursor: text;
+  transition: background var(--motion-fast) var(--ease), box-shadow var(--motion-fast) var(--ease);
+}
+.search-field:hover { background: var(--surface-container-highest); }
+.search-field:focus-within {
+  background: var(--surface-container-lowest);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+.search-field input {
+  border: none; outline: none; background: transparent;
+  font-size: 14px; flex: 1; color: var(--on-surface);
+}
+.search-field input::placeholder { color: var(--on-surface-variant); }
+
+/* ===================== Content ===================== */
+.content {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+/* Workspace */
+.workspace {
+  flex: 1;
+  background: var(--surface-container-lowest);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.workspace-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+
+/* Chips */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-small);
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  cursor: pointer; border: 1px solid transparent;
+  transition: all var(--motion-fast) var(--ease);
+}
+.chip:hover { background: var(--surface-container-highest); }
+.chip:active { background: var(--state-pressed); }
+.chip.selected { background: var(--secondary-container); color: var(--on-secondary-container); }
+.chip.primary { background: var(--primary); color: var(--on-primary); }
+.chip.primary:hover { background: var(--primary); filter: brightness(0.94); }
+.chip.danger { background: var(--error-container); color: var(--on-error-container); }
+.chip.tonal { background: var(--secondary-container); color: var(--on-secondary-container); }
+
+/* M3 segmented（视图切换：网格/列表） */
+.seg {
+  display: inline-flex;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 4px;
+  gap: 4px;
+}
+.seg-item {
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  font-size: 13px; font-weight: 600;
+  color: var(--on-surface-variant);
+  cursor: pointer; border: none; background: transparent;
+  transition: background var(--motion-normal) var(--ease), color var(--motion-normal) var(--ease);
+}
+.seg-item:hover { background: var(--state-hover); }
+.seg-item.active { background: var(--secondary-container); color: var(--on-secondary-container); }
+
+/* ===================== 相册网格 ===================== */
+.panel { display: flex; flex-direction: column; gap: 14px; }
+.panel.hidden { display: none; }
+
+.section-label {
+  font-size: 13px; font-weight: 600; color: var(--on-surface-variant);
+  letter-spacing: 0.2px; display: flex; align-items: center; gap: 8px;
+}
+.section-label .count {
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  border-radius: var(--radius-full);
+  padding: 1px 10px; font-size: 12px; font-weight: 600;
+}
+
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  align-content: start;
+}
+.album-card {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease), border-color var(--motion-normal) var(--ease);
+}
+.album-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.10); }
+.album-card:active { transform: scale(0.98); }
+.album-card.selected { border-color: var(--primary); }
+
+.album-cover {
+  aspect-ratio: 16/10;
+  border-radius: var(--radius-large);
+  overflow: hidden;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px;
+}
+.album-cover .count-badge {
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(0,0,0,0.55);
+  color: #fff; font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--radius-full);
+}
+.album-cover .offline-badge {
+  position: absolute; top: 8px; left: 8px;
+  background: var(--tertiary-container); color: var(--on-tertiary-container);
+  font-size: 10px; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--radius-full);
+}
+.album-name {
+  font-size: 14px; font-weight: 700;
+  margin: 10px 6px 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.album-meta {
+  font-size: 12px; color: var(--on-surface-variant);
+  margin: 2px 6px 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* 新建相册卡片（虚线） */
+.add-card {
+  aspect-ratio: 16/10;
+  border-radius: var(--radius-extra-large);
+  border: 2px dashed var(--outline);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 8px;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: border-color var(--motion-normal) var(--ease), background var(--motion-normal) var(--ease), color var(--motion-normal) var(--ease);
+}
+.add-card:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-container); }
+.add-card .plus { font-size: 34px; font-weight: 300; line-height: 1; }
+.add-card .label { font-size: 13px; font-weight: 600; }
+
+/* ===================== 相册详情 ===================== */
+.back-chip {
+  align-self: flex-start;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: var(--surface-container-high);
+  color: var(--on-surface-variant);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.back-chip:hover { background: var(--surface-container-highest); }
+
+.detail-hero {
+  display: flex; align-items: center; gap: 20px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 18px 24px;
+}
+.detail-hero .cover {
+  width: 150px; height: 96px; flex: 0 0 auto;
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px;
+  overflow: hidden; position: relative;
+}
+.detail-hero .hero-info { flex: 1; min-width: 0; }
+.detail-hero h2 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.detail-hero .hero-sub { font-size: 12px; color: var(--on-surface-variant); margin-top: 3px; }
+.detail-hero .hero-path {
+  font-size: 12px; color: var(--on-surface-variant);
+  margin-top: 6px;
+  background: var(--surface-container-high);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.detail-hero .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 照片网格 / 列表 */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+.photo-tile {
+  aspect-ratio: 1;
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--surface-container);
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.photo-tile:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+.photo-tile:active { transform: scale(0.98); }
+.photo-tile .img {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  background: linear-gradient(135deg, var(--primary-container) 0%, var(--tertiary-container) 45%, var(--secondary-container) 100%);
+  color: var(--on-primary-container);
+}
+.photo-tile.selected { outline: 3px solid var(--primary); outline-offset: 2px; }
+.photo-tile.selected::after {
+  content: '✓';
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+}
+.photo-tile .date {
+  position: absolute; bottom: 8px; left: 8px;
+  background: rgba(0,0,0,0.55);
+  color: #fff; font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+/* 列表视图 */
+.photo-list { display: none; flex-direction: column; gap: 8px; }
+.photo-list.open { display: flex; }
+.list-row {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-large);
+  padding: 8px 14px 8px 8px;
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+}
+.list-row:hover { background: var(--surface-container-high); }
+.list-row.selected { outline: 2px solid var(--primary); outline-offset: -2px; }
+.list-row .thumb {
+  width: 56px; height: 56px; flex: 0 0 auto;
+  border-radius: var(--radius-medium);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  background: linear-gradient(135deg, var(--primary-container), var(--tertiary-container));
+}
+.list-row .row-name { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-row .row-meta { font-size: 12px; color: var(--on-surface-variant); flex: 0 0 auto; }
+.list-row .row-size { font-size: 12px; color: var(--on-surface-variant); flex: 0 0 auto; width: 70px; text-align: right; }
+
+/* 空状态 */
+.empty-state {
+  border-radius: var(--radius-extra-large);
+  border: 2px dashed var(--outline-variant);
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+.empty-state .e-emoji { font-size: 44px; margin-bottom: 10px; }
+.empty-state .e-title { font-size: 15px; font-weight: 600; color: var(--on-surface); }
+.empty-state .e-sub { font-size: 13px; margin-top: 4px; }
+
+/* ===================== Inspector ===================== */
+.inspector {
+  width: 320px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-extra-large);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.inspector h3 { font-size: 14px; font-weight: 600; }
+.inspector .sub { font-size: 12px; color: var(--on-surface-variant); }
+
+.info-row {
+  display: flex; justify-content: space-between;
+  font-size: 13px; padding: 6px 0;
+  border-bottom: 1px solid var(--outline-variant);
+  gap: 10px;
+}
+.info-row .k { color: var(--on-surface-variant); flex: 0 0 auto; }
+.info-row .v { font-weight: 500; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.action-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* FAB */
+.fab {
+  position: fixed;
+  right: 356px; bottom: 28px;
+  width: 56px; height: 56px;
+  border-radius: var(--radius-large);
+  background: var(--primary);
+  color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 6px 16px rgba(67, 85, 185, 0.35);
+  cursor: pointer; border: none;
+  transition: transform var(--motion-normal) var(--ease), box-shadow var(--motion-normal) var(--ease);
+}
+.fab:hover { box-shadow: 0 8px 24px rgba(67, 85, 185, 0.45); }
+.fab:active { transform: scale(0.94); }
+
+/* ===================== Status bar ===================== */
+.statusbar {
+  height: 44px;
+  background: var(--surface-container);
+  border-radius: var(--radius-large);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px; color: var(--on-surface-variant);
+}
+.statusbar .progress {
+  height: 6px; width: 180px;
+  background: var(--surface-container-highest);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.statusbar .progress .fill {
+  height: 100%; width: 100%;
+  background: var(--tertiary);
+  border-radius: var(--radius-full);
+  transition: width var(--motion-slow) var(--ease);
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--outline-variant); border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ Navigation Rail ============ -->
+  <nav class="rail">
+    <div class="rail-logo">H</div>
+    <div class="rail-item" title="主页"><span class="rail-icon">🏠</span>主页</div>
+    <div class="rail-item" title="照片图库"><span class="rail-icon">🖼️</span>图库</div>
+    <div class="rail-item" title="人物"><span class="rail-icon">👤</span>人物</div>
+    <div class="rail-item active" title="相册"><span class="rail-icon">📁</span>相册</div>
+    <div class="rail-item" title="地图"><span class="rail-icon">🗺️</span>地图</div>
+    <div class="rail-item" title="网盘"><span class="rail-icon">☁️</span>网盘</div>
+    <div class="rail-item" title="设置" style="margin-top:auto;"><span class="rail-icon">⚙️</span>设置</div>
+  </nav>
+
+  <!-- ============ Main ============ -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <div class="topbar-title">相册</div>
+        <div class="topbar-sub">7 个自定义相册 · 2,341 张照片 · 磁盘占用 8.2 GB</div>
+      </div>
+      <div class="search-field">
+        <span>🔍</span>
+        <input type="text" placeholder="搜索相册名称、文件夹路径…">
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="workspace">
+        <!-- 相册总览 -->
+        <div class="panel" id="panel-overview">
+          <div class="workspace-head">
+            <div class="section-label">自定义相册 <span class="count">7</span></div>
+            <div style="display:flex;gap:8px;">
+              <div class="chip">排序 ▾</div>
+            </div>
+          </div>
+          <div class="album-grid" id="album-grid"></div>
+          <div class="add-card" id="add-album">
+            <div class="plus">＋</div>
+            <div class="label">新建相册</div>
+          </div>
+          <div class="empty-state" style="display:none;">
+            <div class="e-emoji">📁</div>
+            <div class="e-title">还没有自定义相册</div>
+            <div class="e-sub">添加的是应用内引用；移除相册不会删除磁盘中的文件夹或照片。</div>
+          </div>
+        </div>
+
+        <!-- 相册详情 -->
+        <div class="panel hidden" id="panel-detail">
+          <div class="back-chip" id="back-albums">← 全部相册</div>
+          <div class="detail-hero">
+            <div class="cover" id="d-cover"></div>
+            <div class="hero-info">
+              <h2 id="d-name"></h2>
+              <div class="hero-sub" id="d-sub"></div>
+              <div class="hero-path" id="d-path"></div>
+            </div>
+            <div class="hero-actions">
+              <div class="chip tonal">✏️ 重命名</div>
+              <div class="chip">⟳ 刷新</div>
+              <div class="chip danger">移除引用</div>
+            </div>
+          </div>
+          <div class="workspace-head">
+            <div class="section-label">照片 <span class="count" id="d-count"></span></div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div class="seg">
+                <div class="seg-item active" data-view="grid">网格</div>
+                <div class="seg-item" data-view="list">列表</div>
+              </div>
+            </div>
+          </div>
+          <div class="photo-grid" id="d-photos"></div>
+          <div class="photo-list" id="d-list"></div>
+        </div>
+      </div>
+
+      <!-- ============ Inspector ============ -->
+      <aside class="inspector">
+        <h3>选中的照片</h3>
+        <div style="height:130px;border-radius:var(--radius-medium);background:linear-gradient(135deg,var(--primary-container),var(--tertiary-container));display:flex;align-items:center;justify-content:center;font-size:40px;">🌅</div>
+        <div class="sub" style="margin-top:6px;">IMG_4785_海边_露娜.jpg</div>
+
+        <div class="info-row"><span class="k">尺寸</span><span class="v">3840 × 2160</span></div>
+        <div class="info-row"><span class="k">拍摄时间</span><span class="v">2026-08-13 21:47</span></div>
+        <div class="info-row"><span class="k">相机</span><span class="v">Sony α7 IV</span></div>
+        <div class="info-row"><span class="k">镜头</span><span class="v">FE 24-70mm F2.8</span></div>
+        <div class="info-row"><span class="k">ISO / 光圈</span><span class="v">800 / f/2.8</span></div>
+        <div class="info-row"><span class="k">文件大小</span><span class="v">12.4 MB</span></div>
+        <div class="info-row"><span class="k">所属相册</span><span class="v">旅行摄影</span></div>
+
+        <h3 style="margin-top:8px;">操作</h3>
+        <div class="action-chips">
+          <div class="chip">打开原图</div>
+          <div class="chip">复制路径</div>
+          <div class="chip selected">收藏 ★</div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="statusbar">
+      <span>7 个相册 · 2,341 张照片 · 最近扫描 14:02</span>
+      <div class="progress"><div class="fill"></div></div>
+      <span>索引 100%</span>
+    </footer>
+  </div>
+</div>
+
+<button class="fab" title="新建相册">＋</button>
+
+<script>
+/* ============ 演示数据（占位） ============ */
+const ALBUMS = [
+  { emoji: '🌄', name: '旅行摄影', path: 'D:\\Photos\\旅行',       count: 1204, grad: 'linear-gradient(135deg,#DEE0FF,#FFDF9E)' },
+  { emoji: '🍜', name: '美食记录', path: 'D:\\Photos\\美食',       count: 312,  grad: 'linear-gradient(135deg,#FFDF9E,#F7D8FF)' },
+  { emoji: '👨‍👩‍👧', name: '家庭合影', path: 'D:\\Photos\\家庭',     count: 486,  grad: 'linear-gradient(135deg,#F7D8FF,#DEE0FF)' },
+  { emoji: '🐱', name: '猫猫日常', path: 'D:\\Photos\\毛孩子',     count: 158,  grad: 'linear-gradient(135deg,#9CF0F0,#DEE0FF)' },
+  { emoji: '🎨', name: '设计素材', path: 'E:\\素材库\\设计',       count: 97,   grad: 'linear-gradient(135deg,#DEE0FF,#9CF0F0)' },
+  { emoji: '🏔️', name: '徒步合集', path: 'D:\\Photos\\徒步',       count: 74,   grad: 'linear-gradient(135deg,#E0E1F9,#FFDF9E)' },
+  { emoji: '📷', name: '胶片扫描', path: 'F:\\Scan\\2026',         count: 10,   grad: 'linear-gradient(135deg,#FFDF9E,#E0E1F9)', offline: true },
+];
+const PHOTO_EMOJIS = ['🌅','🏔️','📷','🌸','🌊','🦋','🌙','🎨','🌄','🪐','🎞️','☁️','🍜','🚗','🏮','🎂','⚽','🎹','🌻','⛺','🛶','🎡','📚','🖼️'];
+const FILE_NAMES = ['IMG_4785_海边_露娜.jpg','IMG_3901_生日_合照.jpg','IMG_2208_咖啡_午后.jpg','IMG_5120_展会_现场.jpg','IMG_1024_婚礼_签到.jpg','IMG_6666_徒步_山顶.jpg','IMG_3311_晚餐_合影.jpg','IMG_7788_地铁_自拍.jpg','IMG_5544_公园_长椅.jpg','IMG_9080_毕业_典礼.jpg','IMG_1122_机场_送机.jpg','IMG_2048_夜景_城市.jpg'];
+
+let currentAlbum = 0;
+let viewMode = 'grid';
+let selectedPhoto = 0;
+
+/* ============ 渲染 ============ */
+function renderAlbums() {
+  const grid = document.getElementById('album-grid');
+  grid.innerHTML = ALBUMS.map((a, i) => `
+    <div class="album-card ${i === currentAlbum ? 'selected' : ''}" data-i="${i}">
+      <div class="album-cover" style="background:${a.grad};">
+        ${a.offline ? '<span class="offline-badge">⚠ 不可用</span>' : ''}
+        <span>${a.emoji}</span>
+        <span class="count-badge">${a.count.toLocaleString()} 张</span>
+      </div>
+      <div class="album-name">${a.name}</div>
+      <div class="album-meta">${a.path}</div>
+    </div>`).join('');
+  grid.querySelectorAll('.album-card').forEach(card => {
+    card.addEventListener('click', () => openAlbum(+card.dataset.i));
+  });
+}
+
+function openAlbum(i) {
+  currentAlbum = i;
+  const a = ALBUMS[i];
+  document.getElementById('panel-overview').classList.add('hidden');
+  document.getElementById('panel-detail').classList.remove('hidden');
+  document.getElementById('d-cover').style.background = a.grad;
+  document.getElementById('d-cover').textContent = a.emoji;
+  document.getElementById('d-name').textContent = a.name;
+  document.getElementById('d-sub').textContent = a.offline
+    ? '⚠ 文件夹当前不可访问'
+    : `${a.count.toLocaleString()} 张图片 · 最近更新 2026-08-13`;
+  document.getElementById('d-path').textContent = a.path;
+  document.getElementById('d-count').textContent = a.count.toLocaleString();
+  selectedPhoto = 0;
+  renderPhotos();
+}
+
+function renderPhotos() {
+  const count = Math.min(ALBUMS[currentAlbum].count, 18);
+  const tiles = Array.from({ length: count }, (_, k) => `
+    <div class="photo-tile ${k === selectedPhoto ? 'selected' : ''}" data-k="${k}" title="双击打开">
+      <div class="img">${PHOTO_EMOJIS[(currentAlbum * 7 + k) % PHOTO_EMOJIS.length]}</div>
+      <span class="date">08-${String((k % 28) + 1).padStart(2, '0')}</span>
+    </div>`).join('');
+  const rows = Array.from({ length: count }, (_, k) => `
+    <div class="list-row ${k === selectedPhoto ? 'selected' : ''}" data-k="${k}">
+      <div class="thumb">${PHOTO_EMOJIS[(currentAlbum * 7 + k) % PHOTO_EMOJIS.length]}</div>
+      <div class="row-name">${FILE_NAMES[(currentAlbum * 3 + k) % FILE_NAMES.length]}</div>
+      <div class="row-meta">2026-08-${String((k % 28) + 1).padStart(2, '0')}</div>
+      <div class="row-size">${(2 + (k % 9) + k * 0.7).toFixed(1)} MB</div>
+    </div>`).join('');
+  document.getElementById('d-photos').innerHTML = tiles;
+  document.getElementById('d-list').innerHTML = rows;
+  document.querySelectorAll('#d-photos .photo-tile, #d-list .list-row').forEach(el => {
+    el.addEventListener('click', () => { selectedPhoto = +el.dataset.k; renderPhotos(); });
+  });
+}
+
+function backToAlbums() {
+  document.getElementById('panel-detail').classList.add('hidden');
+  document.getElementById('panel-overview').classList.remove('hidden');
+  renderAlbums();
+}
+
+/* ============ 事件 ============ */
+document.getElementById('back-albums').addEventListener('click', backToAlbums);
+document.getElementById('add-album').addEventListener('click', () => alert('新建相册：选择要引用的文件夹（演示）。'));
+
+document.querySelectorAll('.seg-item[data-view]').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.seg-item[data-view]').forEach(s => s.classList.remove('active'));
+    item.classList.add('active');
+    viewMode = item.dataset.view;
+    document.getElementById('d-photos').style.display = viewMode === 'grid' ? '' : 'none';
+    document.getElementById('d-list').classList.toggle('open', viewMode === 'list');
+  });
+});
+
+renderAlbums();
+</script>
+</body>
+</html>

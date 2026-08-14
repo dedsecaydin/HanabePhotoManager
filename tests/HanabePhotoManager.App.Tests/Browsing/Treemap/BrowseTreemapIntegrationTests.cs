@@ -38,6 +38,20 @@ public sealed class BrowseTreemapIntegrationTests
     }
 
     [Fact]
+    public void IncrementalScan_SeedsViewportThumbnailSourceForInitialWall()
+    {
+        // The all-library / date scan populates the treemap through ApplyBatch,
+        // which never routes through RepopulateTreemapFrom. The viewport queue
+        // must still be seeded so the initial photo wall loads thumbnails.
+        var source = File.ReadAllText(ProjectFile(
+            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        source.Should().Contain("EnsureTreemapSourceLookup");
+        source.Should().Contain("StartTreemapThumbnailLoading(_filteredCache.ToArray())");
+        source.Should().Contain("TreemapRepopulated?.Invoke()");
+    }
+
+    [Fact]
     public void ViewModel_DefaultsToTreemapAndSupportsBothWeightModes()
     {
         var viewModel = new MainWindowViewModel();

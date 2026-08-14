@@ -13,6 +13,12 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
 
     private void DarkTheme_Click(object sender, RoutedEventArgs e) => ThemeManager.Apply(AppTheme.Dark);
 
+    private void DynamicScheme_Click(object sender, RoutedEventArgs e) => ThemeManager.Apply(AppColorScheme.Dynamic);
+
+    private void ForestScheme_Click(object sender, RoutedEventArgs e) => ThemeManager.Apply(AppColorScheme.Forest);
+
+    private void VioletScheme_Click(object sender, RoutedEventArgs e) => ThemeManager.Apply(AppColorScheme.Violet);
+
     private void SettingsCenterPage_Loaded(object sender, RoutedEventArgs e)
     {
         if (DataContext is not MainWindowViewModel viewModel)

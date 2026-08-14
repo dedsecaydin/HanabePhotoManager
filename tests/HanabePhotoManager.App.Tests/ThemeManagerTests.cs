@@ -25,4 +25,16 @@ public sealed class ThemeManagerTests
         eventInfo.Should().NotBeNull();
         eventInfo!.EventHandlerType.Should().Be(typeof(EventHandler<AppTheme>));
     }
+
+    [Theory]
+    [InlineData(null, AppColorScheme.Dynamic)]
+    [InlineData("", AppColorScheme.Dynamic)]
+    [InlineData("unexpected", AppColorScheme.Dynamic)]
+    [InlineData("forest", AppColorScheme.Forest)]
+    [InlineData("FOREST", AppColorScheme.Forest)]
+    [InlineData("violet", AppColorScheme.Violet)]
+    public void ParseSchemePreference_UsesDynamicAsSafeDefault(string? value, AppColorScheme expected)
+    {
+        ThemeManager.ParseSchemePreference(value).Should().Be(expected);
+    }
 }

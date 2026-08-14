@@ -1,6 +1,6 @@
 # Hanabe Photo Manager Design System
 
-版本：1.0　更新：2026-08-11　状态：项目唯一 UI 规范来源
+版本：1.1　更新：2026-08-14　状态：项目唯一 UI 规范来源（M3 大改方向见 `docs/M3_DESIGN_FINAL.md`，排版用变体 001）
 
 ## Design Principles
 
@@ -15,17 +15,17 @@
 
 ## Resource Architecture
 
-`App.xaml` 默认加载 `Themes/Themes/Light.xaml`。主题入口依次合并 Colors、Brushes、Tokens、Typography、Motion 和 Controls。深色模式加载同名资源键的 `Dark.xaml`，组件不判断主题。
+`App.xaml` 默认加载 `Themes/Themes/Dynamic.Light.xaml`（默认：动态色彩 · 浅色）。主题入口依次合并 Colors、Brushes、Tokens、Typography、Motion 和 Controls。6 套主题 = 3 配色（Dynamic 动态色彩 / Forest 森林绿 / Violet 紫罗兰）× 2 明暗（Light/Dark），入口为 `Themes/Themes/{Scheme}.{Mode}.xaml`，组件不判断主题。
 
-原始颜色只能出现在 `Themes/Colors/Colors.Light.xaml` 与 `Colors.Dark.xaml`。语义 Brush 位于对应 Brushes 文件。`ThemeManager` 即时切换主题并在本机保存偏好。
+原始颜色只能出现在 `Themes/Colors/Colors.<Scheme>.<Mode>.xaml`（6 套 M3 tonal 色值）。语义 Brush 位于 `Brushes.Light/Dark.xaml`（含 M3 语义 Brush：`Brush.Primary` / `Brush.Surface.Container*` / `Brush.OnSurfaceVariant` 等）。`ThemeManager` 即时切换主题并在本机保存偏好（`ui-theme.txt` 存 `"{Scheme}.{Mode}"`）。
 
 ## Tokens
 
 - Color：Background（Canvas/Subtle/Chrome）、Surface（Default/Subtle/Elevated/Interactive/Selected/Disabled/Overlay）、Border、Text、Accent、Status（含 Subtle）与 Viewer 语义族；Overlay Scrim 独立表达遮罩层。
 - Spacing：0、2、4、6、8、12、16、20、24、32、40、48；页面 32，卡片 20，gutter 16/24。复合 Thickness 必须由共享 Spacing Token 提供。
-- Radius：Small 6、Control 8、Card 12、Dialog 16。
+- Radius：Small 8、Control 12、Card 12、Dialog 16、Container 28、Full 999（M3：容器 28 / 卡片 12-16 / chip 8-12 / pill 999）。
 - Typography：`Segoe UI Variable, Microsoft YaHei UI`；Caption 11/16、BodySmall 12/18、Body 13/20、Label 13/18、TitleSmall 16/22、Title 20/28、Display 28/36（字号/行高）；字重仅使用 Regular、Medium、SemiBold、Bold Token。
-- Sizing：控件 36/40，Sidebar 232，内容最大宽度 1440，阅读区 960，图标 12/16/18/20/24。
+- Sizing：控件 36/40，Navigation Rail 88，内容最大宽度 1440，阅读区 960，图标 12/16/18/20/24。
 - Material：Shell Chrome 可使用低对比半透明材质；普通内容区保持清晰、稳定和高可读性。
 - Shadow：普通内容无阴影或仅有极轻分隔；Floating、Popup 与 Dialog 使用分层阴影；重点展示区域可使用单一强调阴影。
 - Highlight / Glow：高光描边用于材质边缘；发光只用于 Focus、Selected 或特殊状态，且不得成为常规边框。
@@ -43,7 +43,7 @@ Material 3 在 HanabePhoto 中是桌面设计体系，不是移动端模板。Sh
 
 ## Component Library
 
-- Button：Primary、Secondary、Ghost、Danger、Icon、Toolbar、Disclosure。
+- Button：Primary、Secondary、Ghost、Danger、Icon、Toolbar、Disclosure、Fab（56×56 圆形 primary）。
 - Input：TextBox、PasswordBox、ComboBox、CheckBox、RadioButton、Slider。
 - Card：Default、Subtle、Interactive、Selected。
 - Dialog：Window、Surface、Title、Body。
@@ -53,13 +53,14 @@ Material 3 在 HanabePhoto 中是桌面设计体系，不是移动端模板。Sh
 - List：Default、ListItem.Default。
 - Menu：Context、Item、Separator.Menu。
 - Status：Panel、Title、Description。
+- Inspector：Container、Header、SectionLabel、Panel（320px surface-container-low 大圆角面板）。
 - Layout：PageSurface、PageTitle、SectionTitle。
 
 所有交互组件必须覆盖 Normal、Hover、Pressed、Focus、Disabled；输入组件还需覆盖 ReadOnly 和 ValidationError。
 
 ## Layout and States
 
-主界面使用 232px Sidebar 与弹性工作区。Sidebar、顶部区域和主内容区共享连续 Shell 背景与统一对齐体系，不得分别包装成互相割裂的大 Card。页面使用 16/24px gutter，标题、说明、表单和列表遵循同一左边线。首页统计使用轻量摘要区；缩略图、设备项、文件夹项等独立语义单元可以保留小 Card。PhotoViewer 是唯一固定深色画布，工具栏与信息栏仍使用共享组件。
+主界面使用 88px Navigation Rail 与弹性工作区（M3 排版变体 001：Rail 88 / Topbar surface-container-low / Workspace surface-container-lowest / Inspector 320 / Statusbar 44 / FAB 右下角）。Shell 顶部区域与主内容区共享连续 Shell 背景与统一对齐体系。页面使用 16/24px gutter，标题、说明、表单和列表遵循同一左边线。首页统计使用轻量摘要区；缩略图、设备项、文件夹项等独立语义单元可以保留小 Card。PhotoViewer 是唯一固定深色画布，工具栏与信息栏仍使用共享组件。
 
 ## Controlled Visual Effects
 

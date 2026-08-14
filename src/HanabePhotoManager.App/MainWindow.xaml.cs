@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -43,6 +43,14 @@ public partial class MainWindow : Window
     private const double TreemapZoomMax = 8.0;
     private const double TreemapZoomNotchFactor = 1.12;
 
+    // Title-bar theming: DWMWA_USE_IMMERSIVE_DARK_MODE makes the system caption
+    // follow the app's Light/Dark theme (20 = Win10 2004+/Win11, 19 = 1809-1909).
+    private const int DwmwaUseImmersiveDarkMode = 20;
+    private const int DwmwaUseImmersiveDarkModeBefore20h1 = 19;
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
+    private static extern int DwmSetWindowAttribute(System.IntPtr hwnd, int attribute, ref int value, int valueSize);
+
     private readonly DispatcherTimer _treemapViewportDebounceTimer;
 
     public MainWindow()
@@ -67,7 +75,33 @@ public partial class MainWindow : Window
         LocationChanged += (_, _) => ScheduleWindowStateSave();
         StateChanged += (_, _) => ScheduleWindowStateSave();
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
+        _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PeopleAlbumViewModel.SelectedAlbum))
+                RefreshPeopleTabContent();
+        };
         _viewModel.TreemapRepopulated += OnTreemapRepopulated;
+        ThemeManager.ThemeChanged += OnThemeChanged;
+    }
+
+    private void OnThemeChanged(object? sender, AppTheme theme) => ApplyTitleBarTheme();
+
+    private void ApplyTitleBarTheme()
+    {
+        try
+        {
+            var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            if (hwnd == System.IntPtr.Zero) return;
+            var useDark = ThemeManager.Current == AppTheme.Dark ? 1 : 0;
+            if (DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkMode, ref useDark, sizeof(int)) != 0)
+            {
+                _ = DwmSetWindowAttribute(hwnd, DwmwaUseImmersiveDarkModeBefore20h1, ref useDark, sizeof(int));
+            }
+        }
+        catch
+        {
+            // Non-fatal: keep the default system caption if the DWM call fails.
+        }
     }
 
     private void PrimaryNavigationItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -123,13 +157,73 @@ public partial class MainWindow : Window
         await _viewModel.InitializeAsync();
         RestoreSafeWindowState();
         ApplyCustomWindowIcon();
+        ApplyTitleBarTheme();
+        if (App.ScreenshotPage is { } page)
+        {
+            _viewModel.CurrentPage = page;
+        }
+        if (App.BrowseShowcaseForScreenshot)
+        {
+            _viewModel.BrowseDisplayMode = BrowseDisplayMode.Grid;
+            _viewModel.IsBrowseConditionsExpanded = true;
+        }
+        if (App.AdvancedFiltersForScreenshot)
+        {
+            _viewModel.IsAdvancedFiltersExpanded = true;
+        }
         AnimateVisiblePage();
+
+        if (App.ScreenshotPath is { } screenshotPath)
+        {
+            // Headless-safe screenshot: let the async library scan and the
+            // viewport thumbnail queue settle, then render the window's visual
+            // tree to a PNG and exit.
+            _ = CaptureScreenshotAfterDelayAsync(screenshotPath);
+        }
+    }
+
+    private async Task CaptureScreenshotAfterDelayAsync(string path)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(8));
+        if (App.SelectFirstForScreenshot && _viewModel.PreviewFiles.Count > 0)
+        {
+            _viewModel.SelectedPreviewFile = _viewModel.PreviewFiles.FirstOrDefault();
+            // Give the async metadata read a moment so the Inspector shows populated fields.
+            await Task.Delay(TimeSpan.FromMilliseconds(600));
+        }
+        if (App.SelectFirstPersonForScreenshot && _viewModel.PeopleAlbums.Albums.Count > 0)
+        {
+            _viewModel.PeopleAlbums.SelectedAlbum = _viewModel.PeopleAlbums.Albums.FirstOrDefault();
+            // Let the virtualized photo grid realize its visible tiles and decode thumbnails.
+            await Task.Delay(TimeSpan.FromMilliseconds(1200));
+        }
+        CaptureWindowScreenshot(path);
+    }
+
+    private void CaptureWindowScreenshot(string path)
+    {
+        try
+        {
+            var bitmap = new RenderTargetBitmap(
+                Math.Max(1, (int)Math.Ceiling(ActualWidth)),
+                Math.Max(1, (int)Math.Ceiling(ActualHeight)),
+                96, 96, PixelFormats.Pbgra32);
+            bitmap.Render(this);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(bitmap));
+            using var stream = System.IO.File.Create(path);
+            encoder.Save(stream);
+        }
+        finally
+        {
+            System.Windows.Application.Current.Shutdown();
+        }
     }
 
     private void ToggleTheme_Click(object sender, RoutedEventArgs e)
     {
         ThemeManager.Toggle();
-        ThemeToggleButton.Content = ThemeManager.Current == AppTheme.Light ? "深色模式" : "浅色模式";
+        ThemeToggleLabel.Text = ThemeManager.Current == AppTheme.Light ? "深色" : "浅色";
     }
 
     private void MainWindowViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -155,47 +249,55 @@ public partial class MainWindow : Window
 
     private void AnimateVisiblePage()
     {
-        FrameworkElement page = _viewModel.CurrentPage switch
+        var page = ResolveCurrentPage();
+        if (page is null)
         {
-            "Import" => ImportPage,
-            "Preview" => PreviewPage,
-            "FaceSearch" => FaceSearchPage,
-            "MapPhotos" => MapPageHost,
-            "Compression" => CompressionPageHost,
-            "Cloud" => CloudPageContainer,
-            "Settings" => SettingsPage,
-            _ => HomePage
-        };
+            return;
+        }
+
+        // A fresh transform avoids any in-flight translate animation on the page,
+        // and BeginAnimation is inherently interruptible (SnapshotAndReplace).
+        var translate = new TranslateTransform();
+        page.RenderTransform = translate;
+        page.BeginAnimation(UIElement.OpacityProperty, null);
 
         if (!SystemParameters.ClientAreaAnimation)
         {
             page.Opacity = 1;
-            page.RenderTransform = new TranslateTransform();
+            translate.Y = 0;
             return;
         }
 
         page.Opacity = 0;
-        page.RenderTransform = new TranslateTransform(0, 18);
+        translate.Y = 6;
 
-        var storyboard = new Storyboard();
-        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(240))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(fade, page);
-        Storyboard.SetTargetProperty(fade, new PropertyPath(UIElement.OpacityProperty));
+        var duration = TimeSpan.FromMilliseconds(180);
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
 
-        var slide = new DoubleAnimation(18, 0, TimeSpan.FromMilliseconds(280))
-        {
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-        };
-        Storyboard.SetTarget(slide, page);
-        Storyboard.SetTargetProperty(slide, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
-
-        storyboard.Children.Add(fade);
-        storyboard.Children.Add(slide);
-        storyboard.Begin();
+        page.BeginAnimation(
+            UIElement.OpacityProperty,
+            new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        translate.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(6, 0, duration) { EasingFunction = ease });
     }
+
+    private FrameworkElement? ResolveCurrentPage() => _viewModel.CurrentPage switch
+    {
+        "Home" => HomePage,
+        "Import" => ImportPage,
+        "Preview" => PreviewPage,
+        "CustomAlbums" => CustomAlbumsPageHost,
+        "FaceSearch" => FaceSearchPage,
+        "MapPhotos" => MapPageHost,
+        "Compression" => CompressionPageHost,
+        "Watermark" => WatermarkPageHost,
+        "Cloud" => CloudPageContainer,
+        "ContestOpen" => ContestOpenPageHost,
+        "ContestJudged" => ContestJudgedPageHost,
+        "Settings" => SettingsCenterPageHost,
+        _ => HomePage
+    };
 
     protected override void OnClosed(EventArgs e)
     {
@@ -283,6 +385,45 @@ public partial class MainWindow : Window
         {
             _viewModel.FaceSearch.OpenResultCommand.Execute(item);
             e.Handled = true;
+        }
+    }
+
+    private void PeopleMainTab_Checked(object sender, RoutedEventArgs e)
+    {
+        RefreshPeopleTabContent();
+    }
+
+    private void RefreshPeopleTabContent()
+    {
+        // The Checked event also fires while InitializeComponent is still building
+        // the visual tree, before the tab panels are assigned to their fields.
+        if (PeopleGroupsPanel is null || PeopleGroupsDetail is null || PeopleSearchPanel is null)
+        {
+            return;
+        }
+
+        var showGroups = PeopleTabGroupsButton.IsChecked == true;
+        var hasSelection = _viewModel.PeopleAlbums.SelectedAlbum is not null;
+
+        PeopleGroupsPanel.Visibility = showGroups && !hasSelection ? Visibility.Visible : Visibility.Collapsed;
+        PeopleGroupsDetail.Visibility = showGroups && hasSelection ? Visibility.Visible : Visibility.Collapsed;
+        PeopleSearchPanel.Visibility = showGroups ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void PersonPhoto_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2 && sender is FrameworkElement { DataContext: PersonPhotoViewModel item } && System.IO.File.Exists(item.Path))
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(item.Path) { UseShellExecute = true });
+            e.Handled = true;
+        }
+    }
+
+    private void PersonPhoto_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: PersonPhotoViewModel photo })
+        {
+            photo.EnsureThumbnailLoaded();
         }
     }
 
@@ -720,6 +861,46 @@ public partial class MainWindow : Window
         _viewModel.SelectedPreviewFile = null;
     }
 
+    private void Inspector_Open(object sender, RoutedEventArgs e)
+    {
+        var file = _viewModel.SelectedPreviewFile;
+        if (file is not null && System.IO.File.Exists(file.PreviewPath))
+        {
+            OpenIndependentViewer(file);
+        }
+    }
+
+    private void Inspector_OpenFolder(object sender, RoutedEventArgs e)
+    {
+        var file = _viewModel.SelectedPreviewFile;
+        if (file is not null && System.IO.File.Exists(file.PreviewPath))
+        {
+            System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{file.PreviewPath}\"");
+        }
+    }
+
+    private void Inspector_CopyPath(object sender, RoutedEventArgs e)
+    {
+        var file = _viewModel.SelectedPreviewFile;
+        if (file is not null)
+        {
+            System.Windows.Clipboard.SetText(file.PreviewPath);
+            _viewModel.StatusMessage = $"已复制：{file.PreviewPath}";
+        }
+    }
+
+    private void Inspector_Delete(object sender, RoutedEventArgs e)
+    {
+        var file = _viewModel.SelectedPreviewFile;
+        if (file is not null) _viewModel.DeletePreviewFile(file);
+    }
+
+    private void Inspector_BatchCopy(object sender, RoutedEventArgs e) => BatchCopySelected();
+
+    private void Inspector_BatchMove(object sender, RoutedEventArgs e) => BatchMoveSelected();
+
+    private void Inspector_ClearSelection(object sender, RoutedEventArgs e) => ClearPreviewSelection();
+
     private static PreviewFileViewModel? GetFileFromSender(object? sender) =>
         (sender as System.Windows.FrameworkElement)?.DataContext as PreviewFileViewModel;
 
@@ -767,14 +948,17 @@ public partial class MainWindow : Window
     private void PreviewSelection_Changed(object sender, RoutedEventArgs e) =>
         _viewModel.NotifyPreviewSelectionChanged();
 
-    private void PreviewContextMenu_BatchCopy(object sender, RoutedEventArgs e)
+    private void PreviewContextMenu_BatchCopy(object sender, RoutedEventArgs e) => BatchCopySelected();
+    private void PreviewContextMenu_BatchMove(object sender, RoutedEventArgs e) => BatchMoveSelected();
+
+    private void BatchCopySelected()
     {
         var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "选择目标文件夹" };
         if (dlg.ShowDialog() != true) return;
         _viewModel.BatchCopyFilesTo(dlg.FolderName);
     }
 
-    private void PreviewContextMenu_BatchMove(object sender, RoutedEventArgs e)
+    private void BatchMoveSelected()
     {
         var dlg = new Microsoft.Win32.OpenFolderDialog { Title = "选择目标文件夹" };
         if (dlg.ShowDialog() != true) return;
@@ -806,6 +990,14 @@ public partial class MainWindow : Window
                 e.Handled = true;
             }
 
+            return;
+        }
+
+        // Ctrl+F = jump to the smart search box on the browse page.
+        if (e.Key == Key.F && Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && _viewModel.IsPreviewPage)
+        {
+            FocusBrowseSearch();
+            e.Handled = true;
             return;
         }
 
@@ -884,6 +1076,16 @@ public partial class MainWindow : Window
     {
         return Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase ||
                Keyboard.FocusedElement is System.Windows.Controls.ComboBox;
+    }
+
+    private void FocusBrowseSearch()
+    {
+        _viewModel.IsBrowseConditionsExpanded = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            BrowseSmartSearchBox.Focus();
+            BrowseSmartSearchBox.SelectAll();
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     private void PreviewThumbnail_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

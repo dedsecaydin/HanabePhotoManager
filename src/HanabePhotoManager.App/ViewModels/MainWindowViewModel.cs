@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -165,7 +165,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
     private int _previewScanVersion;
-    private string _exifSummary = string.Empty;
+    private readonly IPhotoDetailMetadataReader _metadataReader = new PhotoDetailMetadataReader();
+    private PhotoDetailMetadata _selectedFileMetadata = PhotoDetailMetadata.Empty(string.Empty);
     private PreviewFileViewModel? _selectedPreviewFile;
     private CancellationTokenSource? _activeTaskCancellation;
     private CancellationTokenSource? _importThumbnailCancellation;
@@ -201,10 +202,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _enablePersonRecognition;
     private bool _previewHasLoaded;
     private bool _isBrowseConditionsExpanded;
+    private bool _isAdvancedFiltersExpanded;
     private bool _isInitialized;
     private bool _isOnboardingVisible;
     private int _onboardingStep;
-    private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.Text;
+    private NavigationDisplayMode _navigationDisplayMode = NavigationDisplayMode.IconAndText;
     private int _previewPage;
     private readonly Dictionary<string, bool> _previewDateExpansion = new(StringComparer.OrdinalIgnoreCase);
     private bool _suppressPreviewSectionRefresh;
@@ -357,6 +359,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
         NavigateGridCategoryCommand = new RelayCommand<string?>(NavigateGridCategory);
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
+        ToggleAdvancedFiltersCommand = new RelayCommand(() => IsAdvancedFiltersExpanded = !IsAdvancedFiltersExpanded);
         OpenQuarkOfficialCommand = new RelayCommand(OpenQuarkOfficial);
         OpenBaiduConsoleCommand = new RelayCommand(OpenBaiduConsole);
         SaveBaiduCredentialsCommand = new AsyncRelayCommand(SaveBaiduCredentialsAsync, CanSaveBaiduCredentials);
@@ -573,11 +576,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public int TotalPhotoGroupCount => CountPhotoGroups(PreviewFiles);
 
-    public string ExifSummary
+    public PhotoDetailMetadata SelectedFileMetadata
     {
-        get => _exifSummary;
-        private set => SetProperty(ref _exifSummary, value);
+        get => _selectedFileMetadata;
+        private set => SetProperty(ref _selectedFileMetadata, value);
     }
+
+    public int SelectedFileCount => PreviewFiles.Count(file => file.IsSelected);
+
+    public bool IsMultiSelection => HasSelectedFiles && SelectedPreviewFile is null;
 
     private CancellationTokenSource? _exifCts;
 
@@ -589,6 +596,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (SetProperty(ref _selectedPreviewFile, value))
             {
                 OnPropertyChanged(nameof(SelectedTreemapPath));
+                OnPropertyChanged(nameof(IsMultiSelection));
+                OnPropertyChanged(nameof(SelectedFileCount));
                 _ = LoadExifForSelectedAsync();
             }
         }
@@ -616,51 +625,27 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var ct = _exifCts.Token;
 
         var file = _selectedPreviewFile;
-        if (file is null || !File.Exists(file.PreviewPath))
+        if (file is null)
         {
-            ExifSummary = "选择照片查看元数据";
+            SelectedFileMetadata = PhotoDetailMetadata.Empty(string.Empty);
             return;
         }
 
         var path = file.PreviewPath;
-        ExifSummary = "读取元数据中…";
+        // Show the file-level facts immediately while the metadata read runs.
+        SelectedFileMetadata = PhotoDetailMetadata.Empty(path);
 
         try
         {
-            var text = await Task.Run(() => ReadExifCore(path), ct);
+            var metadata = await Task.Run(() => _metadataReader.Read(path), ct);
             if (ct.IsCancellationRequested) return;
-            ExifSummary = string.IsNullOrWhiteSpace(text) ? "该文件无可用 EXIF 数据" : text;
+            SelectedFileMetadata = metadata;
         }
         catch (OperationCanceledException) { }
         catch
         {
-            ExifSummary = "无法读取元数据（可能非标准图像格式）";
+            SelectedFileMetadata = PhotoDetailMetadata.Empty(path);
         }
-    }
-
-    private static string ReadExifCore(string path)
-    {
-        var dirs = MetadataExtractor.ImageMetadataReader.ReadMetadata(path);
-        var sb = new StringBuilder();
-        foreach (var directory in dirs)
-        {
-            foreach (var tag in directory.Tags)
-            {
-                var name = tag.Name;
-                if (name == "File Name" || name == "File Size" || name == "Image Width" || name == "Image Height"
-                    || name.Contains("Make") || name.Contains("Model") || (name.Contains("Aperture") && !name.Contains("Max"))
-                    || name.Contains("Shutter") || name.Contains("ISO") || name.Contains("Focal Length")
-                    || name.Contains("Date") || name.Contains("Exposure") || name.Contains("White Balance")
-                    || name.Contains("Lens") || name.Contains("Flash"))
-                {
-                    sb.AppendLine($"{name}：{tag.Description}");
-                }
-            }
-            if (directory.Name.Contains("GPS"))
-                foreach (var tag in directory.Tags.Where(t => t.Name.Contains("GPS")))
-                    sb.AppendLine($"{tag.Name}：{tag.Description}");
-        }
-        return sb.ToString().TrimEnd();
     }
 
     public ObservableCollection<ImportPreviewItemViewModel> ImportItems { get; } = [];
@@ -973,12 +958,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand ScanLibraryDuplicatesCommand { get; }
 
+    public IRelayCommand ToggleAdvancedFiltersCommand { get; }
+
     public event Action? TreemapRepopulated;
 
     public bool IsBrowseConditionsExpanded
     {
         get => _isBrowseConditionsExpanded;
         set => SetProperty(ref _isBrowseConditionsExpanded, value);
+    }
+
+    public bool IsAdvancedFiltersExpanded
+    {
+        get => _isAdvancedFiltersExpanded;
+        set
+        {
+            if (SetProperty(ref _isAdvancedFiltersExpanded, value) && _isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
     }
 
     public BrowseDisplayMode BrowseDisplayMode
@@ -1090,6 +1089,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // The actual viewport priority loading is triggered by code-behind
         // after each render via RefreshTreemapViewportLoading().
         _treemapSourceFiles = files;
+        _treemapSourceLookup = new Dictionary<string, PreviewFileViewModel>(
+            files.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files)
+        {
+            _treemapSourceLookup[file.FullPath] = file;
+        }
+
         _treemapDimensionCancellation?.Cancel();
         _treemapDimensionCancellation?.Dispose();
         _treemapDimensionCancellation = new CancellationTokenSource();
@@ -1130,6 +1136,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     private PreviewFileViewModel[]? _treemapSourceFiles;
+    private Dictionary<string, PreviewFileViewModel>? _treemapSourceLookup;
     private CancellationTokenSource? _treemapDimensionCancellation;
 
     /// <summary>
@@ -1140,15 +1147,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (!IsTreemapBrowseMode || !IsPreviewPage) return;
         if (visiblePathsNeedingThumbnail.Count == 0) return;
-        if (_treemapSourceFiles is not { Length: > 0 } source) return;
-
-        // Build a quick lookup from FullPath → PreviewFileViewModel
-        var pathToFile = new Dictionary<string, PreviewFileViewModel>(
-            source.Length, StringComparer.OrdinalIgnoreCase);
-        foreach (var file in source)
-        {
-            pathToFile[file.FullPath] = file;
-        }
+        EnsureTreemapSourceLookup();
+        if (_treemapSourceLookup is not { } pathToFile) return;
 
         var toLoad = new List<PreviewFileViewModel>(visiblePathsNeedingThumbnail.Count);
         foreach (var path in visiblePathsNeedingThumbnail)
@@ -1172,6 +1172,38 @@ public sealed partial class MainWindowViewModel : ObservableObject
         DrainTreemapThumbnailQueue();
     }
 
+    /// <summary>
+    /// Seeds (or refreshes) the FullPath → PreviewFileViewModel lookup used by
+    /// the viewport thumbnail queue. The treemap can be populated either through
+    /// RepopulateTreemapFrom (filters) or through the incremental ApplyBatch scan
+    /// (startup all-library / date selection), so this falls back to the filtered
+    /// cache whenever the lookup is missing or stale.
+    /// </summary>
+    private void EnsureTreemapSourceLookup()
+    {
+        var expected = _filteredCache.Count;
+        if (_treemapSourceLookup is not null &&
+            _treemapSourceFiles is { Length: var length } &&
+            length == expected)
+        {
+            return;
+        }
+
+        if (expected == 0)
+        {
+            return;
+        }
+
+        var files = _filteredCache.ToArray();
+        _treemapSourceFiles = files;
+        _treemapSourceLookup = new Dictionary<string, PreviewFileViewModel>(
+            files.Length, StringComparer.OrdinalIgnoreCase);
+        foreach (var file in files)
+        {
+            _treemapSourceLookup[file.FullPath] = file;
+        }
+    }
+
     private void DrainTreemapThumbnailQueue()
     {
         if (Interlocked.CompareExchange(ref _treemapLoadActive, 1, 0) != 0 ||
@@ -1180,7 +1212,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var lookup = source.ToDictionary(file => file.FullPath, StringComparer.OrdinalIgnoreCase);
+        var lookup = _treemapSourceLookup
+            ?? source.ToDictionary(file => file.FullPath, StringComparer.OrdinalIgnoreCase);
         PreviewFileViewModel[] batch;
         lock (_pendingTreemapThumbnailPaths)
         {
@@ -1731,9 +1764,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RebuildVisiblePreviewPage();
         OnPropertyChanged(nameof(FilteredPreviewFiles));
         NotifyPreviewCountsChanged();
-        if (HasLibraryRoot && IsTreemapBrowseMode && RequiresTreemapRepopulation())
+        if (HasLibraryRoot && IsTreemapBrowseMode)
         {
-            RepopulateTreemapFrom(_filteredCache);
+            if (RequiresTreemapRepopulation())
+            {
+                RepopulateTreemapFrom(_filteredCache);
+            }
+            else if (_treemapSourceFiles is null && _filteredCache.Count > 0)
+            {
+                // The incremental all-library / date scan populates the treemap
+                // via ApplyBatch and never routes through RepopulateTreemapFrom,
+                // so the viewport thumbnail source is never seeded. Seed it once
+                // the filtered cache is complete so the initial photo wall loads
+                // thumbnails through the viewport queue.
+                StartTreemapThumbnailLoading(_filteredCache.ToArray());
+                TreemapRepopulated?.Invoke();
+            }
         }
     }
 
@@ -2182,6 +2228,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : TreemapWeightMode.FileSize;
         _isTreemapBorderless = settings.IsTreemapBorderless is not false;
         _isShowingPsdFiles = settings.ShowPsdFiles is true;
+        _isAdvancedFiltersExpanded = settings.IsAdvancedFiltersExpanded is true;
+        OnPropertyChanged(nameof(IsAdvancedFiltersExpanded));
         if (settings.SelectedFileTypeFilters is { Count: > 0 } savedTypes)
         {
             foreach (var t in savedTypes) _selectedFileTypeFilters.Add(t);
@@ -4176,6 +4224,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 {
                     StartPreviewThumbnailLoading(VisiblePreviewFiles, ResolveThumbnailDecodeWidth());
                 }
+                else if (IsHomePage)
+                {
+                    StartPreviewThumbnailLoading(HomePreviewFiles);
+                }
                 else
                 {
                     CancelPreviewThumbnailLoading();
@@ -4710,6 +4762,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public void NotifyPreviewSelectionChanged()
     {
         OnPropertyChanged(nameof(HasSelectedFiles));
+        OnPropertyChanged(nameof(SelectedFileCount));
+        OnPropertyChanged(nameof(IsMultiSelection));
         DeleteSelectedFilesCommand.NotifyCanExecuteChanged();
     }
 
@@ -5560,6 +5614,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.IsTreemapBorderless = IsTreemapBorderless;
             settings.ShowPsdFiles = IsShowingPsdFiles;
             settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
+            settings.IsAdvancedFiltersExpanded = IsAdvancedFiltersExpanded;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)

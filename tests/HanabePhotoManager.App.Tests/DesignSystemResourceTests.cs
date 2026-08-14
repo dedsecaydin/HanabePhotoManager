@@ -41,7 +41,28 @@ public sealed class DesignSystemResourceTests
     [Fact]
     public void App_LoadsTheLightThemeEntryPoint()
     {
-        Read("App.xaml").Should().Contain("Themes/Themes/Light.xaml");
+        Read("App.xaml").Should().Contain("Themes/Themes/Dynamic.Light.xaml");
+    }
+
+    [Fact]
+    public void AllSixThemes_ExposeTheSameColorAndBrushKeys()
+    {
+        var schemes = new[] { "Dynamic", "Forest", "Violet" };
+        var modes = new[] { "Light", "Dark" };
+        var colorFiles = schemes.SelectMany(s => modes.Select(m => (s, m)))
+            .Select(p => Read("Themes", "Colors", $"Colors.{p.s}.{p.m}.xaml")).ToArray();
+
+        foreach (var colorFile in colorFiles)
+        {
+            colorFile.Should().Contain("x:Key=\"Color.Primary\"");
+            colorFile.Should().Contain("x:Key=\"Color.Surface.ContainerLow\"");
+            colorFile.Should().Contain("x:Key=\"Color.OnSurface\"");
+        }
+
+        Read("Themes", "Colors", "Brushes.Light.xaml").Should().Contain("x:Key=\"Brush.Primary\"")
+            .And.Contain("x:Key=\"Brush.SecondaryContainer\"")
+            .And.Contain("x:Key=\"Brush.Surface.Container\"")
+            .And.Contain("x:Key=\"Brush.OnSurfaceVariant\"");
     }
 
     [Fact]

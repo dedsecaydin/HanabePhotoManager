@@ -1,3 +1,5 @@
+using HanabePhotoManager.Core;
+
 namespace HanabePhotoManager.Core.Cloud;
 
 public enum CloudProviderKind
@@ -266,7 +268,7 @@ public sealed record CloudTransferFile
             throw new ArgumentException("Local path is required.", nameof(localPath));
         }
 
-        if (!Path.IsPathFullyQualified(localPath))
+        if (!LocalPathSyntax.IsFullyQualified(localPath))
         {
             throw new ArgumentException("Local path must be an absolute file path.", nameof(localPath));
         }

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using HanabePhotoManager.Core;
 
 namespace HanabePhotoManager.Core.Imports;
 
@@ -13,12 +14,12 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
         var normalizedFiles = ValidateAndNormalize(files);
         var sortedFiles = normalizedFiles
-            .OrderBy(file => file.PathIdentity, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(file => file.PathIdentity, LocalPathSyntax.PathIdentityComparer)
             .ThenBy(file => file.PathIdentity, StringComparer.Ordinal)
             .ToArray();
         var candidates = sortedFiles.Select(file => _classifier.Classify(file.Source)).ToArray();
         var sidecarIndex = BuildSidecarIndex(sortedFiles);
-        var consumedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var consumedPaths = new HashSet<string>(LocalPathSyntax.PathIdentityEqualityComparer);
         var groups = new List<NormalizedMediaGroup>();
 
         for (var index = 0; index < sortedFiles.Length; index++)
@@ -50,7 +51,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
             groups.Add(new NormalizedMediaGroup(
                 new MediaGroup(
-                    Path.GetFileNameWithoutExtension(file.PathIdentity),
+                    LocalPathSyntax.GetFileNameWithoutExtension(file.PathIdentity),
                     candidates[index].SuggestedCategory,
                     file.Source,
                     Array.Empty<SourceMediaFile>()),
@@ -58,7 +59,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         }
 
         var orderedGroups = groups
-            .OrderBy(group => group.PathIdentity, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group.PathIdentity, LocalPathSyntax.PathIdentityComparer)
             .ThenBy(group => group.PathIdentity, StringComparer.Ordinal)
             .Select(group => group.Group)
             .ToArray();
@@ -69,7 +70,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
     private static IReadOnlyList<NormalizedMediaFile> ValidateAndNormalize(IEnumerable<SourceMediaFile> files)
     {
         var normalizedFiles = new List<NormalizedMediaFile>();
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var paths = new HashSet<string>(LocalPathSyntax.PathIdentityEqualityComparer);
 
         foreach (var file in files)
         {
@@ -98,11 +99,11 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
     private static Dictionary<string, IReadOnlyList<NormalizedMediaFile>> BuildSidecarIndex(
         IReadOnlyList<NormalizedMediaFile> files)
     {
-        var index = new Dictionary<string, List<NormalizedMediaFile>>(StringComparer.OrdinalIgnoreCase);
+        var index = new Dictionary<string, List<NormalizedMediaFile>>(LocalPathSyntax.PathIdentityEqualityComparer);
 
         foreach (var file in files)
         {
-            var fileName = Path.GetFileName(file.PathIdentity);
+            var fileName = LocalPathSyntax.GetFileName(file.PathIdentity);
             var sonyMatch = SonySidecarPattern().Match(fileName);
             if (sonyMatch.Success)
             {
@@ -114,14 +115,14 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
             if (extension.Equals(".LRF", StringComparison.OrdinalIgnoreCase) ||
                 extension.Equals(".AAC", StringComparison.OrdinalIgnoreCase))
             {
-                AddSidecar(index, CreateMediaKey(file.PathIdentity, Path.GetFileNameWithoutExtension(fileName)), file);
+                AddSidecar(index, CreateMediaKey(file.PathIdentity, LocalPathSyntax.GetFileNameWithoutExtension(fileName)), file);
             }
         }
 
         return index.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<NormalizedMediaFile>)pair.Value,
-            StringComparer.OrdinalIgnoreCase);
+            LocalPathSyntax.PathIdentityEqualityComparer);
     }
 
     private static void AddSidecar(
@@ -143,10 +144,10 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         IReadOnlyDictionary<string, IReadOnlyList<NormalizedMediaFile>> sidecarIndex,
         ISet<string> consumedPaths)
     {
-        var key = Path.GetFileNameWithoutExtension(primary.PathIdentity).ToUpperInvariant();
-        var sidecars = ConsumeSidecars(primary, key, sidecarIndex, consumedPaths);
+        var stem = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity);
+        var sidecars = ConsumeSidecars(primary, stem, sidecarIndex, consumedPaths);
 
-        return new MediaGroup(key, MediaCategory.Video, primary.Source, sidecars);
+        return new MediaGroup(stem.ToUpperInvariant(), MediaCategory.Video, primary.Source, sidecars);
     }
 
     private static MediaGroup BuildDjiGroup(
@@ -154,7 +155,7 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
         IReadOnlyDictionary<string, IReadOnlyList<NormalizedMediaFile>> sidecarIndex,
         ISet<string> consumedPaths)
     {
-        var key = Path.GetFileNameWithoutExtension(primary.PathIdentity);
+        var key = LocalPathSyntax.GetFileNameWithoutExtension(primary.PathIdentity);
         var sidecars = ConsumeSidecars(primary, key, sidecarIndex, consumedPaths);
 
         return new MediaGroup(key, MediaCategory.ActionVideo, primary.Source, sidecars);
@@ -179,20 +180,18 @@ public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 
     private static string CreateMediaKey(string pathIdentity, string stem)
     {
-        var parentDirectory = Path.TrimEndingDirectorySeparator(Path.GetDirectoryName(pathIdentity)!);
+        var parentDirectory = LocalPathSyntax.GetDirectoryName(pathIdentity);
         return $"{parentDirectory}\0{stem}";
     }
 
     private static string NormalizePathIdentity(string fullPath)
     {
-        if (!Path.IsPathFullyQualified(fullPath))
+        if (!LocalPathSyntax.IsFullyQualified(fullPath))
         {
             throw new ArgumentException($"FullPath '{fullPath}' must be fully qualified.", nameof(fullPath));
         }
 
-        var normalized = Path.GetFullPath(fullPath)
-            .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-        return Path.TrimEndingDirectorySeparator(normalized);
+        return LocalPathSyntax.NormalizeIdentity(fullPath);
     }
 
     private static bool IsPrimaryVideoFile(string path)

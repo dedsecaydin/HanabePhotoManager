@@ -12,7 +12,7 @@
 
 - Preserve `src/HanabePhotoManager.App` as the Windows WPF client.
 - Target Apple Silicon only with runtime identifier `osx-arm64`.
-- Set the minimum supported operating system to macOS 11 Big Sur.
+- Set the minimum supported operating system to macOS 14 Sonoma, matching the current .NET 8 support matrix.
 - Publish self-contained, unsigned artifacts; do not add signing, notarization, or App Store steps.
 - Keep Core free of UI and operating-system APIs.
 - Platform failures must be explicit; file deletion must never silently become permanent deletion.
@@ -120,7 +120,7 @@ public interface IExternalFileService
 }
 ```
 
-The project targets `net8.0`, references Core and Infrastructure, and uses CommunityToolkit.Mvvm 8.4.0. Add both new projects to the solution under the existing `src` and `tests` solution folders.
+The project targets `net8.0`, references Core only, and uses CommunityToolkit.Mvvm 8.4.0. Desktop.Core does not consume Infrastructure; a later Desktop composition project may reference Infrastructure when it composes implementations. Add both new projects to the solution under the existing `src` and `tests` solution folders.
 
 - [ ] **Step 4: Run contract and existing portable tests**
 
@@ -283,6 +283,8 @@ public sealed class DesktopShellViewModel
 Use Avalonia 11 package versions resolved consistently across `Avalonia`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`, and `Avalonia.Fonts.Inter`. Reference Desktop.Core. Set `OutputType` to `WinExe`, `TargetFramework` to `net8.0`, `RuntimeIdentifiers` to `osx-arm64`, `SelfContained` to `true`, `PublishSingleFile` to `false`, and `ApplicationId` to `com.hanabe.photomanager`.
 
 `MainWindow.axaml` binds its title and two text elements to `Title` and `Status`, uses `FluentTheme`, and contains no Windows-specific namespace. `App.OnFrameworkInitializationCompleted` creates the main window with `DesktopShellViewModel` as its data context.
+
+`Program` must accept `--smoke-test`, validate the startup composition prerequisites, and exit with code 0 before creating a window. This is the runtime contract consumed by Task 7 macOS CI.
 
 - [ ] **Step 5: Build the Avalonia project and run tests**
 
@@ -459,7 +461,7 @@ git commit -m "feat: compose macOS desktop services"
 
 **Interfaces:**
 - Produces: bundle id `com.hanabe.photomanager`
-- Produces: minimum system `11.0`
+- Produces: minimum system `14.0`
 - Produces: executable name `HanabePhotoManager.Desktop`
 
 - [ ] **Step 1: Write metadata tests**
@@ -467,10 +469,13 @@ git commit -m "feat: compose macOS desktop services"
 Read `Info.plist` using `XDocument` and assert:
 
 ```csharp
-values["CFBundleIdentifier"].Should().Be("com.hanabe.photomanager");
-values["CFBundleExecutable"].Should().Be("HanabePhotoManager.Desktop");
-values["LSMinimumSystemVersion"].Should().Be("11.0");
-values["NSHighResolutionCapable"].Should().Be("true");
+values["CFBundleIdentifier"].Value.Should().Be("com.hanabe.photomanager");
+values["CFBundleExecutable"].Value.Should().Be("HanabePhotoManager.Desktop");
+values["CFBundleDisplayName"].Value.Should().Be("Hanabe Photo Manager");
+values["CFBundleName"].Value.Should().Be("Hanabe Photos");
+values["CFBundleName"].Value.Length.Should().BeLessOrEqualTo(15);
+values["LSMinimumSystemVersion"].Value.Should().Be("14.0");
+values["NSHighResolutionCapable"].Name.LocalName.Should().Be("true");
 ```
 
 - [ ] **Step 2: Verify the metadata test fails**
@@ -554,7 +559,7 @@ Expected: FAIL because the workflow does not exist.
 
 - [ ] **Step 3: Create the workflow**
 
-Trigger on `workflow_dispatch` and pull requests changing `src/**`, `tests/**`, `tools/macos/**`, or the workflow itself. Use `actions/checkout`, `actions/setup-dotnet`, restore, run all three portable test projects, publish Desktop with:
+Trigger on `workflow_dispatch` and pull requests changing `src/**`, `tests/**`, `tools/macos/**`, or the workflow itself. Use `actions/checkout`, `actions/setup-dotnet`, restore and test the phase 1 cross-platform Core and Desktop.Core projects, then publish Desktop with:
 
 ```bash
 dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj \
@@ -562,7 +567,14 @@ dotnet publish src/HanabePhotoManager.Desktop/HanabePhotoManager.Desktop.csproj 
   -o artifacts/macos/publish
 ```
 
-Run the bundle script, execute the app host with a `--smoke-test` argument that exits zero before creating a window, zip the `.app` with `ditto`, generate SHA-256 using `shasum -a 256`, and upload the zip plus checksum. Pin released major versions of GitHub actions; do not use floating branch names.
+Run the bundle script, execute `"artifacts/macos/bundle/Hanabe Photo Manager.app/Contents/MacOS/HanabePhotoManager.Desktop" --smoke-test` so the generated bundle itself is exercised, zip the `.app` with `ditto`, generate SHA-256 using `shasum -a 256`, and upload the zip plus checksum. Pin released major versions of GitHub actions; do not use floating branch names.
+
+Do not run Infrastructure tests in the phase 1 macOS job. Infrastructure
+currently contains Windows DPAPI, `kernel32` file-handle operations, and
+Win32-specific lock-contention semantics. The full Windows solution remains the
+mandatory regression gate for Infrastructure in phase 1. Port and test those
+adapters on macOS in the later full-parity phases before wiring them into the
+Avalonia application.
 
 - [ ] **Step 4: Document first launch and smoke checks**
 
@@ -637,7 +649,7 @@ Push the implementation branch, manually run `macos-arm64.yml`, and require a gr
 
 - [ ] **Step 5: Run the real-device smoke matrix**
 
-On an M1 or later Mac running macOS 11 or later:
+On an M1 or later Mac running macOS 14 or later:
 
 1. Verify the checksum.
 2. Extract the application.

@@ -1,4 +1,0 @@
-interface:
-  display_name: "WPF AI-native Shell"
-  short_description: "Hanabe WPF 桌面壳层、首页布局与视觉质检专用规范"
-  default_prompt: "Use $wpf-ai-native-shell to refine Hanabe Photo Manager's WPF App Shell and run visual QA."

@@ -17,3 +17,11 @@ artifacts/
 # Local-only semantic-search model exports
 src/HanabePhotoManager.App/Models/ChineseCLIP/
 *.onnx.data
+
+# AI / Agent 配置文件（不随应用发布）
+.ai/
+.codex/
+.hermes-guide/
+AGENTS.md
+CLAUDE.md
+.cursorrules

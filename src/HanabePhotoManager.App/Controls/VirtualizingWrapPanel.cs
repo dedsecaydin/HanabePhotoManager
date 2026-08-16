@@ -42,6 +42,7 @@ public interface IWallSectionHeader
 public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
     private const double ScrollLineAmount = 16d;
+    private const int RealizationBufferRows = 12;
 
     private Size _extent = new();
     private Size _viewport = new();
@@ -545,9 +546,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var viewportWidth = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0
             ? Math.Max(1d, ItemWidth)
             : availableSize.Width;
-        var viewportHeight = double.IsInfinity(availableSize.Height) || availableSize.Height <= 0
-            ? Math.Max(1d, _scrollOwner?.ViewportHeight ?? ItemHeight)
-            : availableSize.Height;
+        var viewportHeight = ResolveViewportHeight(availableSize);
         var viewport = new Size(viewportWidth, viewportHeight);
         if (viewport != _viewport)
         {
@@ -561,9 +560,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var viewportWidth = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0
             ? Math.Max(1d, ItemWidth)
             : availableSize.Width;
-        var viewportHeight = double.IsInfinity(availableSize.Height) || availableSize.Height <= 0
-            ? Math.Max(1d, ItemHeight)
-            : availableSize.Height;
+        var viewportHeight = ResolveViewportHeight(availableSize);
 
         if (itemCount == 0)
         {
@@ -578,6 +575,25 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         return new Size(viewportWidth, Math.Max(totalHeight, viewportHeight));
+    }
+
+    private double ResolveViewportHeight(Size availableSize)
+    {
+        if (!double.IsInfinity(availableSize.Height) && availableSize.Height > 0)
+        {
+            return availableSize.Height;
+        }
+
+        var scrollViewport = _scrollOwner?.ViewportHeight ?? 0;
+        var ownerHeight = _scrollOwner?.ActualHeight ?? 0;
+        var liveViewport = Math.Max(
+            double.IsFinite(scrollViewport) ? scrollViewport : 0,
+            double.IsFinite(ownerHeight) ? ownerHeight : 0);
+
+        // ViewportHeight can retain the pre-maximize value for one layout pass.
+        // ActualHeight is already current, so using the larger value prevents the
+        // virtualizer from leaving the enlarged gallery surface mostly blank.
+        return liveViewport > 0 ? liveViewport : Math.Max(1d, ItemHeight);
     }
 
     private void GetVisibleRange(out int firstVisibleItemIndex, out int lastVisibleItemIndex)
@@ -629,8 +645,10 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             y += h;
         }
 
-        // Realize one extra row below.
-        lastRow = Math.Min(_rows.Count - 1, lastRow + 1);
+        // Keep enough rows realized for a maximized/high-DPI window. WPF can report
+        // the pre-resize ScrollViewer viewport during the same layout pass; a single
+        // overscan row then leaves most of the newly enlarged surface blank.
+        lastRow = Math.Min(_rows.Count - 1, lastRow + RealizationBufferRows);
 
         firstVisibleItemIndex = _rows[firstRow].StartIndex;
         lastVisibleItemIndex = Math.Min(itemCount - 1, _rows[lastRow].StartIndex + _rows[lastRow].Count - 1);

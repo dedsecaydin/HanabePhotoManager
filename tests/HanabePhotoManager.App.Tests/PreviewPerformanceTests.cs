@@ -245,7 +245,8 @@ public sealed class PreviewPerformanceTests
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 2)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 3)).IsAvailable.Should().BeFalse();
         viewModel.PeopleAlbums.SelectedAlbum = null;
-        viewModel.VisiblePreviewSections.Should().OnlyContain(section => section.IsExpanded);
+        viewModel.VisiblePreviewSections[0].IsExpanded.Should().BeTrue();
+        viewModel.VisiblePreviewSections[1].IsExpanded.Should().BeFalse();
     }
 
     [Fact]
@@ -267,6 +268,12 @@ public sealed class PreviewPerformanceTests
         viewModel.PreviewWallItems.OfType<PreviewDateSectionViewModel>()
             .Select(section => section.Title)
             .Should().Contain(["8月 · 08.15", "8月 · 08.14"]);
+
+        viewModel.VisiblePreviewSections[0].ToggleCommand.Execute(null);
+
+        viewModel.VisiblePreviewSections[0].IsExpanded.Should().BeFalse();
+        viewModel.PreviewWallItems.Should().HaveCount(3);
+        viewModel.PreviewWallItems.Should().NotContain(viewModel.VisiblePreviewSections[0].Items[0]);
     }
 
     [Fact]
@@ -337,19 +344,31 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
-    public void PreviewWall_UsesNaturalNonCollapsibleFolderFlow()
+    public void PreviewWall_UsesNaturalCollapsibleFolderFlow()
     {
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
         xaml.Should().Contain("HeaderHeight=\"64\"");
-        xaml.Should().NotContain("Command=\"{Binding ToggleCommand}\"");
-        xaml.Should().NotContain("Text=\"{Binding ToggleGlyph}\"");
+        xaml.Should().Contain("Command=\"{Binding ToggleCommand}\"");
+        xaml.Should().Contain("Text=\"{Binding ToggleGlyph}\"");
         xaml.Should().Contain("DataType=\"{x:Type vm:PreviewDateSectionViewModel}\"");
         xaml.Should().NotContain("<Expander IsExpanded=\"{Binding IsExpanded");
         xaml.Should().NotContain("Content=\"上一批\"");
         xaml.Should().NotContain("Content=\"下一批\"");
+    }
+
+    [Fact]
+    public void GalleryViewport_UsesTheOwningScrollViewerHeightWhenMeasuredWithInfinity()
+    {
+        var root = FindSourceRoot();
+        var source = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "Controls", "VirtualizingWrapPanel.cs"));
+
+        source.Should().Contain("ResolveViewportHeight");
+        source.Should().Contain("_scrollOwner?.ActualHeight");
+        source.Should().Contain("RealizationBufferRows = 12");
     }
 
     [Fact]

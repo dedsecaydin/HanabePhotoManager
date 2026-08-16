@@ -1648,12 +1648,13 @@
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.Resources>
                           <DataTemplate DataType="{x:Type vm:PreviewDateSectionViewModel}">
-                            <Border Height="64" Padding="8,6" Background="Transparent">
+                            <Button Height="64" Style="{StaticResource PreviewDateHeaderButton}" Command="{Binding ToggleCommand}" ToolTip="{Binding ToggleLabel}">
                               <Grid>
                                 <Grid.ColumnDefinitions>
                                   <ColumnDefinition Width="40" />
                                   <ColumnDefinition Width="*" />
                                   <ColumnDefinition Width="Auto" />
+                                  <ColumnDefinition Width="32" />
                                 </Grid.ColumnDefinitions>
                                 <Border Width="32" Height="32" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Default}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
                                   <TextBlock Text="日" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Body}" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -1666,8 +1667,9 @@
                                   <Run Text="{Binding Count, Mode=OneWay}" />
                                   <Run Text=" 张照片" />
                                 </TextBlock>
+                                <TextBlock Grid.Column="3" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="Light" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ToggleGlyph}" />
                               </Grid>
-                            </Border>
+                            </Button>
                           </DataTemplate>
                           <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
                             <Grid Tag="PreviewCard" Margin="0,0,12,12" Cursor="Hand" Loaded="PreviewWallTile_Loaded" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">

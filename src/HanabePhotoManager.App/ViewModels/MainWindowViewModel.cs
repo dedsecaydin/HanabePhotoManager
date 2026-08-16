@@ -4833,7 +4833,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 first.Key,
                 title,
                 group.ToArray(),
-                true,
+                _personFilterOwnsExpansion || _previewDateExpansion.GetValueOrDefault(first.Key, true),
+                OnPreviewDateSectionExpansionChanged,
                 showHeader: true));
         }
 
@@ -4857,6 +4858,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (section.ShowHeader)
             {
                 PreviewWallItems.Add(section);
+            }
+
+            if (!section.IsExpanded)
+            {
+                continue;
             }
 
             foreach (var item in section.Items)

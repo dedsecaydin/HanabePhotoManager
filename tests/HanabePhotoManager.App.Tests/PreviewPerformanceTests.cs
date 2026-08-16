@@ -26,6 +26,25 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
+    public void PreviewWall_HidesVideoPosterJpegButKeepsItsVideo()
+    {
+        var viewModel = new MainWindowViewModel();
+        var video = new PreviewFileViewModel("JK0001.mp4", "视频", @"C:\photos\08.15\视频\JK0001.mp4", "1 MB", "MP4", null);
+        var poster = new PreviewFileViewModel("JK0001.jpg", "JPG生图", @"C:\photos\08.15\JPG生图\JK0001.jpg", "100 KB", "JPG", null);
+        var photo = new PreviewFileViewModel("JK0002.jpg", "JPG生图", @"C:\photos\08.15\JPG生图\JK0002.jpg", "100 KB", "JPG", null);
+        viewModel.PreviewFiles.Add(video);
+        viewModel.PreviewFiles.Add(poster);
+        viewModel.PreviewFiles.Add(photo);
+
+        viewModel.CurrentPreviewCategory = "视频";
+        viewModel.CurrentPreviewCategory = "全部";
+
+        viewModel.PreviewWallItems.Should().Contain(video);
+        viewModel.PreviewWallItems.Should().Contain(photo);
+        viewModel.PreviewWallItems.Should().NotContain(poster);
+    }
+
+    [Fact]
     public void SemanticRanking_IntersectsExistingFilteredItemsAndKeepsClipOrder()
     {
         var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
@@ -357,6 +376,9 @@ public sealed class PreviewPerformanceTests
         xaml.Should().NotContain("<Expander IsExpanded=\"{Binding IsExpanded");
         xaml.Should().NotContain("Content=\"上一批\"");
         xaml.Should().NotContain("Content=\"下一批\"");
+        xaml.Should().Contain("x:Key=\"PreviewWallItemContainer\"");
+        xaml.Should().Contain("Style=\"{StaticResource PreviewWallItemContainer}\"");
+        xaml.Should().NotContain("<Setter Property=\"Margin\" Value=\"0,0,0,10\" />");
     }
 
     [Fact]
@@ -519,14 +541,14 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
-    public void PreviewCard_PhotoBleedsToOuterEdgesAndUsesOnlyTopCornerMask()
+    public void PreviewCard_ClipsPhotoInsideItsRoundedOutline()
     {
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("Tag=\"PreviewCard\"");
+        xaml.Should().Contain("Tag=\"PreviewCard\" Margin=\"0,0,12,12\" ClipToBounds=\"True\"");
         xaml.Should().Contain("Name=\"ThumbnailClip\"");
-        xaml.Should().Contain("CornerRadius=\"12\" ClipToBounds=\"True\"");
+        xaml.Should().Contain("Margin=\"1\" CornerRadius=\"11\" ClipToBounds=\"True\"");
         xaml.Should().Contain("ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\"");
         xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }

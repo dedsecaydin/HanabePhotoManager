@@ -4806,8 +4806,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _skipPreviewExpansionCaptureOnce = false;
 
         VisiblePreviewSections.Clear();
+        var videoKeys = PreviewFiles
+            .Where(file => VideoExtensions.Contains($".{file.Extension.TrimStart('.')}"))
+            .Select(CreateDateStemKey)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var galleryFiles = _filteredCache
             .Where(file => !string.Equals(file.Extension.TrimStart('.'), "xml", StringComparison.OrdinalIgnoreCase))
+            .Where(file => !IsVideoPosterJpeg(file, videoKeys))
             .ToArray();
         var xmlSidecars = PreviewFiles
             .Where(file => string.Equals(file.Extension.TrimStart('.'), "xml", StringComparison.OrdinalIgnoreCase))
@@ -4839,6 +4844,21 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         RebuildExpandedPreviewFiles();
+    }
+
+    private static bool IsVideoPosterJpeg(PreviewFileViewModel file, IReadOnlySet<string> videoKeys)
+    {
+        var extension = $".{file.Extension.TrimStart('.')}";
+        return (extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)) &&
+               videoKeys.Contains(CreateDateStemKey(file));
+    }
+
+    private static string CreateDateStemKey(PreviewFileViewModel file)
+    {
+        var categoryDirectory = Path.GetDirectoryName(file.FullPath) ?? string.Empty;
+        var dateDirectory = Directory.GetParent(categoryDirectory)?.FullName ?? categoryDirectory;
+        return Path.Combine(dateDirectory, Path.GetFileNameWithoutExtension(file.FullPath));
     }
 
     /// <summary>
@@ -5568,8 +5588,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return null;
         }
 
+        // Prefer the camera-generated JPEG with the same date/stem as a video's
+        // poster. It stays hidden as a standalone gallery item but remains the
+        // video's fast, high-quality visual preview.
+        if (VideoExtensions.Contains(extension))
+        {
+            var videoPoster = TryFindVideoPosterJpeg(path);
+            if (videoPoster is not null)
+            {
+                var posterThumbnail = TryLoadWpfThumbnail(videoPoster, decodeWidth);
+                if (posterThumbnail is not null)
+                {
+                    if (cacheKey is not null) CacheThumbnail(cacheKey, posterThumbnail);
+                    return posterThumbnail;
+                }
+            }
+        }
+
         // Videos have no decodable first frame via WPF/WIC, so the Shell is the
-        // only source. allowExtraction lets the Shell seek into the file and
+        // fallback source. allowExtraction lets the Shell seek into the file and
         // generate a real first-frame thumbnail instead of returning the generic
         // file-type icon (gray film placeholder). Runs on a background thread and
         // is cached in memory, so the seek cost is paid once per file.
@@ -5579,6 +5616,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
             CacheThumbnail(cacheKey, shellThumbnail);
         }
         return shellThumbnail;
+    }
+
+    private static string? TryFindVideoPosterJpeg(string videoPath)
+    {
+        var categoryDirectory = Path.GetDirectoryName(videoPath);
+        var dateDirectory = string.IsNullOrWhiteSpace(categoryDirectory)
+            ? null
+            : Directory.GetParent(categoryDirectory)?.FullName;
+        if (string.IsNullOrWhiteSpace(dateDirectory)) return null;
+
+        var stem = Path.GetFileNameWithoutExtension(videoPath);
+        foreach (var category in new[] { "JPG生图", "素材" })
+        foreach (var extension in new[] { ".JPG", ".jpg", ".JPEG", ".jpeg" })
+        {
+            var candidate = Path.Combine(dateDirectory, category, stem + extension);
+            if (File.Exists(candidate)) return candidate;
+        }
+
+        return null;
     }
 
     private static void CacheThumbnail(string key, ImageSource thumbnail)

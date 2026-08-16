@@ -391,15 +391,16 @@
       </Style>
       <Style x:Key="PreviewDateHeaderButton" TargetType="{x:Type Button}">
         <Setter Property="FrameworkElement.FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="0" />
-        <Setter Property="Margin" Value="0,0,0,10" />
+        <Setter Property="Margin" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type Button}">
-              <Border Name="DateSurface" CornerRadius="8" Padding="10,8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}">
+              <Border Name="DateSurface" CornerRadius="12" Padding="10,8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}">
                 <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
               </Border>
               <ControlTemplate.Triggers>
@@ -411,12 +412,15 @@
                 </Trigger>
                 <Trigger Property="UIElement.IsKeyboardFocused" Value="True">
                   <Setter TargetName="DateSurface" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" />
-                  <Setter TargetName="DateSurface" Property="BorderThickness" Value="2" />
                 </Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>
           </Setter.Value>
         </Setter>
+      </Style>
+      <Style x:Key="PreviewWallItemContainer" TargetType="{x:Type ContentPresenter}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
       </Style>
       <Style x:Key="PreviewItemContainer" TargetType="{x:Type ContentPresenter}">
         <Setter Property="UIElement.Opacity" Value="0" />
@@ -1640,7 +1644,7 @@
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
                       <ScrollViewer Grid.Row="1" Name="PreviewPhotoScrollViewer" CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
-                      <ItemsControl x:Name="PreviewWallItemsControl" ItemsSource="{Binding PreviewWallItems}" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                      <ItemsControl x:Name="PreviewWallItemsControl" ItemsSource="{Binding PreviewWallItems}" ItemContainerStyle="{StaticResource PreviewWallItemContainer}" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
                             <controls:VirtualizingWrapPanel ItemWidth="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" ItemHeight="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" HeaderHeight="64" />
@@ -1672,7 +1676,7 @@
                             </Button>
                           </DataTemplate>
                           <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
-                            <Grid Tag="PreviewCard" Margin="0,0,12,12" Cursor="Hand" Loaded="PreviewWallTile_Loaded" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
+                            <Grid Tag="PreviewCard" Margin="0,0,12,12" ClipToBounds="True" Cursor="Hand" Loaded="PreviewWallTile_Loaded" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
                                           <FrameworkElement.ContextMenu>
                                             <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="{StaticResource Typography.Body}">
                                               <MenuItem Style="{DynamicResource Menu.Item}" Click="PreviewContextMenu_Open">
@@ -1769,7 +1773,7 @@
                                               </Style>
                                             </Border.Style>
                                             <Grid>
-                                              <Border Name="ThumbnailClip" Margin="0" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+                                              <Border Name="ThumbnailClip" Margin="1" CornerRadius="11" ClipToBounds="True" Background="{DynamicResource Brush.Surface.ContainerHigh}">
                                                 <Grid>
                                                   <Grid Visibility="{Binding HasNoThumbnail, Converter={StaticResource BoolToVis}}">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">

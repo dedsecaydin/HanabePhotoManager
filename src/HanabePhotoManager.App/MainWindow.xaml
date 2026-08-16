@@ -492,6 +492,7 @@
       </Style>
       </ResourceDictionary>
   </FrameworkElement.Resources>
+  <AdornerDecorator>
   <Grid Style="{StaticResource Layout.Shell}">
     <Image Opacity="0.92" Source="{Binding EffectiveBackgroundImage}" Stretch="{Binding BackgroundImageStretch}" HorizontalAlignment="{Binding BackgroundImageHorizontalAlignment}" VerticalAlignment="{Binding BackgroundImageVerticalAlignment}" Visibility="{Binding HasEffectiveBackground, Converter={StaticResource BoolToVis}}" />
     <Rectangle Fill="{DynamicResource Brush.Background.Canvas}" Opacity="{Binding BackgroundOverlayOpacity}" />
@@ -515,7 +516,7 @@
               <StackPanel>
                 <Border Width="32" Height="32" CornerRadius="16" Background="Transparent" HorizontalAlignment="Center">
                   <Viewbox Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Path Data="{StaticResource Icon.Theme}" Stroke="{DynamicResource Brush.OnSurfaceVariant}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+                    <Path x:Name="ThemeToggleIcon" Data="{StaticResource Icon.Theme.Moon}" Stroke="{DynamicResource Brush.OnSurfaceVariant}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                   </Viewbox>
                 </Border>
                 <TextBlock x:Name="ThemeToggleLabel" Text="深色" FontSize="{StaticResource Typography.Caption}" FontWeight="Medium" HorizontalAlignment="Center" Margin="0,4,0,0" Foreground="{DynamicResource Brush.OnSurfaceVariant}" />
@@ -2586,4 +2587,5 @@
       </Border>
     </Grid>
   </Grid>
+  </AdornerDecorator>
 </Window>

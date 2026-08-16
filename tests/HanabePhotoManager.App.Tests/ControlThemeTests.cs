@@ -169,11 +169,35 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("AutomationProperties.Name=\"设置\"");
         mainXaml.Should().NotContain("Text=\"Hanabe Photos\"");
         mainXaml.Should().Contain("Stretch=\"Uniform\"");
-        mainXaml.Should().Contain("Data=\"{StaticResource Icon.Theme}\"");
+        mainXaml.Should().Contain("x:Name=\"ThemeToggleIcon\"");
+        mainXaml.Should().Contain("Data=\"{StaticResource Icon.Theme.Moon}\"");
         mainXaml.Should().Contain("Data=\"{StaticResource Icon.Settings}\"");
         mainXaml.Should().Contain("x:Name=\"ThemeToggleLabel\"");
         mainXaml.Should().Contain("x:Name=\"ThemeToggleButton\"");
         mainXaml.Should().Contain("Background=\"{DynamicResource Brush.PrimaryContainer}\"");
+
+        var iconsXaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Tokens", "Icons.xaml"));
+        iconsXaml.Should().Contain("x:Key=\"Icon.Theme.Moon\"");
+        iconsXaml.Should().Contain("x:Key=\"Icon.Theme.Sun\"");
+    }
+
+    [Fact]
+    public void ThemeSwitching_UsesClickedElementAsRevealOriginForSettingsAndSidebar()
+    {
+        var sourceRoot = FindSourceRoot();
+        var settingsCode = File.ReadAllText(Path.Combine(
+            sourceRoot, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml.cs"));
+        var mainCode = File.ReadAllText(Path.Combine(
+            sourceRoot, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+        var transitionCode = File.ReadAllText(Path.Combine(
+            sourceRoot, "src", "HanabePhotoManager.App", "Services", "ThemeTransitionService.cs"));
+
+        settingsCode.Should().Contain("ThemeTransitionService.Apply(window, source,");
+        mainCode.Should().Contain("ThemeTransitionService.Apply(this, ThemeToggleButton,");
+        transitionCode.Should().Contain("FrameworkElement sourceElement");
+        transitionCode.Should().Contain("sourceElement.TranslatePoint");
+        transitionCode.Should().NotContain("Apply(Window window, WpfPoint origin");
     }
 
     [Fact]

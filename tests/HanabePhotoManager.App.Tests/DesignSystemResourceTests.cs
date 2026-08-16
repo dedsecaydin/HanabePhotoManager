@@ -41,13 +41,13 @@ public sealed class DesignSystemResourceTests
     [Fact]
     public void App_LoadsTheLightThemeEntryPoint()
     {
-        Read("App.xaml").Should().Contain("Themes/Themes/Dynamic.Light.xaml");
+        Read("App.xaml").Should().Contain("Themes/Themes/Violet.Light.xaml");
     }
 
     [Fact]
     public void AllSixThemes_ExposeTheSameColorAndBrushKeys()
     {
-        var schemes = new[] { "Dynamic", "Forest", "Violet" };
+        var schemes = new[] { "Dynamic", "Forest", "Violet", "Classic" };
         var modes = new[] { "Light", "Dark" };
         var colorFiles = schemes.SelectMany(s => modes.Select(m => (s, m)))
             .Select(p => Read("Themes", "Colors", $"Colors.{p.s}.{p.m}.xaml")).ToArray();

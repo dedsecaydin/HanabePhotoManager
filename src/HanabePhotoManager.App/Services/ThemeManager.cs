@@ -6,15 +6,15 @@ namespace HanabePhotoManager.App.Services;
 public enum AppTheme { Light, Dark }
 
 /// <summary>
-/// 三套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰）。与 <see cref="AppTheme"/> 明暗维度组合成 6 套主题。
+/// 四套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰 / 经典中性）。与 <see cref="AppTheme"/> 明暗维度组合成 8 套主题。
 /// </summary>
-public enum AppColorScheme { Dynamic, Forest, Violet }
+public enum AppColorScheme { Dynamic, Forest, Violet, Classic }
 
 public static class ThemeManager
 {
     private static readonly string PreferencePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HanabePhotoManager", "ui-theme.txt");
     public static AppTheme Current { get; private set; } = AppTheme.Light;
-    public static AppColorScheme CurrentScheme { get; private set; } = AppColorScheme.Dynamic;
+    public static AppColorScheme CurrentScheme { get; private set; } = AppColorScheme.Violet;
     public static event EventHandler<AppTheme>? ThemeChanged;
     public static AppTheme ParsePreference(string? value) => string.Equals(value?.Trim(), "dark", StringComparison.OrdinalIgnoreCase) ? AppTheme.Dark : AppTheme.Light;
 
@@ -22,7 +22,8 @@ public static class ThemeManager
     {
         "forest" => AppColorScheme.Forest,
         "violet" => AppColorScheme.Violet,
-        _ => AppColorScheme.Dynamic,
+        "classic" => AppColorScheme.Classic,
+        _ => AppColorScheme.Violet,
     };
 
     public static void LoadAndApply()
@@ -67,10 +68,10 @@ public static class ThemeManager
     private static (AppTheme Theme, AppColorScheme Scheme) ParseCombinedPreference(string? value)
     {
         var trimmed = value?.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return (AppTheme.Light, AppColorScheme.Dynamic);
+        if (string.IsNullOrEmpty(trimmed)) return (AppTheme.Light, AppColorScheme.Violet);
         var parts = trimmed.Split('.');
         return parts.Length == 2
             ? (ParsePreference(parts[1]), ParseSchemePreference(parts[0]))
-            : (ParsePreference(trimmed), AppColorScheme.Dynamic);
+            : (ParsePreference(trimmed), AppColorScheme.Violet);
     }
 }

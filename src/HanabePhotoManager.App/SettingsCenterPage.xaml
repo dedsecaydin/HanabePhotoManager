@@ -116,13 +116,11 @@
 
           <Grid Margin="0,12,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="主题 · 6 套" Style="{StaticResource Settings.GroupHeader}" />
+            <TextBlock Grid.Column="0" Text="主题 · 8 套" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="10" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+            <UniformGrid Columns="4">
 
               <Button x:Name="ThemeCardDynamicLight" Grid.Row="0" Grid.Column="0" Tag="Dynamic.Light" Click="ThemeCard_Click" Style="{StaticResource ThemeCard}">
                 <Grid>
@@ -130,7 +128,7 @@
                     <StackPanel Orientation="Horizontal">
                       <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Tertiary}" Margin="4,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="经典黑白" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="动态色彩" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     <TextBlock Text="浅色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckDynamicLight" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
@@ -144,7 +142,7 @@
                     <StackPanel Orientation="Horizontal">
                       <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Tertiary}" Margin="4,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="经典黑白" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="动态色彩" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     <TextBlock Text="深色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckDynamicDark" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
@@ -208,7 +206,35 @@
                   </Border>
                 </Grid>
               </Button>
-            </Grid>
+              <Button x:Name="ThemeCardClassicLight" Tag="Classic.Light" Click="ThemeCard_Click" Style="{StaticResource ThemeCard}">
+                <Grid>
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Light.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Light.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Light.Tertiary}" Margin="4,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="白色" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="经典浅色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
+                  </StackPanel>
+                  <Border x:Name="ThemeCheckClassicLight" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+                    <TextBlock Text="✓" Foreground="{DynamicResource Brush.OnPrimary}" FontSize="{StaticResource Typography.Caption}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                </Grid>
+              </Button>
+              <Button x:Name="ThemeCardClassicDark" Tag="Classic.Dark" Click="ThemeCard_Click" Style="{StaticResource ThemeCard}">
+                <Grid>
+                  <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                      <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Dark.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Dark.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Classic.Dark.Tertiary}" Margin="4,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="黑色" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="经典深色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
+                  </StackPanel>
+                  <Border x:Name="ThemeCheckClassicDark" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
+                    <TextBlock Text="✓" Foreground="{DynamicResource Brush.OnPrimary}" FontSize="{StaticResource Typography.Caption}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                  </Border>
+                </Grid>
+              </Button>
+            </UniformGrid>
           </Border>
 
           <Grid Margin="0,20,0,8">

@@ -339,6 +339,7 @@ public partial class MainWindow : Window
         };
         _importTipTimer.Tick += ImportTipTimer_Tick;
         InitializeComponent();
+        UpdateThemeToggleAppearance(ThemeManager.Current);
         DataContext = _viewModel;
         Loaded += MainWindow_Loaded;
         Activated += (_, _) => _viewModel.RefreshWindowsWallpaper();
@@ -359,8 +360,16 @@ public partial class MainWindow : Window
 
     private void OnThemeChanged(object? sender, AppTheme theme)
     {
+        UpdateThemeToggleAppearance(theme);
         ApplyTitleBarTheme();
         ApplyWindowMaterial(); // 重新按主题色调应用亚克力（深色/浅色渐变不同）
+    }
+
+    private void UpdateThemeToggleAppearance(AppTheme theme)
+    {
+        ThemeToggleLabel.Text = theme == AppTheme.Light ? "深色" : "浅色";
+        ThemeToggleIcon.Data = (Geometry)FindResource(
+            theme == AppTheme.Light ? "Icon.Theme.Moon" : "Icon.Theme.Sun");
     }
 
     private void ImportTipTimer_Tick(object? sender, EventArgs e)
@@ -567,8 +576,7 @@ public partial class MainWindow : Window
 
     private void ToggleTheme_Click(object sender, RoutedEventArgs e)
     {
-        ThemeManager.Toggle();
-        ThemeToggleLabel.Text = ThemeManager.Current == AppTheme.Light ? "深色" : "浅色";
+        ThemeTransitionService.Apply(this, ThemeToggleButton, ThemeManager.Toggle);
     }
 
     private void MainWindowViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

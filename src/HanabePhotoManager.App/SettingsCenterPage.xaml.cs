@@ -43,10 +43,19 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         {
             "Forest" => AppColorScheme.Forest,
             "Violet" => AppColorScheme.Violet,
+            "Classic" => AppColorScheme.Classic,
             _ => AppColorScheme.Dynamic,
         };
         var theme = parts.Length > 1 && parts[1] == "Dark" ? AppTheme.Dark : AppTheme.Light;
-        ThemeManager.Apply(theme, scheme);
+        var window = Window.GetWindow(this);
+        if (window is not null && sender is FrameworkElement source)
+        {
+            ThemeTransitionService.Apply(window, source, () => ThemeManager.Apply(theme, scheme));
+        }
+        else
+        {
+            ThemeManager.Apply(theme, scheme);
+        }
         UpdateThemeIndicators();
     }
 
@@ -59,7 +68,6 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         GeneralSection.Visibility = key == "general" ? Visibility.Visible : Visibility.Collapsed;
         LibrarySection.Visibility = key == "library" ? Visibility.Visible : Visibility.Collapsed;
         BrowseSection.Visibility = key == "browse" ? Visibility.Visible : Visibility.Collapsed;
-        CloudSection.Visibility = key == "cloud" ? Visibility.Visible : Visibility.Collapsed;
         AdvancedSection.Visibility = key == "advanced" ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -76,6 +84,8 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         ApplyThemeCard(ThemeCardForestDark, ThemeCheckForestDark, primary, outlineVariant);
         ApplyThemeCard(ThemeCardVioletLight, ThemeCheckVioletLight, primary, outlineVariant);
         ApplyThemeCard(ThemeCardVioletDark, ThemeCheckVioletDark, primary, outlineVariant);
+        ApplyThemeCard(ThemeCardClassicLight, ThemeCheckClassicLight, primary, outlineVariant);
+        ApplyThemeCard(ThemeCardClassicDark, ThemeCheckClassicDark, primary, outlineVariant);
     }
 
     private void ApplyThemeCard(System.Windows.Controls.Button card, FrameworkElement check, System.Windows.Media.Brush primary, System.Windows.Media.Brush outlineVariant)
@@ -91,6 +101,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
     {
         AppColorScheme.Forest => "森林绿",
         AppColorScheme.Violet => "紫罗兰",
+        AppColorScheme.Classic => "经典",
         _ => "动态色彩",
     };
 

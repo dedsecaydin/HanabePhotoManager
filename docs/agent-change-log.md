@@ -857,3 +857,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 修复主题扩散动画混用窗口坐标与内容层坐标造成的圆心偏移；主题卡片与左侧明暗按钮均从实际点击控件中心向窗口四角扩散。
 - 左侧明暗按钮纳入同一动画入口，并根据目标操作在月亮与太阳图标、深色与浅色文字之间同步切换。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 406、InstallerShell 10，共 629 项测试通过；发布版已同步至 `D:\hanabe-publish-v2`，实机捕获动画中间帧并确认结束状态。
+- 后续复查发现 `DrawingBrush` 会按自身边界重映射圆形遮罩，视觉上形成斜切分屏；已改为内容坐标系原生 `CombinedGeometry Clip`，现在严格以点击点为圆心、半径连续扩大至覆盖窗口四角。

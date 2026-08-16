@@ -198,6 +198,8 @@ public sealed class ControlThemeTests
         transitionCode.Should().Contain("FrameworkElement sourceElement");
         transitionCode.Should().Contain("sourceElement.TranslatePoint");
         transitionCode.Should().NotContain("Apply(Window window, WpfPoint origin");
+        transitionCode.Should().Contain("Clip = outsideCircle");
+        transitionCode.Should().NotContain("OpacityMask = new DrawingBrush");
     }
 
     [Fact]

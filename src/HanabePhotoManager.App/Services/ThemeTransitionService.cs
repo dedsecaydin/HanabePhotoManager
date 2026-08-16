@@ -72,7 +72,7 @@ public static class ThemeTransitionService
             {
                 Source = snapshot,
                 Stretch = Stretch.Fill,
-                OpacityMask = new DrawingBrush(new GeometryDrawing(System.Windows.Media.Brushes.White, null, outsideCircle))
+                Clip = outsideCircle
             };
             AddVisualChild(snapshotImage);
         }

@@ -157,6 +157,8 @@ public sealed class MapPhotosViewModel : ObservableObject
                 .GroupBy(entry => Path.GetFullPath(entry.Path), StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(group => group.Key, group => group.Last(), StringComparer.OrdinalIgnoreCase);
             var changed = false;
+            var pendingCheckpoints = 0;
+            var cachedCount = 0;
             for (var index = 0; index < paths.Length; index++)
             {
                 var path = paths[index];
@@ -167,17 +169,50 @@ public sealed class MapPhotosViewModel : ObservableObject
                     lookup[path] = entry;
                     changed = true;
                 }
-                if (entry.ExifLocation is null)
+
+                var file = new FileInfo(path);
+                var length = file.Length;
+                var writeTicks = file.LastWriteTimeUtc.Ticks;
+                var unchanged = entry.MapExifScanned
+                    && entry.MapFileLength == length
+                    && entry.MapLastWriteTimeUtcTicks == writeTicks;
+                if (unchanged)
+                {
+                    cachedCount++;
+                    StatusText = $"正在恢复位置索引 {index + 1}/{paths.Length} · 已缓存 {cachedCount:N0}";
+                    continue;
+                }
+
+                // Legacy entries that already contain EXIF coordinates only need
+                // a file stamp; do not decode the same image again during migration.
+                if (!entry.MapExifScanned && entry.ExifLocation is not null)
+                {
+                    entry.MapExifScanned = true;
+                    entry.MapFileLength = length;
+                    entry.MapLastWriteTimeUtcTicks = writeTicks;
+                }
+                else
                 {
                     var coordinate = _exifReader.TryRead(path);
-                    if (coordinate is not null)
-                    {
-                        entry.ExifLocation = new PhotoLocation(
-                            coordinate.Latitude, coordinate.Longitude, PhotoLocationSource.Exif);
-                        changed = true;
-                    }
+                    entry.ExifLocation = coordinate is null
+                        ? null
+                        : new PhotoLocation(coordinate.Latitude, coordinate.Longitude, PhotoLocationSource.Exif);
+                    entry.MapExifScanned = true;
+                    entry.MapFileLength = length;
+                    entry.MapLastWriteTimeUtcTicks = writeTicks;
                 }
-                StatusText = $"正在读取 EXIF 位置 {index + 1}/{paths.Length}";
+                changed = true;
+                pendingCheckpoints++;
+                StatusText = $"正在读取 EXIF 位置 {index + 1}/{paths.Length} · 新扫描 {pendingCheckpoints:N0}";
+
+                // Persist progress incrementally so an interrupted large scan resumes
+                // near its last checkpoint instead of restarting from the beginning.
+                if (pendingCheckpoints >= 64)
+                {
+                    await _store.SaveAsync(snapshot).ConfigureAwait(true);
+                    pendingCheckpoints = 0;
+                    changed = false;
+                }
             }
             if (changed) await _store.SaveAsync(snapshot).ConfigureAwait(true);
             Rebuild(paths, snapshot);

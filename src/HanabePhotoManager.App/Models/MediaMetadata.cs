@@ -31,6 +31,12 @@ public sealed class MediaMetadataEntry
 
     public PhotoLocation? ExifLocation { get; set; }
 
+    public bool MapExifScanned { get; set; }
+
+    public long MapFileLength { get; set; }
+
+    public long MapLastWriteTimeUtcTicks { get; set; }
+
     public PhotoLocation? ManualLocation { get; set; }
 
     public string EffectiveCategory => !string.IsNullOrWhiteSpace(ManualCategory)

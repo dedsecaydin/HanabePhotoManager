@@ -30,6 +30,35 @@ public sealed class MapPhotosViewModelTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_SkipsUnchangedFilesThatWereAlreadyScannedWithoutGps()
+    {
+        var path = CreateFiles("no-gps.jpg").Single();
+        var reader = new CountingExifReader();
+        var viewModel = new MapPhotosViewModel(CreateStore(), () => [path], reader);
+
+        await viewModel.RefreshAsync();
+        await viewModel.RefreshAsync();
+
+        reader.Paths.Should().Equal(path);
+        viewModel.UnlocatedPhotos.Should().ContainSingle(item => item.Path == path);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_RescansAFileAfterItsContentChanges()
+    {
+        var path = CreateFiles("changed.jpg").Single();
+        var reader = new CountingExifReader();
+        var viewModel = new MapPhotosViewModel(CreateStore(), () => [path], reader);
+        await viewModel.RefreshAsync();
+
+        File.AppendAllText(path, "changed-content");
+        File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddSeconds(2));
+        await viewModel.RefreshAsync();
+
+        reader.Paths.Should().Equal(path, path);
+    }
+
+    [Fact]
     public async Task AssignAndClearSelected_UpdatesEffectiveSource()
     {
         var path = CreateFiles("none.jpg").Single();
@@ -154,5 +183,15 @@ public sealed class MapPhotosViewModelTests : IDisposable
     private sealed class StubExifReader : IExifLocationReader
     {
         public PhotoCoordinate? TryRead(string path) => null;
+    }
+
+    private sealed class CountingExifReader : IExifLocationReader
+    {
+        public List<string> Paths { get; } = [];
+        public PhotoCoordinate? TryRead(string path)
+        {
+            Paths.Add(path);
+            return null;
+        }
     }
 }

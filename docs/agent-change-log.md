@@ -864,3 +864,10 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 移除每次打开查看器时在 UI 线程对全部可见媒体逐项执行 `File.Exists` 的全库探测；当前文件仍在双击入口校验，查看器继续保留失效路径容错。
 - 约 1.5 万项图库发布版实测，双击输入返回并创建无边框查看器窗口约 239 ms，视频首帧与导航列表正常。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 407、InstallerShell 10，共 630 项测试通过；发布版已同步至 `D:\hanabe-publish-v2`。
+
+### 地图照片增量位置索引
+
+- 在现有 `media-metadata.json` 中为地图 EXIF 扫描增加文件大小、最后修改时间和完成标记；无 GPS 的照片也会记为已扫描。
+- 地图刷新时复用未变化文件的结果，仅对新增或已修改照片重新读取 EXIF；旧版已有 GPS 坐标的条目只补写文件签名，不重复解码。
+- 每完成 64 个新文件即保存扫描检查点，大图库扫描被中断后可从最近进度继续。
+- Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 409、InstallerShell 10，共 632 项测试通过。

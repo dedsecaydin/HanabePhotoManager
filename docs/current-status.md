@@ -2,7 +2,7 @@
 
 > **Purpose:** Real-time overview of what's done, what's partial, and what's planned.
 > **Last Updated:** 2026-08-16
-> **Current Version:** `0.3.2-alpha.10`（WPF 安装外壳与主题可读性修复）
+> **Current Version:** `0.3.2-alpha.11`（地图位置增量索引与扫描续接）
 > **Status Labels:** Stable / Implemented-Unverified / Partial / In Progress / Planned / Known Issue / Blocked
 
 ---
@@ -402,6 +402,7 @@ P1 门槛：发现并修复 1 个 P1——增量全库/日期扫描路径（`App
 | Item | Status |
 |------|--------|
 | MapPage WebView2 crash | Resolved |
+| Map EXIF incremental index | Stable | 已扫描文件按大小与最后修改时间持久化；未变化文件（包括无 GPS 文件）直接复用，每 64 个新结果保存检查点，中断后续接 |
 | Duplicate detection | Stable | SHA-256 exact matching after size prefilter; visual hash remains review-only; explicit import decision dialog |
 | Retouched output write protection | Stable | `<root>\<month>\<date>\修后` files remain scan-visible but are disabled in review, filtered before delete, and skipped by resequencing |
 | Cloud provider pages | Stable |

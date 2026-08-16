@@ -39,7 +39,7 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
             case "Compression": ShowTool(ImageToolMode.Compression); break;
             case "Collage": ShowTool(ImageToolMode.Collage); break;
             case "Watermark": ShowTool(ImageToolMode.Watermark); break;
-            case "WeChat": ShowTool(ImageToolMode.WeChatSend); break;
+            case "PixelArt": ShowTool(ImageToolMode.PixelArt); break;
         }
     }
 
@@ -93,10 +93,7 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
     {
         if (e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths || ViewModel is not { } viewModel)
             return;
-        if (viewModel.IsWeChatSendMode)
-            viewModel.WeChatSender.AddInputs(paths, true);
-        else
-            await AddInputsAsync(viewModel, paths, recursive: true);
+        await AddInputsAsync(viewModel, paths, recursive: true);
     }
 
     private static async Task AddInputsAsync(CompressionViewModel viewModel, IEnumerable<string> paths, bool recursive)

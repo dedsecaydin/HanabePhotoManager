@@ -39,6 +39,62 @@ public partial class CustomAlbumsPage : System.Windows.Controls.UserControl
         }
     }
 
+    private void AlbumMenu_Manage_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetAlbumFromContextMenu(sender) is { } item &&
+            DataContext is CustomAlbumsViewModel viewModel)
+        {
+            viewModel.SelectedAlbum = item;
+            _showingAlbumDetail = true;
+            ApplyAlbumViewState();
+        }
+    }
+
+    private void AlbumMenu_Rename_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetAlbumFromContextMenu(sender) is { } item &&
+            DataContext is CustomAlbumsViewModel viewModel)
+        {
+            viewModel.SelectedAlbum = item;
+            _showingAlbumDetail = true;
+            ApplyAlbumViewState();
+            AlbumRenameTextBox.Focus();
+            AlbumRenameTextBox.SelectAll();
+        }
+    }
+
+    private async void AlbumMenu_Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (GetAlbumFromContextMenu(sender) is not { } item ||
+            DataContext is not CustomAlbumsViewModel viewModel)
+        {
+            return;
+        }
+
+        var result = System.Windows.MessageBox.Show(
+            $"确定要从应用中移除“{item.DisplayName}”吗？\n\n仅移除引用，不会删除磁盘中的文件夹或照片。",
+            "移除相册",
+            System.Windows.MessageBoxButton.YesNo,
+            System.Windows.MessageBoxImage.Question);
+        if (result != System.Windows.MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        viewModel.SelectedAlbum = item;
+        await viewModel.RemoveSelectedCommand.ExecuteAsync(null);
+    }
+
+    private static CustomAlbumItemViewModel? GetAlbumFromContextMenu(object sender)
+    {
+        if (sender is not System.Windows.Controls.MenuItem { Parent: ContextMenu menu })
+        {
+            return null;
+        }
+
+        return (menu.PlacementTarget as FrameworkElement)?.DataContext as CustomAlbumItemViewModel;
+    }
+
     private void BackToAlbums_Click(object sender, RoutedEventArgs e)
     {
         _showingAlbumDetail = false;

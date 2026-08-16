@@ -1,5 +1,10 @@
 # Known Issues
 
+## 2026-08-14 UI 修复批次（B1/B5–B22）已知项
+
+- **日期分组标题「红色矩形框」（B17）**：已排查，全仓无硬编码红色（唯一 `Status.Danger` 仅用于关闭按钮/导入失败/看图器错误），日期分组头 XAML 无红元素；判定为日期头被 `VirtualizingWrapPanel HeaderHeight=56` 裁切的渲染残留，随 B19 把 `HeaderHeight` 提到 64 一并消除。若真人验收仍见红色框，需截图定位。
+- **云盘（网盘）功能已移除（B12）**：一级菜单「网盘」、CloudPage、CloudHubViewModel、百度/夸克 Provider、云传输队列/索引等全部删除；视频预览（LibVLCSharp）保留。设置页「云盘与项目」分区整块删除。相关测试同步删除（994→585 全绿）。
+
 ## 2026-08-08 KI-14 update: semantic panorama overview
 
 - **Status:** Fix Attempted; manual real-library visual QA remains required.

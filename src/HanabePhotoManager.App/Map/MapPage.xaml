@@ -10,7 +10,13 @@
       <Setter Property="Background" Value="{DynamicResource Brush.Surface.Container}"/>
     </Style>
   </UserControl.Resources>
-  <Grid Background="{DynamicResource Brush.Background.Canvas}">
+  <Border Style="{DynamicResource Layout.PagePanel}" Padding="16">
+    <DockPanel LastChildFill="True">
+      <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+        <TextBlock Style="{DynamicResource Layout.PageTitle}" Text="地图照片" />
+        <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。" />
+      </StackPanel>
+    <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*"/>
       <ColumnDefinition Width="16"/>
@@ -18,8 +24,7 @@
     </Grid.ColumnDefinitions>
 
     <!-- ═══════ 地图工作区 ═══════ -->
-    <Border Padding="0" ClipToBounds="True" CornerRadius="{StaticResource Radius.Container}"
-            Background="{DynamicResource Brush.Surface.ContainerLowest}">
+    <Border Padding="0" ClipToBounds="True" Background="Transparent">
       <Grid>
         <wv2:WebView2 x:Name="MapWebView"/>
         <Border x:Name="MapStatusPanel" Style="{DynamicResource Status.Panel}"
@@ -36,7 +41,7 @@
           </StackPanel>
         </Border>
         <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Padding="12,8"
-                CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerLow}"
+                CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLow}"
                 IsHitTestVisible="False">
           <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}"
                      Text="选择聚合点浏览照片，或在地图上选取手动位置。"/>
@@ -54,7 +59,7 @@
         <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
-      <Border Style="{DynamicResource Inspector.Panel}">
+      <Border Style="{DynamicResource Layout.Section}">
         <StackPanel>
           <DockPanel>
             <TextBlock Text="地图照片" Style="{DynamicResource Inspector.Header}"/>
@@ -207,5 +212,7 @@
         </Grid>
       </Grid>
     </Grid>
-  </Grid>
+    </Grid>
+    </DockPanel>
+  </Border>
 </UserControl>

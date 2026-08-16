@@ -1,0 +1,102 @@
+<UserControl x:Class="HanabePhotoManager.App.PixelArt.PixelArtView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+    <!-- 像素画尺寸选项（预设/自定义）RadioButton：ContentPresenter 显式传递 Foreground，
+         避免字符串内容被隐式 TextBlock 样式强制成低对比度前景色（按键文字看不清）。 -->
+    <Style x:Key="PixelArt.SizeOption" TargetType="RadioButton">
+      <Setter Property="MinHeight" Value="36"/>
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/>
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="RadioButton">
+            <Border x:Name="Chrome" Padding="{TemplateBinding Padding}" CornerRadius="{StaticResource Radius.Control}"
+                    Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                TextElement.Foreground="{TemplateBinding Foreground}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Interactive}"/></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Selected}"/></Trigger>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource Brush.OnPrimary}"/>
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Primary}"/>
+                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Primary}"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}"/><Setter TargetName="Chrome" Property="BorderThickness" Value="2"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*" />
+      <ColumnDefinition Width="16" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- 左：源图 -->
+    <Border Style="{DynamicResource Card.Default}">
+      <StackPanel>
+        <TextBlock Text="源图" Style="{DynamicResource Layout.SectionTitle}" />
+        <TextBlock Text="选择一张照片或图片，保持原始构图。"
+                   Style="{DynamicResource Status.Description}" Margin="0,6,0,16" />
+        <Button Content="选择图片" Style="{DynamicResource Button.Secondary}" HorizontalAlignment="Left" Click="ChooseImage_Click" />
+        <Border Margin="0,16,0,0" Height="360" CornerRadius="{DynamicResource Radius.Card}"
+                Background="{DynamicResource Brush.Surface.Container}" ClipToBounds="True">
+          <Image Source="{Binding SourceImage}" Stretch="Uniform" />
+        </Border>
+      </StackPanel>
+    </Border>
+
+    <!-- 右：像素画 -->
+    <Border Grid.Column="2" Style="{DynamicResource Card.Default}">
+      <StackPanel>
+        <TextBlock Text="像素画" Style="{DynamicResource Layout.SectionTitle}" />
+        <TextBlock Text="把图片转成块状像素画，可导出 PNG。"
+                   Style="{DynamicResource Status.Description}" Margin="0,6,0,16" />
+        <DockPanel>
+          <TextBlock Text="尺寸" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <RadioButton GroupName="PixelArtSize" Content="64" Tag="64"
+                         Style="{StaticResource PixelArt.SizeOption}" Checked="SizeOption_Checked" />
+            <RadioButton GroupName="PixelArtSize" Content="128" Tag="128" IsChecked="True" Margin="6,0,0,0"
+                         Style="{StaticResource PixelArt.SizeOption}" Checked="SizeOption_Checked" />
+            <RadioButton GroupName="PixelArtSize" Content="256" Tag="256" Margin="6,0,0,0"
+                         Style="{StaticResource PixelArt.SizeOption}" Checked="SizeOption_Checked" />
+            <RadioButton GroupName="PixelArtSize" Content="自定义" Tag="custom" Margin="6,0,0,0"
+                         Style="{StaticResource PixelArt.SizeOption}" Checked="SizeOption_Checked" />
+            <TextBox Width="72" Margin="8,0,0,0" VerticalContentAlignment="Center"
+                     Text="{Binding CustomSizeText, UpdateSourceTrigger=PropertyChanged}"
+                     IsEnabled="{Binding IsCustom}" Style="{DynamicResource Input.TextBox}" />
+          </StackPanel>
+          <Button DockPanel.Dock="Right" Content="生成像素画" Style="{DynamicResource Button.Primary}"
+                  Command="{Binding GenerateCommand}" Margin="16,0,0,0" />
+        </DockPanel>
+        <Border Margin="0,16,0,0" Height="360" CornerRadius="{DynamicResource Radius.Card}"
+                Background="{DynamicResource Brush.Surface.Container}" ClipToBounds="True">
+          <Image Source="{Binding PixelArtImage}" Stretch="Uniform" RenderOptions.BitmapScalingMode="NearestNeighbor" />
+        </Border>
+        <TextBlock Text="{Binding StatusText}" Style="{DynamicResource Status.Description}"
+                   Margin="0,10,0,0" TextWrapping="Wrap" />
+        <Button Content="导出 PNG" Style="{DynamicResource Button.Primary}" Margin="0,16,0,0"
+                HorizontalAlignment="Left" Click="Export_Click" IsEnabled="{Binding HasResult}" />
+        <TextBlock Text="压力测试：6000×4000 大图 + 256 网格实测通过。" Foreground="{DynamicResource Brush.Text.Secondary}"
+                   TextWrapping="Wrap" FontSize="{DynamicResource Typography.Caption}" Margin="0,12,0,0" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

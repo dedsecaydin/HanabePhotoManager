@@ -29,7 +29,8 @@ public sealed class LibraryContentScanner
     public async Task<Dictionary<long, List<string>>> BuildSizeMapAsync(
         string libraryRoot,
         IReadOnlySet<string> extensions,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<double>? progress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
@@ -38,10 +39,11 @@ public sealed class LibraryContentScanner
         if (!Directory.Exists(libraryRoot))
             return sizeMap;
 
-        var files = EnumerateLibraryFiles(libraryRoot, extensions);
-        foreach (var path in files)
+        var files = EnumerateLibraryFiles(libraryRoot, extensions).ToArray();
+        for (var index = 0; index < files.Length; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var path = files[index];
             long size;
             try { size = new FileInfo(path).Length; }
             catch (FileNotFoundException) { continue; }
@@ -53,6 +55,9 @@ public sealed class LibraryContentScanner
                 sizeMap[size] = list;
             }
             list.Add(path);
+
+            // 枚举阶段：0% → 40%
+            progress?.Report(files.Length == 0 ? 40d : index * 40d / files.Length);
         }
 
         return await Task.FromResult(sizeMap).ConfigureAwait(false);
@@ -115,17 +120,27 @@ public sealed class LibraryContentScanner
     public async Task<List<List<string>>> FindAllDuplicatesAsync(
         string libraryRoot,
         IReadOnlySet<string> extensions,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<double>? progress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
 
-        var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken)
+        var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken, progress)
             .ConfigureAwait(false);
 
         var duplicateGroups = new List<List<string>>();
         var processed = new HashSet<string>(OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
+
+        var hashTasks = sizeMap
+            .Where(pair => pair.Value.Count >= 2)
+            .SelectMany(pair => pair.Value)
+            .Distinct(OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
+            .ToArray();
+        var hashedIndex = 0;
+        var totalCandidates = Math.Max(1, hashTasks.Length);
 
         foreach (var (size, candidates) in sizeMap)
         {
@@ -150,6 +165,10 @@ public sealed class LibraryContentScanner
                 catch (FileNotFoundException) { continue; }
                 catch (IOException) { continue; }
 
+                hashedIndex++;
+                // 哈希比对阶段：40% → 100%
+                progress?.Report(40d + hashedIndex * 60d / totalCandidates);
+
                 if (!byHash.TryGetValue(hash, out var group))
                 {
                     group = new List<string>();
@@ -169,6 +188,7 @@ public sealed class LibraryContentScanner
             }
         }
 
+        progress?.Report(100d);
         return duplicateGroups;
     }
 
@@ -189,7 +209,8 @@ public sealed class LibraryContentScanner
         string libraryRoot,
         IReadOnlySet<string> extensions,
         IReadOnlyCollection<string>? excludePaths,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProgress<double>? progress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
@@ -210,9 +231,10 @@ public sealed class LibraryContentScanner
             return new List<List<string>>();
 
         var hashes = new List<(string Path, ulong Hash)>(paths.Count);
-        foreach (var path in paths)
+        for (var index = 0; index < paths.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            var path = paths[index];
             try
             {
                 hashes.Add((path, ComputeAverageHash(path)));
@@ -224,6 +246,9 @@ public sealed class LibraryContentScanner
             catch (NotSupportedException) { }
             catch (InvalidImageContentException) { }
             catch (ImageFormatException) { }
+
+            // 视觉指纹检测阶段：0% → 100%（VM 层会缩放到 80% → 100%）
+            progress?.Report(index * 100d / paths.Count);
 
             // Yield periodically so a large library scan stays responsive.
             if ((hashes.Count & 31) == 0)

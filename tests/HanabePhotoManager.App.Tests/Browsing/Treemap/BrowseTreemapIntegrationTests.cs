@@ -11,12 +11,12 @@ namespace HanabePhotoManager.App.Tests.Browsing.Treemap;
 public sealed class BrowseTreemapIntegrationTests
 {
     [Fact]
-    public void BrowsePage_KeepsGridAndAddsTreeMapSurface()
+    public void BrowsePage_UsesGridOnlyAndHidesTreeMapSurface()
     {
         var xaml = File.ReadAllText(ProjectFile("src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("xmlns:treemap=\"clr-namespace:HanabePhotoManager.App.Browsing.Treemap\"");
-        xaml.Should().Contain("x:Name=\"BrowseDisplayModeSelector\"");
+        xaml.Should().NotContain("x:Name=\"BrowseDisplayModeSelector\"");
         xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
         xaml.Should().Contain("<treemap:PhotoTreemapControl");
         xaml.Should().Contain("ItemsSource=\"{Binding TreemapBrowser.Items}\"");
@@ -24,7 +24,7 @@ public sealed class BrowseTreemapIntegrationTests
         xaml.Should().Contain("ZoomScale=\"{Binding TreemapZoom}\"");
         xaml.Should().Contain("Text=\"{Binding Label}\"");
         xaml.Should().Contain("Visibility=\"{Binding IsGridBrowseMode, Converter={StaticResource BoolToVis}}\"");
-        xaml.Should().Contain("Visibility=\"{Binding IsTreemapBrowseMode, Converter={StaticResource BoolToVis}}\"");
+        xaml.Should().NotContain("Visibility=\"{Binding IsTreemapBrowseMode");
     }
 
     [Fact]

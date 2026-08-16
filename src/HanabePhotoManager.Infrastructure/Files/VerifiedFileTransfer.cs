@@ -38,7 +38,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
 
             if (item.Files.Any(file => file.Conflict == ConflictKind.SameNameDifferentContent))
             {
-                return Failure("A destination file has the same name but different content.", verifiedFiles);
+                return Failure("目标位置已有同名但内容不同的文件。", verifiedFiles);
             }
 
             sourceLeases = OpenSourceLeases(item);
@@ -53,7 +53,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                     {
                         if (!File.Exists(file.DestinationPath))
                         {
-                            return Failure($"Destination file is missing: {file.DestinationPath}", verifiedFiles);
+                            return Failure($"目标文件不存在：{file.DestinationPath}", verifiedFiles);
                         }
 
                         var lease = sourceLeases.Single(lease => string.Equals(lease.Path, file.Source.FullPath, StringComparison.OrdinalIgnoreCase));
@@ -65,7 +65,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
 
                         if (!string.Equals(sourceHash, destinationHash, StringComparison.OrdinalIgnoreCase))
                         {
-                            return Failure($"Identical conflict changed before transfer: {file.DestinationPath}", verifiedFiles);
+                            return Failure($"重复检测后文件发生变化：{file.DestinationPath}", verifiedFiles);
                         }
 
                         verifiedFiles.Add(new VerifiedFileResult(file, sourceHash));
@@ -110,7 +110,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                         if (temporaryInfo.Length != file.Source.Length)
                         {
                             CleanupTemporaryFiles(copiedTemporaryFiles);
-                            return Failure($"Temporary file length mismatch: {file.TemporaryPath}", verifiedFiles);
+                            return Failure($"临时文件大小不匹配：{file.TemporaryPath}", verifiedFiles);
                         }
 
                         lease.Stream.Position = 0;
@@ -122,7 +122,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                         if (!string.Equals(sourceHash, temporaryHash, StringComparison.OrdinalIgnoreCase))
                         {
                             CleanupTemporaryFiles(copiedTemporaryFiles);
-                            return Failure($"Temporary file hash mismatch: {file.TemporaryPath}", verifiedFiles);
+                            return Failure($"临时文件校验不一致：{file.TemporaryPath}", verifiedFiles);
                         }
 
                         verifiedFiles.Add(new VerifiedFileResult(file, sourceHash));
@@ -130,7 +130,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                     }
 
                     default:
-                        return Failure($"Unsupported conflict kind: {file.Conflict}", verifiedFiles);
+                        return Failure($"不支持的冲突类型：{file.Conflict}", verifiedFiles);
                 }
             }
 
@@ -139,7 +139,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 if (File.Exists(file.DestinationPath) || Directory.Exists(file.DestinationPath))
                 {
                     CleanupTemporaryFiles(copiedTemporaryFiles);
-                    return Failure($"Destination already exists before publish: {file.DestinationPath}", verifiedFiles);
+                    return Failure($"发布前目标文件已存在：{file.DestinationPath}", verifiedFiles);
                 }
             }
 
@@ -198,7 +198,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
             !Path.IsPathFullyQualified(file.DestinationPath) ||
             !Path.IsPathFullyQualified(file.TemporaryPath))
         {
-            throw new ArgumentException("Transfer paths must be fully qualified.", nameof(file));
+            throw new ArgumentException("传输路径必须是完整路径。", nameof(file));
         }
 
         if (!string.Equals(
@@ -206,7 +206,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 Path.GetFullPath(file.DestinationPath + ".hanabe-part"),
                 StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("TemporaryPath must be DestinationPath plus .hanabe-part.", nameof(file));
+            throw new ArgumentException("临时路径格式不正确。", nameof(file));
         }
     }
 
@@ -223,7 +223,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
             var currentHash = await ComputeSha256Async(lease.Stream, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(currentHash, result.Sha256, StringComparison.OrdinalIgnoreCase))
             {
-                throw new IOException($"Source file changed after verification: {source.FullPath}");
+                throw new IOException($"校验后源文件发生变化：{source.FullPath}");
             }
         }
     }
@@ -282,7 +282,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
             IntPtr.Zero);
         if (handle.IsInvalid)
         {
-            throw new IOException($"Unable to open source lease. Win32 error {Marshal.GetLastWin32Error()}.");
+            throw new IOException($"无法打开源文件（Win32 错误 {Marshal.GetLastWin32Error()}）。");
         }
 
         return new FileStream(handle, FileAccess.Read, bufferSize: 1024 * 64, isAsync: false);
@@ -300,7 +300,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                     ref disposition,
                     (uint)Marshal.SizeOf<FileDispositionInformation>()))
             {
-                throw new IOException($"Unable to delete source by handle. Win32 error {Marshal.GetLastWin32Error()}.");
+                throw new IOException($"无法删除源文件（Win32 错误 {Marshal.GetLastWin32Error()}）。");
             }
         }
     }
@@ -309,7 +309,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
     {
         if (!GetFileInformationByHandle(handle, out var information))
         {
-            throw new IOException($"Unable to inspect file identity. Win32 error {Marshal.GetLastWin32Error()}.");
+            throw new IOException($"无法读取文件信息（Win32 错误 {Marshal.GetLastWin32Error()}）。");
         }
 
         return new SourceFileIdentity(

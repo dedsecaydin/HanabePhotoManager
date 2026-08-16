@@ -1,4 +1,4 @@
-﻿namespace HanabePhotoManager.Core.Imports;
+namespace HanabePhotoManager.Core.Imports;
 
 public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
 {
@@ -19,14 +19,15 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         LibraryDate date,
         TransferMode mode,
         IEnumerable<MediaGroup> groups,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? namingTemplate = null)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(groups);
 
         if (string.IsNullOrWhiteSpace(root))
         {
-            throw new ArgumentException("Library root cannot be null or whitespace.", nameof(root));
+            throw new ArgumentException("照片库根目录不能为空。", nameof(root));
         }
 
         var inputGroups = groups.ToArray();
@@ -49,11 +50,11 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
 
             var categoryFolder = CategoryFolders[group.Category];
             var plannedFiles = new List<PlannedFile>();
-            var sequenceName = sequenceByGroup[group];
+            var sequence = sequenceByGroup[group];
             var extensionCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             foreach (var source in EnumerateGroupFiles(group))
             {
-                var destinationFileName = BuildRenamedFileName(sequenceName, source.FullPath, extensionCounts);
+                var destinationFileName = BuildRenamedFileName(namingTemplate, sequence, source.FullPath, date, extensionCounts);
                 var destination = Path.Combine(normalizedRoot, date.RelativePath, categoryFolder, destinationFileName);
                 var normalizedDestination = NormalizeDestinationIdentity(destination);
                 var conflict = plannedDestinations.Add(normalizedDestination)
@@ -84,21 +85,21 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         {
             if (group is null)
             {
-                throw new ArgumentException("Groups cannot contain a null MediaGroup.", parameterName);
+                throw new ArgumentException("媒体组不能包含空对象。", parameterName);
             }
 
             if (!CategoryFolders.ContainsKey(group.Category))
             {
                 throw new ArgumentException(
-                    $"Media group category '{group.Category}' is not a concrete import category.",
+                    $"媒体组类别 '{group.Category}' 不是具体的导入类别。",
                     parameterName);
             }
         }
     }
 
-    private static Dictionary<MediaGroup, string> BuildSequenceMap(string root, LibraryDate date, IReadOnlyList<MediaGroup> groups)
+    private static Dictionary<MediaGroup, int> BuildSequenceMap(string root, LibraryDate date, IReadOnlyList<MediaGroup> groups)
     {
-        var result = new Dictionary<MediaGroup, string>();
+        var result = new Dictionary<MediaGroup, int>();
         foreach (var categoryGroup in groups.GroupBy(group => group.Category))
         {
             var categoryFolder = CategoryFolders[categoryGroup.Key];
@@ -107,7 +108,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
                          .OrderBy(group => Path.GetFileNameWithoutExtension(group.Primary.FullPath), NaturalStringComparer.OrdinalIgnoreCase)
                          .ThenBy(group => group.Primary.FullPath, StringComparer.OrdinalIgnoreCase))
             {
-                result[group] = $"JK{next:0000}";
+                result[group] = next;
                 next++;
             }
         }
@@ -141,7 +142,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         return max + 1;
     }
 
-    private static string BuildRenamedFileName(string sequenceName, string sourcePath, IDictionary<string, int> extensionCounts)
+    private static string BuildRenamedFileName(string? namingTemplate, int sequence, string sourcePath, LibraryDate date, IDictionary<string, int> extensionCounts)
     {
         var extension = Path.GetExtension(sourcePath).ToUpperInvariant();
         if (string.IsNullOrWhiteSpace(extension))
@@ -149,11 +150,20 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
             extension = ".BIN";
         }
 
+        var originalStem = Path.GetFileNameWithoutExtension(sourcePath);
+        var baseName = ImportNamingFormatter.Format(namingTemplate, sequence, originalStem, date);
+
+        // {orig} 模式：每个文件保留原文件名，天然唯一，无需 _02 后缀。
+        if (ImportNamingFormatter.UsesOriginalName(namingTemplate))
+        {
+            return baseName + extension;
+        }
+
         var count = extensionCounts.TryGetValue(extension, out var current) ? current + 1 : 1;
         extensionCounts[extension] = count;
         return count == 1
-            ? sequenceName + extension
-            : $"{sequenceName}_{count:00}{extension}";
+            ? baseName + extension
+            : $"{baseName}_{count:00}{extension}";
     }
 
     private static string NormalizeDestinationIdentity(string destination)

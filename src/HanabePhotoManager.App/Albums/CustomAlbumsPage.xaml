@@ -49,7 +49,8 @@
     </Style>
   </UserControl.Resources>
 
-  <Grid>
+  <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
+    <Grid>
     <!-- ═══════════ 相册总览：卡片网格 ═══════════ -->
     <ScrollViewer x:Name="AlbumOverviewPanel" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="0,0,0,4">
@@ -58,7 +59,7 @@
             <TextBlock Text="自定义相册" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" />
             <TextBlock Text="添加的是应用内引用；移除相册不会删除磁盘中的文件夹或照片。" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.BodySmall}" Margin="0,3,0,0" />
           </StackPanel>
-          <Border DockPanel.Dock="Right" Padding="10,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHigh}" VerticalAlignment="Center">
+          <Border DockPanel.Dock="Right" Padding="10,3" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerHigh}" VerticalAlignment="Center">
             <TextBlock Text="{Binding Albums.Count, StringFormat={}{0} 个}" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" />
           </Border>
         </DockPanel>
@@ -70,11 +71,19 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type albums:CustomAlbumItemViewModel}">
               <Button Width="232" Margin="0,0,16,16" Style="{StaticResource AlbumCardButton}" Click="AlbumCard_Click" AutomationProperties.Name="打开相册">
+                <Button.ContextMenu>
+                  <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="{StaticResource Typography.Body}">
+                    <MenuItem Style="{DynamicResource Menu.Item}" Header="管理" Click="AlbumMenu_Manage_Click" />
+                    <MenuItem Style="{DynamicResource Menu.Item}" Header="重命名" Click="AlbumMenu_Rename_Click" />
+                    <Separator Style="{DynamicResource Separator.Menu}" />
+                    <MenuItem Style="{DynamicResource Menu.Item}" Foreground="{DynamicResource Brush.Status.Danger}" Header="删除" Click="AlbumMenu_Delete_Click" />
+                  </ContextMenu>
+                </Button.ContextMenu>
                 <StackPanel>
                   <Border Height="128" Style="{StaticResource AlbumCoverSurface}">
                     <Grid>
                       <Path Data="{StaticResource Icon.Album}" Stroke="{DynamicResource Brush.OnSurfaceVariant}" StrokeThickness="1.4" Width="38" Height="38" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
-                      <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.TertiaryContainer}">
+                      <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,3" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.TertiaryContainer}">
                         <Border.Style>
                           <Style TargetType="Border">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -98,7 +107,7 @@
         </ItemsControl>
 
         <!-- 空相册引导文案 -->
-        <Border Margin="0,36,0,8" Padding="32,28" CornerRadius="{StaticResource Radius.Container}"
+        <Border Margin="0,36,0,8" Padding="32,28"
                 HorizontalAlignment="Center" IsHitTestVisible="False">
           <Border.Style>
             <Style TargetType="Border">
@@ -160,7 +169,7 @@
         </Grid.RowDefinitions>
 
         <!-- 详情 hero -->
-        <Border Grid.Row="0" Margin="0,0,0,16" Padding="18,20" CornerRadius="{StaticResource Radius.Container}" Background="{DynamicResource Brush.Surface.ContainerLow}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+        <Border Grid.Row="0" Margin="0,0,0,16" Padding="18,20" Background="Transparent" BorderThickness="0">
           <StackPanel>
             <Button Style="{StaticResource Button.Ghost}" HorizontalAlignment="Left" Margin="0,0,0,12" Padding="12,7" Content="← 全部相册" Click="BackToAlbums_Click" AutomationProperties.Name="返回全部相册" />
             <Grid>
@@ -174,12 +183,12 @@
               </Border>
               <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="18,0,18,0">
                 <TextBlock Text="{Binding SelectedAlbum.DisplayName}" FontSize="{StaticResource Typography.Title}" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
-                <Border Padding="10,5" Margin="0,8,0,0" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHigh}" HorizontalAlignment="Left">
+                <Border Padding="10,5" Margin="0,8,0,0" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerHigh}" HorizontalAlignment="Left">
                   <TextBlock Text="{Binding SelectedAlbum.FolderPath}" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" TextTrimming="CharacterEllipsis" MaxWidth="520" ToolTip="{Binding SelectedAlbum.FolderPath}" />
                 </Border>
                 <DockPanel Margin="0,12,0,0" MaxWidth="460">
                   <Button DockPanel.Dock="Right" Content="重命名" Style="{StaticResource Button.Secondary}" Margin="8,0,0,0" Command="{Binding RenameSelectedCommand}" />
-                  <TextBox Text="{Binding EditableDisplayName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding HasSelectedAlbum}" AutomationProperties.Name="自定义相册显示名称" />
+                  <TextBox x:Name="AlbumRenameTextBox" Text="{Binding EditableDisplayName, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding HasSelectedAlbum}" AutomationProperties.Name="自定义相册显示名称" />
                 </DockPanel>
               </StackPanel>
               <StackPanel Grid.Column="2" VerticalAlignment="Center">
@@ -204,7 +213,7 @@
                 <RadioButton x:Name="AlbumViewListButton" Content="列表" GroupName="AlbumViewMode" Style="{StaticResource Navigation.SegmentItem}" Checked="AlbumViewMode_Checked" AutomationProperties.Name="列表视图" />
               </StackPanel>
             </Border>
-            <Border Padding="10,3" Margin="12,0,0,0" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHigh}" VerticalAlignment="Center">
+            <Border Padding="10,3" Margin="12,0,0,0" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerHigh}" VerticalAlignment="Center">
               <TextBlock Text="{Binding Photos.Count, StringFormat={}{0} 张}" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" />
             </Border>
           </DockPanel>
@@ -259,12 +268,11 @@
               </ItemsControl>
             </ScrollViewer>
 
-            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="40,28" CornerRadius="{StaticResource Radius.Container}">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" Padding="40,28">
               <Border.Style>
                 <Style TargetType="Border">
-                  <Setter Property="Background" Value="{DynamicResource Brush.Surface.ContainerLow}" />
-                  <Setter Property="BorderBrush" Value="{DynamicResource Brush.OutlineVariant}" />
-                  <Setter Property="BorderThickness" Value="1" />
+                  <Setter Property="Background" Value="Transparent" />
+                  <Setter Property="BorderThickness" Value="0" />
                   <Setter Property="Visibility" Value="Collapsed" />
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding HasPhotos}" Value="False">
@@ -280,10 +288,10 @@
       </Grid>
 
       <!-- Inspector：选中照片 EXIF -->
-      <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}">
+      <Border Grid.Column="2" Style="{StaticResource Layout.Section}">
         <Grid>
           <StackPanel x:Name="InspectorEmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24">
-            <Border Width="48" Height="48" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.Container}" HorizontalAlignment="Center">
+            <Border Width="48" Height="48" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Container}" HorizontalAlignment="Center">
               <Path Data="{StaticResource Icon.Album}" Stroke="{DynamicResource Brush.OnSurfaceVariant}" StrokeThickness="1.6" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
             </Border>
             <TextBlock Text="未选择照片" Style="{StaticResource Inspector.Header}" HorizontalAlignment="Center" Margin="0,14,0,0" />
@@ -323,4 +331,5 @@
       <Path Data="{StaticResource Icon.Plus}" Stroke="{DynamicResource Brush.OnPrimary}" StrokeThickness="2.2" Width="24" Height="24" Stretch="Uniform" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
     </Button>
   </Grid>
+  </Border>
 </UserControl>

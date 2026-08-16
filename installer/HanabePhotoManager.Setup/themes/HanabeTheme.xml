@@ -17,7 +17,7 @@
 
     <Window Width="620" Height="430" HexStyle="100a0000" FontId="0" Caption="#(loc.Caption)">
         <!-- 顶部品牌区（居中，所有页面共用） -->
-        <ImageControl X="270" Y="18" Width="80" Height="80" ImageFile="logo.png" Visible="yes" />
+        <Button X="270" Y="18" Width="80" Height="80" TabStop="no" ImageFile="app-logo-light-strip.png" Visible="yes" />
         <Label X="0" Y="104" Width="620" Height="28" FontId="1" Center="yes" DisablePrefix="yes">#(loc.Title)</Label>
         <Label X="0" Y="134" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.VersionText)</Label>
 
@@ -27,24 +27,15 @@
             <Label X="0" Y="194" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.WelcomeText)</Label>
             <Richedit Name="EulaRichedit" X="40" Y="220" Width="540" Height="118" TabStop="yes" FontId="0" HexStyle="800000" />
             <Checkbox Name="EulaAcceptCheckbox" X="40" Y="344" Width="540" Height="20" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.InstallAcceptCheckbox)</Checkbox>
-            <Button Name="InstallCancelButton" X="93" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="InstallCancelButton" X="93" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.InstallCancelButton)</Text>
                 <CloseWindowAction />
             </Button>
-            <Button Name="OptionsButton" X="225" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" VisibleCondition="NOT WixStdBASuppressOptionsUI">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="OptionsButton" X="225" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png" VisibleCondition="NOT WixStdBASuppressOptionsUI">
                 <Text>#(loc.InstallOptionsButton)</Text>
                 <ChangePageAction Page="Options" />
             </Button>
-            <Button Name="InstallButton" X="357" Y="374" Width="170" Height="44" TabStop="yes" FontId="4">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="InstallButton" X="357" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png">
                 <Text>#(loc.InstallInstallButton)</Text>
             </Button>
         </Page>
@@ -55,24 +46,15 @@
             <Label X="0" Y="196" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.OptionsSubText)</Label>
             <Label X="60" Y="252" Width="80" Height="20" FontId="0" DisablePrefix="yes">#(loc.OptionsLocationLabel)</Label>
             <Editbox Name="InstallFolder" X="150" Y="246" Width="300" Height="30" TabStop="yes" FontId="0" FileSystemAutoComplete="yes" />
-            <Button Name="BrowseButton" X="460" Y="239" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="BrowseButton" X="460" Y="239" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.OptionsBrowseButton)</Text>
                 <BrowseDirectoryAction VariableName="InstallFolder" />
             </Button>
-            <Button Name="OptionsCancelButton" X="159" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="OptionsCancelButton" X="159" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.OptionsCancelButton)</Text>
                 <ChangePageAction Page="Install" Cancel="yes" />
             </Button>
-            <Button Name="OptionsOkButton" X="281" Y="374" Width="170" Height="44" TabStop="yes" FontId="4">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="OptionsOkButton" X="281" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png">
                 <Text>#(loc.OptionsOkButton)</Text>
                 <ChangePageAction Page="Install" />
             </Button>
@@ -83,14 +65,9 @@
             <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.ProgressHeader)</Label>
             <Label X="0" Y="198" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.ProgressSubText)</Label>
             <Label Name="OverallProgressPackageText" X="60" Y="246" Width="500" Height="20" FontId="0" Center="yes" DisablePrefix="yes">#(loc.OverallProgressPackageText)</Label>
-            <Progressbar Name="OverallCalculatedProgressbar" X="60" Y="276" Width="500" Height="12">
-                <ProgressbarImage ImageFile="progressbar.png" />
-            </Progressbar>
+            <Progressbar Name="OverallCalculatedProgressbar" X="60" Y="276" Width="500" Height="12" />
             <Label Name="OverallProgressText" X="60" Y="294" Width="500" Height="18" FontId="3" Center="yes" DisablePrefix="yes" />
-            <Button Name="ProgressCancelButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="ProgressCancelButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.ProgressCancelButton)</Text>
             </Button>
         </Page>
@@ -99,22 +76,13 @@
         <Page Name="Modify">
             <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.ModifyHeader)</Label>
             <Label X="0" Y="198" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.ModifySubText)</Label>
-            <Button Name="UninstallButton" X="103" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="UninstallButton" X="103" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.ModifyUninstallButton)</Text>
             </Button>
-            <Button Name="RepairButton" X="225" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="RepairButton" X="225" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png" HideWhenDisabled="yes">
                 <Text>#(loc.ModifyRepairButton)</Text>
             </Button>
-            <Button Name="ModifyCancelButton" X="407" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="ModifyCancelButton" X="407" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.ModifyCancelButton)</Text>
                 <CloseWindowAction />
             </Button>
@@ -137,22 +105,13 @@
                 <Text>#(loc.SuccessRestartText)</Text>
                 <Text Condition="WixBundleAction = 3">#(loc.SuccessUninstallRestartText)</Text>
             </Label>
-            <Button Name="SuccessRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="SuccessRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png" HideWhenDisabled="yes">
                 <Text>#(loc.SuccessRestartButton)</Text>
             </Button>
-            <Button Name="LaunchButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="LaunchButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png" HideWhenDisabled="yes">
                 <Text>#(loc.SuccessLaunchButton)</Text>
             </Button>
-            <Button Name="SuccessCloseButton" X="164" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="SuccessCloseButton" X="164" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.SuccessCloseButton)</Text>
                 <CloseWindowAction />
             </Button>
@@ -174,16 +133,10 @@
             <Hypertext Name="FailureLogFileLink" X="60" Y="238" Width="500" Height="20" FontId="3" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureHyperlinkLogText)</Hypertext>
             <Hypertext Name="FailureMessageText" X="60" Y="266" Width="500" Height="60" FontId="3" TabStop="yes" HideWhenDisabled="yes" />
             <Label X="60" Y="326" Width="500" Height="34" FontId="3" Center="yes" DisablePrefix="yes" VisibleCondition="WixStdBARestartRequired">#(loc.FailureRestartText)</Label>
-            <Button Name="FailureRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
-                <ButtonImage ImageFile="button-primary.png" />
-                <ButtonHoverImage ImageFile="button-primary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+            <Button Name="FailureRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" ImageFile="button-primary-strip.png" HideWhenDisabled="yes">
                 <Text>#(loc.FailureRestartButton)</Text>
             </Button>
-            <Button Name="FailureCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="FailureCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.FailureCloseButton)</Text>
                 <CloseWindowAction />
             </Button>
@@ -193,10 +146,7 @@
         <Page Name="Help">
             <Label X="60" Y="168" Width="500" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.HelpHeader)</Label>
             <Label X="60" Y="200" Width="500" Height="-60" FontId="0" DisablePrefix="yes">#(loc.HelpText)</Label>
-            <Button Name="HelpCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
-                <ButtonImage ImageFile="button-secondary.png" />
-                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
-                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+            <Button Name="HelpCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" ImageFile="button-secondary-strip.png">
                 <Text>#(loc.HelpCloseButton)</Text>
                 <CloseWindowAction />
             </Button>

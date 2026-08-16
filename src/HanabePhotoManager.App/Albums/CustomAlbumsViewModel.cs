@@ -8,7 +8,7 @@ namespace HanabePhotoManager.App.Albums;
 
 public sealed partial class CustomAlbumsViewModel : ObservableObject
 {
-    private readonly ICustomAlbumStore _store;
+    private ICustomAlbumStore _store;
     private readonly CustomAlbumPhotoScanner _photoScanner;
 
     [ObservableProperty] private CustomAlbumItemViewModel? _selectedAlbum;
@@ -23,6 +23,34 @@ public sealed partial class CustomAlbumsViewModel : ObservableObject
         RenameSelectedCommand = new AsyncRelayCommand(RenameSelectedAsync, CanManageSelected);
         RemoveSelectedCommand = new AsyncRelayCommand(RemoveSelectedAsync, CanManageSelected);
         RefreshSelectedCommand = new AsyncRelayCommand(OpenSelectedAsync, CanManageSelected);
+    }
+
+    /// <summary>
+    /// 替换相册存储（设置里更改了保存目录后调用），并重新加载现有相册。
+    /// </summary>
+    public async Task ReplaceStoreAsync(ICustomAlbumStore newStore, CancellationToken cancellationToken = default)
+    {
+        _store = newStore ?? throw new ArgumentNullException(nameof(newStore));
+        Albums.Clear();
+        Photos.Clear();
+        SelectedAlbum = null;
+        IsLoading = true;
+        try
+        {
+            var albums = await _store.LoadAsync(cancellationToken).ConfigureAwait(true);
+            foreach (var album in albums)
+            {
+                Albums.Add(new CustomAlbumItemViewModel(album));
+            }
+
+            StatusMessage = Albums.Count == 0
+                ? "添加一个文件夹以开始浏览。"
+                : $"已加载 {Albums.Count} 个自定义相册。";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     public ObservableCollection<CustomAlbumItemViewModel> Albums { get; } = [];

@@ -9,14 +9,21 @@ public sealed partial class MediaClassifier
         StringComparer.OrdinalIgnoreCase);
 
     private readonly HashSet<string> _rawExtensions;
+    private readonly HashSet<string> _customVideoExtensions;
 
-    public MediaClassifier(IEnumerable<string> rawExtensions)
+    public MediaClassifier(IEnumerable<string> rawExtensions, IEnumerable<string>? videoExtensions = null)
     {
         ArgumentNullException.ThrowIfNull(rawExtensions);
 
         _rawExtensions = new HashSet<string>(
             rawExtensions.Select(NormalizeExtension),
             StringComparer.OrdinalIgnoreCase);
+
+        _customVideoExtensions = videoExtensions is null
+            ? new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(
+                videoExtensions.Select(NormalizeExtension),
+                StringComparer.OrdinalIgnoreCase);
     }
 
     public ImportCandidate Classify(SourceMediaFile file)
@@ -46,10 +53,7 @@ public sealed partial class MediaClassifier
             return Recognized(file, MediaCategory.Jpeg, "JPEG extension");
         }
 
-        if (extension.Equals(".MP4", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".MOV", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".MTS", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".M2TS", StringComparison.OrdinalIgnoreCase))
+        if (VideoContainerExtensions.Contains(extension) || _customVideoExtensions.Contains(extension))
         {
             return Recognized(file, MediaCategory.Video, "Video extension fallback");
         }
@@ -107,6 +111,12 @@ public sealed partial class MediaClassifier
 
         return normalized;
     }
+
+    private static readonly HashSet<string> VideoContainerExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".MP4", ".MOV", ".MTS", ".M2TS", ".MXF", ".AVI", ".MKV", ".WMV", ".M4V",
+        ".WEBM", ".TS", ".MPEG", ".MPG", ".3GP", ".FLV", ".OGV", ".M2T", ".MOD"
+    };
 
     [GeneratedRegex(@"^DJI_[0-9]{14}_[0-9]{4}_D\.MP4$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DjiActionVideoPattern();

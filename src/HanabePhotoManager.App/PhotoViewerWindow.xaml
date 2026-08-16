@@ -31,7 +31,7 @@
     <Style x:Key="Viewer.Toolbar" TargetType="Border">
       <Setter Property="Background" Value="{DynamicResource Brush.Viewer.Chrome}"/>
       <!-- 正常药丸形状（2026-08-14 用户反馈全圆头丑）：Radius.Container=28 ≈ 工具栏高度一半，
-           宽扁底栏上视觉协调；IconButton 仍是 Radius.Full 圆形按钮 -->
+           宽扁底栏上视觉协调；IconButton 仍是 Radius.Dialog 圆形按钮 -->
       <Setter Property="CornerRadius" Value="{StaticResource Radius.Container}"/>
       <Setter Property="Padding" Value="10,8"/>
       <Setter Property="Opacity" Value="0.62"/>
@@ -50,7 +50,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Chrome" CornerRadius="{StaticResource Radius.Full}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+            <Border x:Name="Chrome" CornerRadius="{StaticResource Radius.Dialog}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>

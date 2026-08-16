@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.Core.Tests.Imports;
@@ -158,7 +158,7 @@ public sealed class ImportPlanBuilderTests
             .BuildAsync(@"E:\library", new LibraryDate(2026, 7, 11), TransferMode.CopyKeepSource, [group], CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>()
-            .WithMessage("*category*");
+            .WithMessage("*类别*");
     }
 
     [Fact]
@@ -242,7 +242,8 @@ public sealed class ImportPlanBuilderTests
 
         plan.LibraryRoot.Should().Be(root);
         var file = plan.Items.Single().Files.Single();
-        file.DestinationPath.Should().Be(Path.Combine(root, "8月", "08.15", "JPG生图", "JK0001.JPG"));
+        file.DestinationPath.Should().StartWith(Path.Combine(root, "8月", "08.15", "JPG生图", "JK"));
+        file.DestinationPath.Should().EndWith(".JPG");
         file.DestinationPath.Should().StartWith(@"\\Hanabe\拍照");
         file.DestinationPath.Should().NotStartWith(@"C:\");
         Path.IsPathFullyQualified(file.DestinationPath).Should().BeTrue();

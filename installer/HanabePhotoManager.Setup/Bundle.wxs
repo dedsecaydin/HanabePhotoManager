@@ -6,9 +6,10 @@
     Name="Hanabe Photo Manager 安装程序"
     Manufacturer="Hanabe"
     Version="$(BundleVersion)"
+    IconSourceFile="..\..\src\HanabePhotoManager.App\Assets\HanabeApp.ico"
     UpgradeCode="{9C69A347-0E59-420B-812A-70A6304B5B35}">
 
-    <Variable Name="InstallFolder" Type="string" Value="[ProgramFiles64Folder]照片管理器" />
+    <Variable Name="InstallFolder" Type="string" Value="[ProgramFiles64Folder]照片管理器\" />
 
     <BootstrapperApplication>
       <bal:WixStandardBootstrapperApplication

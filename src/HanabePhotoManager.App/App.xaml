@@ -5,7 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes/Themes/Dynamic.Light.xaml" />
+                <ResourceDictionary Source="Themes/Themes/Violet.Light.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- ════════════════════════════════════════════
@@ -264,6 +264,34 @@
                 <Setter Property="FontFamily" Value="{StaticResource FontPrimary}" />
                 <Setter Property="FontSize"   Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight" Value="Medium" />
+                <Setter Property="Cursor" Value="Hand" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <StackPanel Orientation="Horizontal">
+                                <Grid Width="40" Height="22" VerticalAlignment="Center">
+                                    <Border x:Name="SwitchTrack" CornerRadius="11" Background="{DynamicResource Brush.Surface.ContainerHighest}" BorderBrush="{DynamicResource Brush.Outline}" BorderThickness="1" />
+                                    <Ellipse x:Name="SwitchThumb" Width="18" Height="18" Fill="{DynamicResource Brush.Surface.Default}" HorizontalAlignment="Left" Margin="1" />
+                                </Grid>
+                                <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
+                            </StackPanel>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource Brush.Primary}" />
+                                    <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource Brush.Primary}" />
+                                    <Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" />
+                                </Trigger>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}" />
+                                    <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}" />
+                                    <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource Brush.Border.Disabled}" />
+                                    <Setter TargetName="SwitchThumb" Property="Fill" Value="{DynamicResource Brush.Text.Disabled}" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
 
             <Style TargetType="TreeView">

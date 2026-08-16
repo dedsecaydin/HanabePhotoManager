@@ -36,27 +36,4 @@ public sealed class OnboardingViewModelTests
         viewModel.ShowStandardOnboardingNavigation.Should().BeTrue();
         viewModel.CurrentPage.Should().Be("Compression");
     }
-
-    [Fact]
-    public void CloudTourSteps_UseUnifiedPageAndSelectEachProvider()
-    {
-        var viewModel = new MainWindowViewModel();
-        viewModel.ReplayOnboardingCommand.Execute(null);
-
-        while (viewModel.OnboardingStep < 10)
-        {
-            if (viewModel.IsOnboardingContinuationChoiceStep)
-                viewModel.ContinueOnboardingCommand.Execute(null);
-            else
-                viewModel.NextOnboardingStepCommand.Execute(null);
-        }
-
-        viewModel.CurrentPage.Should().Be("Cloud");
-        viewModel.SelectedCloudProvider.Should().Be(CloudProviderChoice.Baidu);
-
-        viewModel.NextOnboardingStepCommand.Execute(null);
-
-        viewModel.CurrentPage.Should().Be("Cloud");
-        viewModel.SelectedCloudProvider.Should().Be(CloudProviderChoice.Quark);
-    }
 }

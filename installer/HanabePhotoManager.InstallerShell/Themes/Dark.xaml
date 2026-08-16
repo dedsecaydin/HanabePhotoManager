@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <SolidColorBrush x:Key="Brush.Window" Color="#FF111311" />
+    <SolidColorBrush x:Key="Brush.Surface" Color="#FF191C19" />
+    <SolidColorBrush x:Key="Brush.SurfaceMuted" Color="#FF222622" />
+    <SolidColorBrush x:Key="Brush.Text" Color="#FFF4F5F3" />
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="#FFC2C7C1" />
+    <SolidColorBrush x:Key="Brush.Border" Color="#FF3F4540" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="#FF9B78B1" />
+    <SolidColorBrush x:Key="Brush.AccentHover" Color="#FFB28CC9" />
+    <SolidColorBrush x:Key="Brush.OnAccent" Color="#FF151316" />
+    <BitmapImage x:Key="Image.AppLogo" UriSource="/Assets/HanabeAppLogo.png" />
+</ResourceDictionary>

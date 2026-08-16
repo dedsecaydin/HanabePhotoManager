@@ -43,6 +43,7 @@ public sealed class NavigationMotionTests
         xaml.Should().Contain("x:Name=\"PrimaryNavigationSelectionTransform\"");
         xaml.Should().NotContain("x:Name=\"NavSelectionSurface\"");
         xaml.Should().Contain("x:Name=\"NavIconSurface\"");
+        xaml.Should().Contain("Source=\"{DynamicResource Image.AppLogo}\"");
         xaml.Should().Contain("Motion.Duration.Normal");
         xaml.Should().Contain("KeyboardNavigation.DirectionalNavigation=\"Cycle\"");
         xaml.Should().Contain("KeyboardNavigation.TabNavigation=\"Once\"");

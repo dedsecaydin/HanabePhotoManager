@@ -16,4 +16,8 @@
     <BindPath Include="$(PayloadDir)" BindName="Payload" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+  </ItemGroup>
+
 </Project>

@@ -19,6 +19,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.Infrastr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.App.Tests", "tests\HanabePhotoManager.App.Tests\HanabePhotoManager.App.Tests.csproj", "{9421BE16-6C73-4C7B-B4A9-7238AE60E989}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.InstallerShell", "installer\HanabePhotoManager.InstallerShell\HanabePhotoManager.InstallerShell.csproj", "{4AF7B115-7B39-46A7-A857-7FC27009E63A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HanabePhotoManager.InstallerShell.Tests", "tests\HanabePhotoManager.InstallerShell.Tests\HanabePhotoManager.InstallerShell.Tests.csproj", "{519A86AE-2A83-45CE-9ED2-D9A02674A3BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -52,6 +56,14 @@ Global
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AF7B115-7B39-46A7-A857-7FC27009E63A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AF7B115-7B39-46A7-A857-7FC27009E63A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AF7B115-7B39-46A7-A857-7FC27009E63A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AF7B115-7B39-46A7-A857-7FC27009E63A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{519A86AE-2A83-45CE-9ED2-D9A02674A3BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{519A86AE-2A83-45CE-9ED2-D9A02674A3BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{519A86AE-2A83-45CE-9ED2-D9A02674A3BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{519A86AE-2A83-45CE-9ED2-D9A02674A3BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{3D863F74-E846-4E8E-975D-9CD8DBF82D1C} = {412C1305-5DCB-4838-BECC-E40B732E4A98}
@@ -60,5 +72,6 @@ Global
 		{C94684DA-4C0B-4FFD-AD50-0479CAB0929E} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 		{3E83B841-B169-4C4D-BB73-37B494A76560} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 		{9421BE16-6C73-4C7B-B4A9-7238AE60E989} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
+		{519A86AE-2A83-45CE-9ED2-D9A02674A3BD} = {DC2B2CE9-29D1-42F7-8606-7E86001F5E5B}
 	EndGlobalSection
 EndGlobal

@@ -3,7 +3,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:navigation="clr-namespace:HanabePhotoManager.App.Navigation"
     xmlns:services="clr-namespace:HanabePhotoManager.App.Services"
-    Loaded="SettingsCenterPage_Loaded">
+    Loaded="SettingsCenterPage_Loaded"
+    Foreground="{DynamicResource Brush.OnSurface}">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="Settings.GroupHeader" TargetType="TextBlock">
@@ -20,6 +21,7 @@
       <Setter Property="Padding" Value="16" />
     </Style>
     <Style x:Key="Settings.RowTitle" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}" />
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="FontSize" Value="{StaticResource Typography.Body}" />
     </Style>
@@ -128,7 +130,7 @@
                     <StackPanel Orientation="Horizontal">
                       <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Light.Tertiary}" Margin="4,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="动态色彩" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="经典黑白" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     <TextBlock Text="浅色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckDynamicLight" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">
@@ -142,7 +144,7 @@
                     <StackPanel Orientation="Horizontal">
                       <Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{StaticResource Brush.ThemeSwatch.Dynamic.Dark.Tertiary}" Margin="4,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="动态色彩" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="经典黑白" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     <TextBlock Text="深色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckDynamicDark" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed">

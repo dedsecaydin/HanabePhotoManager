@@ -505,7 +505,7 @@
           <StackPanel DockPanel.Dock="Top">
             <Border Width="48" Height="48" Margin="0,0,0,16" HorizontalAlignment="Center" CornerRadius="16" Background="{DynamicResource Brush.PrimaryContainer}" ClipToBounds="True" x:Name="SidebarLogoSurface" PreviewMouseLeftButtonDown="SidebarLogoSurface_PreviewMouseLeftButtonDown">
               <Grid>
-                <Image Stretch="UniformToFill" Source="pack://application:,,,/Assets/HanabeAppLogo.png" />
+                <Image Stretch="UniformToFill" Source="{DynamicResource Image.AppLogo}" />
                 <Image Stretch="UniformToFill" Source="{Binding AppIconImage}" Visibility="{Binding HasCustomAppIcon, Converter={StaticResource BoolToVis}}" />
               </Grid>
             </Border>
@@ -2476,7 +2476,7 @@
                           </LinearGradientBrush>
                         </Border.Background>
                         <Grid>
-                          <Image Stretch="UniformToFill" Source="pack://application:,,,/Assets/HanabeAppLogo.png" />
+                          <Image Stretch="UniformToFill" Source="{DynamicResource Image.AppLogo}" />
                           <Image Stretch="UniformToFill" Source="{Binding AppIconImage}" Visibility="{Binding HasCustomAppIcon, Converter={StaticResource BoolToVis}}" />
                         </Grid>
                       </Border>

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>..\..\src\HanabePhotoManager.App\Assets\HanabeApp.ico</ApplicationIcon>
+    <AssemblyName>HanabePhotoManager-Setup-x64</AssemblyName>
+    <RootNamespace>HanabePhotoManager.InstallerShell</RootNamespace>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="..\..\src\HanabePhotoManager.App\Assets\HanabeApp.ico" Link="Assets\HanabeApp.ico" />
+    <Resource Include="..\..\src\HanabePhotoManager.App\Assets\HanabeAppLogo.png" Link="Assets\HanabeAppLogo.png" />
+    <Resource Include="..\..\src\HanabePhotoManager.App\Assets\HanabeAppLogo.Light.png" Link="Assets\HanabeAppLogo.Light.png" />
+    <Resource Include="Assets\license.txt" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('$(InstallerMsiPath)')">
+    <EmbeddedResource Include="$(InstallerMsiPath)" LogicalName="EmbeddedInstaller.msi" />
+  </ItemGroup>
+</Project>

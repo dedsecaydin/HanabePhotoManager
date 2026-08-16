@@ -6,8 +6,8 @@ $repositoryRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\.."))
 $packageProjectPath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Installer\HanabePhotoManager.Installer.wixproj"
 $packageSourcePath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Installer\Package.wxs"
 $packageLocalizationPath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Installer\Package.zh-CN.wxl"
-$setupProjectPath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Setup\HanabePhotoManager.Setup.wixproj"
-$bundleSourcePath = Join-Path $repositoryRoot "installer\HanabePhotoManager.Setup\Bundle.wxs"
+$setupProjectPath = Join-Path $repositoryRoot "installer\HanabePhotoManager.InstallerShell\HanabePhotoManager.InstallerShell.csproj"
+$bundleSourcePath = Join-Path $repositoryRoot "installer\HanabePhotoManager.InstallerShell\MainWindow.xaml"
 $publishScriptPath = Join-Path $repositoryRoot "tools\Publish-Clean.ps1"
 $installedReleaseToolPath = Join-Path $repositoryRoot "tools\Test-InstalledRelease.ps1"
 $failures = [Collections.Generic.List[string]]::new()
@@ -91,24 +91,28 @@ Assert-Matches $packageLocalization 'Culture="zh-CN"' `
     "The package must include Simplified Chinese localization."
 Assert-Matches $packageLocalization 'String\s+Id="DowngradeErrorMessage"' `
     "The package must localize its downgrade prevention message."
-Assert-Matches $setupProject '<Project\s+Sdk="WixToolset\.Sdk/5\.[^"]+"' `
-    "Setup must use the SDK-style WiX 5 project."
-Assert-Matches $setupProject '<OutputType>Bundle</OutputType>' `
-    "Setup must build a Burn bundle."
-Assert-Matches $setupProject 'WixToolset\.BootstrapperApplications\.wixext' `
-    "Setup must restore the standard bootstrapper application through NuGet."
-Assert-Matches $bundleSource '<Bundle[^>]+Name="Hanabe Photo Manager 安装程序"' `
-    "The bundle must present a Chinese setup display name."
-Assert-Matches $bundleSource 'UpgradeCode="\{9C69A347-0E59-420B-812A-70A6304B5B35\}"' `
-    "The bundle must retain the stable Hanabe bundle upgrade identity."
-Assert-Matches $bundleSource '<MsiPackage[^>]+SourceFile="\$\(MsiPath\)"[^>]+Compressed="yes"' `
-    "The bundle must embed the MSI in its chain."
+Assert-Matches $setupProject '<UseWPF>true</UseWPF>' `
+    "Setup must use the custom WPF shell."
+Assert-Matches $setupProject '<PublishSingleFile>true</PublishSingleFile>' `
+    "Setup must publish as one distributable executable."
+Assert-Matches $setupProject '<SelfContained>true</SelfContained>' `
+    "Setup must not require a preinstalled desktop runtime."
+Assert-Matches $setupProject 'HanabeApp\.ico' `
+    "Setup must use the same icon as the application."
+Assert-Matches $setupProject 'LogicalName="EmbeddedInstaller\.msi"' `
+    "The WPF shell must embed the MSI payload."
+Assert-Matches $bundleSource 'ScrollChanged="LicenseScroll_ScrollChanged"' `
+    "The license page must enforce a real scroll-to-end gate."
+Assert-Matches $bundleSource 'CornerRadius="24"' `
+    "The installer shell must use the approved rounded window surface."
 Assert-Matches $publishScript 'HanabePhotoManager-Setup-x64\.exe' `
     "Publish-Clean must produce the deterministic Setup EXE name."
 Assert-Matches $publishScript 'HanabePhotoManager-Setup-x64\.exe\.sha256' `
     "Publish-Clean must produce a SHA-256 checksum beside Setup."
-Assert-Matches $publishScript 'HanabePhotoManager\.Setup\.wixproj' `
-    "Publish-Clean must orchestrate the Burn project."
+Assert-Matches $publishScript 'HanabePhotoManager\.InstallerShell\.csproj' `
+    "Publish-Clean must orchestrate the WPF installer shell."
+Assert-Matches $publishScript 'InstallerMsiPath=\$msiArtifact' `
+    "Publish-Clean must embed the freshly built MSI in the shell."
 Assert-Matches $installedReleaseTool '\[switch\]\$Execute' `
     "Installed release verification must default to a non-mutating dry run."
 Assert-Matches $installedReleaseTool '\$expectedInstalledExecutable\s*=\s*Join-Path\s+\$env:ProgramFiles\s+"Hanabe Photo Manager\\HanabePhotoManager\.App\.exe"' `

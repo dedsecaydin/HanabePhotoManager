@@ -28,7 +28,7 @@ $publish = Join-Path $releaseRoot "payload\win-x64"
 $manifestPath = Join-Path $releaseRoot "release-manifest.json"
 $project = Join-Path $root "src\HanabePhotoManager.App\HanabePhotoManager.App.csproj"
 $installerProject = Join-Path $root "installer\HanabePhotoManager.Installer\HanabePhotoManager.Installer.wixproj"
-$setupProject = Join-Path $root "installer\HanabePhotoManager.Setup\HanabePhotoManager.Setup.wixproj"
+$setupProject = Join-Path $root "installer\HanabePhotoManager.InstallerShell\HanabePhotoManager.InstallerShell.csproj"
 $msiBuildOutput = Join-Path $releaseRoot "installer-build"
 $setupBuildOutput = Join-Path $releaseRoot "setup-build"
 $msiArtifact = Join-Path $releaseRoot "HanabePhotoManager-x64.msi"
@@ -60,7 +60,7 @@ if (-not (Test-Path -LiteralPath $builtMsi -PathType Leaf)) {
 }
 Copy-Item -LiteralPath $builtMsi -Destination $msiArtifact -Force
 
-& dotnet build $setupProject -c Release "-p:BundleVersion=$Version" "-p:MsiPath=$msiArtifact" "-p:OutputPath=$setupBuildOutput\"
+& dotnet publish $setupProject -c Release -r win-x64 --self-contained true -o $setupBuildOutput "-p:Version=$Version" "-p:InstallerMsiPath=$msiArtifact" "-p:PublishSingleFile=true"
 if ($LASTEXITCODE -ne 0) { throw "Setup build failed: $LASTEXITCODE" }
 
 $builtSetup = Join-Path $setupBuildOutput "HanabePhotoManager-Setup-x64.exe"

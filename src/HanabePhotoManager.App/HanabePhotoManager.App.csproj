@@ -74,6 +74,7 @@
   <ItemGroup>
     <Resource Include="Assets\HanabeApp.ico" />
     <Resource Include="Assets\HanabeAppLogo.png" />
+    <Resource Include="Assets\HanabeAppLogo.Light.png" />
     <Resource Include="Assets\wechat-sponsor-qr.jpg" />
   </ItemGroup>
 

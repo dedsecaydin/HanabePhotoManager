@@ -1,9 +1,25 @@
-﻿# Current Status — Feature-by-Feature Implementation State
+# Current Status — Feature-by-Feature Implementation State
 
-> **Purpose:** Real-time overview of what's done, what's partial, and what's planned.  
-> **Last Updated:** 2026-08-14  
-> **Current Version:** `0.3.0-alpha`（2026-08-14 开源发布完成）  
+> **Purpose:** Real-time overview of what's done, what's partial, and what's planned.
+> **Last Updated:** 2026-08-16
+> **Current Version:** `0.3.2-alpha.10`（WPF 安装外壳与主题可读性修复）
 > **Status Labels:** Stable / Implemented-Unverified / Partial / In Progress / Planned / Known Issue / Blocked
+
+---
+
+## UI 修复批次 B1/B5–B22（2026-08-14）
+
+> 全应用 UI 修复收尾：大标题+内容合一容器、强调色统一紫色（默认切 Violet）、全局 checkbox→Switch、移除网盘、主页快速操作按使用排序、设备检测只留外部设备等 19 项。验证：Debug/Release build 0 警告 0 错误；`dotnet test` **585 全绿**（Core 159 / Infra 54 / App 372）；已覆盖安装待真人验收。
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| B1 大标题+内容合一容器 | Stable | TopBar 仅留窗口控制按钮；Home/Import/Preview/FaceSearch/Map 各页标题并入 `Layout.PagePanel` |
+| B6 强调色紫色 | Stable | 默认主题切 Violet（`#8B4AA6`），保留 6 套主题与「动态色彩=蓝」语义 |
+| B10/B16 全局 Switch | Stable | 隐式 CheckBox → 药丸胶囊轨道 + 圆形滑块；多选复选框同款 |
+| B12 移除网盘 | Stable | 云盘全链路删除，保留 LibVLCSharp 视频预览与投稿/欣赏项目 |
+| B20 快速操作排序 | Stable | 主页快速操作按最近使用排序（未使用不参与），持久化；图片小工具各工具分计 |
+| B22 设备检测 | Stable | 只检测外部设备（U盘/存储卡/相机/网络），不再列本机磁盘，显示设备类型 |
+| B5/B7/B8/B9/B11/B13/B14/B15/B17/B18/B19/B21 | Stable | 见 `docs/agent-change-log.md` 本批条目 |
 
 ---
 
@@ -356,6 +372,17 @@ P1 门槛：发现并修复 1 个 P1——增量全库/日期扫描路径（`App
 | 按钮可读性 | 稳定 | 主按钮强制前景色；禁用态使用语义颜色，不再整体淡化 |
 | 选择控件 | 稳定 | 单选框、复选框使用自定义 M3 模板，无原生灰色矩形残留 |
 | 六套主题 | 已复查 | 动态、森林、紫罗兰的浅色与深色均完成运行时切换检查 |
+
+## 2026-08-16 WPF 安装外壳与中性主题
+
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| WPF 安装外壳 | 稳定 | 自包含单文件外壳嵌入 MSI，实际启动通过 |
+| 分步安装 | 稳定 | 安装选项、使用须知、安装进度、完成四步 |
+| 须知阅读门禁 | 稳定 | 滚动到末尾后解锁同意框，勾选后解锁安装 |
+| 安装器主题 | 已复查 | 浅色、深色即时切换，统一应用图标和圆角视觉 |
+| 经典黑白主题 | 已实现 | 原 Dynamic 方案改为低饱和黑白灰浅色/深色主题 |
+| 深色文字可读性 | 已修复 | 设置页正文与行标题使用 OnSurface 语义前景色 |
 
 | Concern | Status | Notes |
 |---------|--------|-------|

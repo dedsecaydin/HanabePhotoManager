@@ -22,24 +22,6 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
-    public void CloudPage_AlwaysProvidesLoadingEmptyAndErrorFeedbackWithRetry()
-    {
-        var root = FindSourceRoot();
-        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Cloud", "CloudPage.xaml"));
-        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Cloud", "CloudPage.xaml.cs"));
-
-        xaml.Should().Contain("x:Name=\"CloudStatusPanel\"");
-        xaml.Should().Contain("x:Name=\"CloudStatusTitle\"");
-        xaml.Should().Contain("x:Name=\"CloudStatusDescription\"");
-        xaml.Should().Contain("x:Name=\"CloudRetryButton\"");
-        code.Should().Contain("NavigationCompleted");
-        code.Should().Contain("ShowLoadingState");
-        code.Should().Contain("ShowEmptyState");
-        code.Should().Contain("ShowErrorState");
-        code.Should().Contain("CloudRetry_Click");
-    }
-
-    [Fact]
     public void SharedTextAndButtonStyles_AreDpiSafeAndDisabledButtonsRemainReadable()
     {
         var root = FindSourceRoot();
@@ -167,7 +149,7 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        mainXaml.Should().Contain("<ColumnDefinition Width=\"100\" />");
+        mainXaml.Should().Contain("<ColumnDefinition Width=\"112\" />");
         mainXaml.Should().Contain("Style=\"{StaticResource Sidebar.Container}\"");
         mainXaml.Should().Contain("ItemsSource=\"{Binding NavigationItems}\"");
         mainXaml.Should().Contain("Style=\"{StaticResource Navigation.RailItem}\"");
@@ -232,7 +214,7 @@ public sealed class ControlThemeTests
 
         mapXaml.Should().Contain("Style=\"{DynamicResource Navigation.Segment}\"");
         mapXaml.Should().Contain("Style=\"{DynamicResource Navigation.SegmentItem}\"");
-        mapXaml.Should().Contain("Brush.Background.Canvas");
+        mapXaml.Should().Contain("Layout.PagePanel");
         mapXaml.Should().NotContain("MapModeTabItem");
     }
 
@@ -279,7 +261,7 @@ public sealed class ControlThemeTests
 
         mainXaml.Should().Contain("DataTrigger Binding=\"{Binding IsSettingsPage}\" Value=\"True\"");
         mainXaml.Should().Contain("Setter Property=\"Padding\" Value=\"0\"");
-        mainXaml.Should().Contain("Style=\"{StaticResource Layout.TopBar}\"");
+        mainXaml.Should().Contain("Style=\"{StaticResource Layout.PageTitle}\"");
         mainXaml.Should().Contain("Style=\"{StaticResource Layout.StatusBar}\"");
         layoutXaml.Should().Contain("x:Key=\"Layout.TopBar\"");
         layoutXaml.Should().Contain("Radius.Container");
@@ -397,8 +379,6 @@ public sealed class ControlThemeTests
             FindSourceRoot(), "src", "HanabePhotoManager.App", "Map", "MapPage.xaml"));
         var compression = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "Compression", "CompressionPage.xaml"));
-        var wechat = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "WeChat", "WeChatSenderView.xaml"));
         var albums = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "Albums", "CustomAlbumsPage.xaml"));
 
@@ -408,8 +388,6 @@ public sealed class ControlThemeTests
         map.Should().Contain("DataTrigger Binding=\"{Binding UnlocatedPhotos.Count}\" Value=\"0\"");
         compression.Should().Contain("DataTrigger Binding=\"{Binding Items.Count}\" Value=\"0\"");
         compression.Should().Contain("暂未添加压缩图片");
-        wechat.Should().Contain("DataTrigger Binding=\"{Binding Items.Count}\" Value=\"0\"");
-        wechat.Should().Contain("发送队列为空");
         albums.Should().Contain("DataTrigger Binding=\"{Binding Albums.Count}\" Value=\"0\"");
         albums.Should().Contain("还没有自定义相册");
     }

@@ -43,6 +43,23 @@ public sealed class DateOpenPipelineTests
         method.Should().NotContain("new FileInfo");
     }
 
+    [Fact]
+    public void AllDatesRefresh_InvalidatesPendingSingleDateBatchesFirst()
+    {
+        var source = File.ReadAllText(SourcePath(
+            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var start = source.IndexOf("private async Task RefreshLibraryAsync", StringComparison.Ordinal);
+        var end = source.IndexOf("private async Task SelectDateAsync", start, StringComparison.Ordinal);
+
+        start.Should().BeGreaterThanOrEqualTo(0);
+        end.Should().BeGreaterThan(start);
+        var method = source[start..end];
+        method.Should().Contain("_dateLoadCancellation?.Cancel()");
+        method.Should().Contain("++_dateLoadGeneration");
+        method.IndexOf("_dateLoadCancellation?.Cancel()", StringComparison.Ordinal)
+            .Should().BeLessThan(method.IndexOf("PreviewFiles.Clear()", StringComparison.Ordinal));
+    }
+
     private static string SourcePath(params string[] parts)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

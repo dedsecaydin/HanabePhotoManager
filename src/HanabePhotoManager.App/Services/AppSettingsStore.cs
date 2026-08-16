@@ -6,6 +6,13 @@ using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.App.Services;
 
+public enum GalleryGroupTitleMode
+{
+    ParsedDate,
+    FolderName,
+    ParsedDateAndFolderName
+}
+
 public sealed class AppSettingsStore
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -185,6 +192,18 @@ public sealed class AppSettings
 
     public string? LibraryRoot { get; set; }
 
+    /// <summary>自定义相册保存目录；为空时使用应用数据目录（默认）。</summary>
+    public string? CustomAlbumsDirectory { get; set; }
+
+    /// <summary>用户自定义的 RAW 格式后缀（不含点，如 R3D）。</summary>
+    public List<string> CustomRawExtensions { get; set; } = [];
+
+    /// <summary>用户自定义的视频格式后缀（不含点，如 BRAW）。</summary>
+    public List<string> CustomVideoExtensions { get; set; } = [];
+
+    /// <summary>导入文件命名模板（占位符 {seq}/{seq:N}/{orig}/{date}，默认 JK{seq}）。</summary>
+    public string ImportNamingTemplate { get; set; } = "JK{seq}";
+
     public double DefaultThumbnailSize { get; set; } = 150;
 
     public double ZoomableGridTileSize { get; set; } = 150;
@@ -272,25 +291,23 @@ public sealed class AppSettings
     public bool IsAdvancedFiltersExpanded { get; set; }
 
     /// <summary>
-    /// User-supplied Baidu Open Platform AppKey. The secret counterpart is stored
-    /// separately as <see cref="BaiduAppSecretProtected"/> (DPAPI-encrypted).
-    /// </summary>
-    public string? BaiduAppKey { get; set; }
-
-    /// <summary>
-    /// Base64-encoded DPAPI-encrypted Baidu AppSecret. Never store the raw secret.
-    /// </summary>
-    public string? BaiduAppSecretProtected { get; set; }
-
-    /// <summary>
-    /// Optional path to the user's local Quark netdisk client (or shortcut), so
-    /// the app can launch it on demand even though Quark has no public API.
-    /// </summary>
-    public string? QuarkClientPath { get; set; }
-
-    /// <summary>
     /// 导入时是否对来源文件做全库 SHA-256 哈希查重并弹窗确认。
     /// 默认关闭（导入更快、不做跨库去重）；开启后每次导入前检查重复并弹窗。
     /// </summary>
     public bool CheckDuplicatesOnImport { get; set; } = false;
+
+    /// <summary>
+    /// 照片图库筛选面板「功能说明」（字段标签）位置：Top（标签在上）或 Left（标签在左）。
+    /// </summary>
+    public string FeatureDescriptionPosition { get; set; } = "Top";
+
+    public GalleryGroupTitleMode GalleryGroupTitleMode { get; set; } = GalleryGroupTitleMode.ParsedDate;
+
+    /// <summary>
+    /// 主页快速操作/图片小工具各工具的使用记录（键 → 最近使用时间 UTC）。
+    /// 键为页面 Key（Import/Preview/CustomAlbums/FaceSearch/MapPhotos/Compression）
+    /// 或工具 Key（Compression:Compression / Compression:Collage / Compression:Watermark / Compression:PixelArt）。
+    /// 用于按「最近使用」排序快速操作。
+    /// </summary>
+    public Dictionary<string, DateTime> QuickActionUsage { get; set; } = [];
 }

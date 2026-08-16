@@ -14,6 +14,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Albums;
+using HanabePhotoManager.Core.Albums;
 using HanabePhotoManager.App.Collections;
 using HanabePhotoManager.App.Controls;
 using HanabePhotoManager.App.Duplicates;
@@ -24,6 +25,7 @@ using HanabePhotoManager.App.ReleaseNotes;
 using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.Search;
 using HanabePhotoManager.Core.Browsing.Treemap;
+using HanabePhotoManager.App.PixelArt;
 using HanabePhotoManager.App.Watermark;
 using HanabePhotoManager.Core.Imports;
 using HanabePhotoManager.Core.Performance;
@@ -34,12 +36,6 @@ using Microsoft.Win32;
 using WinForms = System.Windows.Forms;
 
 namespace HanabePhotoManager.App.ViewModels;
-
-public enum CloudProviderChoice
-{
-    Baidu,
-    Quark
-}
 
 public enum BrowseDisplayMode
 {
@@ -82,8 +78,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     ];
 
     private static readonly HashSet<string> ContentScanExtensions = new(
-        [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
-         ".mp4", ".mov"],
+        [".arw", ".cr2", ".cr3", ".nef", ".raf", ".rw2", ".orf", ".dng", ".raw",
+         ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
+         ".mp4", ".mov", ".mxf", ".mts", ".m2ts", ".avi", ".mkv", ".wmv", ".m4v", ".webm"],
         StringComparer.OrdinalIgnoreCase);
 
     private static readonly IReadOnlyList<string> DefaultNavigationOrder =
@@ -94,8 +91,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "CustomAlbums",
         "FaceSearch",
         "MapPhotos",
-        "Compression",
-        "Cloud"
+        "Compression"
     ];
 
     private static readonly HashSet<string> WpfImageExtensions = new(
@@ -109,7 +105,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // Video containers: their "thumbnail" is the first frame, which the Shell
     // must extract from the file (it is never present in the thumbnail cache).
     private static readonly HashSet<string> VideoExtensions = new(
-        [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v"],
+        [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mxf", ".mts", ".m2ts", ".ts",
+         ".webm", ".mpeg", ".mpg", ".3gp", ".flv", ".ogv", ".m2t", ".mod"],
         StringComparer.OrdinalIgnoreCase);
 
     // RAW formats that Windows Shell cannot thumbnail without a third-party codec. Skipping
@@ -126,9 +123,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private readonly AppSettingsStore _settingsStore = new();
     private readonly IStartupRegistrationService _startupRegistrationService;
-    private readonly CloudConnectionSettingsService _cloudConnectionService = new();
     private readonly CameraFolderDateResolver _dateResolver = new();
-    private readonly MediaGroupBuilder _groupBuilder = new(new MediaClassifier(["ARW", "CR2", "CR3"]));
+    private readonly MediaGroupBuilder _groupBuilder;
     private readonly Sha256FileHasher _fileHasher = new();
     private readonly ImportPlanBuilder _planBuilder;
     private readonly LibraryDirectoryInitializer _directoryInitializer = new();
@@ -142,6 +138,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IMediaMetadataStore _mediaMetadataStore;
     private readonly IWindowsWallpaperService _wallpaperService;
     private readonly PersistentAssetStore _assetStore = new(Path.Combine(AppDataPaths.Root, "Assets"));
+    private readonly ImportResumeStore _importResumeStore = new();
 
     private string _libraryRoot = string.Empty;
     private string _sourceFolder = string.Empty;
@@ -156,10 +153,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _backgroundMode = "平衡玻璃";
     private string _backgroundImageLayout = "填充";
     private string _currentPage = "Preview";
-    private CloudProviderChoice _selectedCloudProvider = CloudProviderChoice.Baidu;
+    private Dictionary<string, DateTime> _quickActionUsage = [];
     private BrowseDisplayMode _browseDisplayMode = BrowseDisplayMode.Grid;
     private bool _isMultiSelectMode;
     private string _currentPreviewCategory = "全部";
+    private List<string> _customRawExtensions = [];
+    private List<string> _customVideoExtensions = [];
+    private string _importNamingTemplate = "JK{seq}";
+    private string? _customAlbumsDirectory;
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
     private string _customAppIconPath = string.Empty;
@@ -232,18 +233,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private BrowseSnapshot? _persistedBrowseSnapshot;
     private BrowseSnapshot? _sessionBrowseSnapshot;
 
-    private string _baiduAppKey = string.Empty;
-    private string _baiduAppSecret = string.Empty;
-    private string _baiduAuthCode = string.Empty;
-    private string _baiduStatus = "未连接";
-    private string _quarkStatus = "等待官方 API";
-    private string _quarkClientPath = string.Empty;
     private string _diagnosticsText = "⏱ 库扫描 · 等待触发扫描…";
-    private bool _isBaiduBusy;
-    private bool _isBaiduAuthorized;
-    private bool _hasSavedBaiduCredentials;
-    private string? _pendingBaiduAuthorizeUri;
-    private string? _pendingBaiduState;
 
     public MainWindowViewModel(
         IWindowsWallpaperService? wallpaperService = null,
@@ -252,6 +242,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LibraryDateSnapshotService? libraryDateSnapshotService = null)
     {
         _planBuilder = new ImportPlanBuilder(new DestinationProbe(_fileHasher));
+        _groupBuilder = new MediaGroupBuilder(new MediaClassifier(BuildRawExtensions(), BuildVideoExtensions()));
         _transfer = new VerifiedFileTransfer(_fileHasher);
         _contentScanner = new LibraryContentScanner(_fileHasher);
         _startupRegistrationService = startupRegistrationService ?? new WindowsStartupRegistrationService();
@@ -273,8 +264,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             () => PreviewFiles.Select(file => file.FullPath));
         Compression = new CompressionViewModel();
         Watermark = new WatermarkViewModel();
+        PixelArt = new PixelArtViewModel();
         CustomAlbums = new CustomAlbumsViewModel(
-            new JsonCustomAlbumStore(AppDataPaths.CustomAlbumsFile),
+            CreateCustomAlbumStore(),
             new CustomAlbumPhotoScanner());
         PhotoViewer = new PhotoViewerViewModel();
         TreemapBrowser = new ProgressiveTreemapViewModel();
@@ -325,6 +317,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(BrowseConditionsSummary));
         };
         BrowseLibraryCommand = new AsyncRelayCommand(BrowseLibraryAsync, CanRunCommand);
+        ChangeCustomAlbumsDirectoryCommand = new AsyncRelayCommand(ChangeCustomAlbumsDirectoryAsync, CanRunCommand);
+        ResetCustomAlbumsDirectoryCommand = new RelayCommand(ResetCustomAlbumsDirectory);
         BrowseSourceCommand = new AsyncRelayCommand(BrowseSourceAsync, CanRunCommand);
         BrowseSourceFilesCommand = new AsyncRelayCommand(BrowseSourceFilesAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
@@ -353,12 +347,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Compression.SelectedToolMode = ImageToolMode.Watermark;
             CurrentPage = "Compression";
         });
-        ShowCloudCommand = new RelayCommand(() => CurrentPage = "Cloud");
-        SelectCloudProviderCommand = new RelayCommand<CloudProviderChoice>(SelectCloudProvider);
-        ShowBaiduCloudCommand = new RelayCommand(() =>
-            SelectCloudProviderCommand.Execute(CloudProviderChoice.Baidu));
-        ShowQuarkCloudCommand = new RelayCommand(() =>
-            SelectCloudProviderCommand.Execute(CloudProviderChoice.Quark));
         DeleteSelectedFilesCommand = new RelayCommand(DeleteSelectedFiles, CanDeleteSelectedFiles);
         OpenTreemapItemCommand = new RelayCommand<string>(OpenTreemapItem);
         ZoomTreemapCommand = new RelayCommand<string>(key =>
@@ -373,12 +361,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SetPreviewRetouchFilterCommand = new RelayCommand<string>(filter => PreviewRetouchFilter = filter ?? "全部");
         ToggleAdvancedFiltersCommand = new RelayCommand(() => IsAdvancedFiltersExpanded = !IsAdvancedFiltersExpanded);
         ToggleImportAdvancedCommand = new RelayCommand(() => IsImportAdvancedExpanded = !IsImportAdvancedExpanded);
-        OpenQuarkOfficialCommand = new RelayCommand(OpenQuarkOfficial);
-        OpenBaiduConsoleCommand = new RelayCommand(OpenBaiduConsole);
-        SaveBaiduCredentialsCommand = new AsyncRelayCommand(SaveBaiduCredentialsAsync, CanSaveBaiduCredentials);
-        StartBaiduAuthorizationCommand = new AsyncRelayCommand(StartBaiduAuthorizationAsync, CanStartBaiduAuthorization);
-        CompleteBaiduAuthorizationCommand = new AsyncRelayCommand(CompleteBaiduAuthorizationAsync, CanCompleteBaiduAuthorization);
-        DisconnectBaiduCommand = new AsyncRelayCommand(DisconnectBaiduAsync, () => IsBaiduAuthorized && !IsBaiduBusy);
         NextPreviewPageCommand = new RelayCommand(ShowNextPreviewPage, () => HasNextPreviewPage);
         PreviousPreviewPageCommand = new RelayCommand(ShowPreviousPreviewPage, () => HasPreviousPreviewPage);
         ExpandAllPreviewDatesCommand = new RelayCommand(() => SetAllPreviewDateSectionsExpanded(true));
@@ -399,6 +381,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         NextOnboardingStepCommand = new AsyncRelayCommand(ShowNextOnboardingStepAsync);
         StopOnboardingCommand = new AsyncRelayCommand(DismissOnboardingAsync);
         ContinueOnboardingCommand = new RelayCommand(ContinueOnboarding);
+        BuildQuickActions();
+        Compression.PropertyChanged += OnCompressionPropertyChanged;
     }
 
     public ObservableCollection<LibraryDateNode> LibraryDates { get; } = [];
@@ -418,6 +402,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public CompressionViewModel Compression { get; }
 
     public WatermarkViewModel Watermark { get; }
+
+    public PixelArtViewModel PixelArt { get; }
 
     public CustomAlbumsViewModel CustomAlbums { get; }
 
@@ -471,7 +457,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public int OnboardingStepCount => 13;
+    public int OnboardingStepCount => 11;
     public string OnboardingTitle => OnboardingStep switch
     {
         0 => "第一步：设置图库根目录",
@@ -484,8 +470,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         7 => "图片小工具",
         8 => "批量水印",
         9 => "地图照片",
-        10 => "百度网盘",
-        11 => "夸克网盘",
         _ => "设置、外观与高级选项"
     };
 
@@ -501,8 +485,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         7 => "图片小工具支持批量压缩，以及不限张数的纵向或横向拼图；任务支持取消。",
         8 => "批量水印支持签名水印和满屏平铺，可预览位置、透明度、旋转角度并批量导出。",
         9 => "地图照片读取本地照片的位置元数据，在地图上按地点浏览；没有定位的照片会单独列出。",
-        10 => "百度网盘页面用于网页登录与浏览；应用设置中还可配置本地加密保存的授权信息。",
-        11 => "夸克网盘通过独立页面进入；没有公开 API 的能力会明确提示，不会模拟不存在的接口。",
         _ => "设置集中管理启动、图库、AI、人脸引擎、主题背景和诊断。完成后可从“设置 → 常规”再次打开指南。"
     };
 
@@ -540,11 +522,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (!WpfImageExtensions.Contains(Path.GetExtension(file.FullPath))) return;
 
         SelectedPreviewFile = file;
-        var paths = FilteredPreviewFiles
-            .Select(item => item.PreviewPath)
-            .Where(p => WpfImageExtensions.Contains(Path.GetExtension(p)))
-            .ToArray();
-        PhotoViewer.Open(paths, file.PreviewPath);
+        // 双击：无边框独立查看器窗口（与照片网格双击行为一致）
+        OpenIndependentViewerRequested?.Invoke(file);
     }
 
     public void RemoveDeletedViewerPhoto(string path)
@@ -678,6 +657,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<DeviceContentItemViewModel> SelectedDeviceContents { get; } = [];
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; } = [];
+
+    public ObservableCollection<QuickActionItemViewModel> QuickActions { get; } = [];
 
     public IReadOnlyList<NavigationDisplayMode> NavigationDisplayModes { get; } =
         Enum.GetValues<NavigationDisplayMode>();
@@ -875,6 +856,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand BrowseLibraryCommand { get; }
 
+    public IAsyncRelayCommand ChangeCustomAlbumsDirectoryCommand { get; }
+
+    public IRelayCommand ResetCustomAlbumsDirectoryCommand { get; }
+
     public IAsyncRelayCommand BrowseSourceCommand { get; }
 
     public IAsyncRelayCommand BrowseSourceFilesCommand { get; }
@@ -944,10 +929,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ShowWatermarkCommand { get; }
 
-    public IRelayCommand ShowCloudCommand { get; }
-    public IRelayCommand<CloudProviderChoice> SelectCloudProviderCommand { get; }
-    public IRelayCommand ShowBaiduCloudCommand { get; }
-    public IRelayCommand ShowQuarkCloudCommand { get; }
     public IRelayCommand DeleteSelectedFilesCommand { get; }
     public IRelayCommand<string> OpenTreemapItemCommand { get; }
     public IRelayCommand<string> ZoomTreemapCommand { get; }
@@ -985,6 +966,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public event Action? TreemapRepopulated;
 
+    /// <summary>
+    /// Raised when a treemap item is double-clicked. The UI layer opens an
+    /// independent borderless viewer window, matching the photo grid's
+    /// double-click behavior (OpenIndependentViewer).
+    /// </summary>
+    public event Action<PreviewFileViewModel>? OpenIndependentViewerRequested;
+
     public bool IsBrowseConditionsExpanded
     {
         get => _isBrowseConditionsExpanded;
@@ -1007,6 +995,31 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         get => _isImportAdvancedExpanded;
         set => SetProperty(ref _isImportAdvancedExpanded, value);
+    }
+
+    private string _featureDescriptionPosition = "Top";
+    public string FeatureDescriptionPosition
+    {
+        get => _featureDescriptionPosition;
+        set
+        {
+            if (SetProperty(ref _featureDescriptionPosition, value) && _isInitialized)
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
+    private GalleryGroupTitleMode _galleryGroupTitleMode = GalleryGroupTitleMode.ParsedDate;
+    public GalleryGroupTitleMode GalleryGroupTitleMode
+    {
+        get => _galleryGroupTitleMode;
+        set
+        {
+            if (!SetProperty(ref _galleryGroupTitleMode, value)) return;
+            RebuildVisiblePreviewSections();
+            if (_isInitialized) _ = SaveSettingsAsync();
+        }
     }
 
     public BrowseDisplayMode BrowseDisplayMode
@@ -2258,8 +2271,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var settings = await _settingsStore.LoadAsync().ConfigureAwait(true);
         IsOnboardingVisible = !settings.HasCompletedOnboarding;
         ResetNavigationItems(settings.NavigationOrder);
+        _quickActionUsage = settings.QuickActionUsage ?? [];
+        BuildQuickActions();
         NavigationDisplayMode = settings.NavigationDisplayMode;
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
+        _customRawExtensions = settings.CustomRawExtensions ?? [];
+        _customVideoExtensions = settings.CustomVideoExtensions ?? [];
+        _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate) ? "JK{seq}" : settings.ImportNamingTemplate;
+        _customAlbumsDirectory = settings.CustomAlbumsDirectory;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
         _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
@@ -2335,15 +2354,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _isAdvancedFiltersExpanded = settings.IsAdvancedFiltersExpanded is true;
         OnPropertyChanged(nameof(IsAdvancedFiltersExpanded));
         CheckDuplicatesOnImport = settings.CheckDuplicatesOnImport;
+        _featureDescriptionPosition = string.Equals(settings.FeatureDescriptionPosition, "Left", StringComparison.OrdinalIgnoreCase) ? "Left" : "Top";
+        OnPropertyChanged(nameof(FeatureDescriptionPosition));
+        _galleryGroupTitleMode = settings.GalleryGroupTitleMode;
+        OnPropertyChanged(nameof(GalleryGroupTitleMode));
         if (settings.SelectedFileTypeFilters is { Count: > 0 } savedTypes)
         {
             foreach (var t in savedTypes) _selectedFileTypeFilters.Add(t);
         }
         _persistedBrowseSnapshot = settings.BrowseSnapshot;
-        BaiduAppKey = settings.BaiduAppKey ?? string.Empty;
-        QuarkClientPath = settings.QuarkClientPath ?? string.Empty;
         RefreshConnectedDevices();
-        await RefreshCloudConnectionAsync().ConfigureAwait(true);
         await TagManager.InitializeAsync().ConfigureAwait(true);
         PeopleAlbums.RefreshRecognitionStatus();
         await PeopleAlbums.InitializeAsync().ConfigureAwait(true);
@@ -2559,6 +2579,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (!HasLibraryRoot || IsBusy) return;
         _calendarSelectedDate = null;
+        // 必须同时清 SelectedDate（照片墙筛选实际用的字段），否则"返回全部日期"
+        // 只清了日历高亮，照片仍按旧日期过滤——重置/返回全部日期看起来"没作用"。
+        SetProperty(ref _selectedDate, null, nameof(SelectedDate));
         await RefreshLibraryAsync().ConfigureAwait(true);
         RebuildCalendarDays();
         StatusMessage = "已返回全部日期。";
@@ -3435,6 +3458,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 .ThenBy(group => group.Key.Day)
                 .ToArray();
 
+            // 断点续传：导入开始即持久化全部待导入项，中断后重启可继续。
+            var resumeState = new ImportResumeState
+            {
+                DeleteSourcesAfterVerify = deleteSourcesAfterVerify,
+                Entries = dateGroups
+                    .SelectMany(group => group.Select(item => BuildResumeEntry(item, group.Key)))
+                    .ToList(),
+            };
+            _importResumeStore.Save(resumeState);
+
             var completedDateGroups = 0;
             foreach (var dateGroup in dateGroups)
             {
@@ -3453,8 +3486,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 failed += result.Failed;
                 lines.AddRange(result.Lines);
                 completedDateGroups++;
+
+                // 每完成一个日期组就从续传快照移除，已完成的文件不重复传输。
+                resumeState.Entries.RemoveAll(entry => entry.Year == dateGroup.Key.Year && entry.Month == dateGroup.Key.Month && entry.Day == dateGroup.Key.Day);
+                _importResumeStore.Save(resumeState);
             }
 
+            _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
             SetImportSummary(success, skipped, failed);
@@ -3506,6 +3544,163 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>继续上次未完成的导入（幂等：已完成文件由目标存在性/边传边删自动跳过）。</summary>
+    public async Task ResumePendingImportAsync()
+    {
+        var state = _importResumeStore.Load();
+        if (state is null || state.Entries.Count == 0)
+        {
+            _importResumeStore.Delete();
+            return;
+        }
+
+        using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
+        var cancellationToken = cancellation.Token;
+        IsBusy = true;
+        IsProgressIndeterminate = false;
+        ProgressValue = 0;
+        ProgressLabel = "正在恢复上次导入…";
+        StatusMessage = "正在继续上次未完成的导入。";
+
+        var success = 0;
+        var failed = 0;
+        var skipped = 0;
+        var lines = new List<string>();
+
+        try
+        {
+            var pendingGroups = new List<(LibraryDate Date, List<MediaGroup> Groups)>();
+            foreach (var dateGroup in state.Entries.GroupBy(entry => new LibraryDate(entry.Year, entry.Month, entry.Day)))
+            {
+                var date = dateGroup.Key;
+                var groups = new List<MediaGroup>();
+                foreach (var entry in dateGroup)
+                {
+                    if (!Enum.TryParse<MediaCategory>(entry.Category, out var category))
+                    {
+                        continue;
+                    }
+
+                    var primary = StatSource(entry.PrimaryPath);
+                    if (primary is null)
+                    {
+                        continue; // 源文件已不存在（边传边删已完成或已移动）。
+                    }
+
+                    var sidecars = entry.SidecarPaths
+                        .Select(StatSource)
+                        .Where(file => file is not null)
+                        .Cast<SourceMediaFile>()
+                        .ToArray();
+                    groups.Add(new MediaGroup(entry.GroupKey, category, primary, sidecars));
+                }
+
+                if (groups.Count > 0)
+                {
+                    pendingGroups.Add((date, groups));
+                }
+            }
+
+            if (pendingGroups.Count == 0)
+            {
+                _importResumeStore.Delete();
+                StatusMessage = "上次导入已全部完成。";
+                return;
+            }
+
+            var progress = ImportProgress.Create(pendingGroups.Sum(group => group.Groups.Sum(gr => 1 + gr.Sidecars.Count)));
+            void UpdateProgress(ImportPlanItem item, bool completed)
+            {
+                if (completed)
+                {
+                    progress = progress.Complete(item.Files.Count);
+                }
+
+                var current = completed ? progress.CompletedUnits : Math.Min(progress.CompletedUnits + 1, progress.TotalUnits);
+                ProgressValue = progress.Percentage;
+                ProgressLabel = $"正在导入 {current}/{progress.TotalUnits}（{progress.Percentage:0}%）：{item.Group.GroupKey}";
+            }
+
+            foreach (var (date, groups) in pendingGroups)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = await RunImportDateAsync(
+                    groups,
+                    date,
+                    state.DeleteSourcesAfterVerify,
+                    new Dictionary<string, ImportDuplicateMatch>(StringComparer.OrdinalIgnoreCase),
+                    ImportDuplicateBatchDecision.ImportAll,
+                    UpdateProgress,
+                    cancellationToken).ConfigureAwait(true);
+
+                success += result.Success;
+                skipped += result.Skipped;
+                failed += result.Failed;
+                lines.AddRange(result.Lines);
+
+                state.Entries.RemoveAll(entry => entry.Year == date.Year && entry.Month == date.Month && entry.Day == date.Day);
+                _importResumeStore.Save(state);
+            }
+
+            _importResumeStore.Delete();
+            ProgressValue = 100;
+            ProgressLabel = "导入完成";
+            SetImportSummary(success, skipped, failed);
+            ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
+            StatusMessage = "上次未完成的导入已继续完成。";
+        }
+        catch (OperationCanceledException)
+        {
+            ProgressLabel = "已停止";
+            SetImportSummary(success, skipped, failed);
+            StatusMessage = "恢复导入已停止，可稍后再次继续。";
+        }
+        catch (Exception ex)
+        {
+            ImportReport = "恢复导入中断：" + ex.Message;
+            StatusMessage = "恢复导入中断，可稍后再次继续。";
+        }
+        finally
+        {
+            EndCancelableTask(cancellation);
+            IsProgressIndeterminate = false;
+            IsBusy = false;
+        }
+    }
+
+    private static ImportResumeEntry BuildResumeEntry(ImportPreviewItemViewModel item, LibraryDate date)
+    {
+        var group = item.ToMediaGroup();
+        return new ImportResumeEntry
+        {
+            GroupKey = group.GroupKey,
+            Category = group.Category.ToString(),
+            PrimaryPath = group.Primary.FullPath,
+            SidecarPaths = group.Sidecars.Select(sidecar => sidecar.FullPath).ToList(),
+            Year = date.Year,
+            Month = date.Month,
+            Day = date.Day,
+        };
+    }
+
+    private static SourceMediaFile? StatSource(string path)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists)
+            {
+                return null;
+            }
+
+            return new SourceMediaFile(info.FullName, info.Length, info.LastWriteTime);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private async Task<ImportRunResult> RunImportDateAsync(
         IReadOnlyList<MediaGroup> groups,
         LibraryDate date,
@@ -3526,7 +3721,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             date,
             deleteSourcesAfterVerify ? TransferMode.MoveAfterVerify : TransferMode.CopyKeepSource,
             groups,
-            cancellationToken).ConfigureAwait(true);
+            cancellationToken,
+            _importNamingTemplate).ConfigureAwait(true);
 
         for (var index = 0; index < plan.Items.Count; index++)
         {
@@ -3574,6 +3770,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             finally
             {
                 updateProgress(item, true);
+                // 实时更新导入摘要：导成功一张就写一张，不用等整批完成
+                SetImportSummary(success, skipped, failed);
             }
         }
 
@@ -3591,7 +3789,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         IsBusy = true;
-        IsProgressIndeterminate = true;
+        IsProgressIndeterminate = false;
         IsDuplicateScanRunning = true;
         ProgressValue = 0;
         ProgressLabel = "正在扫描重复内容…";
@@ -3601,14 +3799,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         List<List<string>> visualGroups;
         try
         {
+            var exactProgress = new Progress<double>(value => ProgressValue = Math.Clamp(value * 0.8, 0, 80));
+            var visualProgress = new Progress<double>(value => ProgressValue = Math.Clamp(80 + value * 0.2, 80, 100));
             exactGroups = await _contentScanner.FindAllDuplicatesAsync(
-                LibraryRoot, ContentScanExtensions, cancellationToken).ConfigureAwait(true);
+                LibraryRoot, ContentScanExtensions, cancellationToken, exactProgress).ConfigureAwait(true);
 
             var covered = exactGroups
                 .SelectMany(group => group)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
-                LibraryRoot, ContentScanExtensions, covered, cancellationToken).ConfigureAwait(true);
+                LibraryRoot, ContentScanExtensions, covered, cancellationToken, visualProgress).ConfigureAwait(true);
         }
         catch (OperationCanceledException) { return; }
         catch (Exception ex)
@@ -3897,6 +4097,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
             StatusMessage = "照片库位置为空。";
             return;
         }
+
+        // A date snapshot may still be delivering dispatcher batches when the user
+        // returns to "all dates". Invalidate it before clearing/repopulating the root
+        // collection; otherwise its late tail replaces the natural all-library wall
+        // with the previously opened day even though the UI says "全部日期".
+        _dateLoadCancellation?.Cancel();
+        _dateLoadCancellation?.Dispose();
+        _dateLoadCancellation = null;
+        ++_dateLoadGeneration;
 
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Preview);
         var cancellationToken = cancellation.Token;
@@ -4278,6 +4487,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TreemapBrowser.Complete(treemapGeneration, isPartial: false);
         RebuildCategorySummaries(root, categoryStats);
         RefreshFilteredCache(resetPage: true);
+        // 主页「最近照片」按拍摄时间从新到旧排序（B23）。
+        var recentHome = PreviewFiles
+            .OrderByDescending(preview => preview.CapturedAt)
+            .Take(PreviewLoadingPolicy.HomeRecentItemLimit)
+            .ToArray();
+        HomePreviewFiles.Clear();
+        foreach (var item in recentHome)
+        {
+            HomePreviewFiles.Add(item);
+        }
         NotifyPreviewCountsChanged();
     }
 
@@ -4377,6 +4596,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (_currentPage == "Preview" && value != "Preview") _sessionBrowseSnapshot = CaptureBrowseSnapshot();
             if (SetProperty(ref _currentPage, value))
             {
+                RecordQuickActionUsage(value);
                 OnPropertyChanged(nameof(IsHomePage));
                 OnPropertyChanged(nameof(IsImportPage));
                 OnPropertyChanged(nameof(IsPreviewPage));
@@ -4385,9 +4605,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
                 OnPropertyChanged(nameof(IsWatermarkPage));
-                OnPropertyChanged(nameof(IsCloudPage));
-                OnPropertyChanged(nameof(IsBaiduCloudPage));
-                OnPropertyChanged(nameof(IsQuarkCloudPage));
                 OnPropertyChanged(nameof(IsSettingsPage));
                 OnPropertyChanged(nameof(PageTitle));
                 OnPropertyChanged(nameof(PageSubtitle));
@@ -4429,35 +4646,67 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsWatermarkPage => CurrentPage == "Watermark";
 
-    public CloudProviderChoice SelectedCloudProvider
+    public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
+
+    private static bool IsQuickActionKey(string page) => page switch
     {
-        get => _selectedCloudProvider;
-        set
+        "Import" or "Preview" or "CustomAlbums" or "FaceSearch" or "MapPhotos" or "Compression" => true,
+        _ => false
+    };
+
+    /// <summary>
+    /// 主页快速操作按「最近使用」排序：使用过的排在前面（最近在前），未使用过的保持原顺序。
+    /// </summary>
+    private void BuildQuickActions()
+    {
+        var definitions = new (string Key, string Title, IRelayCommand Command)[]
         {
-            if (!SetProperty(ref _selectedCloudProvider, value)) return;
-            OnPropertyChanged(nameof(IsBaiduCloudSelected));
-            OnPropertyChanged(nameof(IsQuarkCloudSelected));
-            OnPropertyChanged(nameof(IsBaiduCloudPage));
-            OnPropertyChanged(nameof(IsQuarkCloudPage));
+            ("Import", "导入照片", ShowImportCommand),
+            ("Preview", "照片图库", ShowPreviewCommand),
+            ("CustomAlbums", "自定义相册", ShowCustomAlbumsCommand),
+            ("FaceSearch", "人物查找", ShowFaceSearchCommand),
+            ("MapPhotos", "地图照片", ShowMapPhotosCommand),
+            ("Compression", "图片小工具", ShowCompressionCommand),
+        };
+
+        var used = definitions
+            .Where(def => _quickActionUsage.ContainsKey(def.Key))
+            .OrderByDescending(def => _quickActionUsage[def.Key])
+            .ToList();
+        var unused = definitions.Where(def => !_quickActionUsage.ContainsKey(def.Key)).ToList();
+
+        QuickActions.Clear();
+        foreach (var def in used.Concat(unused))
+        {
+            QuickActions.Add(new QuickActionItemViewModel(def.Key, def.Title, def.Command));
         }
     }
 
-    public bool IsCloudPage => CurrentPage == "Cloud";
-    public bool IsBaiduCloudSelected => SelectedCloudProvider == CloudProviderChoice.Baidu;
-    public bool IsQuarkCloudSelected => SelectedCloudProvider == CloudProviderChoice.Quark;
-    public bool IsBaiduCloudPage => IsCloudPage && IsBaiduCloudSelected;
-    public bool IsQuarkCloudPage => IsCloudPage && IsQuarkCloudSelected;
-
-    private void SelectCloudProvider(CloudProviderChoice provider)
+    private void RecordQuickActionUsage(string page)
     {
-        var changed = SelectedCloudProvider != provider;
-        SelectedCloudProvider = provider;
-        if (!changed)
-            OnPropertyChanged(nameof(SelectedCloudProvider));
-        CurrentPage = "Cloud";
+        if (!IsQuickActionKey(page))
+        {
+            return;
+        }
+
+        _quickActionUsage[page] = DateTime.UtcNow;
+        BuildQuickActions();
+        _ = SaveSettingsAsync();
     }
 
-    public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
+    private void OnCompressionPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(CompressionViewModel.SelectedToolMode))
+        {
+            return;
+        }
+
+        // 图片小工具内每个工具单独计使用记录；使用任一工具即刷新「图片小工具」入口。
+        _quickActionUsage[$"Compression:{Compression.SelectedToolMode}"] = DateTime.UtcNow;
+        _quickActionUsage["Compression"] = DateTime.UtcNow;
+        BuildQuickActions();
+        _ = SaveSettingsAsync();
+    }
 
     public string DiagnosticsText
     {
@@ -4466,105 +4715,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public bool IsSettingsPage => CurrentPage == "Settings";
-
-    public string BaiduAppKey
-    {
-        get => _baiduAppKey;
-        set
-        {
-            if (SetProperty(ref _baiduAppKey, value ?? string.Empty))
-            {
-                StartBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-                SaveBaiduCredentialsCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public string BaiduAppSecret
-    {
-        get => _baiduAppSecret;
-        set
-        {
-            if (SetProperty(ref _baiduAppSecret, value ?? string.Empty))
-            {
-                StartBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-                SaveBaiduCredentialsCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public string BaiduAuthCode
-    {
-        get => _baiduAuthCode;
-        set
-        {
-            if (SetProperty(ref _baiduAuthCode, value ?? string.Empty))
-            {
-                CompleteBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public string BaiduStatus
-    {
-        get => _baiduStatus;
-        private set => SetProperty(ref _baiduStatus, value);
-    }
-
-    public string QuarkStatus
-    {
-        get => _quarkStatus;
-        private set => SetProperty(ref _quarkStatus, value);
-    }
-
-    public string QuarkClientPath
-    {
-        get => _quarkClientPath;
-        set
-        {
-            if (SetProperty(ref _quarkClientPath, value ?? string.Empty))
-            {
-                _settingsStore.UpdateAsync(s => s.QuarkClientPath = value ?? string.Empty)
-                    .ConfigureAwait(false);
-            }
-        }
-    }
-
-    public bool IsBaiduAuthorized
-    {
-        get => _isBaiduAuthorized;
-        private set
-        {
-            if (SetProperty(ref _isBaiduAuthorized, value))
-            {
-                DisconnectBaiduCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public bool IsBaiduBusy
-    {
-        get => _isBaiduBusy;
-        private set
-        {
-            if (SetProperty(ref _isBaiduBusy, value))
-            {
-                SaveBaiduCredentialsCommand.NotifyCanExecuteChanged();
-                StartBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-                CompleteBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-                DisconnectBaiduCommand.NotifyCanExecuteChanged();
-            }
-        }
-    }
-
-    public string BaiduConnectionLabel => IsBaiduAuthorized ? "已连接" : "未连接";
-
-    public IRelayCommand OpenQuarkOfficialCommand { get; }
-    public IRelayCommand OpenBaiduConsoleCommand { get; }
-    public IAsyncRelayCommand SaveBaiduCredentialsCommand { get; }
-    public IAsyncRelayCommand StartBaiduAuthorizationCommand { get; }
-    public IAsyncRelayCommand CompleteBaiduAuthorizationCommand { get; }
-    public IAsyncRelayCommand DisconnectBaiduCommand { get; }
 
     public string PageTitle => CurrentPage switch
     {
@@ -4575,7 +4725,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
         "Watermark" => "批量水印",
-        "Cloud" => "网盘",
         "Settings" => "设置",
         _ => "主界面"
     };
@@ -4589,7 +4738,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
-        "Cloud" => "在百度网盘和夸克网盘之间横向切换；两边登录会话分别保存。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
         _ => "设备连接、照片库状态和常用入口。"
     };
@@ -4658,20 +4806,35 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _skipPreviewExpansionCaptureOnce = false;
 
         VisiblePreviewSections.Clear();
-        foreach (var group in _filteredCache.GroupBy(file => ResolvePreviewDateSection(file.FullPath)))
+        var galleryFiles = _filteredCache
+            .Where(file => !string.Equals(file.Extension.TrimStart('.'), "xml", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var xmlSidecars = PreviewFiles
+            .Where(file => string.Equals(file.Extension.TrimStart('.'), "xml", StringComparison.OrdinalIgnoreCase))
+            .Select(file => Path.Combine(Path.GetDirectoryName(file.FullPath) ?? string.Empty, Path.GetFileNameWithoutExtension(file.FullPath)))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var file in galleryFiles)
+        {
+            file.HasXmlSidecar = VideoExtensions.Contains($".{file.Extension.TrimStart('.')}") &&
+                xmlSidecars.Contains(Path.Combine(Path.GetDirectoryName(file.FullPath) ?? string.Empty, Path.GetFileNameWithoutExtension(file.FullPath)));
+        }
+
+        foreach (var group in galleryFiles.GroupBy(file => ResolvePreviewDateSection(file.FullPath)))
         {
             var first = group.Key;
-            var isSingleSelectedDate = _calendarSelectedDate is not null;
-            var expanded = _personFilterOwnsExpansion || isSingleSelectedDate || (_previewDateExpansion.TryGetValue(first.Key, out var remembered)
-                ? remembered
-                : true);
+            var folderName = new DirectoryInfo(first.Key).Name;
+            var title = GalleryGroupTitleMode switch
+            {
+                GalleryGroupTitleMode.FolderName => folderName,
+                GalleryGroupTitleMode.ParsedDateAndFolderName => $"{first.Title} · {folderName}",
+                _ => first.Title
+            };
             VisiblePreviewSections.Add(new PreviewDateSectionViewModel(
                 first.Key,
-                first.Title,
+                title,
                 group.ToArray(),
-                expanded,
-                OnPreviewDateSectionExpansionChanged,
-                showHeader: !isSingleSelectedDate));
+                true,
+                showHeader: true));
         }
 
         RebuildExpandedPreviewFiles();
@@ -4696,12 +4859,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 PreviewWallItems.Add(section);
             }
 
-            if (section.IsExpanded)
+            foreach (var item in section.Items)
             {
-                foreach (var item in section.Items)
-                {
-                    PreviewWallItems.Add(item);
-                }
+                PreviewWallItems.Add(item);
             }
         }
     }
@@ -4711,6 +4871,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _previewDateExpansion[section.Key] = expanded;
         if (!_suppressPreviewSectionRefresh)
         {
+            if (expanded)
+            {
+                var delay = 0;
+                foreach (var item in section.Items)
+                {
+                    item.RevealOnLoad = true;
+                    item.RevealDelayMs = Math.Min(delay, 220);
+                    delay += 22;
+                }
+            }
+
+            // 仅展开/收起时启用照片墙的布局过渡滑动；缩放/窗口调整/切日期不触发。
+            VirtualizingWrapPanel.AnimateLayoutTransition = true;
             RebuildExpandedPreviewFiles();
         }
     }
@@ -5752,17 +5925,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             5 => "FaceSearch",
             7 => "Compression",
             9 => "MapPhotos",
-            10 => SelectOnboardingCloudProvider(CloudProviderChoice.Baidu),
-            11 => SelectOnboardingCloudProvider(CloudProviderChoice.Quark),
-            12 => "Settings",
+            10 => "Settings",
             _ => CurrentPage
         };
-    }
-
-    private string SelectOnboardingCloudProvider(CloudProviderChoice provider)
-    {
-        SelectedCloudProvider = provider;
-        return "Cloud";
     }
 
     private async Task SaveSettingsAsync()
@@ -5780,6 +5945,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.HasCompletedOnboarding = !IsOnboardingVisible;
             settings.NavigationDisplayMode = NavigationDisplayMode;
             settings.LibraryRoot = LibraryRoot;
+            settings.CustomRawExtensions = _customRawExtensions;
+            settings.CustomVideoExtensions = _customVideoExtensions;
+            settings.ImportNamingTemplate = _importNamingTemplate;
+            settings.CustomAlbumsDirectory = _customAlbumsDirectory;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
             settings.ZoomableGridTileSize = ZoomableGridTileSize;
             settings.TreemapZoom = TreemapZoom;
@@ -5818,6 +5987,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
             settings.IsAdvancedFiltersExpanded = IsAdvancedFiltersExpanded;
             settings.CheckDuplicatesOnImport = CheckDuplicatesOnImport;
+            settings.FeatureDescriptionPosition = FeatureDescriptionPosition;
+            settings.GalleryGroupTitleMode = GalleryGroupTitleMode;
+            settings.QuickActionUsage = _quickActionUsage;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -5870,7 +6042,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),
-        "Cloud" => new(key, "网盘", "Icon.Cloud", ShowCloudCommand, order),
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown navigation destination.")
     };
 
@@ -6009,6 +6180,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             try
             {
+                // 只检测外部设备（U盘/存储卡/相机/网络），不把本机磁盘（C:/D:）当设备列出。
+                if (drive.DriveType == DriveType.Fixed)
+                {
+                    continue;
+                }
+
                 var isReady = drive.IsReady;
                 if (!isReady && drive.DriveType != DriveType.Removable && drive.DriveType != DriveType.Network)
                 {
@@ -6412,176 +6589,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         SaveSettingsAsync().GetAwaiter().GetResult();
     }
 
-    private async Task RefreshCloudConnectionAsync()
-    {
-        try
-        {
-            var snapshot = await _cloudConnectionService.LoadAsync().ConfigureAwait(true);
-            BaiduAppKey = snapshot.BaiduAppKey ?? string.Empty;
-            _hasSavedBaiduCredentials = snapshot.BaiduCredentialsConfigured;
-            IsBaiduAuthorized = snapshot.BaiduAuthorized;
-            BaiduStatus = snapshot.BaiduAuthorized
-                ? $"已连接 · 凭据由百度官方授权 · {snapshot.BaiduToken!.ExpiresAt.LocalDateTime:yyyy-MM-dd HH:mm} 到期"
-                : snapshot.BaiduCredentialsConfigured
-                    ? "已配置 AppKey / AppSecret · 待完成 OAuth 授权"
-                    : "未配置 AppKey / AppSecret";
-            QuarkStatus = "未连接 · 等待夸克官方 API 授权";
-            _pendingBaiduState = null;
-            _pendingBaiduAuthorizeUri = null;
-            BaiduAuthCode = string.Empty;
-        }
-        catch (Exception ex)
-        {
-            BaiduStatus = $"读取云盘设置失败：{ex.Message}";
-        }
-        finally
-        {
-            NotifyBaiduCommandStates();
-        }
-    }
-
-    private void NotifyBaiduCommandStates()
-    {
-        SaveBaiduCredentialsCommand.NotifyCanExecuteChanged();
-        StartBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-        CompleteBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-        DisconnectBaiduCommand.NotifyCanExecuteChanged();
-    }
-
-    private bool CanSaveBaiduCredentials() => !IsBaiduBusy
-        && !string.IsNullOrWhiteSpace(BaiduAppKey)
-        && !string.IsNullOrWhiteSpace(BaiduAppSecret);
-
-    private bool CanStartBaiduAuthorization() => !IsBaiduBusy
-        && !string.IsNullOrWhiteSpace(BaiduAppKey);
-
-    private bool CanCompleteBaiduAuthorization() => !IsBaiduBusy
-        && !string.IsNullOrWhiteSpace(BaiduAuthCode)
-        && !string.IsNullOrWhiteSpace(BaiduAppKey)
-        && _hasSavedBaiduCredentials;
-
-    private void OpenQuarkOfficial()
-    {
-        _cloudConnectionService.OpenInBrowser(new Uri(CloudConnectionSettingsService.QuarkOfficialUrl));
-        QuarkStatus = "已为你打开夸克网盘官网 · 登录后即可上传/下载 · 官方 API 暂未开放";
-    }
-
-    private void OpenBaiduConsole()
-    {
-        _cloudConnectionService.OpenInBrowser(new Uri(CloudConnectionSettingsService.BaiduHelpUrl));
-        BaiduStatus = "已为你打开百度网盘开放者中心 · 在「应用管理」中创建/查看 AppKey 与 AppSecret";
-    }
-
-    private async Task SaveBaiduCredentialsAsync()
-    {
-        try
-        {
-            IsBaiduBusy = true;
-            await _cloudConnectionService.SaveBaiduCredentialsAsync(BaiduAppKey, BaiduAppSecret).ConfigureAwait(true);
-            // Clear the in-memory secret field once persisted so it never lingers in the UI.
-            BaiduAppSecret = string.Empty;
-            _hasSavedBaiduCredentials = true;
-            BaiduStatus = "已保存 AppKey 与 AppSecret（AppSecret 已用 Windows DPAPI 加密）";
-            CompleteBaiduAuthorizationCommand.NotifyCanExecuteChanged();
-            await RefreshCloudConnectionAsync().ConfigureAwait(true);
-        }
-        catch (Exception ex)
-        {
-            BaiduStatus = $"保存百度网盘凭据失败：{ex.Message}";
-        }
-        finally
-        {
-            IsBaiduBusy = false;
-        }
-    }
-
-    private async Task StartBaiduAuthorizationAsync()
-    {
-        try
-        {
-            IsBaiduBusy = true;
-            var (authorizeUri, state) = _cloudConnectionService.StartBaiduAuthorization(BaiduAppKey);
-            _pendingBaiduAuthorizeUri = authorizeUri.AbsoluteUri;
-            _pendingBaiduState = state;
-            _cloudConnectionService.OpenInBrowser(authorizeUri);
-            BaiduStatus = "已在浏览器中打开百度授权页 · 登录并同意后，复制页面上的授权码粘贴到下方输入框";
-            await Task.CompletedTask.ConfigureAwait(true);
-        }
-        catch (Exception ex)
-        {
-            BaiduStatus = $"打开授权页失败：{ex.Message}";
-            _pendingBaiduAuthorizeUri = null;
-            _pendingBaiduState = null;
-        }
-        finally
-        {
-            IsBaiduBusy = false;
-        }
-    }
-
-    private async Task CompleteBaiduAuthorizationAsync()
-    {
-        if (!_hasSavedBaiduCredentials)
-        {
-            BaiduStatus = "请先点「保存凭据」把 AppKey 与 AppSecret 加密存到本机";
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(_pendingBaiduState))
-        {
-            BaiduStatus = "请先点「打开授权页」在浏览器中授权，然后把页面上的授权码粘贴到这里";
-            return;
-        }
-
-        var appSecret = _cloudConnectionService.TryReadBaiduAppSecret();
-        if (string.IsNullOrWhiteSpace(appSecret))
-        {
-            BaiduStatus = "未找到本地保存的 AppSecret，请先保存凭据";
-            return;
-        }
-
-        try
-        {
-            IsBaiduBusy = true;
-            await _cloudConnectionService.CompleteBaiduAuthorizationAsync(
-                BaiduAuthCode,
-                BaiduAppKey,
-                appSecret,
-                _pendingBaiduState!).ConfigureAwait(true);
-            BaiduAuthCode = string.Empty;
-            _pendingBaiduState = null;
-            _pendingBaiduAuthorizeUri = null;
-            await RefreshCloudConnectionAsync().ConfigureAwait(true);
-        }
-        catch (Exception ex)
-        {
-            BaiduStatus = $"完成授权失败：{ex.Message}";
-        }
-        finally
-        {
-            IsBaiduBusy = false;
-        }
-    }
-
-    private async Task DisconnectBaiduAsync()
-    {
-        try
-        {
-            IsBaiduBusy = true;
-            await _cloudConnectionService.DisconnectBaiduAsync().ConfigureAwait(true);
-            await RefreshCloudConnectionAsync().ConfigureAwait(true);
-            BaiduStatus = "已退出百度网盘授权";
-        }
-        catch (Exception ex)
-        {
-            BaiduStatus = $"退出百度网盘失败：{ex.Message}";
-        }
-        finally
-        {
-            IsBaiduBusy = false;
-        }
-    }
-
     private static ImageSource? LoadBackgroundImage(string path)
     {
         return LoadImage(path, 2200);
@@ -6651,7 +6658,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private static string FormatDriveType(DriveType driveType) => driveType switch
     {
-        DriveType.Removable => "可移动设备",
+        DriveType.Removable => "U盘 / 存储卡",
         DriveType.Network => "网络设备",
         DriveType.CDRom => "光盘/读卡器",
         DriveType.Fixed => "本机磁盘",
@@ -6706,6 +6713,141 @@ public sealed partial class MainWindowViewModel : ObservableObject
         };
 
         return dialog.ShowDialog() == WinForms.DialogResult.OK ? dialog.SelectedPath : null;
+    }
+
+    /// <summary>内置 RAW + 用户自定义 RAW（用于导入分类）。</summary>
+    private IEnumerable<string> BuildRawExtensions()
+    {
+        var builtIn = new[] { "ARW", "CR2", "CR3", "NEF", "RAF", "RW2", "ORF", "DNG", "RAW" };
+        return builtIn.Concat(_customRawExtensions);
+    }
+
+    /// <summary>用户自定义视频扩展（内置视频容器在 MediaClassifier 中静态定义）。</summary>
+    private IEnumerable<string> BuildVideoExtensions() => _customVideoExtensions;
+
+    /// <summary>自定义 RAW 后缀（逗号/空格分隔，持久化）。</summary>
+    public string CustomRawExtensionsText
+    {
+        get => string.Join(", ", _customRawExtensions);
+        set
+        {
+            var parsed = ParseExtensionList(value);
+            if (Enumerable.SequenceEqual(parsed, _customRawExtensions, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _customRawExtensions = parsed;
+            _ = SaveSettingsAsync();
+            OnPropertyChanged(nameof(CustomRawExtensionsText));
+        }
+    }
+
+    /// <summary>自定义视频后缀（逗号/空格分隔，持久化）。</summary>
+    public string CustomVideoExtensionsText
+    {
+        get => string.Join(", ", _customVideoExtensions);
+        set
+        {
+            var parsed = ParseExtensionList(value);
+            if (Enumerable.SequenceEqual(parsed, _customVideoExtensions, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _customVideoExtensions = parsed;
+            _ = SaveSettingsAsync();
+            OnPropertyChanged(nameof(CustomVideoExtensionsText));
+        }
+    }
+
+    /// <summary>导入文件命名模板（占位符 {seq}/{seq:N}/{orig}/{date}，持久化）。</summary>
+    public string ImportNamingTemplate
+    {
+        get => _importNamingTemplate;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value) ? "JK{seq}" : value.Trim();
+            if (string.Equals(normalized, _importNamingTemplate, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _importNamingTemplate = normalized;
+            _ = SaveSettingsAsync();
+            OnPropertyChanged(nameof(ImportNamingTemplate));
+        }
+    }
+
+    /// <summary>是否有上次未完成的导入可续传。</summary>
+    public bool HasPendingImportResume => _importResumeStore.HasPending;
+
+    /// <summary>放弃上次未完成的导入进度。</summary>
+    public void DiscardPendingImportResume() => _importResumeStore.Delete();
+
+    private static List<string> ParseExtensionList(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return [];
+        }
+
+        return text
+            .Split([' ', ',', '，', ';', '；', '、', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(part => part.Trim().TrimStart('.'))
+            .Where(part => part.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>自定义相册保存目录（显示用；空 = 应用默认目录）。</summary>
+    public string CustomAlbumsDirectoryDisplay
+    {
+        get
+        {
+            return string.IsNullOrWhiteSpace(_customAlbumsDirectory) ? AppDataPaths.Root : _customAlbumsDirectory;
+        }
+    }
+
+    private async Task ChangeCustomAlbumsDirectoryAsync()
+    {
+        if (!CanRunCommand())
+        {
+            return;
+        }
+
+        var picked = PickFolder("选择自定义相册保存目录", AppDataPaths.Root);
+        if (string.IsNullOrWhiteSpace(picked))
+        {
+            return;
+        }
+
+        _customAlbumsDirectory = picked;
+        _ = SaveSettingsAsync();
+        OnPropertyChanged(nameof(CustomAlbumsDirectoryDisplay));
+        await CustomAlbums.ReplaceStoreAsync(CreateCustomAlbumStore()).ConfigureAwait(true);
+        StatusMessage = $"自定义相册目录已改为：{picked}";
+    }
+
+    private void ResetCustomAlbumsDirectory()
+    {
+        _customAlbumsDirectory = null;
+        _ = SaveSettingsAsync();
+        OnPropertyChanged(nameof(CustomAlbumsDirectoryDisplay));
+        _ = CustomAlbums.ReplaceStoreAsync(CreateCustomAlbumStore());
+        StatusMessage = "自定义相册目录已恢复为应用默认。";
+    }
+
+    private ICustomAlbumStore CreateCustomAlbumStore()
+    {
+        var configured = _customAlbumsDirectory;
+        if (string.IsNullOrWhiteSpace(configured))
+        {
+            return new JsonCustomAlbumStore(AppDataPaths.CustomAlbumsFile);
+        }
+
+        Directory.CreateDirectory(configured);
+        return new JsonCustomAlbumStore(Path.Combine(configured, "custom-albums.json"));
     }
 
     private static IEnumerable<string> EnumerateImportFiles(string path)
@@ -7079,6 +7221,8 @@ public sealed record CameraBrandGuess(string DisplayName, string Brand, string R
 
 public sealed record DeviceGroupViewModel(string Name, string Icon, string Subtitle, IReadOnlyList<ConnectedDeviceViewModel> Devices);
 
+public sealed record QuickActionItemViewModel(string Key, string Title, IRelayCommand Command);
+
 public sealed record ConnectedDeviceViewModel(string Name, string Kind, string Detail, bool IsConnected, string Icon, string Brand, string BadgeText, string Path)
 {
     public string StateText => IsConnected ? "已连接" : "未连接";
@@ -7259,7 +7403,20 @@ public sealed partial class PreviewFileViewModel : ObservableObject
     /// </summary>
     public int LoadedThumbnailDecodeWidth { get; set; }
 
+    /// <summary>
+    /// 展开日期分组后新加入照片墙的瓷砖置为 true，用于触发一次「展开弹出」进入动画；
+    /// 动画播放后由 code-behind 复位，避免滚动进入视口时重复播放。
+    /// </summary>
+    public bool RevealOnLoad { get; set; }
+
+    /// <summary>
+    /// 展开动画的逐项延迟（毫秒），用于让照片沿标题区域向下依次 reveal。
+    /// </summary>
+    public int RevealDelayMs { get; set; }
+
     [ObservableProperty] private bool _isSelected;
+
+    [ObservableProperty] private bool _hasXmlSidecar;
 
     [ObservableProperty] private string _smartCategory = "待分类";
 

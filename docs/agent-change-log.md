@@ -1,5 +1,65 @@
 # Agent Change Log
 
+## 2026-08-16 — 像素画尺寸自定义 + 按键对比度修复
+
+### Task
+① 像素画（PixelArt）工具的尺寸由固定 64/128/256 预设改为可自定义：新增「自定义」数字输入框，可输入任意像素尺寸（如 96、512），选中自定义时用输入值，输入无效（0/负数/非数字）回退默认 128；保留 64/128/256 预设按钮，点击预设时自定义输入框同步显示数值，最终生成与导出 PNG 均使用有效尺寸。② 修复像素画工具按键对比度不足、按键内文字看不清：参照已有修复方案（`Themes/Controls/Buttons.xaml` 的 `ContentPresenter` 加 `TextElement.Foreground="{TemplateBinding Foreground}"`），处理像素画页内联按钮样式被隐式 `TextBlock` 样式强制成低对比度前景色的问题。铁律：0 警告 0 错误、错误提示全中文、不动 GitHub、每项改动单独 build、跑 `dotnet test` 确认通过。
+
+### 改动
+- **`PixelArtViewModel.cs`**：删除字符串 `SelectedSize` 与 `TargetSizes` 列表（改名为 `PresetSizes` 仅作文档）；新增 `SelectedSize`(int，默认 128)、`IsCustom`、`CustomSizeText`、`SelectPreset(int)`（写入尺寸并退出自定义模式，同时把数值同步到自定义输入框）、`SelectCustom()`、`ResolveEffectiveSize()`（自定义模式解析输入、无效回退 128，预设模式用 `SelectedSize`，沿用 8–4096 钳制）；`Generate()` 改为经 `ResolveEffectiveSize()` 取有效尺寸，自定义输入无效时生成前打「已回退到 128」中文提示。
+- **`PixelArtView.xaml`**：尺寸选择由「可编辑 ComboBox」改为「3 个预设 RadioButton（64/128/256）+ 1 个『自定义』RadioButton + 1 个数字 `TextBox`（绑定 `CustomSizeText`、`IsEnabled` 绑定 `IsCustom`）」，全部同 `GroupName="PixelArtSize"`；新增页内 `PixelArt.SizeOption` RadioButton 样式（选中态 `Brush.Primary` 底 + `Brush.OnPrimary` 字，未选 `Brush.Text.Secondary`）。
+- **`PixelArtView.xaml.cs`**：新增 `SizeOption_Checked` 处理器，按 `Tag`（64/128/256/custom）分发到 `SelectPreset`/`SelectCustom`（含 DataContext 未就绪时的空防护）。
+- **按键对比度修复（需求 2）**：新增的 `PixelArt.SizeOption` 模板中 `ContentPresenter` 显式 `TextElement.Foreground="{TemplateBinding Foreground}"`（与 `Button.Primary/Secondary` 的 B9 修复同源），避免「64/128/256/自定义」字符串被隐式 `TextBlock` 样式强制成低对比度前景色；像素画页既有「选择图片/生成像素画/导出 PNG」按钮均已使用 `Button.Secondary/Primary`（已含该修复），复核无遗漏。
+- **`PixelArtViewModelTests.cs`（新增测试）**：覆盖默认 128、`SelectPreset` 退出自定义并同步输入框、自定义有效值（96/512/5000→钳制 4096）、无效值（空/0/负数/非数字→回退 128）。
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Debug /warnaserror`：0 警告 / 0 错误。
+- `dotnet test HanabePhotoManager.sln -c Debug --no-build`：**596 全绿 exit 0**（Core 159 / Infra 54 / App 383，App 较上轮 372 增加 11 个像素画尺寸选择测试）。
+
+### Notes（风险）
+- 尺寸选择 UI 由 ComboBox 改为 RadioButton + TextBox，属表现层重构；生成/导出渲染逻辑（`PixelArtRenderer`）零改动，仅把取数源从旧字符串 `SelectedSize` 改为 `ResolveEffectiveSize()`。
+- 「回退 128」为生成时回退并提示，不改写用户输入框内容；钳制上限仍为 4096（沿用既有安全边界），避免异常尺寸导致内存/渲染问题。
+- 新 RadioButton 样式为页内 keyed 样式（`PixelArt.SizeOption`），未改动共享 `Navigation.SegmentItem`，避免影响浏览页修图状态/文件类型等其它 segment 的表现。
+
+---
+
+## 2026-08-14 — 全应用 UI 修复 B1/B5–B22（收尾批次）
+
+### Task
+按「下一轮任务交接」文档逐项修复 UI：B1 大标题+内容合一容器、B5 归属确认溢出、B6 强调色统一紫色、B7 筛选面板间距、B8 功能说明位置、B9 扫描重复按钮对比度、B10/B16 全局 checkbox→Switch、B11 相册右键菜单、B12 移除网盘、B13 导入 tips 轮播、B14 导入来源合并、B15 人物面板精简、B17 日期分组红色框排查、B18 缩略图滑块裁切、B19 日期分组横向条不完整、B20 快速操作按使用排序、B21 快速操作间距、B22 设备检测只留外部设备。铁律：0 警告 0 错误、错误全中文、不用 `#hex`（Theme 之外）、每项 build。
+
+### 逐项
+- **B6 紫色统一**：用户选择「默认主题切到 Violet」。改 `App.xaml` 默认入口 `Dynamic.Light.xaml`→`Violet.Light.xaml`；`ThemeManager` 的 `CurrentScheme` 默认、`ParseSchemePreference`/`ParseCombinedPreference` 回退全部由 Dynamic→Violet；更新 `ThemeManagerTests`（`ParseSchemePreference_UsesVioletAsSafeDefault`）与 `DesignSystemResourceTests.App_LoadsTheLightThemeEntryPoint`。保留 6 套主题体系与「动态色彩=蓝」语义。
+- **B9 扫描重复按钮对比度**：根因是 `Button.Primary/Secondary` 模板的 `ContentPresenter` 未传 `Foreground`，字符串内容被隐式 `TextBlock` 样式强制为 `Text.Primary`，导致「蓝底深字」。给两个 `ContentPresenter` 加 `TextElement.Foreground="{TemplateBinding Foreground}"`（`Themes/Controls/Buttons.xaml`）。
+- **B11 相册右键菜单**：`CustomAlbumsPage.xaml` 相册卡加 `ContextMenu`（管理/重命名/删除），`CustomAlbumsPage.xaml.cs` 加 `AlbumMenu_*` 处理器（经 `ContextMenu.PlacementTarget` 取相册项）；重命名进详情并聚焦 `AlbumRenameTextBox`，删除带确认。
+- **B12 移除网盘（大）**：删除 `Core/Cloud`、`Infrastructure/Cloud`、`App/Cloud`、`Services/CloudConnectionSettingsService.cs` 及 16 个云测试文件；清掉 `MainWindow.xaml`（网盘导航项 + `CloudPageContainer`）、`MainWindowViewModel`（云命令/属性/onboarding 步骤/导航项/页面标题）、`MainWindow.xaml.cs`（`--cloud-provider`/`AnimateCloudProvider`/云 host 映射/百度夸克处理器）、`App.xaml.cs`、`SettingsCenterPage`（云盘与项目分区）、`NavigationOrderPolicy`、`AppSettingsStore`（Baidu/Quark 字段）、`ReleaseNotesViewModel` 云相关条目、`Infrastructure.csproj` 的 DPAPI 引用。**保留 LibVLCSharp 视频预览与投稿/欣赏项目**。测试 994→585（云 ~387 例 + 少量导航/onboarding/controltheme 断言更新）。
+- **B1 大标题+内容合一容器**：`MainWindow.xaml` 移除 `Layout.TopBar` 的标题/副标题/首页库按钮（仅留透明拖拽区 + 右上角窗口控制按钮）；Home/Import/Preview/FaceSearch 四页在各自 `Layout.PagePanel` 顶部加入 `Layout.PageTitle`+副标题（Import/Preview/FaceSearch 用 `DockPanel` 包标题+内容，Home 标题进滚动区并迁入「选择库根目录/刷新」）；`MapPage.xaml` 同样加「地图照片」标题。更新 `ControlThemeTests.ShellChrome_UsesRoundedM3Containers...`。
+- **B13 导入 tips 轮播**：移除左面板 RAW/视频格式 tip 与右 Inspector 归属确认 tip，右 Inspector 顶部加 `ImportTipCard` 单 tip；`MainWindow.xaml.cs` 加 `DispatcherTimer`（6s）在两条 tip 间轮播。
+- **B14 导入来源合并**：把「拖入相机文件夹」拖放区与「来源」卡合并为一个卡片（拖放头 + 分隔线 + 来源文件夹 + 两个选择按钮）。
+- **B5 归属确认溢出**：右 Inspector「归属确认」的 ComboBox+按钮由同行挤压改为上下两行（ComboBox 全宽 + 按钮全宽），消除灰色方框溢出。
+- **B15 人物面板精简**：移除浏览页左栏人物面板的 `PeopleRecognitionModelPanel`（模型说明/版本/阈值/前往设置），只留扫描按钮 + 显示全部人物；更新 `PeopleAlbumViewModelTests` 断言。
+- **B10/B16 全局 Switch**：`App.xaml` 与 `MainWindow.xaml` 的隐式 `CheckBox` 样式改为「正常药丸胶囊轨道 + 圆形滑块」Switch 模板（40×22 轨道、18×18 圆形滑块、选中 `Brush.Primary`）；浏览页多选复选框 22×22→40×22。
+- **B7 筛选面板间距**：智能搜索模式下拉 `Margin 12→8`、`Width 120→116`；高级折叠区「识别当前范围/停止」按钮间距 8→14。
+- **B8 功能说明位置**：`AppSettings` 加 `FeatureDescriptionPosition`（Top/Left，默认 Top）+ VM 属性（持久化）+ 设置「照片库与导入」分区加「功能说明位置」下拉；`分类` 筛选标签按该设置在上/左间切换。
+- **B18 缩略图滑块裁切**：缩略图大小标签行重排（值文本 Dock=Right 在前、标签填充），消除「211px」显示不全。
+- **B19 日期分组横向条不完整**：`VirtualizingWrapPanel HeaderHeight 56→64`，修复日期分组头底部被裁切。
+- **B17 日期分组红色框排查**：全仓排查无硬编码红色（唯一 `Status.Danger` 用于关闭按钮/导入失败/看图器错误），日期分组头 XAML 无红元素；判定为日期头被裁切的渲染残留，已随 B19 的 HeaderHeight 修复一并消除。
+- **B20 快速操作按使用排序**：`AppSettings.QuickActionUsage`（字典）持久化；主页 6 个硬编码快速操作按钮改为 `ItemsControl` 绑定 `QuickActions`（使用过的按最近在前、未使用保持原序）；`CurrentPage` setter 记录页面使用、`Compression.SelectedToolMode` 变化按工具分开计 `Compression:<tool>` 记录。
+- **B21 快速操作间距**：快速操作按钮 `Margin 8→14`。
+- **B22 设备检测只留外部设备**：`RefreshConnectedDevices` 跳过 `DriveType.Fixed`（本机 C:/D:）；`FormatDriveType` Removable→「U盘 / 存储卡」；首页设备副标题改「自动检测 U盘、存储卡、相机、网络设备等外部设备」。
+
+### Verification
+- `dotnet build HanabePhotoManager.sln -c Debug /warnaserror`：0 警告 0 错误。
+- `dotnet test HanabePhotoManager.sln -c Debug --no-build`：**585 全绿 exit 0**（Core 159 / Infra 54 / App 372）。
+- `dotnet publish`（Release/win-x64/self-contained/PublishReadyToRun）成功，覆盖安装并启动供真人验收。
+
+### Notes
+- B12 云盘移除后测试数从 994 降为 585，差值由云测试（~387 例）与少量云相关导航/onboarding/controltheme 断言更新组成，无业务逻辑回归。
+- B17 未能复现「红色矩形框」的具体来源，已全仓排查确认无硬编码红；诚实记录为「随 B19 高度修复消除」，若真人验收仍见红色框请截图反馈定位。
+- **额外修复（启动验证发现）**：`CompressionPage.xaml` 的压力测试结果区引用了设置页专属的 `{StaticResource Settings.Divider}`（`Settings.Divider` 定义在 `SettingsCenterPage.xaml` 的 UserControl.Resources，CompressionPage 作用域不可见），导致启动时 `Application.DoStartup` 抛 `XamlParseException: 无法找到名为 Settings.Divider 的资源`（此前历次启动日志均有记录）。改为内联 `<Border Height="1" Background="{DynamicResource Brush.OutlineVariant}" .../>`，重发布后启动无新异常。
+
+---
+
 ## 2026-08-14 — M3 功能页重设计第三批（工具页 + 地图页 + 网盘页，对齐 008/009/010 mockup）
 
 ### Task
@@ -746,3 +806,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 日期照片墙改为所有日期分组默认展开；8.15 的照片结束后连续显示 8.14、8.13 等后续日期标题与照片，仍可单独点击标题收起。
 - 左侧导航选中态移除焦点、悬停和选中描边叠加，只保留单层 `Brush.Surface.Selected` 深色背景；设置入口同步采用相同规则。
 - 启动在图库页或重新进入图库页时，将虚拟照片墙滚动位置恢复到首个日期标题，避免旧滚动位置让日期看起来消失。
+
+## 2026-08-16 — 自然连续图库与导入设置整理
+
+- 图库改为不可折叠的连续日期/文件夹分组，默认范围展示全部媒体，普通滚轮自然浏览后续分组；切回全部日期时先取消旧的单日期异步批次，避免 8.15 数据尾批覆盖全库。
+- 设置 → 照片库与导入新增“文件夹标题显示”，支持解析日期、实际文件夹名、日期与文件夹名，默认解析日期。
+- XML 不再作为图库独立项目；同目录同名 XML 改为对应视频卡片内的关联标记。多选卡片仅用深色背景表达选中，不叠加描边。
+- 设置二级导航统一为单层圆角选中块，主导航加宽并居中图标与文字；导入高级选项改为紧凑的分隔行布局。
+- 保留照片/视频双击无边框查看器和视频封面路径；Release 构建与 613 项测试通过，发布版同步至 `D:\hanabe-publish-v2` 并完成鼠标实机复查。

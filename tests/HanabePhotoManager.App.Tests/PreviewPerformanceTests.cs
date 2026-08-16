@@ -11,6 +11,21 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class PreviewPerformanceTests
 {
     [Fact]
+    public void PreviewWall_HidesXmlButMarksMatchingVideoSidecar()
+    {
+        var viewModel = new MainWindowViewModel();
+        var video = new PreviewFileViewModel("clip.mp4", "视频", @"C:\photos\08.15\clip.mp4", "1 MB", "MP4", null);
+        var xml = new PreviewFileViewModel("clip.xml", "素材", @"C:\photos\08.15\clip.xml", "1 KB", "XML", null);
+        viewModel.PreviewFiles.Add(video);
+        viewModel.PreviewFiles.Add(xml);
+
+        viewModel.CurrentPreviewCategory = "视频";
+
+        viewModel.PreviewWallItems.Should().NotContain(xml);
+        video.HasXmlSidecar.Should().BeTrue();
+    }
+
+    [Fact]
     public void SemanticRanking_IntersectsExistingFilteredItemsAndKeepsClipOrder()
     {
         var first = new PreviewFileViewModel("first.jpg", "JPG生图", @"D:\photos\first.jpg", "1 KB", ".jpg", null);
@@ -230,7 +245,7 @@ public sealed class PreviewPerformanceTests
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 2)).IsAvailable.Should().BeTrue();
         viewModel.CalendarDays.Single(day => day.Date == new DateOnly(2026, 7, 3)).IsAvailable.Should().BeFalse();
         viewModel.PeopleAlbums.SelectedAlbum = null;
-        viewModel.VisiblePreviewSections.Select(section => section.IsExpanded).Should().Equal(true, false);
+        viewModel.VisiblePreviewSections.Should().OnlyContain(section => section.IsExpanded);
     }
 
     [Fact]
@@ -322,32 +337,19 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
-    public void PreviewWall_ProvidesPerDateExpandControlWithoutManualBatches()
+    public void PreviewWall_UsesNaturalNonCollapsibleFolderFlow()
     {
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
-        xaml.Should().Contain("HeaderHeight=\"56\"");
-        xaml.Should().Contain("Style=\"{StaticResource PreviewDateHeaderButton}\"");
-        xaml.Should().Contain("Command=\"{Binding ToggleCommand}\"");
+        xaml.Should().Contain("HeaderHeight=\"64\"");
+        xaml.Should().NotContain("Command=\"{Binding ToggleCommand}\"");
+        xaml.Should().NotContain("Text=\"{Binding ToggleGlyph}\"");
         xaml.Should().Contain("DataType=\"{x:Type vm:PreviewDateSectionViewModel}\"");
         xaml.Should().NotContain("<Expander IsExpanded=\"{Binding IsExpanded");
         xaml.Should().NotContain("Content=\"上一批\"");
         xaml.Should().NotContain("Content=\"下一批\"");
-    }
-
-    [Fact]
-    public void PreviewDateSection_ToggleCommandChangesSingleSectionOnly()
-    {
-        var first = new PreviewDateSectionViewModel("a", "7月 · 07.16", [], true);
-        var second = new PreviewDateSectionViewModel("b", "7月 · 07.17", [], true);
-
-        first.ToggleCommand.Execute(null);
-
-        first.IsExpanded.Should().BeFalse();
-        first.ToggleLabel.Should().Be("展开");
-        second.IsExpanded.Should().BeTrue();
     }
 
     [Fact]

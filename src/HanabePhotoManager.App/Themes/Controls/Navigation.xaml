@@ -90,7 +90,7 @@
   <Style x:Key="Segment.Item" TargetType="Button" BasedOn="{StaticResource Button.Toolbar}"/>
   <Style x:Key="Tab.Item" TargetType="TabItem"><Setter Property="Padding" Value="12,8"/><Setter Property="Foreground" Value="{DynamicResource Brush.Text.Secondary}"/><Setter Property="Background" Value="Transparent"/></Style>
   <Style x:Key="Navigation.RailItem" TargetType="Button" BasedOn="{StaticResource Button.Ghost}">
-    <Setter Property="Width" Value="64"/>
+    <Setter Property="Width" Value="84"/>
     <Setter Property="MinHeight" Value="52"/>
     <Setter Property="Margin" Value="0,2"/>
     <Setter Property="Padding" Value="4,6"/>

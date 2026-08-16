@@ -5,6 +5,7 @@
     xmlns:services="clr-namespace:HanabePhotoManager.App.Services"
     Loaded="SettingsCenterPage_Loaded">
   <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <Style x:Key="Settings.GroupHeader" TargetType="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource Brush.Primary}" />
       <Setter Property="FontWeight" Value="SemiBold" />
@@ -30,6 +31,26 @@
     <Style x:Key="Settings.Divider" TargetType="Border">
       <Setter Property="Height" Value="1" />
       <Setter Property="Background" Value="{DynamicResource Brush.OutlineVariant}" />
+    </Style>
+    <Style x:Key="Settings.SectionNavItem" TargetType="ListBoxItem">
+      <Setter Property="MinHeight" Value="44" />
+      <Setter Property="Margin" Value="6,2" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Chrome" Padding="{TemplateBinding Padding}" CornerRadius="{StaticResource Radius.Control}" Background="Transparent">
+              <ContentPresenter VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Interactive}" /></Trigger>
+              <Trigger Property="IsSelected" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Selected}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
     <Style x:Key="ThemeCard" TargetType="Button">
       <Setter Property="Background" Value="{DynamicResource Brush.Surface.ContainerLowest}" />
@@ -64,7 +85,7 @@
   </UserControl.Resources>
   <Grid Background="{DynamicResource Brush.Background.Canvas}">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="216" />
+      <ColumnDefinition Width="240" />
       <ColumnDefinition Width="16" />
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="16" />
@@ -73,12 +94,11 @@
 
     <!-- 左：设置分区导航 -->
     <Border Grid.Column="0" Style="{StaticResource Inspector.Panel}">
-      <ListBox x:Name="SectionNavList" Style="{StaticResource List.Default}" ItemContainerStyle="{StaticResource ListItem.Default}" SelectionChanged="SectionNav_SelectionChanged">
+      <ListBox x:Name="SectionNavList" Style="{StaticResource List.Default}" ItemContainerStyle="{StaticResource Settings.SectionNavItem}" SelectionChanged="SectionNav_SelectionChanged">
         <ListBoxItem Tag="appearance"><TextBlock Text="外观" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="general"><TextBlock Text="常规" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="library"><TextBlock Text="照片库与导入" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="browse"><TextBlock Text="浏览与 AI" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="cloud"><TextBlock Text="云盘与项目" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="advanced"><TextBlock Text="高级" FontWeight="SemiBold" /></ListBoxItem>
       </ListBox>
     </Border>
@@ -349,7 +369,7 @@
             <StackPanel>
               <DockPanel Margin="0,0,0,14">
                 <TextBlock Text="版本树" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" />
-                <Border DockPanel.Dock="Right" Padding="10,4" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+                <Border DockPanel.Dock="Right" Padding="10,4" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
                   <TextBlock Text="{Binding ReleaseNotes.CurrentVersionLabel}" FontSize="{StaticResource Typography.BodySmall}" FontWeight="SemiBold" />
                 </Border>
               </DockPanel>
@@ -437,11 +457,77 @@
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
-            <TextBlock Text="应用启动时会验证已配置的照片库，有效时后台扫描新文件；当前无可配置的扫描开关。" Style="{StaticResource Settings.RowDesc}" />
+            <StackPanel>
+              <TextBlock Text="扫描重复内容" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="对整个图库做两层检测：① 文件哈希（SHA-256）找出完全相同的副本；② 视觉指纹进一步比对画面/内容相似的图片（如重压缩、改尺寸、二次截图等），并支持逐组勾选删除。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,10" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Content="扫描重复" Style="{StaticResource Button.Primary}" Command="{Binding ScanLibraryDuplicatesCommand}" AutomationProperties.Name="扫描重复内容" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0" Visibility="{Binding IsDuplicateScanRunning, Converter={StaticResource BoolToVis}}">
+                  <ProgressBar Width="140" Height="6" IsIndeterminate="True" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding ProgressLabel}" Margin="8,0,0,0" VerticalAlignment="Center" FontSize="{StaticResource Typography.BodySmall}" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                </StackPanel>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,20,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="功能说明位置" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}">
+            <StackPanel>
+              <TextBlock Text="筛选字段标签位置" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="照片图库筛选面板里「分类 / 修图状态 / 评分分类」等字段标签统一放在控件上方或左侧。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,10" />
+              <ComboBox Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding FeatureDescriptionPosition, Mode=TwoWay}">
+                <ComboBoxItem Content="标签在上" Tag="Top" />
+                <ComboBoxItem Content="标签在左" Tag="Left" />
+              </ComboBox>
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,20,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="图库分组标题" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="文件夹标题显示" Style="{StaticResource Settings.RowTitle}" />
+                <TextBlock Text="选择解析日期、磁盘文件夹名，或同时显示两者。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,20,0" />
+              </StackPanel>
+              <ComboBox Grid.Column="1" Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding GalleryGroupTitleMode, Mode=TwoWay}">
+                <ComboBoxItem Content="解析后的日期标题" Tag="ParsedDate" />
+                <ComboBoxItem Content="实际文件夹名称" Tag="FolderName" />
+                <ComboBoxItem Content="日期标题 + 文件夹名称" Tag="ParsedDateAndFolderName" />
+              </ComboBox>
+            </Grid>
+          </Border>
+
+          <Grid Margin="0,20,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="自定义导入格式" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}">
+            <StackPanel>
+              <TextBlock Text="自定义 RAW 后缀" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="内置 RAW（ARW / CR2 / CR3 / NEF / RAF / RW2 / ORF / DNG / RAW）之外的格式，用逗号或空格分隔，例如 R3D、IIQ。保存后会自动记住。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,6" />
+              <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding CustomRawExtensionsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="自定义RAW后缀" />
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <TextBlock Text="自定义视频后缀" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="内置视频（MP4 / MOV / MXF / MTS / M2TS / AVI / MKV / WMV / M4V / WEBM / MPEG / MPG / 3GP / FLV 等）之外的格式，用逗号或空格分隔，例如 BRAW。保存后会自动记住。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,6" />
+              <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding CustomVideoExtensionsText, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="自定义视频后缀" />
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <TextBlock Text="导入文件命名模板" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="占位符：{seq} 序号（4 位）、{seq:N} 指定位数序号、{orig} 原文件名、{date} 日期。例如 JK{seq} 生成 JK0001、JK0002。保存后自动记住并复用。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,6" />
+              <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding ImportNamingTemplate, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="导入命名模板" />
+            </StackPanel>
           </Border>
         </StackPanel>
-
-        <!-- ─────── 浏览与 AI ─────── -->
         <StackPanel x:Name="BrowseSection" Visibility="Collapsed">
           <TextBlock Text="浏览与 AI" Style="{StaticResource Layout.PageTitle}" />
           <TextBlock Text="这里的默认值不会被当前浏览会话覆盖。" Style="{StaticResource Layout.SettingsHint}" />
@@ -526,56 +612,6 @@
               </Grid>
               <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
               <TextBlock Text="语义参数仅对支持语义标签的引擎生效；人物识别继续在人物页面手动触发。" Style="{StaticResource Settings.RowDesc}" />
-            </StackPanel>
-          </Border>
-        </StackPanel>
-
-        <!-- ─────── 云盘与项目 ─────── -->
-        <StackPanel x:Name="CloudSection" Visibility="Collapsed">
-          <TextBlock Text="云盘与项目" Style="{StaticResource Layout.PageTitle}" />
-          <TextBlock Text="百度凭据使用 Windows 本机加密；夸克仅提供官方客户端入口。" Style="{StaticResource Layout.SettingsHint}" />
-
-          <Grid Margin="0,12,0,8">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="百度网盘" Style="{StaticResource Settings.GroupHeader}" />
-            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
-          </Grid>
-          <Border Style="{StaticResource Settings.Group}">
-            <StackPanel>
-              <TextBlock Text="AppKey" Style="{StaticResource Settings.RowTitle}" />
-              <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding BaiduAppKey, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-              <TextBlock Text="AppSecret" Style="{StaticResource Settings.RowTitle}" Margin="0,12,0,0" />
-              <TextBox Style="{StaticResource Input.TextBox}" Text="{Binding BaiduAppSecret, UpdateSourceTrigger=PropertyChanged}" Margin="0,6,0,0" />
-              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                  <TextBlock Text="连接状态" Style="{StaticResource Settings.RowTitle}" />
-                  <TextBlock Text="{Binding BaiduStatus}" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                  <Button Content="保存凭据" Style="{StaticResource Button.Secondary}" Command="{Binding SaveBaiduCredentialsCommand}" />
-                  <Button Content="授权" Style="{StaticResource Button.Secondary}" Command="{Binding StartBaiduAuthorizationCommand}" />
-                  <Button Content="断开连接" Style="{StaticResource Button.Secondary}" Command="{Binding DisconnectBaiduCommand}" />
-                </StackPanel>
-              </Grid>
-            </StackPanel>
-          </Border>
-
-          <Grid Margin="0,20,0,8">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="夸克" Style="{StaticResource Settings.GroupHeader}" />
-            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
-          </Grid>
-          <Border Style="{StaticResource Settings.Group}">
-            <StackPanel>
-              <TextBlock Text="官方客户端位置" Style="{StaticResource Settings.RowTitle}" />
-              <TextBlock Text="当前没有官方 API 集成，不显示连接或自动备份状态。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,10" />
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
-                <TextBox Grid.Column="0" Text="{Binding QuarkClientPath, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input.TextBox}" Margin="0,0,8,0" />
-                <Button Grid.Column="1" Content="打开官网" Style="{StaticResource Button.Secondary}" VerticalAlignment="Center" Command="{Binding OpenQuarkOfficialCommand}" />
-              </Grid>
             </StackPanel>
           </Border>
         </StackPanel>

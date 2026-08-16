@@ -31,12 +31,13 @@ public partial class MainWindow : Window
     // previews in the Inspector, but it must not fire before a double click is
     // ruled out (the user explicitly rejected "double click = click + open").
     private readonly DispatcherTimer _singleClickPreviewTimer;
+    private readonly DispatcherTimer _importTipTimer;
+    private bool _importTipShowingSecond;
     private PreviewFileViewModel? _pendingSingleClickFile;
     private bool _pendingSingleClickControl;
     private bool _pendingSingleClickShift;
     private System.Windows.Point? _navigationDragStart;
     private NavigationItemViewModel? _navigationDragSource;
-    private CancellationTokenSource? _cloudTransitionCts;
     private bool _isGridPanning;
     private System.Windows.Point _gridPanStartPoint;
     private double _gridPanStartVerticalOffset;
@@ -51,6 +52,7 @@ public partial class MainWindow : Window
     private const double TreemapZoomMin = 0.02;
     private const double TreemapZoomMax = 8.0;
     private const double TreemapZoomNotchFactor = 1.12;
+    private DispatcherTimer? _treemapZoomAnimation;
     private int _galleryZoomGeneration;
 
     // Title-bar theming: DWMWA_USE_IMMERSIVE_DARK_MODE makes the system caption
@@ -331,6 +333,11 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime())
         };
         _singleClickPreviewTimer.Tick += (_, _) => ApplyPendingSingleClick();
+        _importTipTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(6)
+        };
+        _importTipTimer.Tick += ImportTipTimer_Tick;
         InitializeComponent();
         DataContext = _viewModel;
         Loaded += MainWindow_Loaded;
@@ -340,6 +347,7 @@ public partial class MainWindow : Window
         StateChanged += (_, _) => ScheduleWindowStateSave();
         StateChanged += (_, _) => UpdateWindowCaptionGlyphs();
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
+        _viewModel.OpenIndependentViewerRequested += OpenIndependentViewer;
         _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(PeopleAlbumViewModel.SelectedAlbum))
@@ -353,6 +361,19 @@ public partial class MainWindow : Window
     {
         ApplyTitleBarTheme();
         ApplyWindowMaterial(); // 重新按主题色调应用亚克力（深色/浅色渐变不同）
+    }
+
+    private void ImportTipTimer_Tick(object? sender, EventArgs e)
+    {
+        if (ImportTipText is null)
+        {
+            return;
+        }
+
+        _importTipShowingSecond = !_importTipShowingSecond;
+        ImportTipText.Text = _importTipShowingSecond
+            ? "💡 无法判断归属时会停下来让你确认，不会乱放。确认目标文件夹后再导入。"
+            : "💡 遇到不认识的 RAW / 视频格式？到 设置 → 照片库与导入 → 自定义导入格式 里添加后缀（如 R3D、BRAW），保存后会自动记住。";
     }
 
     private void ApplyTitleBarTheme()
@@ -428,16 +449,10 @@ public partial class MainWindow : Window
         ApplyCustomWindowIcon();
         ApplyTitleBarTheme();
         ApplyWindowMaterial();
+        _importTipTimer.Start();
         if (App.ScreenshotPage is { } page)
         {
             _viewModel.CurrentPage = page;
-        }
-        if (App.ScreenshotCloudProvider is { } providerChoice)
-        {
-            _viewModel.SelectCloudProviderCommand.Execute(
-                providerChoice.Equals("quark", StringComparison.OrdinalIgnoreCase)
-                    ? CloudProviderChoice.Quark
-                    : CloudProviderChoice.Baidu);
         }
         if (App.BrowseShowcaseForScreenshot)
         {
@@ -449,6 +464,15 @@ public partial class MainWindow : Window
             _viewModel.IsAdvancedFiltersExpanded = true;
         }
         AnimateVisiblePage();
+        if (_viewModel.IsPreviewPage)
+        {
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
+        }
+
+        if (App.ScreenshotPath is null && App.ViewerFile is null && _viewModel.HasPendingImportResume)
+        {
+            PromptResumePendingImport();
+        }
 
         if (App.ScreenshotPath is { } screenshotPath && App.ViewerFile is null)
         {
@@ -460,6 +484,25 @@ public partial class MainWindow : Window
         if (App.ViewerFile is { } viewerFile)
         {
             OpenViewerForScreenshotOrInspect(viewerFile);
+        }
+    }
+
+    private async void PromptResumePendingImport()
+    {
+        var result = System.Windows.MessageBox.Show(
+            this,
+            "检测到上次未完成的导入。是否继续？\n\n选择「是」继续导入剩余文件；选择「否」放弃上次的导入进度。",
+            "继续导入",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            await _viewModel.ResumePendingImportAsync();
+        }
+        else
+        {
+            _viewModel.DiscardPendingImportResume();
         }
     }
 
@@ -541,14 +584,54 @@ public partial class MainWindow : Window
         {
             ApplyCustomWindowIcon();
         }
-        else if (e.PropertyName == nameof(MainWindowViewModel.SelectedCloudProvider))
-        {
-            AnimateCloudProvider();
-        }
         else if (e.PropertyName == nameof(MainWindowViewModel.IsAcrylicEnabled))
         {
             ApplyWindowMaterial();
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.ImportSuccessCount))
+        {
+            AnimateImportCount(ImportSuccessScale);
+        }
+        else if (e.PropertyName == nameof(MainWindowViewModel.ImportSkippedCount))
+        {
+            AnimateImportCount(ImportSkippedScale);
+        }
+        else if (e.PropertyName == nameof(MainWindowViewModel.ImportFailedCount))
+        {
+            AnimateImportCount(ImportFailedScale);
+        }
+    }
+
+    // 导入摘要数字变化：弹性放大回弹动画（导成功一张数字就跳一下）
+    private void AnimateImportCount(ScaleTransform scale)
+    {
+        if (scale is null)
+        {
+            return;
+        }
+
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        var storyboard = new Storyboard();
+        var bounce = new DoubleAnimation(1.0, 1.28, TimeSpan.FromMilliseconds(110))
+        {
+            AutoReverse = true,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(bounce, scale);
+        Storyboard.SetTargetProperty(bounce, new PropertyPath(ScaleTransform.ScaleXProperty));
+        storyboard.Children.Add(bounce);
+
+        var bounceY = new DoubleAnimation(1.0, 1.28, TimeSpan.FromMilliseconds(110))
+        {
+            AutoReverse = true,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(bounceY, scale);
+        Storyboard.SetTargetProperty(bounceY, new PropertyPath(ScaleTransform.ScaleYProperty));
+        storyboard.Children.Add(bounceY);
+
+        storyboard.Begin();
     }
 
     private void ApplyCustomWindowIcon()
@@ -601,72 +684,18 @@ public partial class MainWindow : Window
         "MapPhotos" => MapPageHost,
         "Compression" => CompressionPageHost,
         "Watermark" => WatermarkPageHost,
-        "Cloud" => CloudPageContainer,
         "Settings" => SettingsCenterPageHost,
         _ => HomePage
     };
 
     protected override void OnClosed(EventArgs e)
     {
-        _cloudTransitionCts?.Cancel();
-        _cloudTransitionCts?.Dispose();
         _windowStateSaveTimer.Stop();
         PersistWindowState();
         _viewModel.PropertyChanged -= MainWindowViewModel_PropertyChanged;
         _viewModel.FaceSearch.Cancel();
         MapPageHost.Dispose();
-        BaiduCloudPageHost.Dispose();
-        QuarkCloudPageHost.Dispose();
         base.OnClosed(e);
-    }
-
-    private async void AnimateCloudProvider()
-    {
-        _cloudTransitionCts?.Cancel();
-        _cloudTransitionCts?.Dispose();
-        var cancellation = _cloudTransitionCts = new CancellationTokenSource();
-
-        var incoming = _viewModel.SelectedCloudProvider == CloudProviderChoice.Baidu
-            ? BaiduCloudPageHost
-            : QuarkCloudPageHost;
-        var outgoing = ReferenceEquals(incoming, BaiduCloudPageHost)
-            ? QuarkCloudPageHost
-            : BaiduCloudPageHost;
-
-        incoming.Visibility = Visibility.Visible;
-        incoming.BeginAnimation(OpacityProperty, null);
-
-        if (!SystemParameters.ClientAreaAnimation)
-        {
-            incoming.Opacity = 1;
-            outgoing.Opacity = 0;
-            outgoing.Visibility = Visibility.Collapsed;
-            return;
-        }
-
-        incoming.Opacity = 0;
-        incoming.BeginAnimation(
-            OpacityProperty,
-            new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(180))
-            {
-                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
-            });
-
-        try
-        {
-            await Task.Delay(TimeSpan.FromMilliseconds(180), cancellation.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (!ReferenceEquals(_cloudTransitionCts, cancellation)) return;
-        incoming.BeginAnimation(OpacityProperty, null);
-        incoming.Opacity = 1;
-        outgoing.BeginAnimation(OpacityProperty, null);
-        outgoing.Opacity = 0;
-        outgoing.Visibility = Visibility.Collapsed;
     }
 
     private void FaceReference_DragOver(object sender, System.Windows.DragEventArgs e)
@@ -868,21 +897,87 @@ public partial class MainWindow : Window
             return;
         }
 
-        var oldOffsetX = scrollViewer.HorizontalOffset;
-        var oldOffsetY = scrollViewer.VerticalOffset;
-        var contentX = oldOffsetX + pointer.X;
-        var contentY = oldOffsetY + pointer.Y;
-        var scale = newZoom / oldZoom;
-        var newOffsetX = contentX * scale - pointer.X;
-        var newOffsetY = contentY * scale - pointer.Y;
-
-        _viewModel.TreemapZoom = newZoom;
-        UpdateTreemapSize();
-        scrollViewer.UpdateLayout();
-        scrollViewer.ScrollToHorizontalOffset(Math.Clamp(newOffsetX, 0, scrollViewer.ScrollableWidth));
-        scrollViewer.ScrollToVerticalOffset(Math.Clamp(newOffsetY, 0, scrollViewer.ScrollableHeight));
+        // 画布放大：整个节点布局按比例缩放，锚点 = 鼠标下的内容点（scale 1.0 坐标）。
+        var anchorContentX = (scrollViewer.HorizontalOffset + pointer.X) / oldZoom;
+        var anchorContentY = (scrollViewer.VerticalOffset + pointer.Y) / oldZoom;
+        AnimateTreemapZoom(newZoom, anchorContentX, anchorContentY, pointer.X, pointer.Y);
 
         e.Handled = true;
+    }
+
+    /// <summary>
+    /// 画布级平滑缩放：围绕鼠标（或视口中心）把整个节点布局按比例放大/缩小，
+    /// 180ms 三次缓出过渡。只缩放画布整体，不触发任何节点级动画。
+    /// </summary>
+    private void AnimateTreemapZoom(
+        double toZoom,
+        double anchorContentX,
+        double anchorContentY,
+        double anchorViewportX,
+        double anchorViewportY)
+    {
+        if (TreemapControl is null || TreemapScrollViewer is null)
+        {
+            return;
+        }
+
+        _treemapZoomAnimation?.Stop();
+        _treemapZoomAnimation = null;
+
+        var fromZoom = _viewModel?.TreemapZoom ?? 1.0;
+        if (Math.Abs(fromZoom - toZoom) < 0.001)
+        {
+            ApplyTreemapZoom(toZoom, anchorContentX, anchorContentY, anchorViewportX, anchorViewportY);
+            return;
+        }
+
+        var started = DateTime.UtcNow;
+        var duration = TimeSpan.FromMilliseconds(180);
+        var timer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(16),
+        };
+
+        timer.Tick += (_, _) =>
+        {
+            var progress = Math.Clamp((DateTime.UtcNow - started).TotalMilliseconds / duration.TotalMilliseconds, 0d, 1d);
+            var eased = 1d - Math.Pow(1d - progress, 3d); // cubic ease-out
+            var zoom = fromZoom + (toZoom - fromZoom) * eased;
+            ApplyTreemapZoom(zoom, anchorContentX, anchorContentY, anchorViewportX, anchorViewportY);
+
+            if (progress >= 1d)
+            {
+                timer.Stop();
+                if (ReferenceEquals(_treemapZoomAnimation, timer))
+                {
+                    _treemapZoomAnimation = null;
+                }
+            }
+        };
+
+        _treemapZoomAnimation = timer;
+        timer.Start();
+    }
+
+    private void ApplyTreemapZoom(
+        double zoom,
+        double anchorContentX,
+        double anchorContentY,
+        double anchorViewportX,
+        double anchorViewportY)
+    {
+        if (_viewModel is null || TreemapControl is null || TreemapScrollViewer is null)
+        {
+            return;
+        }
+
+        _viewModel.TreemapZoom = zoom;
+        UpdateTreemapSize();
+        TreemapScrollViewer.UpdateLayout();
+
+        // 锚点内容点始终保持在视口锚点位置，实现围绕鼠标的平滑缩放。
+        TreemapScrollViewer.ScrollToHorizontalOffset(Math.Clamp(anchorContentX * zoom - anchorViewportX, 0, TreemapScrollViewer.ScrollableWidth));
+        TreemapScrollViewer.ScrollToVerticalOffset(Math.Clamp(anchorContentY * zoom - anchorViewportY, 0, TreemapScrollViewer.ScrollableHeight));
     }
 
     private void TreemapScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -1195,51 +1290,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void BaiduAppSecretBox_PasswordChanged(object sender, RoutedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.PasswordBox passwordBox)
-        {
-            _viewModel.BaiduAppSecret = passwordBox.Password;
-        }
-    }
-
-    private void BrowseQuarkClient_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new Microsoft.Win32.OpenFileDialog
-        {
-            Title = "选择夸克客户端或桌面快捷方式",
-            Filter = "可执行文件 (*.exe;*.lnk;*.url)|*.exe;*.lnk;*.url|所有文件 (*.*)|*.*"
-        };
-        if (dialog.ShowDialog() == true)
-        {
-            _viewModel.QuarkClientPath = dialog.FileName;
-        }
-    }
-
-    private void LaunchQuarkClient_Click(object sender, RoutedEventArgs e)
-    {
-        var path = _viewModel.QuarkClientPath;
-        if (string.IsNullOrWhiteSpace(path))
-        {
-            _viewModel.StatusMessage = "请先在左侧填入或选择夸克客户端路径。";
-            return;
-        }
-
-        try
-        {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
-            {
-                FileName = path,
-                UseShellExecute = true
-            });
-            _viewModel.StatusMessage = $"已启动：{path}";
-        }
-        catch (Exception ex)
-        {
-            _viewModel.StatusMessage = $"启动夸克失败：{ex.Message}";
-        }
-    }
-
     private void CloseExifPanel_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         _viewModel.SelectedPreviewFile = null;
@@ -1331,6 +1381,45 @@ public partial class MainWindow : Window
 
     private void PreviewSelection_Changed(object sender, RoutedEventArgs e) =>
         _viewModel.NotifyPreviewSelectionChanged();
+
+    /// <summary>
+    /// 展开日期分组后新加入照片墙的瓷砖播放一次「向下 reveal」动画：以顶部为锚点
+    /// 纵向展开（ScaleY 0→1）+ 淡入，并逐项错峰，形成内容从日期标题区域向下连续展开的
+    /// 效果。只对标记了 <see cref="PreviewFileViewModel.RevealOnLoad"/> 的瓷砖触发，
+    /// 滚动进入视口时不会重复播放。
+    /// </summary>
+    private void PreviewWallTile_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.FrameworkElement { DataContext: PreviewFileViewModel item } element ||
+            !item.RevealOnLoad)
+        {
+            return;
+        }
+
+        item.RevealOnLoad = false;
+
+        var scale = new ScaleTransform(1.0, 0.0);
+        element.RenderTransformOrigin = new System.Windows.Point(0.5, 0);
+        element.RenderTransform = scale;
+        element.Opacity = 0;
+
+        var duration = TimeSpan.FromMilliseconds(240);
+        var beginTime = TimeSpan.FromMilliseconds(item.RevealDelayMs);
+        var easing = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var scaleY = new DoubleAnimation(0.0, 1.0, duration)
+        {
+            BeginTime = beginTime,
+            EasingFunction = easing
+        };
+        var opacity = new DoubleAnimation(0, 1, duration)
+        {
+            BeginTime = beginTime,
+            EasingFunction = easing
+        };
+
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);
+        element.BeginAnimation(UIElement.OpacityProperty, opacity);
+    }
 
     private void PreviewContextMenu_BatchCopy(object sender, RoutedEventArgs e) => BatchCopySelected();
     private void PreviewContextMenu_BatchMove(object sender, RoutedEventArgs e) => BatchMoveSelected();

@@ -9,6 +9,23 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class AppSettingsStoreTests
 {
     [Fact]
+    public async Task GalleryGroupTitleMode_DefaultsToParsedDateAndPersists()
+    {
+        new AppSettings().GalleryGroupTitleMode.Should().Be(GalleryGroupTitleMode.ParsedDate);
+        var path = Path.Combine(Path.GetTempPath(), $"hanabe-gallery-title-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new AppSettingsStore(path);
+            await store.SaveAsync(new AppSettings { GalleryGroupTitleMode = GalleryGroupTitleMode.ParsedDateAndFolderName });
+            (await store.LoadAsync()).GalleryGroupTitleMode.Should().Be(GalleryGroupTitleMode.ParsedDateAndFolderName);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task NavigationPreferencesSurviveRestart()
     {
         var directory = Path.Combine(Path.GetTempPath(), "hanabe-settings-" + Guid.NewGuid().ToString("N"));
@@ -62,18 +79,18 @@ public sealed class AppSettingsStoreTests
             var store = new AppSettingsStore(path);
             await store.SaveAsync(new AppSettings
             {
-                BaiduAppKey = "cloud-key",
-                BaiduAppSecretProtected = "protected-secret",
-                QuarkClientPath = "C:\\Quark\\Quark.exe"
+                LaunchAtStartup = true,
+                DefaultThumbnailSize = 300,
+                DefaultPreviewSort = 7
             });
 
             await store.UpdateAsync(settings => settings.GlassIntensity = 0.75);
 
             var loaded = await store.LoadAsync();
             loaded.GlassIntensity.Should().Be(0.75);
-            loaded.BaiduAppKey.Should().Be("cloud-key");
-            loaded.BaiduAppSecretProtected.Should().Be("protected-secret");
-            loaded.QuarkClientPath.Should().Be("C:\\Quark\\Quark.exe");
+            loaded.LaunchAtStartup.Should().BeTrue();
+            loaded.DefaultThumbnailSize.Should().Be(300);
+            loaded.DefaultPreviewSort.Should().Be(7);
         }
         finally
         {

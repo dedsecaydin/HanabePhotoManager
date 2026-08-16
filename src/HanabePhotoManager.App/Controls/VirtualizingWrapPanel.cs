@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using Size = System.Windows.Size;
 using Point = System.Windows.Point;
 
@@ -53,6 +54,22 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     // section collapsing or re-expanding with the same item count — never
     // leave a stale layout behind.
     private List<RowInfo> _rows = [];
+
+    // Tracks the last logical (content-space) top of every realized item, keyed by
+    // the item object (stable across flat-list insertions/removals). On a layout
+    // change (a date section expanding/collapsing) the row top of items below the
+    // change point shifts; we animate their containers' RenderTransform from the
+    // old offset back to zero so they slide smoothly instead of jumping.
+    private readonly Dictionary<object, double> _itemTops = [];
+
+    /// <summary>
+    /// Set to <c>true</c> (by the browse page) only when a date section expands or
+    /// collapses, so the layout-transition slide plays for that change. Other
+    /// layout changes — Ctrl+wheel zoom, window resize, date/filter switches —
+    /// must NOT trigger the slide, otherwise zooming feels janky. Reset by
+    /// <see cref="ArrangeOverride"/> after a single pass.
+    /// </summary>
+    public static bool AnimateLayoutTransition { get; set; }
 
     private readonly struct RowInfo(int startIndex, int count, bool isHeader)
     {
@@ -298,14 +315,14 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         if (itemCount == 0)
         {
             CleanUpItems(0, -1);
-            return ClampToFinite(availableSize);
+            return _viewport;
         }
 
         GetVisibleRange(out var firstVisibleItemIndex, out var lastVisibleItemIndex);
         if (firstVisibleItemIndex < 0 || lastVisibleItemIndex < firstVisibleItemIndex)
         {
             CleanUpItems(0, -1);
-            return ClampToFinite(availableSize);
+            return _viewport;
         }
 
         var startPosition = generator.GeneratorPositionFromIndex(firstVisibleItemIndex);
@@ -340,7 +357,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         CleanUpItems(firstVisibleItemIndex, lastVisibleItemIndex);
-        return ClampToFinite(availableSize);
+        return _viewport;
     }
 
     protected override Size ArrangeOverride(Size finalSize)
@@ -380,6 +397,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             var rowTop = rowTops[rowIndex];
             if (row.IsHeader)
             {
+                AnimateSlide(child, itemIndex, rowTop);
                 child.Arrange(new Rect(
                     -HorizontalOffset,
                     rowTop - VerticalOffset,
@@ -391,13 +409,17 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             var itemWidth = Math.Max(1d, ItemWidth);
             var itemHeight = Math.Max(1d, ItemHeight);
             var column = itemIndex - row.StartIndex;
+            // 强制使用 ItemWidth/ItemHeight（方形 tile），而不是内容自适应高度——
+            // 否则缩略图按照片原始比例（3:2 横图）撑开 tile，网格看起来"扁"。
+            AnimateSlide(child, itemIndex, rowTop);
             child.Arrange(new Rect(
                 column * itemWidth - HorizontalOffset,
                 rowTop - VerticalOffset,
-                child.DesiredSize.Width,
-                child.DesiredSize.Height));
+                itemWidth,
+                itemHeight));
         }
 
+        AnimateLayoutTransition = false;
         return finalSize;
     }
 
@@ -413,6 +435,42 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         return -1;
+    }
+
+    /// <summary>
+    /// Smoothly slides a realized item from its previous logical top to its new
+    /// top when a date section expands/collapses and pushes the rows below. The
+    /// item is already arranged at its new position; a transient
+    /// <see cref="TranslateTransform"/> offsets it back to the old position and
+    /// eases to zero. Scrolling does not change the logical top, so this never
+    /// fires during a normal scroll.
+    /// </summary>
+    private void AnimateSlide(UIElement child, int itemIndex, double rowTop)
+    {
+        var items = ItemsOwner?.Items;
+        if (items is null || itemIndex < 0 || itemIndex >= items.Count)
+        {
+            return;
+        }
+
+        var itemObject = items[itemIndex];
+        var hasOldTop = _itemTops.TryGetValue(itemObject, out var oldTop);
+        var moved = AnimateLayoutTransition && hasOldTop && Math.Abs(oldTop - rowTop) > 0.5;
+        _itemTops[itemObject] = rowTop;
+
+        if (!moved)
+        {
+            return;
+        }
+
+        var delta = oldTop - rowTop;
+        var translate = new TranslateTransform(0, delta);
+        child.RenderTransform = translate;
+        var animation = new DoubleAnimation(delta, 0, TimeSpan.FromMilliseconds(250))
+        {
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        translate.BeginAnimation(TranslateTransform.YProperty, animation);
     }
 
     /// <summary>
@@ -473,16 +531,27 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     private void UpdateScrollInfo(Size availableSize)
     {
-        var extent = CalculateExtent(availableSize, ItemCount);
+        var itemCount = ItemCount;
+        var extent = CalculateExtent(availableSize, itemCount);
         if (extent != _extent)
         {
             _extent = extent;
             _scrollOwner?.InvalidateScrollInfo();
         }
 
-        if (availableSize != _viewport)
+        // 虚拟化面板在 CanContentScroll=True 下会被以「高度无穷大」测量；
+        // 真正的视口高度取自 ScrollOwner（ScrollViewer）。否则 ViewportHeight 会变成
+        // 无穷大，导致 ExtentHeight 与滚动全部失效。
+        var viewportWidth = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0
+            ? Math.Max(1d, ItemWidth)
+            : availableSize.Width;
+        var viewportHeight = double.IsInfinity(availableSize.Height) || availableSize.Height <= 0
+            ? Math.Max(1d, _scrollOwner?.ViewportHeight ?? ItemHeight)
+            : availableSize.Height;
+        var viewport = new Size(viewportWidth, viewportHeight);
+        if (viewport != _viewport)
         {
-            _viewport = availableSize;
+            _viewport = viewport;
             _scrollOwner?.InvalidateScrollInfo();
         }
     }
@@ -582,7 +651,4 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
     }
 
-    private static Size ClampToFinite(Size size) => new(
-        double.IsInfinity(size.Width) ? 0 : size.Width,
-        double.IsInfinity(size.Height) ? 0 : size.Height);
 }

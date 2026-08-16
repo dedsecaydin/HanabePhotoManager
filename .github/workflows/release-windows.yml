@@ -1,0 +1,40 @@
+name: Release Windows installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version without the v prefix
+        required: true
+        default: 0.3.2-alpha.12
+      tag:
+        description: Existing GitHub release tag
+        required: true
+        default: v0.3.2-alpha.12
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build installer
+        shell: pwsh
+        run: ./tools/Publish-Clean.ps1 -Version '${{ inputs.version }}' -OutputRoot artifacts
+
+      - name: Upload installer to release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload '${{ inputs.tag }}' `
+            "artifacts/${{ inputs.version }}/HanabePhotoManager-Setup-x64.exe" `
+            "artifacts/${{ inputs.version }}/HanabePhotoManager-Setup-x64.exe.sha256" `
+            --repo '${{ github.repository }}' --clobber

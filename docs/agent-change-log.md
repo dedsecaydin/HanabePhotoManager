@@ -872,3 +872,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 每完成 64 个新文件即保存扫描检查点，大图库扫描被中断后可从最近进度继续。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 409、InstallerShell 10，共 632 项测试通过。
 - 已生成 `artifacts/0.3.2-alpha.11/HanabePhotoManager-Setup-x64.exe`（自包含 WPF 安装外壳、内嵌 MSI），启动检查通过；SHA-256：`a42278f2df23e5a1ae8d4c806edb0cc89b909bc235b71320d2f76869aedbd8ad`。
+
+### 安装器圆角进度与桌面快捷方式选项
+
+- WPF 安装外壳以自定义模板替换系统矩形进度条，轨道与移动指示块均使用一致圆角并裁切边界。
+- 安装选项页新增“在桌面创建快捷方式”，默认不勾选；选择结果通过 `CREATE_DESKTOP_SHORTCUT` 传入 MSI，未选择时仅保留开始菜单入口。
+- 桌面快捷方式使用当前用户注册表键作为组件 KeyPath，确保安装校验和卸载清理符合 Windows Installer 规则。
+- Release 全量测试 Core 159、Infrastructure 54、App 409、InstallerShell 12，共 634 项通过。
+- 已生成 `artifacts/0.3.2-alpha.12/HanabePhotoManager-Setup-x64.exe`，启动保持运行检查通过；SHA-256：`80869baecaf11f69d08192319f657bc56a22f73fa38d0a392ad844639a5c36d5`。

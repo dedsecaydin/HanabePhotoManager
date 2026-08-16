@@ -33,6 +33,38 @@
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
+        <Style x:Key="RoundedIndeterminateProgressBar" TargetType="ProgressBar">
+            <Setter Property="Background" Value="{DynamicResource Brush.SurfaceMuted}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Border CornerRadius="4" Background="{TemplateBinding Background}" ClipToBounds="True">
+                            <Grid>
+                                <Border x:Name="Indicator" Width="132" HorizontalAlignment="Left"
+                                        CornerRadius="4" Background="{TemplateBinding Foreground}">
+                                    <Border.RenderTransform>
+                                        <TranslateTransform x:Name="IndicatorTransform" X="-132" />
+                                    </Border.RenderTransform>
+                                </Border>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsIndeterminate" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard RepeatBehavior="Forever">
+                                            <DoubleAnimation Storyboard.TargetName="IndicatorTransform"
+                                                             Storyboard.TargetProperty="X"
+                                                             From="-132" To="500" Duration="0:0:1.15" />
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="TextBlock"><Setter Property="Foreground" Value="{DynamicResource Brush.Text}" /></Style>
     </Window.Resources>
 
@@ -80,6 +112,9 @@
                         <Border Margin="0,22,0,0" Padding="18" CornerRadius="14" Background="{DynamicResource Brush.SurfaceMuted}">
                             <TextBlock Foreground="{DynamicResource Brush.TextSecondary}" TextWrapping="Wrap" LineHeight="22" Text="安装器将在你点击“开始安装”后请求管理员权限。照片库与个人数据不会写入安装目录。" />
                         </Border>
+                        <CheckBox x:Name="DesktopShortcutCheckBox" Margin="4,20,0,0"
+                                  Foreground="{DynamicResource Brush.Text}"
+                                  Content="在桌面创建快捷方式" />
                     </StackPanel>
 
                     <StackPanel x:Name="LicensePanel" Visibility="Collapsed">
@@ -97,7 +132,9 @@
                     <StackPanel x:Name="InstallingPanel" VerticalAlignment="Center" Visibility="Collapsed">
                         <TextBlock HorizontalAlignment="Center" FontSize="30" FontWeight="Bold" Text="正在安装" />
                         <TextBlock Margin="0,10,0,30" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.TextSecondary}" Text="请稍候，不要关闭安装程序。" />
-                        <ProgressBar Height="8" IsIndeterminate="True" Foreground="{DynamicResource Brush.Accent}" />
+                        <ProgressBar Height="8" IsIndeterminate="True"
+                                     Style="{StaticResource RoundedIndeterminateProgressBar}"
+                                     Foreground="{DynamicResource Brush.Accent}" />
                     </StackPanel>
 
                     <StackPanel x:Name="CompletePanel" VerticalAlignment="Center" Visibility="Collapsed">

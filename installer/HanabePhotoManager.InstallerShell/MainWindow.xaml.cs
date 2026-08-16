@@ -102,7 +102,11 @@ public partial class MainWindow : Window
         try
         {
             var msiPath = engine.ExtractEmbeddedMsi();
-            var outcome = await engine.InstallAsync(msiPath, InstallFolderBox.Text.Trim(), CancellationToken.None);
+            var outcome = await engine.InstallAsync(
+                msiPath,
+                InstallFolderBox.Text.Trim(),
+                DesktopShortcutCheckBox.IsChecked == true,
+                CancellationToken.None);
             var success = outcome is InstallerOutcome.Success or InstallerOutcome.RestartRequired;
             flow.Complete(success);
             ResultTitle.Text = success ? "安装完成" : outcome == InstallerOutcome.Cancelled ? "已取消安装" : "安装未完成";

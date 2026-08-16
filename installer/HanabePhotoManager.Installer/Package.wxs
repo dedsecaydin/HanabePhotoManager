@@ -20,6 +20,7 @@
       DowngradeErrorMessage="!(loc.DowngradeErrorMessage)"
       Schedule="afterInstallInitialize" />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Property Id="CREATE_DESKTOP_SHORTCUT" Value="0" Secure="yes" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
       <Directory Id="INSTALLFOLDER" Name="照片管理器" />
@@ -45,13 +46,6 @@
         Source="!(bindpath.Payload)\HanabePhotoManager.App.exe"
         KeyPath="yes">
         <Shortcut
-          Id="DesktopShortcut"
-          Directory="DesktopFolder"
-          Name="照片管理器"
-          Description="照片管理器"
-          Advertise="yes"
-          WorkingDirectory="INSTALLFOLDER" />
-        <Shortcut
           Id="StartMenuShortcut"
           Directory="ApplicationProgramsFolder"
           Name="照片管理器"
@@ -63,6 +57,20 @@
         Id="RemoveApplicationProgramsFolder"
         Directory="ApplicationProgramsFolder"
         On="uninstall" />
+    </Component>
+    <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="*"
+               Bitness="always64" Condition="CREATE_DESKTOP_SHORTCUT = 1">
+      <Shortcut Id="DesktopShortcut"
+                Name="照片管理器"
+                Description="照片管理器"
+                Target="[INSTALLFOLDER]HanabePhotoManager.App.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue Root="HKCU"
+                     Key="Software\Hanabe\照片管理器"
+                     Name="DesktopShortcut"
+                     Type="integer"
+                     Value="1"
+                     KeyPath="yes" />
     </Component>
   </Package>
 </Wix>

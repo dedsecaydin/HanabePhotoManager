@@ -20,10 +20,14 @@ public sealed class InstallerEngine
         return destination;
     }
 
-    public async Task<InstallerOutcome> InstallAsync(string msiPath, string installFolder, CancellationToken cancellationToken)
+    public async Task<InstallerOutcome> InstallAsync(
+        string msiPath,
+        string installFolder,
+        bool createDesktopShortcut,
+        CancellationToken cancellationToken)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-        var arguments = $"/i \"{msiPath}\" INSTALLFOLDER=\"{installFolder}\" /qn /norestart /L*v \"{LogPath}\"";
+        var arguments = BuildInstallArguments(msiPath, installFolder, createDesktopShortcut, LogPath);
         using var process = Process.Start(new ProcessStartInfo("msiexec.exe", arguments)
         {
             UseShellExecute = true,
@@ -34,6 +38,13 @@ public sealed class InstallerEngine
         await process.WaitForExitAsync(cancellationToken);
         return InstallerExitCode.Classify(process.ExitCode);
     }
+
+    public static string BuildInstallArguments(
+        string msiPath,
+        string installFolder,
+        bool createDesktopShortcut,
+        string logPath)
+        => $"/i \"{msiPath}\" INSTALLFOLDER=\"{installFolder}\" CREATE_DESKTOP_SHORTCUT={(createDesktopShortcut ? 1 : 0)} /qn /norestart /L*v \"{logPath}\"";
 
     public async Task<int> RunQuietAsync(string msiPath, bool uninstall, string? requestedLogPath, CancellationToken cancellationToken)
     {

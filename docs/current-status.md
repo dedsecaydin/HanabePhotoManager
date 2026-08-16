@@ -2,7 +2,7 @@
 
 > **Purpose:** Real-time overview of what's done, what's partial, and what's planned.
 > **Last Updated:** 2026-08-16
-> **Current Version:** `0.3.2-alpha.11`（地图位置增量索引与扫描续接）
+> **Current Version:** `0.3.2-alpha.12`（圆角安装进度与可选桌面快捷方式）
 > **Status Labels:** Stable / Implemented-Unverified / Partial / In Progress / Planned / Known Issue / Blocked
 
 ---

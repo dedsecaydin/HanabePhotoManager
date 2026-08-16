@@ -880,3 +880,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 桌面快捷方式使用当前用户注册表键作为组件 KeyPath，确保安装校验和卸载清理符合 Windows Installer 规则。
 - Release 全量测试 Core 159、Infrastructure 54、App 409、InstallerShell 12，共 634 项通过。
 - 已生成 `artifacts/0.3.2-alpha.12/HanabePhotoManager-Setup-x64.exe`，启动保持运行检查通过；SHA-256：`80869baecaf11f69d08192319f657bc56a22f73fa38d0a392ad844639a5c36d5`。
+
+### 图库 Inspector 空状态互斥修复
+
+- 修复浏览页已选中照片并显示文件详情时，“未选择照片”空状态仍叠加在右侧 Inspector 中央的问题。
+- 根因是详情面板已有 `SelectedPreviewFile` 非空可见性绑定，而空状态面板没有反向绑定，导致两层同时参与渲染。
+- 空状态现在通过 `NullToVis` 的 `Invert` 参数仅在没有选中文件时显示，并增加 XAML 结构回归测试锁定互斥行为。

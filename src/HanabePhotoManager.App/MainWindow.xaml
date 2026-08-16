@@ -1940,7 +1940,7 @@
                         BorderThickness="1"
                         ClipToBounds="True">
                   <Grid>
-                    <StackPanel x:Name="InspectorEmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="28">
+                    <StackPanel x:Name="InspectorEmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="28" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource NullToVis}, ConverterParameter=Invert}">
                       <Border Width="48" Height="48" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Container}" HorizontalAlignment="Center">
                         <Path Data="{StaticResource Icon.Library}" Stroke="{DynamicResource Brush.OnSurfaceVariant}" StrokeThickness="1.6" Width="22" Height="22" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                       </Border>

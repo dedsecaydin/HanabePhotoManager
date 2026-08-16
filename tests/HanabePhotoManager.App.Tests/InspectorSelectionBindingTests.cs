@@ -46,6 +46,16 @@ public sealed class InspectorSelectionBindingTests
             "BooleanToVisibilityConverter 对对象引用永远 Collapsed，会导致 Inspector 永远显示「未选择照片」空态");
     }
 
+    [Fact]
+    public void InspectorEmptyState_IsVisibleOnlyWhenNoPreviewFileIsSelected()
+    {
+        var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        xaml.Should().Contain(
+            "x:Name=\"InspectorEmptyState\" VerticalAlignment=\"Center\" HorizontalAlignment=\"Center\" Margin=\"28\" Visibility=\"{Binding SelectedPreviewFile, Converter={StaticResource NullToVis}, ConverterParameter=Invert}\"",
+            "选中照片后空状态必须折叠，不能与文件详情同时显示");
+    }
+
     private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

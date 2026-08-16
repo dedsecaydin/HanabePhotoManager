@@ -871,3 +871,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 地图刷新时复用未变化文件的结果，仅对新增或已修改照片重新读取 EXIF；旧版已有 GPS 坐标的条目只补写文件签名，不重复解码。
 - 每完成 64 个新文件即保存扫描检查点，大图库扫描被中断后可从最近进度继续。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 409、InstallerShell 10，共 632 项测试通过。
+- 已生成 `artifacts/0.3.2-alpha.11/HanabePhotoManager-Setup-x64.exe`（自包含 WPF 安装外壳、内嵌 MSI），启动检查通过；SHA-256：`a42278f2df23e5a1ae8d4c806edb0cc89b909bc235b71320d2f76869aedbd8ad`。

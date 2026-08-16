@@ -14,4 +14,10 @@
     <PackageReference Include="WixToolset.BootstrapperApplications.wixext" Version="5.0.2" />
   </ItemGroup>
 
+  <!-- 主题 .wxl 只通过 LocalizationFile 作为 BA 主题本地化引用，不能同时被 **/*.wxl 默认包含，
+       否则与内置主题本地化冲突报 duplicate-ID（WIX0100）。 -->
+  <ItemGroup>
+    <EmbeddedResource Remove="themes\HanabeTheme.wxl" />
+  </ItemGroup>
+
 </Project>

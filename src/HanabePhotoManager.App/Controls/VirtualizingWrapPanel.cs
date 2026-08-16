@@ -101,6 +101,36 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         typeof(VirtualizingWrapPanel),
         new FrameworkPropertyMetadata(44d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange));
 
+    public static readonly DependencyProperty SectionBackgroundProperty = DependencyProperty.Register(
+        nameof(SectionBackground),
+        typeof(System.Windows.Media.Brush),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty SectionBorderBrushProperty = DependencyProperty.Register(
+        nameof(SectionBorderBrush),
+        typeof(System.Windows.Media.Brush),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty SectionCornerRadiusProperty = DependencyProperty.Register(
+        nameof(SectionCornerRadius),
+        typeof(CornerRadius),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(new CornerRadius(), FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty SectionPaddingProperty = DependencyProperty.Register(
+        nameof(SectionPadding),
+        typeof(double),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsArrange | FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty SectionSpacingProperty = DependencyProperty.Register(
+        nameof(SectionSpacing),
+        typeof(double),
+        typeof(VirtualizingWrapPanel),
+        new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
+
     public double ItemWidth
     {
         get => (double)GetValue(ItemWidthProperty);
@@ -117,6 +147,36 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     {
         get => (double)GetValue(HeaderHeightProperty);
         set => SetValue(HeaderHeightProperty, value);
+    }
+
+    public System.Windows.Media.Brush? SectionBackground
+    {
+        get => (System.Windows.Media.Brush?)GetValue(SectionBackgroundProperty);
+        set => SetValue(SectionBackgroundProperty, value);
+    }
+
+    public System.Windows.Media.Brush? SectionBorderBrush
+    {
+        get => (System.Windows.Media.Brush?)GetValue(SectionBorderBrushProperty);
+        set => SetValue(SectionBorderBrushProperty, value);
+    }
+
+    public CornerRadius SectionCornerRadius
+    {
+        get => (CornerRadius)GetValue(SectionCornerRadiusProperty);
+        set => SetValue(SectionCornerRadiusProperty, value);
+    }
+
+    public double SectionPadding
+    {
+        get => (double)GetValue(SectionPaddingProperty);
+        set => SetValue(SectionPaddingProperty, value);
+    }
+
+    public double SectionSpacing
+    {
+        get => (double)GetValue(SectionSpacingProperty);
+        set => SetValue(SectionSpacingProperty, value);
     }
 
     private int ItemCount => ItemsControl.GetItemsOwner(this)?.Items.Count ?? 0;
@@ -169,6 +229,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         _offset.X = offset;
         _scrollOwner?.InvalidateScrollInfo();
         InvalidateMeasure();
+        InvalidateVisual();
     }
 
     public void SetVerticalOffset(double offset)
@@ -182,6 +243,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         _offset.Y = offset;
         _scrollOwner?.InvalidateScrollInfo();
         InvalidateMeasure();
+        InvalidateVisual();
     }
 
     public Rect MakeVisible(Visual visual, Rect rectangle)
@@ -239,7 +301,8 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             return rows;
         }
 
-        var itemsPerRow = Math.Max(1, (int)Math.Floor(viewportWidth / Math.Max(1d, ItemWidth)));
+        var contentWidth = Math.Max(1d, viewportWidth - Math.Max(0d, SectionPadding) * 2);
+        var itemsPerRow = Math.Max(1, (int)Math.Floor(contentWidth / Math.Max(1d, ItemWidth)));
         var items = ItemsOwner?.Items;
         var rowStart = 0;
         var rowCount = 0;
@@ -331,6 +394,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var viewportWidth = double.IsInfinity(availableSize.Width) || availableSize.Width <= 0
             ? Math.Max(1d, ItemWidth)
             : availableSize.Width;
+        var sectionPadding = Math.Max(0d, SectionPadding);
 
         using (generator.StartAt(startPosition, GeneratorDirection.Forward, true))
         {
@@ -351,7 +415,9 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                     generator.PrepareItemContainer(child);
                 }
 
-                var measureWidth = IsHeaderItem(itemIndex) ? viewportWidth : Math.Max(1d, ItemWidth);
+                var measureWidth = IsHeaderItem(itemIndex)
+                    ? Math.Max(1d, viewportWidth - sectionPadding * 2)
+                    : Math.Max(1d, ItemWidth);
                 var measureHeight = IsHeaderItem(itemIndex) ? Math.Max(1d, HeaderHeight) : Math.Max(1d, ItemHeight);
                 child?.Measure(new Size(measureWidth, measureHeight));
             }
@@ -377,6 +443,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var viewportWidth = double.IsInfinity(finalSize.Width) || finalSize.Width <= 0
             ? Math.Max(1d, ItemWidth)
             : finalSize.Width;
+        var sectionPadding = Math.Max(0d, SectionPadding);
 
         foreach (UIElement child in InternalChildren)
         {
@@ -400,9 +467,9 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             {
                 AnimateSlide(child, itemIndex, rowTop);
                 child.Arrange(new Rect(
-                    -HorizontalOffset,
+                    sectionPadding - HorizontalOffset,
                     rowTop - VerticalOffset,
-                    viewportWidth,
+                    Math.Max(1d, viewportWidth - sectionPadding * 2),
                     Math.Max(1d, HeaderHeight)));
                 continue;
             }
@@ -414,14 +481,59 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             // 否则缩略图按照片原始比例（3:2 横图）撑开 tile，网格看起来"扁"。
             AnimateSlide(child, itemIndex, rowTop);
             child.Arrange(new Rect(
-                column * itemWidth - HorizontalOffset,
+                sectionPadding + column * itemWidth - HorizontalOffset,
                 rowTop - VerticalOffset,
                 itemWidth,
                 itemHeight));
         }
 
         AnimateLayoutTransition = false;
+        InvalidateVisual();
         return finalSize;
+    }
+
+    protected override void OnRender(DrawingContext drawingContext)
+    {
+        base.OnRender(drawingContext);
+        EnsureRowTable();
+        if (_rows.Count == 0 || SectionBackground is null)
+        {
+            return;
+        }
+
+        var rowTops = new double[_rows.Count];
+        var totalHeight = 0d;
+        for (var index = 0; index < _rows.Count; index++)
+        {
+            rowTops[index] = totalHeight;
+            totalHeight += RowHeight(_rows[index]);
+        }
+
+        var spacing = Math.Max(0d, SectionSpacing);
+        var radius = Math.Max(0d, SectionCornerRadius.TopLeft);
+        var pen = SectionBorderBrush is null ? null : new System.Windows.Media.Pen(SectionBorderBrush, 1d);
+        var width = Math.Max(1d, ActualWidth - HorizontalOffset);
+
+        for (var rowIndex = 0; rowIndex < _rows.Count; rowIndex++)
+        {
+            if (!_rows[rowIndex].IsHeader)
+            {
+                continue;
+            }
+
+            var nextHeaderRow = rowIndex + 1;
+            while (nextHeaderRow < _rows.Count && !_rows[nextHeaderRow].IsHeader)
+            {
+                nextHeaderRow++;
+            }
+
+            var top = rowTops[rowIndex] - VerticalOffset;
+            var bottom = (nextHeaderRow < _rows.Count ? rowTops[nextHeaderRow] : totalHeight) -
+                         VerticalOffset - spacing;
+            bottom = Math.Max(bottom, top + Math.Max(1d, HeaderHeight));
+            var bounds = new Rect(-HorizontalOffset, top, width, bottom - top);
+            drawingContext.DrawRoundedRectangle(SectionBackground, pen, bounds, radius, radius);
+        }
     }
 
     private int FindRowIndex(int itemIndex)
@@ -467,7 +579,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         var delta = oldTop - rowTop;
         var translate = new TranslateTransform(0, delta);
         child.RenderTransform = translate;
-        var animation = new DoubleAnimation(delta, 0, TimeSpan.FromMilliseconds(250))
+        var animation = new DoubleAnimation(delta, 0, TimeSpan.FromMilliseconds(180))
         {
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };

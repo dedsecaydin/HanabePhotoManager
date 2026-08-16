@@ -10,7 +10,7 @@ public sealed class NavigationMotionTests
     private static readonly string[] AllPages =
     [
         "Home", "Import", "Preview", "CustomAlbums", "FaceSearch", "MapPhotos",
-        "Compression", "Watermark", "Cloud", "Settings"
+        "Compression", "Watermark", "Settings"
     ];
 
     [Fact]
@@ -39,18 +39,19 @@ public sealed class NavigationMotionTests
         var xaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("x:Name=\"NavSelectionSurface\"");
-        xaml.Should().Contain("x:Name=\"NavSelectionSurface\" CornerRadius=\"16\" Background=\"{DynamicResource Brush.Surface.Selected}\" BorderThickness=\"0\"");
+        xaml.Should().Contain("x:Name=\"PrimaryNavigationSelectionIndicator\"");
+        xaml.Should().Contain("x:Name=\"PrimaryNavigationSelectionTransform\"");
+        xaml.Should().NotContain("x:Name=\"NavSelectionSurface\"");
         xaml.Should().Contain("x:Name=\"NavIconSurface\"");
-        xaml.Should().Contain("Converter=\"{StaticResource CategoryEqualityMultiConverter}\"");
-        xaml.Should().Contain("DataContext.CurrentPage");
         xaml.Should().Contain("Motion.Duration.Normal");
-        xaml.Should().Contain("Motion.Duration.Fast");
         xaml.Should().Contain("KeyboardNavigation.DirectionalNavigation=\"Cycle\"");
         xaml.Should().Contain("KeyboardNavigation.TabNavigation=\"Once\"");
 
         var code = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+        code.Should().Contain("UpdatePrimaryNavigationIndicator");
+        code.Should().Contain("TranslateTransform.YProperty");
+        code.Should().Contain("Motion.Easing.Standard");
         code.Should().Contain("ResetGalleryScrollToFirstDate");
         code.Should().Contain("GetGalleryPanel()?.SetVerticalOffset(0)");
     }
@@ -124,7 +125,6 @@ public sealed class NavigationMotionTests
         "MapPhotos" => viewModel.IsMapPhotosPage,
         "Compression" => viewModel.IsCompressionPage,
         "Watermark" => viewModel.IsWatermarkPage,
-        "Cloud" => viewModel.IsCloudPage,
         "Settings" => viewModel.IsSettingsPage,
         _ => false
     };

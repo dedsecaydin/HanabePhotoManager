@@ -126,6 +126,8 @@ public sealed class PreviewPerformanceTests
         panelSource.Should().Contain("GetItemBounds");
         panelSource.Should().Contain("HeaderHeight");
         panelSource.Should().Contain("IWallSectionHeader");
+        panelSource.Should().Contain("SectionBackground");
+        panelSource.Should().Contain("DrawRoundedRectangle");
     }
 
     [Fact]
@@ -370,6 +372,8 @@ public sealed class PreviewPerformanceTests
 
         xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
         xaml.Should().Contain("HeaderHeight=\"64\"");
+        xaml.Should().Contain("SectionCornerRadius=\"{StaticResource Radius.Dialog}\"");
+        xaml.Should().Contain("SectionBackground=\"{DynamicResource Brush.Surface.Subtle}\"");
         xaml.Should().Contain("Command=\"{Binding ToggleCommand}\"");
         xaml.Should().Contain("Text=\"{Binding ToggleGlyph}\"");
         xaml.Should().Contain("DataType=\"{x:Type vm:PreviewDateSectionViewModel}\"");
@@ -548,7 +552,11 @@ public sealed class PreviewPerformanceTests
 
         xaml.Should().Contain("Tag=\"PreviewCard\" Margin=\"0,0,12,12\" ClipToBounds=\"True\"");
         xaml.Should().Contain("Name=\"ThumbnailClip\"");
-        xaml.Should().Contain("Margin=\"1\" CornerRadius=\"11\" ClipToBounds=\"True\"");
+        xaml.Should().Contain("x:Name=\"PreviewSelectionMask\"");
+        xaml.Should().Contain("SizeChanged=\"PreviewWallTile_SizeChanged\"");
+        xaml.Should().Contain("Panel.ZIndex=\"20\"");
+        xaml.Should().Contain("x:Name=\"BrowseInspectorPanel\"");
+        xaml.Should().Contain("BorderBrush=\"{DynamicResource Brush.Border.Default}\"");
         xaml.Should().Contain("ImageBrush Stretch=\"UniformToFill\" ImageSource=\"{Binding Thumbnail}\"");
         xaml.Should().NotContain("CornerRadius=\"21,21,0,0\" ClipToBounds=\"True\"");
     }

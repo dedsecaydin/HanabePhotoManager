@@ -391,16 +391,16 @@
       </Style>
       <Style x:Key="PreviewDateHeaderButton" TargetType="{x:Type Button}">
         <Setter Property="FrameworkElement.FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}" />
-        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="Margin" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <Setter Property="Template">
           <Setter.Value>
             <ControlTemplate TargetType="{x:Type Button}">
-              <Border Name="DateSurface" CornerRadius="12" Padding="10,8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}">
+              <Border Name="DateSurface" CornerRadius="{StaticResource Radius.Control}" Padding="10,8" Background="{TemplateBinding Control.Background}" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}">
                 <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center" />
               </Border>
               <ControlTemplate.Triggers>
@@ -555,6 +555,21 @@
             </TextBlock>
           </StackPanel>
           <ScrollViewer Style="{StaticResource Sidebar.NavigationScroller}" VerticalScrollBarVisibility="Auto" CanContentScroll="True">
+            <Grid x:Name="PrimaryNavigationHost" SizeChanged="PrimaryNavigationHost_SizeChanged">
+              <Border x:Name="PrimaryNavigationSelectionIndicator"
+                      Width="84"
+                      Height="52"
+                      CornerRadius="16"
+                      Background="{DynamicResource Brush.Surface.Selected}"
+                      BorderThickness="0"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Top"
+                      Opacity="0"
+                      IsHitTestVisible="False">
+                <Border.RenderTransform>
+                  <TranslateTransform x:Name="PrimaryNavigationSelectionTransform" />
+                </Border.RenderTransform>
+              </Border>
             <ItemsControl x:Name="PrimaryNavigationList"
                           ItemsSource="{Binding NavigationItems}"
                           AllowDrop="True"
@@ -571,7 +586,6 @@
                           PreviewMouseLeftButtonDown="PrimaryNavigationItem_PreviewMouseLeftButtonDown"
                           PreviewMouseMove="PrimaryNavigationItem_PreviewMouseMove">
                     <Grid>
-                      <Border x:Name="NavSelectionSurface" CornerRadius="16" Background="{DynamicResource Brush.Surface.Selected}" BorderThickness="0" Opacity="0" IsHitTestVisible="False" />
                       <StackPanel>
                         <Border x:Name="NavIconSurface" Width="32" Height="32" CornerRadius="16" Background="Transparent" HorizontalAlignment="Center">
                           <Viewbox x:Name="NavigationIcon" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -597,36 +611,11 @@
                       <DataTrigger Binding="{Binding Key}" Value="MapPhotos"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Map}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Compression"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Compress}" /></DataTrigger>
                       <DataTrigger Binding="{Binding Key}" Value="Watermark"><Setter TargetName="NavigationIconPath" Property="Data" Value="{StaticResource Icon.Watermark}" /></DataTrigger>
-                      <DataTrigger Value="True">
-                        <DataTrigger.Binding>
-                          <MultiBinding Converter="{StaticResource CategoryEqualityMultiConverter}">
-                            <Binding Path="Key" />
-                            <Binding Path="DataContext.CurrentPage" RelativeSource="{RelativeSource AncestorType=Window}" />
-                          </MultiBinding>
-                        </DataTrigger.Binding>
-                        <DataTrigger.EnterActions>
-                          <BeginStoryboard>
-                            <Storyboard>
-                              <DoubleAnimation Storyboard.TargetName="NavSelectionSurface" Storyboard.TargetProperty="Opacity" To="1" Duration="{StaticResource Motion.Duration.Normal}">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                              </DoubleAnimation>
-                            </Storyboard>
-                          </BeginStoryboard>
-                        </DataTrigger.EnterActions>
-                        <DataTrigger.ExitActions>
-                          <BeginStoryboard>
-                            <Storyboard>
-                              <DoubleAnimation Storyboard.TargetName="NavSelectionSurface" Storyboard.TargetProperty="Opacity" To="0" Duration="{StaticResource Motion.Duration.Fast}">
-                                <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
-                              </DoubleAnimation>
-                            </Storyboard>
-                          </BeginStoryboard>
-                        </DataTrigger.ExitActions>
-                      </DataTrigger>
                   </DataTemplate.Triggers>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </Grid>
           </ScrollViewer>
         </DockPanel>
       </Border>
@@ -1647,7 +1636,14 @@
                       <ItemsControl x:Name="PreviewWallItemsControl" ItemsSource="{Binding PreviewWallItems}" ItemContainerStyle="{StaticResource PreviewWallItemContainer}" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
-                            <controls:VirtualizingWrapPanel ItemWidth="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" ItemHeight="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" HeaderHeight="64" />
+                            <controls:VirtualizingWrapPanel ItemWidth="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           ItemHeight="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           HeaderHeight="64"
+                                                           SectionPadding="{StaticResource Spacing.8}"
+                                                           SectionSpacing="{StaticResource Spacing.12}"
+                                                           SectionCornerRadius="{StaticResource Radius.Dialog}"
+                                                           SectionBackground="{DynamicResource Brush.Surface.Subtle}"
+                                                           SectionBorderBrush="{DynamicResource Brush.Border.Subtle}" />
                           </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.Resources>
@@ -1676,7 +1672,7 @@
                             </Button>
                           </DataTemplate>
                           <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
-                            <Grid Tag="PreviewCard" Margin="0,0,12,12" ClipToBounds="True" Cursor="Hand" Loaded="PreviewWallTile_Loaded" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
+                            <Grid Tag="PreviewCard" Margin="0,0,12,12" ClipToBounds="True" Cursor="Hand" Loaded="PreviewWallTile_Loaded" SizeChanged="PreviewWallTile_SizeChanged" MouseLeftButtonDown="PreviewThumbnail_MouseLeftButtonDown" MouseMove="PreviewThumbnail_MouseMove" ContextMenuOpening="PreviewThumbnail_ContextMenuOpening">
                                           <FrameworkElement.ContextMenu>
                                             <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="{StaticResource Typography.Body}">
                                               <MenuItem Style="{DynamicResource Menu.Item}" Click="PreviewContextMenu_Open">
@@ -1773,7 +1769,7 @@
                                               </Style>
                                             </Border.Style>
                                             <Grid>
-                                              <Border Name="ThumbnailClip" Margin="1" CornerRadius="11" ClipToBounds="True" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+                                              <Border Name="ThumbnailClip" Margin="0" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="{DynamicResource Brush.Surface.ContainerHigh}">
                                                 <Grid>
                                                   <Grid Visibility="{Binding HasNoThumbnail, Converter={StaticResource BoolToVis}}">
                                                     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="10">
@@ -1788,8 +1784,16 @@
                                                   </Rectangle>
                                                 </Grid>
                                               </Border>
-                                              <CheckBox HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6" Width="40" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
-                                              <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
+                                              <Border x:Name="PreviewSelectionMask"
+                                                      Panel.ZIndex="20"
+                                                      Margin="0"
+                                                      CornerRadius="{StaticResource Radius.Card}"
+                                                      Background="{DynamicResource Brush.Surface.Selected}"
+                                                      Opacity="0.72"
+                                                      Visibility="{Binding IsSelected, Converter={StaticResource BoolToVis}}"
+                                                      IsHitTestVisible="False" />
+                                              <CheckBox Panel.ZIndex="30" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="6" Width="40" Height="22" ToolTip="勾选后可批量操作" IsChecked="{Binding IsSelected, Mode=TwoWay}" Checked="PreviewSelection_Changed" Unchecked="PreviewSelection_Changed" Visibility="{Binding DataContext.IsMultiSelectMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVis}}" />
+                                              <StackPanel Panel.ZIndex="30" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="6">
                                                 <Border Padding="10,4" Margin="0,0,0,6" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.SecondaryContainer}" Visibility="{Binding HasXmlSidecar, Converter={StaticResource BoolToVis}}" IsHitTestVisible="False">
                                                   <TextBlock Text="XML" FontSize="{StaticResource Typography.BodySmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.OnSecondaryContainer}" />
                                                 </Border>
@@ -1823,7 +1827,7 @@
                                                   </TextBlock>
                                                 </Border>
                                               </StackPanel>
-                                              <Grid>
+                                              <Grid Panel.ZIndex="30">
                                                 <Grid.Style>
                                                   <Style TargetType="{x:Type Grid}">
                                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -1837,7 +1841,7 @@
                                                   <Path Data="{StaticResource Icon.Play}" Fill="{DynamicResource Brush.Viewer.Text}" Width="16" Height="16" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0,0,0" />
                                                 </Border>
                                               </Grid>
-                                              <Border VerticalAlignment="Bottom" Padding="8,6" CornerRadius="0,0,12,12">
+                                              <Border Panel.ZIndex="30" VerticalAlignment="Bottom" Padding="8,6" CornerRadius="0,0,12,12">
                                                 <Border.Background>
                                                   <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                                     <GradientStop Color="Transparent" Offset="0" />
@@ -1924,7 +1928,16 @@
                   </Button>
                   </Grid>
                 </Border>
-                <Border Grid.Column="2" x:Name="BrowseInspectorPanel" Style="{StaticResource Layout.Section}" Width="320" Margin="16,0,0,0">
+                <Border Grid.Column="2"
+                        x:Name="BrowseInspectorPanel"
+                        Style="{StaticResource Layout.Section}"
+                        Width="320"
+                        Margin="16,0,0,0"
+                        CornerRadius="{StaticResource Radius.Container}"
+                        Background="{DynamicResource Brush.Surface.Subtle}"
+                        BorderBrush="{DynamicResource Brush.Border.Default}"
+                        BorderThickness="1"
+                        ClipToBounds="True">
                   <Grid>
                     <StackPanel x:Name="InspectorEmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="28">
                       <Border Width="48" Height="48" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Container}" HorizontalAlignment="Center">
@@ -1933,7 +1946,7 @@
                       <TextBlock Text="未选择照片" Style="{StaticResource Inspector.Header}" HorizontalAlignment="Center" Margin="0,14,0,0" />
                       <TextBlock Text="在照片墙中选择一张照片，这里会显示它的拍摄信息与快捷操作。" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
                     </StackPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="{DynamicResource Brush.Surface.ContainerLow}" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource NullToVis}}">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Background="Transparent" Visibility="{Binding SelectedPreviewFile, Converter={StaticResource NullToVis}}">
                       <StackPanel>
                         <DockPanel Margin="0,0,0,12">
                           <Border DockPanel.Dock="Right" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Surface.ContainerHigh}" Padding="8,4" VerticalAlignment="Center" Margin="8,0,0,0" Cursor="Hand" MouseLeftButtonDown="CloseExifPanel_Click">

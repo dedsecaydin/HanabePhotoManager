@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HanabePhotoManager 安装器外壳 — 简体中文（zh-CN）本地化
+  供 HanabeTheme.xml 的 #(loc.Xxx) 引用，以及 WixStdBA 运行期所需的对话框文案。
+-->
+<WixLocalization Culture="zh-CN" Language="2052" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <!-- 窗口 / 品牌 -->
+  <String Id="Caption" Value="HanabePhotoManager 安装程序" />
+  <String Id="Title" Value="HanabePhotoManager" />
+  <String Id="VersionText" Value="版本 [WixBundleVersion]" />
+
+  <!-- 加载 / 检测 -->
+  <String Id="CheckingForUpdatesLabel" Value="正在检查更新…" />
+
+  <!-- 欢迎 / 安装 页 -->
+  <String Id="WelcomeHeader" Value="欢迎安装 HanabePhotoManager" />
+  <String Id="WelcomeText" Value="本向导将引导你在计算机上安装 HanabePhotoManager。请先阅读并同意许可条款。" />
+  <String Id="InstallAcceptCheckbox" Value="我已阅读并同意许可条款和条件" />
+  <String Id="InstallInstallButton" Value="安装" />
+  <String Id="InstallOptionsButton" Value="自定义安装" />
+  <String Id="InstallCancelButton" Value="取消" />
+
+  <!-- 安装目录选择 页 -->
+  <String Id="OptionsHeader" Value="选择安装位置" />
+  <String Id="OptionsSubText" Value="选择 HanabePhotoManager 的安装目录，然后点击“确定”。" />
+  <String Id="OptionsLocationLabel" Value="安装目录：" />
+  <String Id="OptionsBrowseButton" Value="浏览" />
+  <String Id="OptionsOkButton" Value="确定" />
+  <String Id="OptionsCancelButton" Value="取消" />
+
+  <!-- 安装进度 页 -->
+  <String Id="ProgressHeader" Value="正在安装 HanabePhotoManager" />
+  <String Id="ProgressSubText" Value="请稍候，正在安装所需组件。" />
+  <String Id="OverallProgressPackageText" Value="正在准备…" />
+  <String Id="ProgressCancelButton" Value="取消" />
+
+  <!-- 维护（修复/卸载）页 -->
+  <String Id="ModifyHeader" Value="修改或卸载 HanabePhotoManager" />
+  <String Id="ModifySubText" Value="你可以修复当前安装，或从计算机上卸载 HanabePhotoManager。" />
+  <String Id="ModifyRepairButton" Value="修复" />
+  <String Id="ModifyUninstallButton" Value="卸载" />
+  <String Id="ModifyCancelButton" Value="关闭" />
+
+  <!-- 完成 页 -->
+  <String Id="SuccessHeader" Value="安装完成" />
+  <String Id="SuccessInstallHeader" Value="安装已成功完成" />
+  <String Id="SuccessLayoutHeader" Value="布局已成功完成" />
+  <String Id="SuccessModifyHeader" Value="修改已成功完成" />
+  <String Id="SuccessRepairHeader" Value="修复已成功完成" />
+  <String Id="SuccessUninstallHeader" Value="卸载已成功完成" />
+  <String Id="SuccessCacheHeader" Value="缓存已成功完成" />
+  <String Id="SuccessSubText" Value="HanabePhotoManager 已成功安装到你的计算机。" />
+  <String Id="SuccessLaunchButton" Value="立即启动" />
+  <String Id="SuccessRestartText" Value="你需要重新启动计算机后才能使用该软件。" />
+  <String Id="SuccessUninstallRestartText" Value="你需要重新启动计算机才能完成该软件的卸载。" />
+  <String Id="SuccessRestartButton" Value="重新启动" />
+  <String Id="SuccessCloseButton" Value="关闭" />
+
+  <!-- 失败 页 -->
+  <String Id="FailureHeader" Value="安装失败" />
+  <String Id="FailureInstallHeader" Value="安装失败" />
+  <String Id="FailureLayoutHeader" Value="布局失败" />
+  <String Id="FailureModifyHeader" Value="修改失败" />
+  <String Id="FailureRepairHeader" Value="修复失败" />
+  <String Id="FailureUninstallHeader" Value="卸载失败" />
+  <String Id="FailureCacheHeader" Value="缓存失败" />
+  <String Id="FailureSubText" Value="安装过程中出现问题，未能完成安装。" />
+  <String Id="FailureHyperlinkLogText" Value="一个或多个问题导致安装失败。请修复问题后重试。如需了解更多信息，请查看&lt;a href=&quot;#&quot;&gt;日志文件&lt;/a&gt;。" />
+  <String Id="FailureRestartText" Value="你需要重新启动计算机才能完成该软件的回滚。" />
+  <String Id="FailureRestartButton" Value="重新启动" />
+  <String Id="FailureCloseButton" Value="关闭" />
+
+  <!-- 帮助 页 -->
+  <String Id="HelpHeader" Value="安装帮助" />
+  <String Id="HelpText" Value="/install | /repair | /uninstall | /layout [目录] - 安装、修复、卸载，或将捆绑包完整本地副本生成到指定目录；默认操作为安装。&#xA;&#xA;/passive | /quiet - 以最简界面运行且不显示提示，或不显示界面也不提示。默认显示全部界面与提示。&#xA;&#xA;/norestart - 禁止任何重启尝试。默认在重启前会提示。&#xA;&#xA;/log 日志.txt - 将日志写入指定文件。默认在 %TEMP% 中生成日志文件。" />
+  <String Id="HelpCloseButton" Value="关闭" />
+
+  <!-- WixStdBA 运行期对话框 -->
+  <String Id="ConfirmCancelMessage" Value="确定要取消吗？" />
+  <String Id="ExecuteUpgradeRelatedBundleMessage" Value="上一版本" />
+  <String Id="FilesInUseTitle" Value="文件正在使用" />
+  <String Id="FilesInUseLabel" Value="以下应用程序正在使用需要更新的文件：" />
+  <String Id="FilesInUseNetfxCloseRadioButton" Value="关闭应用程序。" />
+  <String Id="FilesInUseCloseRadioButton" Value="关闭应用程序并尝试重新启动它们。" />
+  <String Id="FilesInUseDontCloseRadioButton" Value="不要关闭应用程序。将需要重新启动。" />
+  <String Id="FilesInUseRetryButton" Value="重试" />
+  <String Id="FilesInUseIgnoreButton" Value="忽略" />
+  <String Id="FilesInUseExitButton" Value="退出" />
+</WixLocalization>

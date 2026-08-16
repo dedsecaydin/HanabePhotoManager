@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HanabePhotoManager 安装器外壳主题（WixStdBA ThmUtil 主题）
+  品牌主色 #8B4AA6（浅色主题）；颜色在 thmutil 中按 BGR 十六进制书写：
+  #8B4AA6 -> "A64A8B"。
+  设计规则：仅使用圆角矩形，禁止全圆/胶囊（Radius.Full/999）、禁止虚线。
+  页面结构（WixStdBA 固定页名）：欢迎(Install) -> 安装位置(Options) -> 进度(Progress) -> 完成(Success)。
+-->
+<Theme xmlns="http://wixtoolset.org/schemas/v4/thmutil">
+    <!-- 0 正文；1 标题（品牌紫）；2 页面标题；3 次要灰；4 主按钮文字（白）；5 次按钮文字 -->
+    <Font Id="0" Height="-13" Weight="400" Foreground="windowtext" Background="window">Segoe UI</Font>
+    <Font Id="1" Height="-26" Weight="600" Foreground="A64A8B">Segoe UI</Font>
+    <Font Id="2" Height="-19" Weight="600" Foreground="2D2D2D">Segoe UI</Font>
+    <Font Id="3" Height="-12" Weight="400" Foreground="graytext">Segoe UI</Font>
+    <Font Id="4" Height="-14" Weight="600" Foreground="ffffff">Segoe UI</Font>
+    <Font Id="5" Height="-14" Weight="400" Foreground="404040">Segoe UI</Font>
+
+    <Window Width="620" Height="430" HexStyle="100a0000" FontId="0" Caption="#(loc.Caption)">
+        <!-- 顶部品牌区（居中，所有页面共用） -->
+        <ImageControl X="270" Y="18" Width="80" Height="80" ImageFile="logo.png" Visible="yes" />
+        <Label X="0" Y="104" Width="620" Height="28" FontId="1" Center="yes" DisablePrefix="yes">#(loc.Title)</Label>
+        <Label X="0" Y="134" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.VersionText)</Label>
+
+        <!-- ===================== 欢迎 / 安装 页 ===================== -->
+        <Page Name="Install">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.WelcomeHeader)</Label>
+            <Label X="0" Y="194" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.WelcomeText)</Label>
+            <Richedit Name="EulaRichedit" X="40" Y="220" Width="540" Height="118" TabStop="yes" FontId="0" HexStyle="800000" />
+            <Checkbox Name="EulaAcceptCheckbox" X="40" Y="344" Width="540" Height="20" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.InstallAcceptCheckbox)</Checkbox>
+            <Button Name="InstallCancelButton" X="93" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.InstallCancelButton)</Text>
+                <CloseWindowAction />
+            </Button>
+            <Button Name="OptionsButton" X="225" Y="374" Width="110" Height="44" TabStop="yes" FontId="5" VisibleCondition="NOT WixStdBASuppressOptionsUI">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.InstallOptionsButton)</Text>
+                <ChangePageAction Page="Options" />
+            </Button>
+            <Button Name="InstallButton" X="357" Y="374" Width="170" Height="44" TabStop="yes" FontId="4">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.InstallInstallButton)</Text>
+            </Button>
+        </Page>
+
+        <!-- ===================== 安装目录选择 页 ===================== -->
+        <Page Name="Options">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.OptionsHeader)</Label>
+            <Label X="0" Y="196" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.OptionsSubText)</Label>
+            <Label X="60" Y="252" Width="80" Height="20" FontId="0" DisablePrefix="yes">#(loc.OptionsLocationLabel)</Label>
+            <Editbox Name="InstallFolder" X="150" Y="246" Width="300" Height="30" TabStop="yes" FontId="0" FileSystemAutoComplete="yes" />
+            <Button Name="BrowseButton" X="460" Y="239" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.OptionsBrowseButton)</Text>
+                <BrowseDirectoryAction VariableName="InstallFolder" />
+            </Button>
+            <Button Name="OptionsCancelButton" X="159" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.OptionsCancelButton)</Text>
+                <ChangePageAction Page="Install" Cancel="yes" />
+            </Button>
+            <Button Name="OptionsOkButton" X="281" Y="374" Width="170" Height="44" TabStop="yes" FontId="4">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.OptionsOkButton)</Text>
+                <ChangePageAction Page="Install" />
+            </Button>
+        </Page>
+
+        <!-- ===================== 安装进度 页 ===================== -->
+        <Page Name="Progress">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.ProgressHeader)</Label>
+            <Label X="0" Y="198" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.ProgressSubText)</Label>
+            <Label Name="OverallProgressPackageText" X="60" Y="246" Width="500" Height="20" FontId="0" Center="yes" DisablePrefix="yes">#(loc.OverallProgressPackageText)</Label>
+            <Progressbar Name="OverallCalculatedProgressbar" X="60" Y="276" Width="500" Height="12">
+                <ProgressbarImage ImageFile="progressbar.png" />
+            </Progressbar>
+            <Label Name="OverallProgressText" X="60" Y="294" Width="500" Height="18" FontId="3" Center="yes" DisablePrefix="yes" />
+            <Button Name="ProgressCancelButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.ProgressCancelButton)</Text>
+            </Button>
+        </Page>
+
+        <!-- ===================== 维护（修复/卸载）页 ===================== -->
+        <Page Name="Modify">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.ModifyHeader)</Label>
+            <Label X="0" Y="198" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.ModifySubText)</Label>
+            <Button Name="UninstallButton" X="103" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.ModifyUninstallButton)</Text>
+            </Button>
+            <Button Name="RepairButton" X="225" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.ModifyRepairButton)</Text>
+            </Button>
+            <Button Name="ModifyCancelButton" X="407" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.ModifyCancelButton)</Text>
+                <CloseWindowAction />
+            </Button>
+        </Page>
+
+        <!-- ===================== 完成 页 ===================== -->
+        <Page Name="Success">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">
+                <Text>#(loc.SuccessHeader)</Text>
+                <Text Condition="WixBundleAction = 2">#(loc.SuccessLayoutHeader)</Text>
+                <Text Condition="WixBundleAction = 3">#(loc.SuccessUninstallHeader)</Text>
+                <Text Condition="WixBundleAction = 4">#(loc.SuccessUninstallHeader)</Text>
+                <Text Condition="WixBundleAction = 5">#(loc.SuccessCacheHeader)</Text>
+                <Text Condition="WixBundleAction = 6">#(loc.SuccessInstallHeader)</Text>
+                <Text Condition="WixBundleAction = 7">#(loc.SuccessModifyHeader)</Text>
+                <Text Condition="WixBundleAction = 8">#(loc.SuccessRepairHeader)</Text>
+            </Label>
+            <Label X="0" Y="200" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.SuccessSubText)</Label>
+            <Label X="60" Y="262" Width="500" Height="34" FontId="3" Center="yes" DisablePrefix="yes" VisibleCondition="WixStdBARestartRequired">
+                <Text>#(loc.SuccessRestartText)</Text>
+                <Text Condition="WixBundleAction = 3">#(loc.SuccessUninstallRestartText)</Text>
+            </Label>
+            <Button Name="SuccessRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.SuccessRestartButton)</Text>
+            </Button>
+            <Button Name="LaunchButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.SuccessLaunchButton)</Text>
+            </Button>
+            <Button Name="SuccessCloseButton" X="164" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.SuccessCloseButton)</Text>
+                <CloseWindowAction />
+            </Button>
+        </Page>
+
+        <!-- ===================== 失败 页 ===================== -->
+        <Page Name="Failure">
+            <Label X="0" Y="168" Width="620" Height="24" FontId="2" Center="yes" DisablePrefix="yes">
+                <Text>#(loc.FailureHeader)</Text>
+                <Text Condition="WixBundleAction = 2">#(loc.FailureLayoutHeader)</Text>
+                <Text Condition="WixBundleAction = 3">#(loc.FailureUninstallHeader)</Text>
+                <Text Condition="WixBundleAction = 4">#(loc.FailureUninstallHeader)</Text>
+                <Text Condition="WixBundleAction = 5">#(loc.FailureCacheHeader)</Text>
+                <Text Condition="WixBundleAction = 6">#(loc.FailureInstallHeader)</Text>
+                <Text Condition="WixBundleAction = 7">#(loc.FailureModifyHeader)</Text>
+                <Text Condition="WixBundleAction = 8">#(loc.FailureRepairHeader)</Text>
+            </Label>
+            <Label X="0" Y="200" Width="620" Height="18" FontId="3" Center="yes" DisablePrefix="yes">#(loc.FailureSubText)</Label>
+            <Hypertext Name="FailureLogFileLink" X="60" Y="238" Width="500" Height="20" FontId="3" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureHyperlinkLogText)</Hypertext>
+            <Hypertext Name="FailureMessageText" X="60" Y="266" Width="500" Height="60" FontId="3" TabStop="yes" HideWhenDisabled="yes" />
+            <Label X="60" Y="326" Width="500" Height="34" FontId="3" Center="yes" DisablePrefix="yes" VisibleCondition="WixStdBARestartRequired">#(loc.FailureRestartText)</Label>
+            <Button Name="FailureRestartButton" X="286" Y="374" Width="170" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
+                <ButtonImage ImageFile="button-primary.png" />
+                <ButtonHoverImage ImageFile="button-primary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-primary-selected.png" />
+                <Text>#(loc.FailureRestartButton)</Text>
+            </Button>
+            <Button Name="FailureCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.FailureCloseButton)</Text>
+                <CloseWindowAction />
+            </Button>
+        </Page>
+
+        <!-- ===================== 帮助 页（/help 命令行） ===================== -->
+        <Page Name="Help">
+            <Label X="60" Y="168" Width="500" Height="24" FontId="2" Center="yes" DisablePrefix="yes">#(loc.HelpHeader)</Label>
+            <Label X="60" Y="200" Width="500" Height="-60" FontId="0" DisablePrefix="yes">#(loc.HelpText)</Label>
+            <Button Name="HelpCloseButton" X="255" Y="374" Width="110" Height="44" TabStop="yes" FontId="5">
+                <ButtonImage ImageFile="button-secondary.png" />
+                <ButtonHoverImage ImageFile="button-secondary-hover.png" />
+                <ButtonSelectedImage ImageFile="button-secondary-selected.png" />
+                <Text>#(loc.HelpCloseButton)</Text>
+                <CloseWindowAction />
+            </Button>
+        </Page>
+
+        <!-- ===================== 加载/检测 页 ===================== -->
+        <Page Name="Loading">
+            <Label Name="CheckingForUpdatesLabel" X="0" Y="168" Width="620" Height="24" FontId="3" Center="yes" DisablePrefix="yes" Visible="no" />
+        </Page>
+    </Window>
+</Theme>

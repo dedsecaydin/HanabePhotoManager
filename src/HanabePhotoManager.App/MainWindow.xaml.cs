@@ -464,6 +464,7 @@ public partial class MainWindow : Window
             _viewModel.IsAdvancedFiltersExpanded = true;
         }
         AnimateVisiblePage();
+        _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
         if (_viewModel.IsPreviewPage)
         {
             _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
@@ -575,6 +576,7 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainWindowViewModel.CurrentPage))
         {
             Dispatcher.BeginInvoke(AnimateVisiblePage);
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
             if (_viewModel.IsPreviewPage)
             {
                 Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
@@ -796,6 +798,51 @@ public partial class MainWindow : Window
 
         ApplyGalleryZoom(tileSize.Value, e.GetPosition(PreviewPhotoScrollViewer));
         e.Handled = true;
+    }
+
+    private void PrimaryNavigationHost_SizeChanged(object sender, SizeChangedEventArgs e) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
+
+    private void UpdatePrimaryNavigationIndicator()
+    {
+        if (PrimaryNavigationHost is null || PrimaryNavigationSelectionIndicator is null ||
+            PrimaryNavigationSelectionTransform is null)
+        {
+            return;
+        }
+
+        var selectedButton = FindVisualDescendants<System.Windows.Controls.Button>(PrimaryNavigationList)
+            .FirstOrDefault(button => button.DataContext is NavigationItemViewModel item &&
+                                      string.Equals(item.Key, _viewModel.CurrentPage, StringComparison.Ordinal));
+        if (selectedButton is null || selectedButton.ActualHeight <= 0)
+        {
+            PrimaryNavigationSelectionIndicator.BeginAnimation(UIElement.OpacityProperty, null);
+            PrimaryNavigationSelectionIndicator.Opacity = 0;
+            return;
+        }
+
+        var target = selectedButton.TranslatePoint(new System.Windows.Point(0, 0), PrimaryNavigationHost);
+        PrimaryNavigationSelectionIndicator.Height = selectedButton.ActualHeight;
+        var duration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
+            ? motionDuration.TimeSpan
+            : TimeSpan.FromMilliseconds(180);
+        var easing = FindResource("Motion.Easing.Standard") as IEasingFunction;
+
+        if (PrimaryNavigationSelectionIndicator.Opacity < 0.01)
+        {
+            PrimaryNavigationSelectionTransform.BeginAnimation(TranslateTransform.YProperty, null);
+            PrimaryNavigationSelectionTransform.Y = target.Y;
+            PrimaryNavigationSelectionIndicator.BeginAnimation(
+                UIElement.OpacityProperty,
+                new DoubleAnimation(0, 1, duration) { EasingFunction = easing });
+            return;
+        }
+
+        var slide = new DoubleAnimation(PrimaryNavigationSelectionTransform.Y, target.Y, duration)
+        {
+            EasingFunction = easing
+        };
+        PrimaryNavigationSelectionTransform.BeginAnimation(TranslateTransform.YProperty, slide, HandoffBehavior.SnapshotAndReplace);
     }
 
     private void GalleryZoomOut_Click(object sender, RoutedEventArgs e) =>
@@ -1390,11 +1437,13 @@ public partial class MainWindow : Window
     /// </summary>
     private void PreviewWallTile_Loaded(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.FrameworkElement { DataContext: PreviewFileViewModel item } element ||
-            !item.RevealOnLoad)
+        if (sender is not System.Windows.FrameworkElement { DataContext: PreviewFileViewModel item } element)
         {
             return;
         }
+
+        UpdatePreviewCardClip(element);
+        if (!item.RevealOnLoad) return;
 
         item.RevealOnLoad = false;
 
@@ -1419,6 +1468,30 @@ public partial class MainWindow : Window
 
         scale.BeginAnimation(ScaleTransform.ScaleYProperty, scaleY);
         element.BeginAnimation(UIElement.OpacityProperty, opacity);
+    }
+
+    private void PreviewWallTile_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is FrameworkElement element)
+        {
+            UpdatePreviewCardClip(element);
+        }
+    }
+
+    private static void UpdatePreviewCardClip(FrameworkElement element)
+    {
+        if (element.ActualWidth <= 0 || element.ActualHeight <= 0)
+        {
+            return;
+        }
+
+        var radius = System.Windows.Application.Current.TryFindResource("Radius.Card") is CornerRadius cornerRadius
+            ? cornerRadius.TopLeft
+            : 12d;
+        element.Clip = new RectangleGeometry(
+            new Rect(0, 0, element.ActualWidth, element.ActualHeight),
+            radius,
+            radius);
     }
 
     private void PreviewContextMenu_BatchCopy(object sender, RoutedEventArgs e) => BatchCopySelected();

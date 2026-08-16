@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HanabePhotoManager 安装程序 · 界面预览</title>
+<style>
+  :root {
+    --purple: #8B4AA6;
+    --purple-hover: #9B56B8;
+    --purple-active: #7A3F94;
+    --purple-soft: #F3EEF8;
+    --ink: #2D2D2D;
+    --gray: #8A8A8A;
+    --line: #D9D2E3;
+    --bg-soft: #F4F4F4;
+    --border: #D0D0D0;
+    --titlebar: #F7F5FA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Segoe UI Variable", "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1100px 600px at 50% -10%, #F6F1FA 0%, transparent 60%),
+      linear-gradient(160deg, #EFE9F4 0%, #E8E1EF 55%, #E4DDEB 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 48px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page-head { text-align: center; margin-bottom: 22px; }
+  .page-head h1 {
+    font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: .5px;
+  }
+  .page-head p {
+    margin-top: 6px; font-size: 13px; color: var(--gray);
+  }
+
+  /* ---------- 界面切换 tabs ---------- */
+  .tabs {
+    display: flex; gap: 8px; background: rgba(255,255,255,.72);
+    border: 1px solid rgba(139,74,166,.16);
+    padding: 6px; border-radius: 16px;
+    margin-bottom: 22px;
+    box-shadow: 0 6px 20px rgba(72,48,96,.08);
+  }
+  .tab {
+    appearance: none; border: none; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    color: #5b5265;
+    padding: 10px 20px; border-radius: 11px;
+    background: transparent;
+    transition: background .18s, color .18s, box-shadow .18s;
+    white-space: nowrap;
+  }
+  .tab:hover { background: var(--purple-soft); color: var(--purple); }
+  .tab.active { background: var(--purple); color: #fff; box-shadow: 0 4px 12px rgba(139,74,166,.35); }
+
+  /* ---------- 安装窗口模拟 ---------- */
+  .window {
+    width: 640px; max-width: 100%;
+    background: #fff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(56,32,76,.24), 0 2px 8px rgba(56,32,76,.10);
+    border: 1px solid rgba(120,96,140,.14);
+  }
+
+  .titlebar {
+    height: 40px; background: var(--titlebar);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; user-select: none;
+  }
+  .titlebar .tb-icon {
+    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+  }
+  .titlebar .tb-icon img { width: 18px; height: 18px; border-radius: 5px; }
+  .titlebar .tb-title {
+    flex: 1; font-size: 13px; color: #4b4453; padding-left: 2px;
+  }
+  .tb-btn {
+    width: 46px; height: 40px; border: none; background: transparent;
+    font-family: "Segoe UI", sans-serif; font-size: 13px; color: #5b5265;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    transition: background .15s;
+  }
+  .tb-btn:hover { background: #EDE6F2; }
+  .tb-btn.close:hover { background: #E81123; color: #fff; }
+
+  .screen { display: none; flex-direction: column; min-height: 452px; }
+  .screen.active { display: flex; }
+
+  .screen-body {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 30px 46px 22px; text-align: center;
+  }
+  .screen-body.left { align-items: stretch; text-align: left; }
+
+  .logo { width: 96px; height: 96px; border-radius: 24px; margin-bottom: 14px; }
+  .app-name { font-size: 26px; font-weight: 600; color: var(--purple); letter-spacing: .3px; }
+  .app-version { font-size: 13px; color: var(--gray); margin-top: 2px; }
+  .heading { font-size: 18px; font-weight: 600; color: var(--ink); margin-top: 22px; }
+  .subtitle { font-size: 13px; color: var(--gray); margin-top: 8px; line-height: 1.55; max-width: 430px; }
+
+  /* 许可条款框 */
+  .license-box {
+    margin-top: 18px; width: 100%; max-width: 500px;
+    height: 104px; overflow: auto;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: #FBFBFD; padding: 12px 14px;
+    font-size: 12px; line-height: 1.7; color: #6b6472; text-align: left;
+  }
+  .license-box b { color: #4b4453; }
+
+  .check-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 14px; font-size: 13px; color: #4b4453; text-align: left; width: 100%; max-width: 500px;
+  }
+  .check-row input[type="checkbox"] {
+    width: 16px; height: 16px; accent-color: var(--purple); cursor: pointer; flex: none;
+  }
+
+  /* 目录选择 */
+  .field { margin-top: 26px; width: 100%; max-width: 500px; text-align: left; }
+  .field label { font-size: 13px; color: #4b4453; display: block; margin-bottom: 8px; }
+  .path-row { display: flex; gap: 10px; }
+  .path-input {
+    flex: 1; height: 44px; border: 1px solid var(--border); border-radius: 12px;
+    background: #fff; padding: 0 14px; font-size: 13px; color: var(--ink);
+    font-family: inherit; display: flex; align-items: center;
+  }
+  .hint { margin-top: 12px; font-size: 12px; color: var(--gray); text-align: left; width: 100%; max-width: 500px; }
+
+  /* 进度条 */
+  .progress-wrap { width: 100%; max-width: 500px; margin-top: 26px; }
+  .progress-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray); margin-bottom: 8px; }
+  .progress-track {
+    width: 100%; height: 12px; background: #EDEAF1; border-radius: 8px; overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%; width: 65%;
+    background: linear-gradient(90deg, var(--purple) 0%, var(--purple-hover) 100%);
+    border-radius: 8px;
+  }
+  .step-text { margin-top: 18px; font-size: 13px; color: #4b4453; }
+
+  /* 完成对勾徽标（圆角方形，非圆形） */
+  .check-badge {
+    width: 64px; height: 64px; border-radius: 18px;
+    background: var(--purple); color: #fff;
+    font-size: 30px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    box-shadow: 0 10px 24px rgba(139,74,166,.32);
+  }
+
+  /* ---------- 底部按钮区 ---------- */
+  .screen-footer {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    padding: 14px 46px 22px; border-top: 1px solid #F0ECF4;
+  }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    height: 46px; min-width: 96px; padding: 0 24px;
+    border-radius: 16px;             /* 圆角矩形，非胶囊 */
+    border: 1px solid transparent;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    transition: background .16s, border-color .16s, box-shadow .16s, transform .05s;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--purple); color: #fff; box-shadow: 0 8px 18px rgba(139,74,166,.30); }
+  .btn-primary:hover { background: var(--purple-hover); }
+  .btn-primary:active { background: var(--purple-active); }
+  .btn-secondary {
+    background: #F4F4F4; color: #404040; border-color: var(--border); font-weight: 500;
+  }
+  .btn-secondary:hover { background: #E8E8E8; }
+  .btn-secondary:active { background: #DDDDDD; }
+  .btn-sm { height: 44px; min-width: 72px; padding: 0 18px; font-size: 13px; }
+
+  .page-foot { margin-top: 22px; font-size: 12px; color: var(--gray); text-align: center; }
+
+  @media (max-width: 680px) {
+    .window { width: 100%; }
+    .tabs { flex-wrap: wrap; justify-content: center; }
+    .screen-body { padding: 24px 22px 18px; }
+    .screen-footer { padding: 12px 22px 20px; flex-wrap: wrap; }
+  }
+</style>
+</head>
+<body>
+
+  <header class="page-head">
+    <h1>HanabePhotoManager 安装程序 · 界面预览</h1>
+    <p>模拟 WiX Burn 安装窗口外观 · 品牌紫 #8B4AA6 · 点击下方标签切换四个界面</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="界面切换">
+    <button class="tab active" data-screen="0" onclick="showScreen(0)">① 欢迎页</button>
+    <button class="tab" data-screen="1" onclick="showScreen(1)">② 安装目录</button>
+    <button class="tab" data-screen="2" onclick="showScreen(2)">③ 安装进度</button>
+    <button class="tab" data-screen="3" onclick="showScreen(3)">④ 完成</button>
+  </nav>
+
+  <div class="window">
+    <!-- 顶部标题栏（模拟） -->
+    <div class="titlebar">
+      <span class="tb-icon"><img src="data:image/png;base64,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
+" alt="logo" /></span>
+      <span class="tb-title">HanabePhotoManager 安装程序</span>
+      <button class="tb-btn" title="最小化" tabindex="-1">&#8211;</button>
+      <button class="tb-btn" title="最大化" tabindex="-1">&#9633;</button>
+      <button class="tb-btn close" title="关闭" tabindex="-1">&#10005;</button>
+    </div>
+
+    <!-- ① 欢迎页 -->
+    <section class="screen active">
+      <div class="screen-body">
+        <img class="logo" src="data:image/png;base64,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
+" alt="HanabePhotoManager Logo" />
+        <div class="app-name">HanabePhotoManager</div>
+        <div class="app-version">版本 0.1.0</div>
+
+        <div class="heading">欢迎安装 HanabePhotoManager</div>
+        <div class="subtitle">本向导将引导你在计算机上安装 HanabePhotoManager。请先阅读并同意许可条款。</div>
+
+        <div class="license-box">
+          <b>HanabePhotoManager 软件许可协议</b><br />
+          请仔细阅读以下条款。安装即表示你同意受本许可协议的约束。<br />
+          1. 许可授予：本软件按“现状”提供，授予你非独占、不可转让的使用权。<br />
+          2. 限制：不得对本软件进行反编译、逆向工程或再分发。<br />
+          3. 隐私：本软件仅在本地处理你的照片，不会未经许可上传任何数据。<br />
+          4. 终止：如违反本协议，许可将自动终止。<br />
+          （此处为许可条款占位文本，实际以 license.rtf 为准。）
+        </div>
+
+        <label class="check-row">
+          <input type="checkbox" checked />
+          <span>我已阅读并同意许可条款和条件</span>
+        </label>
+      </div>
+      <div class="screen-footer">
+        <button class="btn btn-secondary" onclick="showScreen(0)">取消</button>
+        <button class="btn btn-secondary" onclick="showScreen(1)">自定义安装</button>
+        <button class="btn btn-primary" onclick="showScreen(2)">安装</button>
+      </div>
+    </section>
+
+    <!-- ② 安装目录选择页 -->
+    <section class="screen">
+      <div class="screen-body left">
+        <div class="heading">选择安装位置</div>
+        <div class="subtitle">选择 HanabePhotoManager 的安装目录，然后点击「下一步」。</div>
+
+        <div class="field">
+          <label for="install-path">安装目录</label>
+          <div class="path-row">
+            <div class="path-input" id="install-path">C:\Program Files\照片管理器</div>
+            <button class="btn btn-secondary btn-sm" onclick="alert('打开目录选择对话框（预览演示）')">浏览</button>
+          </div>
+          <div class="hint">至少需要约 180 MB 可用磁盘空间。目标目录不存在时将自动创建。</div>
+        </div>
+      </div>
+      <div class="screen-footer">
+        <button class="btn btn-secondary" onclick="showScreen(0)">上一步</button>
+        <button class="btn btn-primary" onclick="showScreen(2)">下一步</button>
+      </div>
+    </section>
+
+    <!-- ③ 安装进度页 -->
+    <section class="screen">
+      <div class="screen-body">
+        <div class="heading">正在安装 HanabePhotoManager</div>
+        <div class="subtitle">请稍候，正在安装所需组件。</div>
+
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span>正在处理：HanabePhotoManager 主程序</span>
+            <span>65%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+        <div class="step-text">正在复制文件…</div>
+      </div>
+      <div class="screen-footer">
+        <button class="btn btn-secondary" onclick="showScreen(3)">取消</button>
+      </div>
+    </section>
+
+    <!-- ④ 完成页 -->
+    <section class="screen">
+      <div class="screen-body">
+        <div class="check-badge">&#10003;</div>
+        <div class="heading">安装已成功完成</div>
+        <div class="subtitle">HanabePhotoManager 已成功安装到你的计算机。</div>
+
+        <label class="check-row" style="justify-content:center; margin-top:24px;">
+          <input type="checkbox" checked />
+          <span>安装完成后立即启动 HanabePhotoManager</span>
+        </label>
+      </div>
+      <div class="screen-footer">
+        <button class="btn btn-primary" style="min-width:120px;" onclick="alert('安装程序已结束（预览演示）')">完成</button>
+      </div>
+    </section>
+  </div>
+
+  <p class="page-foot">此页面为 UI 预览示意图，实际安装包外观以最终构建的 HanabePhotoManager-Setup 为准。</p>
+
+  <script>
+    function showScreen(n) {
+      document.querySelectorAll('.screen').forEach(function (s, i) {
+        s.classList.toggle('active', i === n);
+      });
+      document.querySelectorAll('.tab').forEach(function (t, i) {
+        t.classList.toggle('active', i === n);
+      });
+    }
+  </script>
+</body>
+</html>

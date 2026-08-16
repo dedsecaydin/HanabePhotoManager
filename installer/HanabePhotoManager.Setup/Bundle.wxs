@@ -3,16 +3,21 @@
   xmlns="http://wixtoolset.org/schemas/v4/wxs"
   xmlns:bal="http://wixtoolset.org/schemas/v4/wxs/bal">
   <Bundle
-    Name="照片管理器 安装程序"
+    Name="Hanabe Photo Manager 安装程序"
     Manufacturer="Hanabe"
     Version="$(BundleVersion)"
     UpgradeCode="{9C69A347-0E59-420B-812A-70A6304B5B35}">
 
+    <Variable Name="InstallFolder" Type="string" Value="[ProgramFiles64Folder]照片管理器" />
+
     <BootstrapperApplication>
       <bal:WixStandardBootstrapperApplication
-        Theme="hyperlinkLicense"
-        LicenseUrl=""
-        SuppressOptionsUI="yes" />
+        Theme="rtfLicense"
+        ThemeFile="themes\HanabeTheme.xml"
+        LocalizationFile="themes\HanabeTheme.wxl"
+        LicenseFile="..\HanabePhotoManager.Installer\license.rtf"
+        LaunchTarget="[InstallFolder]HanabePhotoManager.App.exe"
+        LaunchWorkingFolder="[InstallFolder]" />
     </BootstrapperApplication>
 
     <Chain>
@@ -20,7 +25,10 @@
         SourceFile="$(MsiPath)"
         Compressed="yes"
         Visible="no"
-        Vital="yes" />
+        Vital="yes">
+        <MsiProperty Name="INSTALLFOLDER" Value="[InstallFolder]" />
+      </MsiPackage>
     </Chain>
   </Bundle>
+
 </Wix>

@@ -51,7 +51,7 @@ public sealed class ControlThemeTests
         buttons.Should().Contain("VerticalContentAlignment");
         buttons.Should().Contain("HorizontalContentAlignment");
         buttons.Should().Contain("TextElement.FontSize");
-        buttons.Should().Contain("Brush.Surface.Subtle");
+        buttons.Should().Contain("Brush.Surface.Disabled");
         buttons.Should().NotContain("<Setter Property=\"Opacity\" Value=\"0.72\"");
         layout.Should().Contain("TextOptions.TextFormattingMode");
         status.Should().Contain("TextOptions.TextFormattingMode");
@@ -70,6 +70,59 @@ public sealed class ControlThemeTests
         selectionXaml.Should().NotContain(
             "TargetType=\"RadioButton\" BasedOn=\"{StaticResource Selection.CheckBox}\"",
             "WPF rejects a RadioButton style based on a CheckBox-targeted style at runtime");
+    }
+
+    [Fact]
+    public void SharedSelectionControls_ReplaceNativeGreyTemplates()
+    {
+        var selection = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Selection.xaml"));
+
+        selection.Should().Contain("x:Key=\"Selection.CheckBox\"")
+            .And.Contain("<ControlTemplate TargetType=\"CheckBox\">")
+            .And.Contain("x:Name=\"CheckMark\"")
+            .And.Contain("x:Key=\"Selection.RadioButton\"")
+            .And.Contain("<ControlTemplate TargetType=\"RadioButton\">")
+            .And.Contain("x:Name=\"SelectionDot\"");
+    }
+
+    [Fact]
+    public void SharedButtons_UseSemanticDisabledColorsInsteadOfFadingTheirLabels()
+    {
+        var root = FindSourceRoot();
+        var buttons = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
+        var navigation = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Themes", "Controls", "Navigation.xaml"));
+
+        buttons.Should().NotContain("<Setter Property=\"Opacity\" Value=\"0.45\"")
+            .And.Contain("Brush.Text.Tertiary")
+            .And.Contain("Brush.Surface.Disabled");
+        navigation.Should().NotContain("<Setter Property=\"Opacity\" Value=\"0.45\"");
+    }
+
+    [Fact]
+    public void PrimaryButton_ForcesOnPrimaryForegroundThroughItsContentPresenter()
+    {
+        var buttons = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
+
+        buttons.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.OnPrimary}\"")
+            .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"")
+            .And.Contain("x:Key=\"Button.PrimaryTextTemplate\"")
+            .And.Contain("ContentTemplate=\"{StaticResource Button.PrimaryTextTemplate}\"");
+    }
+
+    [Fact]
+    public void ApplicationButtonTemplates_DoNotFadeDisabledContentBelowReadableContrast()
+    {
+        var root = FindSourceRoot();
+        var app = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "App.xaml"));
+        var main = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var viewer = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "PhotoViewerWindow.xaml"));
+
+        app.Should().NotContain("<Setter Property=\"Opacity\" Value=\"0.45\" />");
+        main.Should().NotContain("<Setter Property=\"UIElement.Opacity\" Value=\"0.45\" />")
+            .And.NotContain("<Setter Property=\"UIElement.Opacity\" Value=\"0.5\" />");
+        viewer.Should().NotContain("<Setter Property=\"Opacity\" Value=\"0.35\"/>");
     }
 
     [Fact]

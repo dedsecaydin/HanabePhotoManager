@@ -728,3 +728,12 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 ### 验证
 - `dotnet build -c Debug /warnaserror`：0 警告 0 错误；`dotnet test --no-build`：917 全绿（Core 373 / Infra 164 / App 380）。
 - 截图 `.artifacts/m3-settings-sponsor2-light.png`：二维码卡片 + 爱发电卡片均可见；settings.json 的 LibraryRoot/WindowHeight 恢复校验通过。
+
+## 2026-08-16 — 图库滚动缩放与全局控件可读性重构
+
+- 图库普通滚轮恢复为仅滚动；`Ctrl + 滚轮` 改为以指针位置为锚点缩放，并统一减号、滑块、加号和重置按钮的缩放状态。
+- 新增纯计算的 `GalleryZoomPolicy` 与边界、锚点、无效布局回退测试，避免列数变化导致视野跳动。
+- 重绘复选框和单选框模板，移除系统原生灰色矩形残留；禁用按钮改用语义颜色，不再整体降低透明度。
+- 修复主按钮内容被隐式文本样式覆盖而出现“紫底无字”的问题，并统一导航、查看器和组合框的禁用态可读性。
+- 逐页鼠标复查主页、人物、导入、图库、工具、地图、相册和设置，并切换六套主题复查浅色/深色对比度。
+- Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 397，共 610 项测试通过；自包含版本已同步至 `D:\hanabe-publish-v2`。

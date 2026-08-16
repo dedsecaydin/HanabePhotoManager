@@ -109,7 +109,9 @@
                                     <Setter TargetName="Chrome" Property="BorderThickness" Value="2" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Opacity" Value="0.45" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+                                    <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}" />
+                                    <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Disabled}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -218,7 +220,9 @@
                                     <Setter TargetName="PopupSurface" Property="MinHeight" Value="44" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
-                                    <Setter Property="Opacity" Value="0.45" />
+                                    <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}" />
+                                    <Setter TargetName="ComboSurface" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}" />
+                                    <Setter TargetName="ComboSurface" Property="BorderBrush" Value="{DynamicResource Brush.Border.Disabled}" />
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -248,7 +252,7 @@
                                     <Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
                                     <Setter Property="Foreground" Value="White" />
                                 </Trigger>
-                                <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45" /></Trigger>
+                                <Trigger Property="IsEnabled" Value="False"><Setter Property="Foreground" Value="{DynamicResource Brush.Text.Disabled}"/><Setter TargetName="ItemSurface" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}"/></Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>

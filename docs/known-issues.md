@@ -150,6 +150,13 @@
 
 ## Verification Checklist
 
+## 2026-08-16 已解决：图库缩放冲突与按钮文字不可见
+
+- **状态：** 已解决并回归验证。
+- **原症状：** 图库滚轮与缩放职责混杂；部分主按钮出现有底色但文字不可见；原生选择控件可能留下灰色矩形。
+- **修复：** 普通滚轮与 Ctrl 缩放分流，指针锚点补偿；主按钮显式内容前景；选择控件重绘；禁用态改用语义颜色。
+- **验证：** 六套主题和八个主要页面完成鼠标复查，610 项自动化测试通过。
+
 For each issue marked "Fix Attempted", verify the following before marking "Resolved":
 
 1. Can reproduce the original symptom

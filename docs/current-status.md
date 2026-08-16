@@ -347,6 +347,16 @@ P1 门槛：发现并修复 1 个 P1——增量全库/日期扫描路径（`App
 
 ## Performance
 
+## 2026-08-16 图库交互与控件可读性
+
+| 功能 | 状态 | 说明 |
+|---|---|---|
+| 图库滚轮 | 稳定 | 普通滚轮只滚动，保留系统滚动惯性与边界行为 |
+| 图库缩放 | 稳定 | Ctrl + 滚轮以指针锚点缩放；工具栏四种入口共用同一状态 |
+| 按钮可读性 | 稳定 | 主按钮强制前景色；禁用态使用语义颜色，不再整体淡化 |
+| 选择控件 | 稳定 | 单选框、复选框使用自定义 M3 模板，无原生灰色矩形残留 |
+| 六套主题 | 已复查 | 动态、森林、紫罗兰的浅色与深色均完成运行时切换检查 |
+
 | Concern | Status | Notes |
 |---------|--------|-------|
 | UI hang on large treemap (KI-07) | Resolved | Startup publication is bounded to 1,024-item scan/dimension batches and panorama layout is snapshot-cached; UNC startup also skips recursive auto-cleanup, reuses media scan capacity statistics, and avoids rebuilding the completed all-library treemap solely to apply neutral filters. |

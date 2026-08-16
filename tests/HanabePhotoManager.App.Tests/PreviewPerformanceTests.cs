@@ -260,6 +260,22 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
+    public void GalleryZoom_UsesUnifiedToolbarAndControlWheelCoordinator()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var codeBehind = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        xaml.Should().Contain("x:Name=\"GalleryZoomSlider\"");
+        xaml.Should().Contain("Click=\"GalleryZoomOut_Click\"");
+        xaml.Should().Contain("Click=\"GalleryZoomIn_Click\"");
+        xaml.Should().Contain("Click=\"GalleryZoomReset_Click\"");
+        codeBehind.Should().Contain("GalleryZoomPolicy.ResolveWheelTileSize");
+        codeBehind.Should().Contain("ApplyGalleryZoom");
+        codeBehind.Should().NotContain("普通滚轮：显式滚动照片墙");
+    }
+
+    [Fact]
     public void RetouchedPreview_PrefersFinishedJpegOverPhotoshopProject()
     {
         var folder = Path.Combine(Path.GetTempPath(), "修后");

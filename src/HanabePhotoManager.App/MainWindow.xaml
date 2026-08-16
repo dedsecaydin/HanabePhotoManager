@@ -71,7 +71,9 @@
                   <Setter TargetName="Chrome" Property="Border.BorderThickness" Value="2" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                  <Setter Property="UIElement.Opacity" Value="0.45" />
+                  <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+                  <Setter TargetName="Chrome" Property="Border.Background" Value="{DynamicResource Brush.Surface.Disabled}" />
+                  <Setter TargetName="Chrome" Property="Border.BorderBrush" Value="{DynamicResource Brush.Border.Disabled}" />
                 </Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>
@@ -153,7 +155,9 @@
                   <Setter TargetName="DeviceCardInteractionSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                  <Setter Property="UIElement.Opacity" Value="0.5" />
+                  <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}" />
+                  <Setter TargetName="DeviceCardInteractionSurface" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}" />
+                  <Setter TargetName="DeviceCardInteractionSurface" Property="BorderBrush" Value="{DynamicResource Brush.Border.Disabled}" />
                 </Trigger>
               </ControlTemplate.Triggers>
             </ControlTemplate>
@@ -1257,11 +1261,25 @@
                   <StackPanel x:Name="BrowseSidebarThumbnailControls" DockPanel.Dock="Bottom" Width="250" Margin="0,10,14,4">
                     <StackPanel Visibility="{Binding IsGridBrowseMode, Converter={StaticResource BoolToVis}}">
                       <DockPanel Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Right" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding ZoomableGridTileSize, StringFormat={}{0:N0}px}" />
                         <TextBlock Text="缩略图大小" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                        <TextBlock DockPanel.Dock="Right" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Text="{Binding ZoomableGridTileSize, StringFormat={}{0:N0}px}" />
                       </DockPanel>
-                      <Slider Minimum="48" Maximum="512" Value="{Binding ZoomableGridTileSize}" />
-                      <TextBlock Text="也可按住 Ctrl 使用滚轮缩放" FontSize="{StaticResource Typography.Caption}" Opacity="0.62" Margin="0,5,0,0" />
+                      <Grid>
+                        <Grid.ColumnDefinitions>
+                          <ColumnDefinition Width="32" />
+                          <ColumnDefinition Width="8" />
+                          <ColumnDefinition Width="*" />
+                          <ColumnDefinition Width="8" />
+                          <ColumnDefinition Width="32" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="−" Style="{StaticResource Button.Icon}" Width="32" Height="32" Padding="0" Click="GalleryZoomOut_Click" ToolTip="缩小缩略图" />
+                        <Slider x:Name="GalleryZoomSlider" Grid.Column="2" Minimum="48" Maximum="512" Value="{Binding ZoomableGridTileSize, Mode=OneWay}" ValueChanged="GalleryZoomSlider_ValueChanged" ToolTip="调整缩略图大小" />
+                        <Button Grid.Column="4" Content="+" Style="{StaticResource Button.Icon}" Width="32" Height="32" Padding="0" Click="GalleryZoomIn_Click" ToolTip="放大缩略图" />
+                      </Grid>
+                      <DockPanel Margin="0,5,0,0">
+                        <Button DockPanel.Dock="Right" Content="重置" Style="{StaticResource Button.Ghost}" MinHeight="24" Padding="8,2" FontSize="{StaticResource Typography.Caption}" Click="GalleryZoomReset_Click" />
+                        <TextBlock Text="Ctrl + 滚轮：以指针位置缩放" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.OnSurfaceVariant}" VerticalAlignment="Center" />
+                      </DockPanel>
                     </StackPanel>
                   </StackPanel>
                   <ScrollViewer VerticalScrollBarVisibility="Auto">

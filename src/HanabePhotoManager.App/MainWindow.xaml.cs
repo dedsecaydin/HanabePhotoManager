@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using HanabePhotoManager.App.Browsing.Grid;
 using HanabePhotoManager.App.Browsing.Treemap;
 using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.Navigation;
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
     private const double TreemapZoomMin = 0.02;
     private const double TreemapZoomMax = 8.0;
     private const double TreemapZoomNotchFactor = 1.12;
+    private int _galleryZoomGeneration;
 
     // Title-bar theming: DWMWA_USE_IMMERSIVE_DARK_MODE makes the system caption
     // follow the app's Light/Dark theme (20 = Win10 2004+/Win11, 19 = 1809-1909).
@@ -742,33 +744,81 @@ public partial class MainWindow : Window
 
     private void PreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
-        if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        var tileSize = GalleryZoomPolicy.ResolveWheelTileSize(
+            _viewModel.ZoomableGridTileSize,
+            e.Delta,
+            Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
+        if (tileSize is null)
         {
+            // 普通滚轮交给 ScrollViewer 的标准像素滚动，不拦截、不改变缩略图大小。
             return;
         }
 
-        var scrollViewer = PreviewPhotoScrollViewer;
-        var pointer = e.GetPosition(scrollViewer);
-        var oldTileSize = _viewModel.ZoomableGridTileSize;
-        const double notchFactor = 1.12;
-        var factor = e.Delta > 0 ? notchFactor : 1.0 / notchFactor;
-        var newTileSize = Math.Clamp(oldTileSize * factor, 48, 512);
-        if (Math.Abs(newTileSize - oldTileSize) < 0.5)
-        {
-            e.Handled = true;
-            return;
-        }
-
-        var oldOffset = scrollViewer.VerticalOffset;
-        var contentY = oldOffset + pointer.Y;
-        var scale = newTileSize / oldTileSize;
-        var newOffset = contentY * scale - pointer.Y;
-
-        _viewModel.ZoomableGridTileSize = newTileSize;
-        scrollViewer.UpdateLayout();
-        scrollViewer.ScrollToVerticalOffset(Math.Clamp(newOffset, 0, scrollViewer.ScrollableHeight));
-
+        ApplyGalleryZoom(tileSize.Value, e.GetPosition(PreviewPhotoScrollViewer));
         e.Handled = true;
+    }
+
+    private void GalleryZoomOut_Click(object sender, RoutedEventArgs e) =>
+        ApplyGalleryZoom(
+            _viewModel.ZoomableGridTileSize / GalleryZoomPolicy.WheelNotchFactor,
+            GalleryViewportCenter());
+
+    private void GalleryZoomIn_Click(object sender, RoutedEventArgs e) =>
+        ApplyGalleryZoom(
+            _viewModel.ZoomableGridTileSize * GalleryZoomPolicy.WheelNotchFactor,
+            GalleryViewportCenter());
+
+    private void GalleryZoomReset_Click(object sender, RoutedEventArgs e) =>
+        ApplyGalleryZoom(GalleryZoomPolicy.DefaultTileSize, GalleryViewportCenter());
+
+    private void GalleryZoomSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded || Math.Abs(e.NewValue - _viewModel.ZoomableGridTileSize) < 0.01)
+        {
+            return;
+        }
+
+        ApplyGalleryZoom(e.NewValue, GalleryViewportCenter());
+    }
+
+    private System.Windows.Point GalleryViewportCenter() => new(
+        PreviewPhotoScrollViewer.ViewportWidth / 2,
+        PreviewPhotoScrollViewer.ViewportHeight / 2);
+
+    private void ApplyGalleryZoom(double requestedTileSize, System.Windows.Point anchor)
+    {
+        var scrollViewer = PreviewPhotoScrollViewer;
+        var oldTileSize = _viewModel.ZoomableGridTileSize;
+        var newTileSize = Math.Clamp(
+            requestedTileSize,
+            GalleryZoomPolicy.MinimumTileSize,
+            GalleryZoomPolicy.MaximumTileSize);
+        if (Math.Abs(newTileSize - oldTileSize) < 0.01)
+        {
+            return;
+        }
+
+        var requestedOffset = GalleryZoomPolicy.CalculateAnchoredVerticalOffset(
+            scrollViewer.VerticalOffset,
+            anchor.X,
+            anchor.Y,
+            scrollViewer.ViewportWidth,
+            oldTileSize + GalleryZoomPolicy.TileSpacing,
+            newTileSize + GalleryZoomPolicy.TileSpacing,
+            GalleryZoomPolicy.HeaderHeight,
+            double.MaxValue);
+
+        var generation = ++_galleryZoomGeneration;
+        _viewModel.ZoomableGridTileSize = newTileSize;
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+        {
+            if (generation != _galleryZoomGeneration)
+            {
+                return;
+            }
+
+            scrollViewer.ScrollToVerticalOffset(Math.Clamp(requestedOffset, 0, scrollViewer.ScrollableHeight));
+        });
     }
 
     private void TreemapScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

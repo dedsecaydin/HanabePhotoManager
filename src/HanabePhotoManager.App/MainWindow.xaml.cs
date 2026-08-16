@@ -532,6 +532,10 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainWindowViewModel.CurrentPage))
         {
             Dispatcher.BeginInvoke(AnimateVisiblePage);
+            if (_viewModel.IsPreviewPage)
+            {
+                Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
+            }
         }
         else if (e.PropertyName == nameof(MainWindowViewModel.AppIconImage))
         {
@@ -795,6 +799,11 @@ public partial class MainWindow : Window
     private HanabePhotoManager.App.Controls.VirtualizingWrapPanel? GetGalleryPanel() =>
         FindVisualDescendants<HanabePhotoManager.App.Controls.VirtualizingWrapPanel>(PreviewWallItemsControl)
             .FirstOrDefault();
+
+    private void ResetGalleryScrollToFirstDate()
+    {
+        GetGalleryPanel()?.SetVerticalOffset(0);
+    }
 
     private void ApplyGalleryZoom(double requestedTileSize, System.Windows.Point anchor)
     {

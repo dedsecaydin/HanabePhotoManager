@@ -497,7 +497,8 @@
                 <Style TargetType="Button" BasedOn="{StaticResource Navigation.RailItem}">
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding IsSettingsPage}" Value="True">
-                      <Setter Property="Background" Value="{DynamicResource Brush.SecondaryContainer}" />
+                      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Selected}" />
+                      <Setter Property="BorderThickness" Value="0" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
@@ -541,7 +542,7 @@
                           PreviewMouseLeftButtonDown="PrimaryNavigationItem_PreviewMouseLeftButtonDown"
                           PreviewMouseMove="PrimaryNavigationItem_PreviewMouseMove">
                     <Grid>
-                      <Border x:Name="NavSelectionSurface" CornerRadius="16" Background="{DynamicResource Brush.SecondaryContainer}" Opacity="0" IsHitTestVisible="False" />
+                      <Border x:Name="NavSelectionSurface" CornerRadius="16" Background="{DynamicResource Brush.Surface.Selected}" BorderThickness="0" Opacity="0" IsHitTestVisible="False" />
                       <StackPanel>
                         <Border x:Name="NavIconSurface" Width="32" Height="32" CornerRadius="16" Background="Transparent" HorizontalAlignment="Center">
                           <Viewbox x:Name="NavigationIcon" Width="20" Height="20" HorizontalAlignment="Center" VerticalAlignment="Center">

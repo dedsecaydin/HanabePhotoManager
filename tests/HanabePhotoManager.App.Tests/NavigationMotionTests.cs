@@ -40,6 +40,7 @@ public sealed class NavigationMotionTests
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         xaml.Should().Contain("x:Name=\"NavSelectionSurface\"");
+        xaml.Should().Contain("x:Name=\"NavSelectionSurface\" CornerRadius=\"16\" Background=\"{DynamicResource Brush.Surface.Selected}\" BorderThickness=\"0\"");
         xaml.Should().Contain("x:Name=\"NavIconSurface\"");
         xaml.Should().Contain("Converter=\"{StaticResource CategoryEqualityMultiConverter}\"");
         xaml.Should().Contain("DataContext.CurrentPage");
@@ -47,6 +48,11 @@ public sealed class NavigationMotionTests
         xaml.Should().Contain("Motion.Duration.Fast");
         xaml.Should().Contain("KeyboardNavigation.DirectionalNavigation=\"Cycle\"");
         xaml.Should().Contain("KeyboardNavigation.TabNavigation=\"Once\"");
+
+        var code = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+        code.Should().Contain("ResetGalleryScrollToFirstDate");
+        code.Should().Contain("GetGalleryPanel()?.SetVerticalOffset(0)");
     }
 
     [Fact]

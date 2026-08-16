@@ -743,3 +743,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 修正 `VirtualizingWrapPanel` 尺寸绑定错误：原绑定错误地从 `Window` 查找 `ZoomableGridTileStride`，现改为从 `Window.DataContext` 获取，缩略图尺寸可真实改变。
 - 普通滚轮不再依赖外层 `ScrollViewer` 的默认转发，直接更新图库虚拟化面板的垂直偏移。
 - 发布版鼠标实测：上下滚动均改变照片墙位置；点击加号后缩略图由 325px 变为 364px，并完成列数重排。
+- 日期照片墙改为所有日期分组默认展开；8.15 的照片结束后连续显示 8.14、8.13 等后续日期标题与照片，仍可单独点击标题收起。

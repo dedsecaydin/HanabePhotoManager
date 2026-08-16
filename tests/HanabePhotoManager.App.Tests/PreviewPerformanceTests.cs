@@ -234,6 +234,27 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
+    public void PreviewWall_ExpandsEveryDateByDefaultForContinuousWheelBrowsing()
+    {
+        var viewModel = new MainWindowViewModel();
+        var august15 = Path.GetFullPath(@"C:\photos\8月\08.15\JPG生图\first.jpg");
+        var august14 = Path.GetFullPath(@"C:\photos\8月\08.14\JPG生图\second.jpg");
+        viewModel.PreviewFiles.Add(new PreviewFileViewModel(
+            "first.jpg", "JPG生图", august15, "1 KB", ".jpg", null));
+        viewModel.PreviewFiles.Add(new PreviewFileViewModel(
+            "second.jpg", "JPG生图", august14, "1 KB", ".jpg", null));
+
+        viewModel.CurrentPreviewCategory = "JPG生图";
+
+        viewModel.VisiblePreviewSections.Should().HaveCount(2)
+            .And.OnlyContain(section => section.IsExpanded);
+        viewModel.PreviewWallItems.Should().HaveCount(4);
+        viewModel.PreviewWallItems.OfType<PreviewDateSectionViewModel>()
+            .Select(section => section.Title)
+            .Should().Contain(["8月 · 08.15", "8月 · 08.14"]);
+    }
+
+    [Fact]
     public void CompactBrowseLayout_KeepsThePhotoWallVisible()
     {
         var viewModel = new MainWindowViewModel { IsBrowseConditionsExpanded = true };

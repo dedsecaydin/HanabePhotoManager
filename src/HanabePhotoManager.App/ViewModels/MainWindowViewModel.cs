@@ -4658,14 +4658,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _skipPreviewExpansionCaptureOnce = false;
 
         VisiblePreviewSections.Clear();
-        var sectionIndex = 0;
         foreach (var group in _filteredCache.GroupBy(file => ResolvePreviewDateSection(file.FullPath)))
         {
             var first = group.Key;
             var isSingleSelectedDate = _calendarSelectedDate is not null;
             var expanded = _personFilterOwnsExpansion || isSingleSelectedDate || (_previewDateExpansion.TryGetValue(first.Key, out var remembered)
                 ? remembered
-                : sectionIndex == 0);
+                : true);
             VisiblePreviewSections.Add(new PreviewDateSectionViewModel(
                 first.Key,
                 first.Title,
@@ -4673,7 +4672,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 expanded,
                 OnPreviewDateSectionExpansionChanged,
                 showHeader: !isSingleSelectedDate));
-            sectionIndex++;
         }
 
         RebuildExpandedPreviewFiles();

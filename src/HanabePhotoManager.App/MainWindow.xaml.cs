@@ -744,13 +744,20 @@ public partial class MainWindow : Window
 
     private void PreviewScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        var galleryPanel = GetGalleryPanel();
+        if (galleryPanel is null)
+        {
+            return;
+        }
+
         var tileSize = GalleryZoomPolicy.ResolveWheelTileSize(
             _viewModel.ZoomableGridTileSize,
             e.Delta,
             Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
         if (tileSize is null)
         {
-            // 普通滚轮交给 ScrollViewer 的标准像素滚动，不拦截、不改变缩略图大小。
+            galleryPanel.SetVerticalOffset(galleryPanel.VerticalOffset - e.Delta);
+            e.Handled = true;
             return;
         }
 
@@ -785,9 +792,18 @@ public partial class MainWindow : Window
         PreviewPhotoScrollViewer.ViewportWidth / 2,
         PreviewPhotoScrollViewer.ViewportHeight / 2);
 
+    private HanabePhotoManager.App.Controls.VirtualizingWrapPanel? GetGalleryPanel() =>
+        FindVisualDescendants<HanabePhotoManager.App.Controls.VirtualizingWrapPanel>(PreviewWallItemsControl)
+            .FirstOrDefault();
+
     private void ApplyGalleryZoom(double requestedTileSize, System.Windows.Point anchor)
     {
-        var scrollViewer = PreviewPhotoScrollViewer;
+        var galleryPanel = GetGalleryPanel();
+        if (galleryPanel is null)
+        {
+            return;
+        }
+
         var oldTileSize = _viewModel.ZoomableGridTileSize;
         var newTileSize = Math.Clamp(
             requestedTileSize,
@@ -799,10 +815,10 @@ public partial class MainWindow : Window
         }
 
         var requestedOffset = GalleryZoomPolicy.CalculateAnchoredVerticalOffset(
-            scrollViewer.VerticalOffset,
+            galleryPanel.VerticalOffset,
             anchor.X,
             anchor.Y,
-            scrollViewer.ViewportWidth,
+            galleryPanel.ViewportWidth,
             oldTileSize + GalleryZoomPolicy.TileSpacing,
             newTileSize + GalleryZoomPolicy.TileSpacing,
             GalleryZoomPolicy.HeaderHeight,
@@ -817,7 +833,11 @@ public partial class MainWindow : Window
                 return;
             }
 
-            scrollViewer.ScrollToVerticalOffset(Math.Clamp(requestedOffset, 0, scrollViewer.ScrollableHeight));
+            galleryPanel.UpdateLayout();
+            galleryPanel.SetVerticalOffset(Math.Clamp(
+                requestedOffset,
+                0,
+                Math.Max(0, galleryPanel.ExtentHeight - galleryPanel.ViewportHeight)));
         });
     }
 

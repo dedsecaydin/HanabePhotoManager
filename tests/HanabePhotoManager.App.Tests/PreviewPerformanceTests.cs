@@ -270,7 +270,11 @@ public sealed class PreviewPerformanceTests
         xaml.Should().Contain("Click=\"GalleryZoomOut_Click\"");
         xaml.Should().Contain("Click=\"GalleryZoomIn_Click\"");
         xaml.Should().Contain("Click=\"GalleryZoomReset_Click\"");
+        xaml.Should().Contain("ItemWidth=\"{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}\"");
+        xaml.Should().Contain("ItemHeight=\"{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}\"");
         codeBehind.Should().Contain("GalleryZoomPolicy.ResolveWheelTileSize");
+        codeBehind.Should().Contain("GetGalleryPanel");
+        codeBehind.Should().Contain("galleryPanel.SetVerticalOffset");
         codeBehind.Should().Contain("ApplyGalleryZoom");
         codeBehind.Should().NotContain("普通滚轮：显式滚动照片墙");
     }

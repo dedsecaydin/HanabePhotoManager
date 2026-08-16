@@ -737,3 +737,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 修复主按钮内容被隐式文本样式覆盖而出现“紫底无字”的问题，并统一导航、查看器和组合框的禁用态可读性。
 - 逐页鼠标复查主页、人物、导入、图库、工具、地图、相册和设置，并切换六套主题复查浅色/深色对比度。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 397，共 610 项测试通过；自包含版本已同步至 `D:\hanabe-publish-v2`。
+
+### 运行时复查修正
+
+- 修正 `VirtualizingWrapPanel` 尺寸绑定错误：原绑定错误地从 `Window` 查找 `ZoomableGridTileStride`，现改为从 `Window.DataContext` 获取，缩略图尺寸可真实改变。
+- 普通滚轮不再依赖外层 `ScrollViewer` 的默认转发，直接更新图库虚拟化面板的垂直偏移。
+- 发布版鼠标实测：上下滚动均改变照片墙位置；点击加号后缩略图由 325px 变为 364px，并完成列数重排。

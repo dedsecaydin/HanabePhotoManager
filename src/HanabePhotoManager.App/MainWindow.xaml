@@ -1621,10 +1621,10 @@
                         </ItemsControl.ItemTemplate>
                       </ItemsControl>
                       <ScrollViewer Grid.Row="1" Name="PreviewPhotoScrollViewer" CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PreviewMouseWheel="PreviewScrollViewer_PreviewMouseWheel" PreviewMouseDown="PreviewScrollViewer_PreviewMouseDown" PreviewMouseMove="PreviewScrollViewer_PreviewMouseMove" PreviewMouseUp="PreviewScrollViewer_PreviewMouseUp">
-                      <ItemsControl x:Name="PreviewWallItemsControl" ItemsSource="{Binding PreviewWallItems}">
+                      <ItemsControl x:Name="PreviewWallItemsControl" ItemsSource="{Binding PreviewWallItems}" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
                         <ItemsControl.ItemsPanel>
                           <ItemsPanelTemplate>
-                            <controls:VirtualizingWrapPanel ItemWidth="{Binding ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" ItemHeight="{Binding ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" HeaderHeight="56" />
+                            <controls:VirtualizingWrapPanel ItemWidth="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" ItemHeight="{Binding DataContext.ZoomableGridTileStride, RelativeSource={RelativeSource AncestorType=Window}}" HeaderHeight="64" />
                           </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                         <ItemsControl.Resources>

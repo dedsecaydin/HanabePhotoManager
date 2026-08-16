@@ -858,3 +858,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 左侧明暗按钮纳入同一动画入口，并根据目标操作在月亮与太阳图标、深色与浅色文字之间同步切换。
 - Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 406、InstallerShell 10，共 629 项测试通过；发布版已同步至 `D:\hanabe-publish-v2`，实机捕获动画中间帧并确认结束状态。
 - 后续复查发现 `DrawingBrush` 会按自身边界重映射圆形遮罩，视觉上形成斜切分屏；已改为内容坐标系原生 `CombinedGeometry Clip`，现在严格以点击点为圆心、半径连续扩大至覆盖窗口四角。
+
+### 图库双击查看器启动优化
+
+- 移除每次打开查看器时在 UI 线程对全部可见媒体逐项执行 `File.Exists` 的全库探测；当前文件仍在双击入口校验，查看器继续保留失效路径容错。
+- 约 1.5 万项图库发布版实测，双击输入返回并创建无边框查看器窗口约 239 ms，视频首帧与导航列表正常。
+- Release 构建 0 警告、0 错误；Core 159、Infrastructure 54、App 407、InstallerShell 10，共 630 项测试通过；发布版已同步至 `D:\hanabe-publish-v2`。

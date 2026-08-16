@@ -11,6 +11,19 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class PreviewPerformanceTests
 {
     [Fact]
+    public void OpenViewer_DoesNotProbeEveryVisibleFileOnTheUiThread()
+    {
+        var root = FindSourceRoot();
+        var source = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+        var methodStart = source.IndexOf("private void OpenIndependentViewer(PreviewFileViewModel file)", StringComparison.Ordinal);
+        var nextMethod = source.IndexOf("private void ", methodStart + 1, StringComparison.Ordinal);
+        var method = source[methodStart..nextMethod];
+
+        method.Should().Contain("VisiblePreviewFiles.Select");
+        method.Should().NotContain("Where(path => System.IO.File.Exists(path))");
+    }
+
+    [Fact]
     public void PreviewWall_HidesXmlButMarksMatchingVideoSidecar()
     {
         var viewModel = new MainWindowViewModel();

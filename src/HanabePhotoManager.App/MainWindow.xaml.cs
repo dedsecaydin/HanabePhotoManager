@@ -1998,7 +1998,7 @@ public partial class MainWindow : Window
     private void OpenIndependentViewer(PreviewFileViewModel file)
     {
         var paths = _viewModel.VisiblePreviewFiles.Select(item => item.PreviewPath)
-            .Where(path => System.IO.File.Exists(path)).ToArray();
+            .ToArray();
         var window = new PhotoViewerWindow(paths, file.PreviewPath, _viewModel.RemoveDeletedViewerPhoto) { Owner = this };
         window.Show();
     }

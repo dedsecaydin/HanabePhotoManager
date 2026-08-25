@@ -4,10 +4,14 @@ using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.Infrastructure.Files;
 
+/// <summary>
+/// 以 JSON 保存可恢复的导入计划，并在读写两端验证所有目标路径仍位于照片库根目录内。
+/// </summary>
 public sealed class JsonImportJournal
 {
     private static readonly JsonSerializerOptions SerializerOptions = CreateSerializerOptions();
 
+    /// <summary>先写入临时文件，再原子替换现有日志。</summary>
     public async Task SaveAsync(ImportPlan plan, string path, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -35,6 +39,7 @@ public sealed class JsonImportJournal
             await stream.FlushAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        // 只有完整序列化并 Flush 后才发布日志，取消或异常不会留下半份 JSON。
         if (File.Exists(fullPath))
         {
             File.Replace(temporaryPath, fullPath, destinationBackupFileName: null);
@@ -45,6 +50,7 @@ public sealed class JsonImportJournal
         }
     }
 
+    /// <summary>读取并验证日志；文件不存在时返回 null。</summary>
     public async Task<ImportPlan?> LoadAsync(string path, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);

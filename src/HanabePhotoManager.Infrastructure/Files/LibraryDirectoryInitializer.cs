@@ -2,6 +2,7 @@
 
 namespace HanabePhotoManager.Infrastructure.Files;
 
+/// <summary>按照片库日期和固定分类创建安全的目录树。</summary>
 public sealed class LibraryDirectoryInitializer
 {
     public static readonly IReadOnlyList<string> CategoryFolders = Array.AsReadOnly(
@@ -14,6 +15,7 @@ public sealed class LibraryDirectoryInitializer
         "素材"
     ]);
 
+    /// <summary>确保指定自然日下的全部分类目录存在且没有逃逸照片库根目录。</summary>
     public void EnsureDateTree(string root, LibraryDate date)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);

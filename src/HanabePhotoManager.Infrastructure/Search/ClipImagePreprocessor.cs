@@ -4,12 +4,15 @@ using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.Infrastructure.Search;
 
+/// <summary>把图片裁切、缩放并归一化为 Chinese-CLIP 图像编码器要求的 CHW 张量。</summary>
 public sealed class ClipImagePreprocessor
 {
+    /// <summary>模型固定输入边长。</summary>
     public const int InputSize = 224;
     private static readonly float[] Mean = [0.48145466f, 0.4578275f, 0.40821073f];
     private static readonly float[] StandardDeviation = [0.26862954f, 0.26130258f, 0.27577711f];
 
+    /// <summary>异步解码图片并返回按通道排列的归一化浮点数据。</summary>
     public async Task<float[]> PreprocessAsync(string imagePath, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);

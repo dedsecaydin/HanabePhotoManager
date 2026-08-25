@@ -1,12 +1,13 @@
 namespace HanabePhotoManager.Infrastructure.Files;
 
 /// <summary>
-/// Defines the immutable retouched output directory for a library date.
+/// 识别照片库日期目录下受保护的“修后”输出区域。
 /// </summary>
 public static class RetouchedDirectoryPolicy
 {
     public const string DirectoryName = "修后";
 
+    /// <summary>判断路径是否等于任一日期的修后目录或位于其内部。</summary>
     public static bool IsReadOnlyRetouchedPath(string libraryRoot, string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);

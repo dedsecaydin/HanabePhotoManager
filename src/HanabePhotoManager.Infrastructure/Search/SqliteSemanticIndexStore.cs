@@ -4,6 +4,9 @@ using Microsoft.Data.Sqlite;
 
 namespace HanabePhotoManager.Infrastructure.Search;
 
+/// <summary>
+/// 使用单个 SQLite 数据库持久化语义向量；所有连接操作通过信号量串行化。
+/// </summary>
 public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
 {
     private const string Schema = """
@@ -17,6 +20,7 @@ public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
     private readonly string _connectionString;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>创建使用指定数据库文件的索引存储。</summary>
     public SqliteSemanticIndexStore(string databasePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(databasePath);
@@ -24,6 +28,7 @@ public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
         _connectionString = new SqliteConnectionStringBuilder { DataSource = fullPath, Mode = SqliteOpenMode.ReadWriteCreate }.ToString();
     }
 
+    /// <inheritdoc />
     public Task UpsertAsync(IReadOnlyList<SemanticIndexEntry> entries, CancellationToken cancellationToken) => ExecuteAsync(async connection =>
     {
         using var transaction = connection.BeginTransaction();
@@ -46,6 +51,7 @@ public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
     }, cancellationToken);
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<SemanticIndexEntry>> GetAllAsync(CancellationToken cancellationToken) => ExecuteAsync(async connection =>
     {
         using var command = connection.CreateCommand();
@@ -53,10 +59,13 @@ public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
         using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
         var entries = new List<SemanticIndexEntry>();
         while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+        {
             entries.Add(new SemanticIndexEntry(reader.GetString(0), reader.GetString(1), DateTimeOffset.Parse(reader.GetString(2)), FromBytes((byte[])reader[3])));
+        }
         return (IReadOnlyList<SemanticIndexEntry>)entries;
     }, cancellationToken);
 
+    /// <inheritdoc />
     public Task<int> CountAsync(CancellationToken cancellationToken) => ExecuteAsync(async connection =>
     {
         using var command = connection.CreateCommand();
@@ -64,6 +73,7 @@ public sealed class SqliteSemanticIndexStore : ISemanticIndexStore
         return Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false));
     }, cancellationToken);
 
+    /// <inheritdoc />
     public Task RemoveMissingAsync(IEnumerable<string> existingPaths, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(existingPaths);

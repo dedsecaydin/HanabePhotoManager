@@ -1,15 +1,12 @@
 namespace HanabePhotoManager.Infrastructure.Files;
 
 /// <summary>
-/// Renumbers <c>JK%04d</c> files inside a category directory so that the
-/// remaining files form a contiguous 1..N sequence after duplicates or other
-/// files have been removed.
+/// 在文件删除后重新编号分类目录中的 <c>JK%04d</c> 文件，使剩余媒体保持连续序列。
 /// </summary>
 public static class LibraryResequenceService
 {
     /// <summary>
-    /// Walks every category directory under the library root and renumbers
-    /// <c>JK%04d</c> files to fill gaps left by deleted files.
+    /// 遍历照片库的全部日期和分类目录，填补已删除文件留下的编号空洞；“修后”目录不会改名。
     /// </summary>
     public static void ResequenceLibrary(string libraryRoot)
     {
@@ -37,10 +34,7 @@ public static class LibraryResequenceService
     }
 
     /// <summary>
-    /// Renumbers all <c>JK%04d</c> files in a single category directory so
-    /// that the sequence is contiguous starting from JK0001.
-    /// Files sharing the same numeric base (e.g. JK0001.JPG and JK0001_02.XML)
-    /// receive the same new sequence number with the same suffix pattern.
+    /// 从 JK0001 开始重新编号单个分类目录。共享相同数字主干的文件会保留同组关系和后缀顺序。
     /// </summary>
     public static void ResequenceDirectory(string categoryDir)
     {
@@ -90,6 +84,7 @@ public static class LibraryResequenceService
 
         if (renames.Count == 0) return;
 
+        // 两阶段改名避免目标名称仍被尚未处理的旧文件占用。
         foreach (var (from, to) in renames)
         {
             try { File.Move(from, to); } catch (IOException) { }

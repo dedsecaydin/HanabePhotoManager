@@ -1,9 +1,13 @@
 namespace HanabePhotoManager.Infrastructure.Files;
 
+/// <summary>
+/// 管理壁纸、模型或其他用户选择资源的应用私有副本，并隐藏临时写入文件。
+/// </summary>
 public sealed class PersistentAssetStore
 {
     private readonly string _managedDirectory;
 
+    /// <summary>创建使用指定托管目录的资源存储。</summary>
     public PersistentAssetStore(string managedDirectory)
     {
         if (string.IsNullOrWhiteSpace(managedDirectory))
@@ -14,6 +18,7 @@ public sealed class PersistentAssetStore
         _managedDirectory = Path.GetFullPath(managedDirectory);
     }
 
+    /// <summary>复制资源到托管目录，并通过临时文件替换同名旧资源。</summary>
     public string Import(string sourcePath, string assetName)
     {
         if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
@@ -53,6 +58,7 @@ public sealed class PersistentAssetStore
         }
     }
 
+    /// <summary>查找指定逻辑名称最新的非临时资源。</summary>
     public string? Find(string assetName)
     {
         if (string.IsNullOrWhiteSpace(assetName) ||
@@ -73,6 +79,7 @@ public sealed class PersistentAssetStore
             .FirstOrDefault();
     }
 
+    /// <summary>删除指定逻辑名称的全部扩展名变体。</summary>
     public void Delete(string assetName)
     {
         if (string.IsNullOrWhiteSpace(assetName) ||

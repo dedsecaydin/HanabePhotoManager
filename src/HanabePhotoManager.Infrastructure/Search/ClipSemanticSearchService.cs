@@ -4,6 +4,9 @@ using Microsoft.ML.OnnxRuntime.Tensors;
 
 namespace HanabePhotoManager.Infrastructure.Search;
 
+/// <summary>
+/// 使用本地 Chinese-CLIP ONNX 模型建立图片向量索引并执行文本到图片的余弦相似度检索。
+/// </summary>
 public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposable
 {
     public const int IndexBatchSize = 100;
@@ -17,6 +20,7 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
     private ClipTokenizer? _tokenizer;
     private SemanticIndexStatus _status = new(0, 0, false, false, "语义搜索模型未就绪。");
 
+    /// <summary>创建搜索服务；模型会在首次索引或查询时延迟加载。</summary>
     public ClipSemanticSearchService(ISemanticIndexStore store, ModelCatalog catalog, ClipImagePreprocessor? preprocessor = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
@@ -24,11 +28,16 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
         _preprocessor = preprocessor ?? new ClipImagePreprocessor();
     }
 
+    /// <inheritdoc />
     public SemanticIndexStatus GetIndexStatus()
     {
-        lock (_statusLock) return _status;
+        lock (_statusLock)
+        {
+            return _status;
+        }
     }
 
+    /// <inheritdoc />
     public async Task EnsureIndexAsync(string libraryRoot, IProgress<SemanticIndexStatus>? progress, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
@@ -38,16 +47,18 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
         var stored = (await _store.GetAllAsync(cancellationToken).ConfigureAwait(false)).ToDictionary(entry => entry.FileKey, StringComparer.OrdinalIgnoreCase);
         SetStatus(new SemanticIndexStatus(files.Length, 0, true, true, "正在建立语义索引…"), progress);
         var indexed = 0;
-        // Persist a complete batch before reporting progress so the newly
-        // indexed photos are immediately searchable by the caller.
+        // 先持久化完整批次再报告进度，保证调用方看到的进度与立即可搜索的条目一致。
         var pending = new List<SemanticIndexEntry>(IndexBatchSize);
         foreach (var path in files)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var info = new FileInfo(path);
             var fingerprint = $"{info.Length}:{info.LastWriteTimeUtc.Ticks}";
-            if (!stored.TryGetValue(path, out var entry) || !string.Equals(entry.Fingerprint, fingerprint, StringComparison.Ordinal))
+            if (!stored.TryGetValue(path, out var entry) ||
+                !string.Equals(entry.Fingerprint, fingerprint, StringComparison.Ordinal))
+            {
                 pending.Add(new SemanticIndexEntry(path, fingerprint, info.LastWriteTimeUtc, await EncodeImageAsync(path, cancellationToken).ConfigureAwait(false)));
+            }
             indexed++;
             if (pending.Count == IndexBatchSize)
             {
@@ -65,10 +76,14 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
         SetStatus(new SemanticIndexStatus(files.Length, files.Length, false, true, $"已建立 {files.Length:N0} 张照片的语义索引。"), progress);
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<SemanticSearchResult>> SearchAsync(string query, int limit, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(query);
-        if (limit <= 0) throw new ArgumentOutOfRangeException(nameof(limit));
+        if (limit <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        }
         EnsureModelLoaded();
         var queryEmbedding = EncodeText(query);
         var entries = await _store.GetAllAsync(cancellationToken).ConfigureAwait(false);
@@ -79,8 +94,21 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
 
     private void EnsureModelLoaded()
     {
-        if (_imageSession is not null && _textSession is not null && _tokenizer is not null) return;
-        if (!_catalog.IsReady) { lock (_statusLock) _status = new(0, 0, false, false, _catalog.GetMissingModelMessage()); throw new FileNotFoundException(_catalog.GetMissingModelMessage()); }
+        if (_imageSession is not null && _textSession is not null && _tokenizer is not null)
+        {
+            return;
+        }
+
+        if (!_catalog.IsReady)
+        {
+            var message = _catalog.GetMissingModelMessage();
+            lock (_statusLock)
+            {
+                _status = new SemanticIndexStatus(0, 0, false, false, message);
+            }
+
+            throw new FileNotFoundException(message);
+        }
         _tokenizer = new ClipTokenizer(_catalog.VocabularyPath);
         _imageSession = new InferenceSession(_catalog.ImageEncoderPath, new SessionOptions());
         _textSession = new InferenceSession(_catalog.TextEncoderPath, new SessionOptions());
@@ -117,5 +145,10 @@ public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposa
     }
     private static double CosineSimilarity(IReadOnlyList<float> left, IReadOnlyList<float> right) => left.Zip(right, static (a, b) => a * b).Sum();
     private void SetStatus(SemanticIndexStatus status, IProgress<SemanticIndexStatus>? progress) { lock (_statusLock) _status = status; progress?.Report(status); }
-    public void Dispose() { _imageSession?.Dispose(); _textSession?.Dispose(); }
+    /// <summary>释放两个 ONNX 推理会话持有的本地资源。</summary>
+    public void Dispose()
+    {
+        _imageSession?.Dispose();
+        _textSession?.Dispose();
+    }
 }

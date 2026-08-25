@@ -6,14 +6,22 @@ using Microsoft.Win32.SafeHandles;
 
 namespace HanabePhotoManager.Infrastructure.Files;
 
+/// <summary>已完成内容校验的计划文件及其源内容哈希。</summary>
 public sealed record VerifiedFileResult(PlannedFile File, string Sha256);
 
+/// <summary>一个媒体组的原子传输结果。</summary>
 public sealed record GroupTransferResult(bool Success, string? Error, IReadOnlyList<VerifiedFileResult> VerifiedFiles);
 
+/// <summary>
+/// 在源文件租约保护下复制、校验并发布整个媒体组；失败时清理未发布的临时文件和目标文件。
+/// </summary>
 public sealed class VerifiedFileTransfer(IFileHasher hasher)
 {
     private readonly IFileHasher _hasher = hasher ?? throw new ArgumentNullException(nameof(hasher));
 
+    /// <summary>
+    /// 传输计划项中的主文件和附属文件。仅在全部目标校验并发布成功后才按请求删除源文件。
+    /// </summary>
     public async Task<GroupTransferResult> TransferGroupAsync(
         ImportPlanItem item,
         bool deleteSourcesAfterVerify,
@@ -138,6 +146,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 }
             }
 
+            // 发布前再次检查全部目标，确保扫描计划与复制期间出现的外部文件不会被覆盖。
             foreach (var file in item.Files.Where(file => file.Conflict == ConflictKind.None))
             {
                 if (File.Exists(file.DestinationPath) || Directory.Exists(file.DestinationPath))
@@ -147,6 +156,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 }
             }
 
+            // 所有临时文件均验证成功后才进入发布阶段，保持媒体组尽可能接近原子提交。
             foreach (var file in item.Files.Where(file => file.Conflict == ConflictKind.None))
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -158,6 +168,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
 
             if (deleteSourcesAfterVerify)
             {
+                // 删除前重新计算租约内容，避免校验后被外部进程修改的源文件遭到误删。
                 await VerifySourcesUnchangedAsync(verifiedFiles, sourceLeases, cancellationToken).ConfigureAwait(false);
                 deletingSources = true;
                 DeleteSourceLeases(sourceLeases, cancellationToken);

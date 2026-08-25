@@ -8,23 +8,21 @@ using SixLabors.ImageSharp.Processing;
 namespace HanabePhotoManager.Infrastructure.Files;
 
 /// <summary>
-/// Scans the library directory for content-level duplicate detection.
-/// Uses file size as a fast first-pass filter and SHA-256 for confirmation,
-/// matching the strategy already used by <see cref="DestinationProbe"/>.
+/// 扫描照片库并检测内容重复和视觉近似文件。精确查重先按大小分桶，再使用 SHA-256 确认，
+/// 与 <see cref="DestinationProbe"/> 的冲突判断策略保持一致。
 /// </summary>
 public sealed class LibraryContentScanner
 {
     private readonly IFileHasher _fileHasher;
 
+    /// <summary>创建使用指定哈希实现的内容扫描器。</summary>
     public LibraryContentScanner(IFileHasher fileHasher)
     {
         _fileHasher = fileHasher ?? throw new ArgumentNullException(nameof(fileHasher));
     }
 
     /// <summary>
-    /// Builds a map of file size → list of file paths for all files in the
-    /// library root that match the given extensions.  This is the fast
-    /// first-pass index used to avoid computing SHA-256 for every file.
+    /// 为照片库中匹配扩展名的文件构建“文件大小 → 路径列表”映射，避免对唯一大小文件计算哈希。
     /// </summary>
     public async Task<Dictionary<long, List<string>>> BuildSizeMapAsync(
         string libraryRoot,
@@ -64,9 +62,7 @@ public sealed class LibraryContentScanner
     }
 
     /// <summary>
-    /// Checks whether the file at <paramref name="sourcePath"/> has a content
-    /// duplicate anywhere in the library (identified via the size map).
-    /// Returns the path of the first matching library file, or null.
+    /// 使用大小映射检查源文件是否在照片库中存在内容副本；返回第一个 SHA-256 相同的路径。
     /// </summary>
     public async Task<string?> FindContentDuplicateAsync(
         string sourcePath,
@@ -113,9 +109,7 @@ public sealed class LibraryContentScanner
     }
 
     /// <summary>
-    /// Scans the entire library and returns groups of files that have
-    /// identical SHA-256 content.  Each group contains 2+ file paths.
-    /// Uses file size as a first-pass filter for efficiency.
+    /// 扫描整个照片库并返回 SHA-256 完全相同的文件组；每组至少包含两个路径。
     /// </summary>
     public async Task<List<List<string>>> FindAllDuplicatesAsync(
         string libraryRoot,
@@ -148,7 +142,7 @@ public sealed class LibraryContentScanner
             if (candidates.Count < 2)
                 continue;
 
-            // Group candidates by hash.
+            // 同大小候选再按哈希分组，避免把只碰巧大小相同的文件误判为重复。
             var byHash = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (var candidate in candidates)
             {
@@ -193,17 +187,13 @@ public sealed class LibraryContentScanner
     }
 
     /// <summary>
-    /// Maximum Hamming distance between two 64-bit average hashes for the
-    /// corresponding images to be considered visually similar (a near-duplicate).
+    /// 两个 64 位平均哈希被视为视觉近似时允许的最大汉明距离。
     /// </summary>
     public const int DuplicateHammingThreshold = 8;
 
     /// <summary>
-    /// Scans the entire library for visually similar images (re-encoded, resized or
-    /// re-compressed copies of the same photo) using a perceptual average hash.
-    /// This catches duplicates that an exact SHA-256 comparison misses. Files whose
-    /// paths appear in <paramref name="excludePaths"/> are skipped so that groups
-    /// already confirmed by an exact content match are not reported twice.
+    /// 使用感知平均哈希查找重编码、缩放或重新压缩后的近似图片。<paramref name="excludePaths"/>
+    /// 中已由精确查重确认的路径会被排除，避免重复报告同一组。
     /// </summary>
     public async Task<List<List<string>>> FindVisualDuplicatesAsync(
         string libraryRoot,
@@ -215,7 +205,7 @@ public sealed class LibraryContentScanner
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
 
-        // Perceptual hashing only applies to raster images, not video containers.
+        // 感知哈希只适用于可解码的栅格图片，视频容器由精确内容查重处理。
         var imageExtensions = new HashSet<string>(extensions, StringComparer.OrdinalIgnoreCase);
         imageExtensions.Remove(".mp4");
         imageExtensions.Remove(".mov");
@@ -250,13 +240,12 @@ public sealed class LibraryContentScanner
             // 视觉指纹检测阶段：0% → 100%（VM 层会缩放到 80% → 100%）
             progress?.Report(index * 100d / paths.Count);
 
-            // Yield periodically so a large library scan stays responsive.
+            // 周期性让出执行权，防止大图库视觉扫描长期占满调用线程。
             if ((hashes.Count & 31) == 0)
                 await Task.Yield();
         }
 
-        // Bucket by the top 16 bits of the hash so we only compare visually
-        // close candidates instead of doing an O(n^2) scan across the whole library.
+        // 按哈希高 16 位分桶，避免对整个图库执行 O(n²) 两两比较。
         var buckets = new Dictionary<uint, List<int>>();
         for (var index = 0; index < hashes.Count; index++)
         {

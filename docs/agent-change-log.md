@@ -938,3 +938,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 
 - 新增中文源码维护指南，说明分层方针、阅读顺序、注释标准、图库/导入/UI 修改路线、安全精简边界和验证命令。
 - 新增中文软件使用说明，覆盖首次配置、图库、导入、查看器、人物/地图/工具、外接设备和常见问题，并从 README 提供直接入口。
+
+### `src/` 可维护性重构最终验证
+
+- 生成重构后的公开 API 与 WPF 契约快照；忽略声明行号及等价方法体格式后，公开 API 签名与基线一致，XAML Binding、Command、事件处理器和资源键与基线一致。
+- 全解决方案 Release `/warnaserror` 构建 0 警告、0 错误；Core 159、Infrastructure 55、App 410、InstallerShell 12，共 636 项测试全部通过。
+- Windows x64 自包含发布成功，共 939 个文件、约 567.4 MB；发布版主界面截图冒烟进程退出码 0，并成功生成 PNG。

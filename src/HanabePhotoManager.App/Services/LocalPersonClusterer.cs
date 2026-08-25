@@ -5,6 +5,7 @@ using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>按人脸向量相似度把照片聚合为本地人物簇。</summary>
 public sealed class LocalPersonClusterer
 {
     private static readonly TimeSpan PerImageTimeout = TimeSpan.FromSeconds(2);
@@ -317,6 +318,8 @@ public sealed class LocalPersonClusterer
     private sealed record PersonImageFeature(string GroupKey, string PrimaryPath, double[] Vector);
 }
 
+/// <summary>人物聚类扫描进度。</summary>
 public sealed record PersonClusteringProgress(int Processed, int Total, int Recognized);
 
+/// <summary>主媒体路径到人物标签的映射及聚类统计。</summary>
 public sealed record PersonClusteringResult(IReadOnlyDictionary<string, string> LabelsByPrimaryPath, int RecognizedImages, int ClusterCount);

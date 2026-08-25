@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>按原始文件主干索引“修后”目录中的成品媒体。</summary>
 public sealed class RetouchedMediaIndex
 {
     private static readonly HashSet<string> SupportedExtensions = new(
@@ -67,6 +68,7 @@ public sealed class RetouchedMediaIndex
         .First();
 }
 
+/// <summary>一次修后媒体索引重建得到的映射和统计快照。</summary>
 public sealed record RetouchedMediaSnapshot(
     IReadOnlyDictionary<string, string> RetouchedByOriginal,
     IReadOnlyList<string> StandaloneRetouchedFiles);

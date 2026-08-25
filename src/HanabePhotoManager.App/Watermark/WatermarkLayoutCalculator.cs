@@ -1,9 +1,13 @@
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>单枚签名水印的归一化中心、宽度和不透明度。</summary>
 public sealed record WatermarkLayoutSettings(double CenterX, double CenterY, double WidthRatio, double Opacity);
+/// <summary>平铺水印密度、间距、旋转、错列和透明度设置。</summary>
 public sealed record WatermarkTileSettings(bool Automatic, double Density, double HorizontalGapRatio, double VerticalGapRatio, double RotationDegrees, bool Stagger, double Opacity, double WidthRatio = 0.16);
+/// <summary>导出画布中的单个水印像素矩形和绘制参数。</summary>
 public sealed record WatermarkPlacement(int X, int Y, int Width, int Height, double RotationDegrees, double Opacity);
 
+/// <summary>把归一化水印设置转换为具体导出尺寸下的绘制位置。</summary>
 public static class WatermarkLayoutCalculator
 {
     public static WatermarkPlacement CalculateSingle(int imageWidth, int imageHeight, int markWidth, int markHeight, WatermarkLayoutSettings settings)

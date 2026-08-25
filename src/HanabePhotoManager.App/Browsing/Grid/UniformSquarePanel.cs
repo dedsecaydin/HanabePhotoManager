@@ -12,6 +12,7 @@ namespace HanabePhotoManager.App.Browsing.Grid;
 /// behaviour of a photos app grid that reflows as the viewport or zoom
 /// changes.
 /// </summary>
+/// <summary>按统一正方形单元排列图库项目的轻量 WPF Panel。</summary>
 public sealed class UniformSquarePanel : WpfPanel
 {
     public static readonly DependencyProperty TileSizeProperty = DependencyProperty.Register(

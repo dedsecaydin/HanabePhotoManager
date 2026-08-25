@@ -1,5 +1,6 @@
 namespace HanabePhotoManager.App.Search;
 
+/// <summary>把语义搜索分数映射到现有图库项并保持稳定排序。</summary>
 public static class SemanticBrowseRanking
 {
     public static IEnumerable<T> Apply<T>(

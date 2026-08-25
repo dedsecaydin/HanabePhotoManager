@@ -2,11 +2,13 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Imports;
 
+/// <summary>定义一次选择一个或多个导入源文件夹的窗口边界。</summary>
 public interface IImportSourcePicker
 {
     IReadOnlyList<string> PickFolders(string initialDirectory);
 }
 
+/// <summary>使用 Windows 原生多选文件夹对话框选择相机来源。</summary>
 public sealed class WindowsImportSourcePicker : IImportSourcePicker
 {
     public IReadOnlyList<string> PickFolders(string initialDirectory)

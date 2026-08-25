@@ -7,6 +7,7 @@ namespace HanabePhotoManager.App;
 /// (both compared using <see cref="StringComparison.OrdinalIgnoreCase"/>). Used by
 /// the preview filter chips to keep a single source of truth in the view model.
 /// </summary>
+/// <summary>判断媒体类别是否与 XAML 参数相等。</summary>
 internal sealed class CategoryEqualsConverter : System.Windows.Data.IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

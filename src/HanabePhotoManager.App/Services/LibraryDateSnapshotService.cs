@@ -5,6 +5,7 @@ using HanabePhotoManager.App.Models;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>抽象日期快照扫描所需的文件系统读取，便于隔离 I/O 与测试异常分支。</summary>
 public interface ILibraryDateFileSystem
 {
     bool DirectoryExists(string path);
@@ -16,6 +17,9 @@ public interface ILibraryDateFileSystem
     IEnumerable<LibraryDateFileReadResult> EnumerateFilesRecursively(string path);
 }
 
+/// <summary>
+/// 按照片库月/日目录构建稳定快照，并将不可访问文件转换为局部警告而非中断整库浏览。
+/// </summary>
 public sealed class LibraryDateSnapshotService
 {
     private const int BatchSize = 64;
@@ -410,6 +414,7 @@ public sealed class LibraryDateSnapshotService
         LinkedListNode<string> Node);
 }
 
+/// <summary>使用真实磁盘实现日期快照文件系统边界。</summary>
 public sealed class PhysicalLibraryDateFileSystem : ILibraryDateFileSystem
 {
     public bool DirectoryExists(string path) => Directory.Exists(path);

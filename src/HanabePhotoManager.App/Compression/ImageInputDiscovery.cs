@@ -2,8 +2,10 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Compression;
 
+/// <summary>图片输入发现得到的文件和可恢复警告。</summary>
 public sealed record ImageDiscoveryResult(IReadOnlyList<string> Files, IReadOnlyList<string> Warnings);
 
+/// <summary>从文件和目录输入中递归发现压缩工具支持的图片。</summary>
 public sealed class ImageInputDiscovery
 {
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)

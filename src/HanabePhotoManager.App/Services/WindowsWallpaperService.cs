@@ -3,11 +3,13 @@ using Microsoft.Win32;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义 Windows 桌面壁纸设置能力。</summary>
 public interface IWindowsWallpaperService
 {
     string? GetCurrentWallpaperPath();
 }
 
+/// <summary>通过 Windows 系统参数 API 应用持久化桌面壁纸。</summary>
 public sealed class WindowsWallpaperService : IWindowsWallpaperService
 {
     private readonly Func<string?> _readConfiguredPath;

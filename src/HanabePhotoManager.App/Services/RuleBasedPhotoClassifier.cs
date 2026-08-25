@@ -6,6 +6,7 @@ using CvSize = OpenCvSharp.Size;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>在模型不可用时按文件名和基础图像特征提供确定性的分类回退。</summary>
 public sealed class RuleBasedPhotoClassifier : IPhotoClassifier
 {
     private const int AnalysisEdge = 320;

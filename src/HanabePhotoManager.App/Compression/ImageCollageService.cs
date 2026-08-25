@@ -9,20 +9,24 @@ using SharpPoint = SixLabors.ImageSharp.Point;
 
 namespace HanabePhotoManager.App.Compression;
 
+/// <summary>拼图按横向或纵向排列输入图片。</summary>
 public enum CollageOrientation
 {
     Vertical,
     Horizontal
 }
 
+/// <summary>拼图方向、间距、背景、输出格式和质量设置。</summary>
 public sealed record CollageOptions(
     string OutputDirectory,
     CollageOrientation Orientation,
     long? TargetBytes,
     int MinimumQuality = 20);
 
+/// <summary>拼图解码与合成进度。</summary>
 public sealed record CollageProgress(int Processed, int Total, string CurrentFile);
 
+/// <summary>拼图输出路径、画布尺寸和输入统计。</summary>
 public sealed record CollageResult(
     bool IsSuccess,
     string? OutputPath,
@@ -32,6 +36,7 @@ public sealed record CollageResult(
     int Height,
     string Message);
 
+/// <summary>按选定方向解码并合成为单张高分辨率拼图。</summary>
 public sealed class ImageCollageService
 {
     public async Task<CollageResult> ComposeAsync(

@@ -2,12 +2,14 @@ using Microsoft.Win32;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义当前用户登录启动项的查询和设置能力。</summary>
 public interface IStartupRegistrationService
 {
     bool IsEnabled();
     void SetEnabled(bool enabled);
 }
 
+/// <summary>通过当前用户 Run 注册表项管理应用自启动。</summary>
 public sealed class WindowsStartupRegistrationService : IStartupRegistrationService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";

@@ -1,5 +1,6 @@
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>不同性能配置下的人脸图片尺寸、并发和批大小限制。</summary>
 public sealed record FaceRuntimeLimits(int MaximumImageEdge, int MaxConcurrency, int BatchSize)
 {
     public static FaceRuntimeLimits For(FaceRecognitionProfile profile, int? logicalProcessors = null)
@@ -14,6 +15,7 @@ public sealed record FaceRuntimeLimits(int MaximumImageEdge, int MaxConcurrency,
     }
 }
 
+/// <summary>提供人脸向量归一化和余弦相似度纯计算。</summary>
 public static class FaceRecognitionMath
 {
     public static bool IsAcceptableFaceDetection(float confidence, int width, int height) =>
@@ -50,6 +52,7 @@ public static class FaceRecognitionMath
     }
 }
 
+/// <summary>按运行时限制并发执行人脸任务并保持输入顺序。</summary>
 public static class FaceBatchExecutor
 {
     public static async Task<IReadOnlyList<TResult>> RunAsync<TSource, TResult>(

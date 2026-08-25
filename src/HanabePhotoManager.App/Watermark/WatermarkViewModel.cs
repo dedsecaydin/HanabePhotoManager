@@ -10,6 +10,7 @@ using WinForms = System.Windows.Forms;
 
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>水印队列中单个输入文件的状态、预览和输出信息。</summary>
 public sealed partial class WatermarkQueueItem : ObservableObject
 {
     public WatermarkQueueItem(string path) { Path = path; Name = System.IO.Path.GetFileName(path); }
@@ -24,6 +25,7 @@ public sealed partial class WatermarkQueueItem : ObservableObject
     [ObservableProperty] private double _opacity = .72;
 }
 
+/// <summary>协调水印输入、布局预览、批量导出、取消和结果摘要。</summary>
 public sealed partial class WatermarkViewModel : ObservableObject
 {
     private readonly WatermarkInputDiscovery _discovery = new();

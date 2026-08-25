@@ -5,6 +5,7 @@ using System.Text.Json;
 namespace HanabePhotoManager.App.Services;
 
 /// <summary>单个待导入文件组的续传快照（源路径 + 分类 + 目标日期）。</summary>
+/// <summary>可恢复导入队列中的单个源文件状态。</summary>
 public sealed class ImportResumeEntry
 {
     public string GroupKey { get; set; } = "";
@@ -17,6 +18,7 @@ public sealed class ImportResumeEntry
 }
 
 /// <summary>导入续传状态：中断后重启据此提示继续，配合边传边验边删幂等重放。</summary>
+/// <summary>一次导入任务的版本化恢复快照。</summary>
 public sealed class ImportResumeState
 {
     public bool DeleteSourcesAfterVerify { get; set; }
@@ -24,6 +26,7 @@ public sealed class ImportResumeState
 }
 
 /// <summary>导入断点续传的持久化（JSON，位于应用数据目录）。</summary>
+/// <summary>保存和读取导入恢复点，供异常退出后继续未完成任务。</summary>
 public sealed class ImportResumeStore
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };

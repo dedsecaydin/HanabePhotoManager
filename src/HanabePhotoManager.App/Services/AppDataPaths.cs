@@ -2,6 +2,7 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>集中提供当前用户的设置、缓存、索引和托管资源目录。</summary>
 public static class AppDataPaths
 {
     public static string Root

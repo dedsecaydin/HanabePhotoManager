@@ -1,5 +1,6 @@
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>提供查看器缩放、平移和保持指针锚点所需的纯坐标计算。</summary>
 public static class PhotoViewportMath
 {
     public static double AnchoredOffset(

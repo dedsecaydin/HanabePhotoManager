@@ -4,6 +4,7 @@ using HanabePhotoManager.App.Models;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义媒体分类、评分、位置和扫描指纹的持久化边界。</summary>
 public interface IMediaMetadataStore
 {
     Task<MediaMetadataSnapshot> LoadAsync(CancellationToken cancellationToken = default);
@@ -15,6 +16,7 @@ public interface IMediaMetadataStore
     Task SaveAsync(MediaMetadataSnapshot snapshot, CancellationToken cancellationToken = default);
 }
 
+/// <summary>以 JSON 快照保存媒体元数据，并串行化并发写入。</summary>
 public sealed class MediaMetadataStore : IMediaMetadataStore
 {
     private static readonly JsonSerializerOptions JsonOptions = new()

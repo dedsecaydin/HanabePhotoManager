@@ -2,8 +2,10 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>水印输入发现得到的图片路径和可恢复警告。</summary>
 public sealed record WatermarkDiscoveryResult(IReadOnlyList<string> Files, IReadOnlyList<string> Warnings);
 
+/// <summary>递归发现水印工具支持的图片输入并去重。</summary>
 public sealed class WatermarkInputDiscovery
 {
     private static readonly HashSet<string> Extensions = new(StringComparer.OrdinalIgnoreCase)

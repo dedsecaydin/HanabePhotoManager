@@ -10,6 +10,7 @@ using WpfSize = System.Windows.Size;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>以用户点击位置为圆心播放可中断的主题扩散切换动画。</summary>
 public static class ThemeTransitionService
 {
     private static bool isAnimating;

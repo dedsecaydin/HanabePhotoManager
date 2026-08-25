@@ -6,6 +6,7 @@ using System.Windows.Media;
 
 namespace HanabePhotoManager.App.Browsing.Treemap;
 
+/// <summary>按缩放层级渐进加载空间树节点、缩略图和面包屑状态。</summary>
 public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
 {
     public static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromMilliseconds(150);

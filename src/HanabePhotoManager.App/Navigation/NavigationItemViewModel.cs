@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace HanabePhotoManager.App.Navigation;
 
+/// <summary>一级导航项的稳定键、标题、图标和可用状态。</summary>
 public sealed class NavigationItemViewModel
 {
     public NavigationItemViewModel(

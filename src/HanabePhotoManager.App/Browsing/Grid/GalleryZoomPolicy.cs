@@ -4,6 +4,7 @@ namespace HanabePhotoManager.App.Browsing.Grid;
 /// Pure calculations for the photo-library grid zoom interaction.
 /// WPF event handling stays in the view; all zoom entry points share these rules.
 /// </summary>
+/// <summary>限制图库缩略图尺寸，并计算 Ctrl+滚轮时保持指针锚点的目标偏移。</summary>
 public static class GalleryZoomPolicy
 {
     public const double MinimumTileSize = 48;

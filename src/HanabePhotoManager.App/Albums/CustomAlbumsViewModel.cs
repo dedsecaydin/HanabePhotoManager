@@ -6,6 +6,7 @@ using HanabePhotoManager.Core.Albums;
 
 namespace HanabePhotoManager.App.Albums;
 
+/// <summary>协调自定义相册的创建、删除、扫描和选中状态。</summary>
 public sealed partial class CustomAlbumsViewModel : ObservableObject
 {
     private ICustomAlbumStore _store;

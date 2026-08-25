@@ -7,6 +7,7 @@ using CvSize = OpenCvSharp.Size;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>使用通用 ONNX 图像分类模型执行本地推理。</summary>
 public sealed class OnnxPhotoClassifier : IPhotoClassifier, IDisposable
 {
     public const string OfficialModelSha256 = "C1C513582D56AFCEFF8516C73804E484C81C6A830712AB6D682253F4A3CD042F";

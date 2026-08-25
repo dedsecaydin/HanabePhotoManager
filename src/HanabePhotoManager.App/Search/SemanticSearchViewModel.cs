@@ -6,6 +6,7 @@ using HanabePhotoManager.Core.Search;
 
 namespace HanabePhotoManager.App.Search;
 
+/// <summary>协调本地语义索引、查询取消、进度和搜索结果集合。</summary>
 public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
 {
     public const int ResultLimit = 50;

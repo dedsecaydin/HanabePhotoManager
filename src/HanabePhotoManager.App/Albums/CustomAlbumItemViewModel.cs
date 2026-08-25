@@ -4,6 +4,7 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Albums;
 
+/// <summary>自定义相册列表中的可观察显示项。</summary>
 public sealed partial class CustomAlbumItemViewModel : ObservableObject
 {
     public CustomAlbumItemViewModel(CustomAlbum album)

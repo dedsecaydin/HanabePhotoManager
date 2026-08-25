@@ -4,6 +4,7 @@ using HanabePhotoManager.App.Models;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义照片分析指纹和结果检查点的持久化边界。</summary>
 public interface IPhotoAnalysisCheckpointStore
 {
     Task<IReadOnlyList<MediaMetadataEntry>> LoadAsync(CancellationToken cancellationToken = default);
@@ -11,6 +12,7 @@ public interface IPhotoAnalysisCheckpointStore
     Task ClearAsync(CancellationToken cancellationToken = default);
 }
 
+/// <summary>复用媒体元数据存储保存可恢复的照片分析检查点。</summary>
 public sealed class PhotoAnalysisCheckpointStore : IPhotoAnalysisCheckpointStore
 {
     private readonly string _path;

@@ -2,6 +2,7 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>按设置、模型可用性和运行环境选择照片分类器实现。</summary>
 public static class PhotoClassifierFactory
 {
     public const string RulesMode = "轻量规则识别";

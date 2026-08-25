@@ -3,6 +3,7 @@ using System.Windows;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>应用支持的明暗外观。</summary>
 public enum AppTheme { Light, Dark }
 
 /// <summary>
@@ -10,6 +11,7 @@ public enum AppTheme { Light, Dark }
 /// </summary>
 public enum AppColorScheme { Dynamic, Forest, Violet, Classic }
 
+/// <summary>切换成对主题资源字典，并维护当前主题和配色方案。</summary>
 public static class ThemeManager
 {
     private static readonly string PreferencePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HanabePhotoManager", "ui-theme.txt");

@@ -4,6 +4,7 @@ using System.ComponentModel;
 
 namespace HanabePhotoManager.App.Collections;
 
+/// <summary>支持批量替换和追加、并减少逐项 UI 通知的可观察集合。</summary>
 public sealed class RangeObservableCollection<T> : ObservableCollection<T>
 {
     public RangeObservableCollection()

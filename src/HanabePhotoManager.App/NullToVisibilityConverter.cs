@@ -11,6 +11,7 @@ namespace HanabePhotoManager.App;
 /// Used by the people page to switch between the album overview and the
 /// selected-person detail purely in the View layer.
 /// </summary>
+/// <summary>根据绑定值是否为空生成可选反向的 Visibility。</summary>
 public sealed class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

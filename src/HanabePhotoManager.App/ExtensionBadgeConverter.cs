@@ -6,6 +6,7 @@ namespace HanabePhotoManager.App;
 /// Converts a file extension string (e.g. "jpg") into an uppercase display
 /// label such as "JPG" or "PNG" for badge overlays.
 /// </summary>
+/// <summary>从媒体路径提取用于图库角标的规范化扩展名。</summary>
 internal sealed class ExtensionBadgeConverter : System.Windows.Data.IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

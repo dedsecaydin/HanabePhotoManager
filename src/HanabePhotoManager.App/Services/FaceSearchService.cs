@@ -316,8 +316,11 @@ public sealed class FaceSearchService
     private sealed record FaceCacheEntry(string Fingerprint, float[][] Embeddings);
 }
 
+/// <summary>参考照片路径及其选定人脸向量。</summary>
 public sealed record FaceReference(string Path, float[] Embedding);
 
+/// <summary>按脸查找命中的照片、最高相似度和照片内人脸数量。</summary>
 public sealed record FaceSearchMatch(string Path, double Similarity, int FacesInImage);
 
+/// <summary>按脸查找过程的进度和缓存命中状态。</summary>
 public sealed record FaceSearchProgress(int Processed, int Total, int Matches, bool FromCache, string CurrentFile);

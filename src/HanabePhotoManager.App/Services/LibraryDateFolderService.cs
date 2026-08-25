@@ -4,12 +4,14 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>从照片库目录名解析出的月份、日期和展示标题。</summary>
 public sealed record LibraryDateFolderName(
     int Month,
     int Day,
     string Suffix,
     string NormalizedName);
 
+/// <summary>集中解析和格式化照片库的“月/日”目录约定。</summary>
 public static class LibraryDateFolderService
 {
     private static readonly Regex SeparatedDatePrefix = new(

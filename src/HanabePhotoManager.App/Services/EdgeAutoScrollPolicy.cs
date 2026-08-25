@@ -2,6 +2,7 @@ using System.Windows;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>根据指针到滚动视口边缘的距离计算拖选自动滚动速度。</summary>
 public sealed class EdgeAutoScrollPolicy(double maximumDelta = 22)
 {
     public Vector Calculate(System.Windows.Point pointer, System.Windows.Size viewport, double edge = 48)

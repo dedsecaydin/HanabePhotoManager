@@ -6,6 +6,7 @@ using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>图库分组标题使用解析日期还是原文件夹名称。</summary>
 public enum GalleryGroupTitleMode
 {
     ParsedDate,
@@ -13,6 +14,7 @@ public enum GalleryGroupTitleMode
     ParsedDateAndFolderName
 }
 
+/// <summary>负责应用设置的读取、规范化和安全写入。</summary>
 public sealed class AppSettingsStore
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -182,6 +184,7 @@ public sealed class AppSettingsStore
     }
 }
 
+/// <summary>可持久化的用户设置模型；默认值同时承担旧版本兼容回退。</summary>
 public sealed class AppSettings
 {
     public bool HasCompletedOnboarding { get; set; }

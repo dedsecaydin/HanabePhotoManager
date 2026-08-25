@@ -3,11 +3,13 @@ using MetadataExtractor;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义 Inspector 所需媒体详情和拍摄参数读取能力。</summary>
 public interface IPhotoDetailMetadataReader
 {
     PhotoDetailMetadata Read(string path);
 }
 
+/// <summary>文件、拍摄、时间和位置字段组成的只读详情快照。</summary>
 public sealed record PhotoDetailMetadata(
     string Path,
     string Name,
@@ -29,6 +31,7 @@ public sealed record PhotoDetailMetadata(
         "未记录", "未记录", "未记录", "未记录", "未记录", "未记录", "未记录", "未记录", "未记录", "未记录");
 }
 
+/// <summary>从文件属性和 EXIF/XMP 元数据构建 Inspector 详情。</summary>
 public sealed class PhotoDetailMetadataReader : IPhotoDetailMetadataReader
 {
     private readonly IExifLocationReader _locationReader;

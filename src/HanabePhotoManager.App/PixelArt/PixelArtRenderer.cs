@@ -9,6 +9,7 @@ namespace HanabePhotoManager.App.PixelArt;
 /// <summary>
 /// 图片转像素画的核心渲染：加载源图 → 缩到目标网格 → 最近邻放大导出。
 /// </summary>
+/// <summary>把输入图片量化、缩放并渲染为像素画位图。</summary>
 public static class PixelArtRenderer
 {
     /// <summary>加载源图（限制解码宽度以控制内存，OnLoad 立即解码）。</summary>

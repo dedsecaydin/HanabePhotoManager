@@ -7,6 +7,7 @@ using HanabePhotoManager.Core.Search;
 
 namespace HanabePhotoManager.App.Search;
 
+/// <summary>语义搜索结果的缩略图、路径和相关度显示模型。</summary>
 public sealed class SearchResultItemViewModel : ObservableObject
 {
     private ImageSource? _thumbnail;

@@ -8,6 +8,7 @@ using SharpImage = SixLabors.ImageSharp.Image;
 
 namespace HanabePhotoManager.App.Compression;
 
+/// <summary>单张图片压缩任务的结果状态。</summary>
 public enum CompressionItemStatus
 {
     Success,
@@ -16,12 +17,14 @@ public enum CompressionItemStatus
     Failed
 }
 
+/// <summary>压缩输出目录、质量边界、覆盖和元数据策略。</summary>
 public sealed record CompressionOptions(
     string OutputDirectory,
     bool PreserveMetadata = true,
     bool PreserveGps = true,
     int MinimumQuality = 20);
 
+/// <summary>单张图片的压缩输出、体积和状态。</summary>
 public sealed record CompressionItemResult(
     string SourcePath,
     string? OutputPath,
@@ -31,6 +34,7 @@ public sealed record CompressionItemResult(
     int? Quality,
     string Message);
 
+/// <summary>在质量边界内迭代编码图片并安全发布压缩结果。</summary>
 public sealed class ImageCompressionService
 {
     private static readonly HashSet<string> RawExtensions = new(StringComparer.OrdinalIgnoreCase)

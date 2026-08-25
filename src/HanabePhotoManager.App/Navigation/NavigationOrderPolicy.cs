@@ -1,5 +1,6 @@
 namespace HanabePhotoManager.App.Navigation;
 
+/// <summary>集中维护一级导航的稳定顺序和键兼容规则。</summary>
 public static class NavigationOrderPolicy
 {
     public static IReadOnlyList<string> Normalize(

@@ -4,11 +4,13 @@ using MetadataExtractor.Formats.Exif;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>定义从照片元数据读取 GPS 坐标的边界。</summary>
 public interface IExifLocationReader
 {
     PhotoCoordinate? TryRead(string path);
 }
 
+/// <summary>使用 MetadataExtractor 读取并验证照片 EXIF GPS 坐标。</summary>
 public sealed class ExifLocationReader : IExifLocationReader
 {
     public PhotoCoordinate? TryRead(string path)
@@ -36,4 +38,5 @@ public sealed class ExifLocationReader : IExifLocationReader
     }
 }
 
+/// <summary>十进制度表示的有效地理坐标。</summary>
 public sealed record PhotoCoordinate(double Latitude, double Longitude);

@@ -6,6 +6,7 @@ using System.Windows.Media.Imaging;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>从 Windows Shell 获取视频、RAW 和其他系统支持格式的预览位图。</summary>
 internal static class ShellThumbnailProvider
 {
     /// <summary>

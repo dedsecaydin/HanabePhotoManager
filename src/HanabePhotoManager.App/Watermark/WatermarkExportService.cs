@@ -14,13 +14,19 @@ using SharpPoint = SixLabors.ImageSharp.Point;
 
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>单枚签名或平铺水印模式。</summary>
 public enum WatermarkMode { Signature, Tiled }
+/// <summary>单个水印导出项的最终状态。</summary>
 public enum WatermarkExportStatus { Success, Skipped, Failed }
+/// <summary>水印导出目录、命名、元数据和布局选项。</summary>
 public sealed record WatermarkExportOptions(string OutputDirectory, string Suffix, bool PreserveMetadata, WatermarkMode Mode,
     WatermarkLayoutSettings Signature, WatermarkTileSettings Tiled, int MaxParallelism = 0);
+/// <summary>单个输入文件的水印导出结果。</summary>
 public sealed record WatermarkExportResult(string SourcePath, string? OutputPath, WatermarkExportStatus Status, string Message);
+/// <summary>水印批次的完成、成功和失败计数。</summary>
 public sealed record WatermarkBatchProgress(int Completed, int Total, int Success, int Failed, string CurrentFile);
 
+/// <summary>解码图片、绘制签名或平铺水印并安全写入输出文件。</summary>
 public sealed class WatermarkExportService
 {
     public async Task<IReadOnlyList<WatermarkExportResult>> ExportAsync(IReadOnlyList<string> sources, string watermarkPath,

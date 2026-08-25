@@ -7,6 +7,7 @@ using CvSize = OpenCvSharp.Size;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>把用户性能配置转换为识别运行时限制。</summary>
 public static class FaceRecognitionRuntimeOptions
 {
     private static FaceRecognitionOptions _current = new();
@@ -31,6 +32,7 @@ public static class FaceRecognitionRuntimeOptions
     }
 }
 
+/// <summary>验证模型文件并创建当前配置的人脸识别引擎。</summary>
 public static class FaceRecognitionEngineFactory
 {
     private static readonly ConcurrentDictionary<string, OnnxFaceRecognitionEngine> Engines = new(StringComparer.Ordinal);
@@ -62,6 +64,7 @@ public static class FaceRecognitionEngineFactory
     }
 }
 
+/// <summary>组合 YuNet 检测器与 ArcFace 编码器的本地 ONNX 人脸引擎。</summary>
 public sealed class OnnxFaceRecognitionEngine : ILocalFaceEmbeddingService
 {
     private static readonly ConcurrentDictionary<string, Lazy<InferenceSession>> Sessions = new(StringComparer.OrdinalIgnoreCase);
@@ -224,8 +227,10 @@ public sealed class OnnxFaceRecognitionEngine : ILocalFaceEmbeddingService
         }, LazyThreadSafetyMode.ExecutionAndPublication)).Value;
 }
 
+/// <summary>YuNet 输出解码后的候选人脸。</summary>
 internal sealed record YuNetDetection(float X, float Y, float Width, float Height, float Score, Point2f[] Landmarks);
 
+/// <summary>把 YuNet 多尺度张量输出解码为边界框和五点关键点。</summary>
 internal static class YuNetDecoder
 {
     public static IReadOnlyList<YuNetDetection> Decode(

@@ -9,6 +9,7 @@ namespace HanabePhotoManager.App;
 /// filter chips to highlight the active category without relying on a
 /// non-bindable <see cref="Binding.ConverterParameter"/>.
 /// </summary>
+/// <summary>组合多个绑定值判断当前媒体类别选择状态。</summary>
 internal sealed class CategoryEqualityMultiConverter : IMultiValueConverter
 {
     public object Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)

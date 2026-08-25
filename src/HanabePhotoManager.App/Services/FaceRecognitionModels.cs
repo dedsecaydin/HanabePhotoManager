@@ -4,12 +4,14 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>可选择的人脸识别引擎实现。</summary>
 public enum FaceRecognitionEngineKind
 {
     YuNetSFace,
     ArcFaceR100
 }
 
+/// <summary>人脸识别在速度和召回率之间的预设配置。</summary>
 public enum FaceRecognitionProfile
 {
     Speed,
@@ -17,6 +19,7 @@ public enum FaceRecognitionProfile
     HighAccuracy
 }
 
+/// <summary>集中维护人脸引擎默认阈值和运行参数。</summary>
 public static class FaceRecognitionDefaults
 {
     public const double YuNetSFaceThreshold = 0.62;
@@ -24,11 +27,13 @@ public static class FaceRecognitionDefaults
     public const double ArcFaceR100Threshold = 0.45;
 }
 
+/// <summary>引擎是否可用及其不可用原因。</summary>
 public sealed record FaceEngineAvailability(bool IsAvailable, string Reason)
 {
     public static FaceEngineAvailability Available { get; } = new(true, string.Empty);
 }
 
+/// <summary>可持久化的人脸识别引擎、模型路径和性能设置。</summary>
 public sealed class FaceRecognitionOptions
 {
     public FaceRecognitionEngineKind Engine { get; set; } = FaceRecognitionEngineKind.YuNetSFace;
@@ -55,6 +60,7 @@ public sealed class FaceRecognitionOptions
     }
 }
 
+/// <summary>用于判断检查点是否可复用的人脸模型身份。</summary>
 public sealed record FaceModelIdentity(
     string StorageKey,
     FaceRecognitionEngineKind Engine,
@@ -92,5 +98,6 @@ public sealed record FaceModelIdentity(
     }
 }
 
+/// <summary>已有检查点模型身份与当前请求不兼容时抛出的异常。</summary>
 public sealed class FaceModelMismatchException(string stored, string requested)
     : InvalidOperationException($"人物库模型不匹配：已存储 {stored}，当前请求 {requested}。禁止混用向量。");

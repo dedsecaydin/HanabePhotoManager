@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>执行照片库目录创建、重编号和可恢复文件维护任务。</summary>
 public sealed class LibraryMaintenanceService
 {
     private static readonly Regex DateDirectoryPattern = new(
@@ -95,8 +96,10 @@ public sealed class LibraryMaintenanceService
     }
 }
 
+/// <summary>维护任务的成功数量、失败列表和摘要。</summary>
 public sealed record LibraryMaintenanceResult(
     IReadOnlyList<string> Deleted,
     IReadOnlyList<LibraryMaintenanceFailure> Failures);
 
+/// <summary>单个无法完成维护操作的路径和原因。</summary>
 public sealed record LibraryMaintenanceFailure(string Path, string Reason);

@@ -7,6 +7,7 @@ namespace HanabePhotoManager.App;
 /// Formats a byte count (<c>long</c>) into a compact human-readable size
 /// ("12.4 MB" / "86.0 KB" / "512 B") for the album list view. View-layer only.
 /// </summary>
+/// <summary>把字节数格式化为适合界面显示的容量文本。</summary>
 public sealed class FileSizeConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

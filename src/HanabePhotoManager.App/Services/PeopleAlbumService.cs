@@ -5,6 +5,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>扫描照片库、复用人脸检查点并生成可浏览的人物相册快照。</summary>
 public sealed class PeopleAlbumService
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
@@ -292,6 +293,7 @@ public sealed class PeopleAlbumService
     }
 }
 
+/// <summary>人物照片扫描的总体进度。</summary>
 public sealed record PeopleScanProgress(
     int Processed,
     int Total,
@@ -299,6 +301,7 @@ public sealed record PeopleScanProgress(
     int People,
     IReadOnlyList<PeopleScanAlbumProgress> Albums);
 
+/// <summary>单个人物相册生成阶段的进度。</summary>
 public sealed record PeopleScanAlbumProgress(
     string Id,
     string Name,
@@ -308,6 +311,7 @@ public sealed record PeopleScanAlbumProgress(
     public int PhotoCount => PhotoPaths.Count;
 }
 
+/// <summary>一次人物扫描得到的相册集合和统计快照。</summary>
 public sealed class PeopleAlbumSnapshot
 {
     public int Version { get; set; } = 2;
@@ -317,6 +321,7 @@ public sealed class PeopleAlbumSnapshot
     public Dictionary<string, List<string>> RemovedPhotos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
+/// <summary>人物标签、封面和其包含媒体路径组成的相册。</summary>
 public sealed class PersonAlbum
 {
     public string Id { get; set; } = string.Empty;

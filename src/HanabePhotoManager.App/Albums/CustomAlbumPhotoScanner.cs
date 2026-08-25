@@ -2,6 +2,7 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Albums;
 
+/// <summary>扫描自定义相册文件夹并返回稳定排序的可浏览照片。</summary>
 public sealed class CustomAlbumPhotoScanner
 {
     private static readonly HashSet<string> SupportedExtensions = new(
@@ -51,4 +52,5 @@ public sealed class CustomAlbumPhotoScanner
     }
 }
 
+/// <summary>自定义相册中的照片名称、路径和体积。</summary>
 public sealed record CustomAlbumPhoto(string Name, string FullPath, long Length);

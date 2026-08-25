@@ -3,11 +3,13 @@ using System.Reflection;
 
 namespace HanabePhotoManager.App.ReleaseNotes;
 
+/// <summary>一个版本的标题、日期和变更条目。</summary>
 public sealed record ReleaseVersionInfo(
     string Version,
     DateOnly ReleaseDate,
     IReadOnlyList<string> Notes);
 
+/// <summary>版本说明列表中的可展示项。</summary>
 public sealed record ReleaseVersionItemViewModel(
     string Version,
     string DateText,
@@ -15,6 +17,7 @@ public sealed record ReleaseVersionItemViewModel(
     string BranchGlyph,
     IReadOnlyList<string> Notes);
 
+/// <summary>提供版本筛选、选择和当前发布说明。</summary>
 public sealed class ReleaseNotesViewModel : ObservableObject
 {
     private ReleaseVersionItemViewModel? _selectedVersion;
@@ -103,6 +106,7 @@ public sealed class ReleaseNotesViewModel : ObservableObject
     }
 }
 
+/// <summary>内置版本说明的只读目录。</summary>
 public static class ReleaseNotesCatalog
 {
     public static IReadOnlyList<ReleaseVersionInfo> Versions { get; } =

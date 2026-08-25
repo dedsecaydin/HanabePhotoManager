@@ -7,6 +7,7 @@ using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>为地图标记生成并缓存限制尺寸的本地缩略图。</summary>
 public sealed class MapThumbnailCache
 {
     public MapThumbnailCache(string? directory = null) =>

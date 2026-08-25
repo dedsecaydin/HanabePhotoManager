@@ -13,6 +13,7 @@ namespace HanabePhotoManager.App;
 /// View-layer only; mirrors the thumbnail strategy already used by the
 /// face-search results and the browse preview cards.
 /// </summary>
+/// <summary>把媒体路径异步转换为缓存缩略图，并对特殊格式使用 Shell 回退。</summary>
 public sealed class PathThumbnailConverter : IValueConverter
 {
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

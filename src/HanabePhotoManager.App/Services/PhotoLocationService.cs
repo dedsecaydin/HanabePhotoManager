@@ -3,6 +3,7 @@ using HanabePhotoManager.App.Models;
 
 namespace HanabePhotoManager.App.Services;
 
+/// <summary>结合 EXIF、元数据缓存与手动位置为照片生成地图数据。</summary>
 public sealed class PhotoLocationService
 {
     private readonly IMediaMetadataStore _store;
@@ -82,8 +83,10 @@ public sealed class PhotoLocationService
     }
 }
 
+/// <summary>带有已解析地理位置的媒体路径。</summary>
 public sealed record LocatedPhoto(string Path, PhotoLocation Location);
 
+/// <summary>地图缩放级别下聚合的一组相邻照片。</summary>
 public sealed record LocationCluster(
     string Key,
     double Latitude,

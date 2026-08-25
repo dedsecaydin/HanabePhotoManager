@@ -2,12 +2,15 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>批处理中的源根目录、文件和相对目录。</summary>
 public sealed record WatermarkFolderBatchItem(string SourceRoot, string SourcePath, string RelativeDirectory);
 
+/// <summary>多文件夹扫描得到的批处理项和警告。</summary>
 public sealed record WatermarkFolderScanResult(
     IReadOnlyList<WatermarkFolderBatchItem> Items,
     IReadOnlyList<string> Warnings);
 
+/// <summary>文件夹水印批处理的当前文件和累计结果。</summary>
 public sealed record WatermarkFolderBatchProgress(
     int Completed,
     int Total,
@@ -15,11 +18,13 @@ public sealed record WatermarkFolderBatchProgress(
     int Failed,
     string CurrentFile);
 
+/// <summary>文件夹水印批处理完成后的汇总结果。</summary>
 public sealed record WatermarkFolderBatchResult(
     IReadOnlyList<WatermarkExportResult> Results,
     int Success,
     int Failed);
 
+/// <summary>保持目录结构扫描多个来源文件夹并批量导出水印图片。</summary>
 public sealed class WatermarkFolderBatchService
 {
     private readonly WatermarkExportService _exporter;

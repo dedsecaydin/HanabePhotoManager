@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace HanabePhotoManager.App.PixelArt;
 
+/// <summary>协调像素画输入、参数、预览和导出状态。</summary>
 public sealed class PixelArtViewModel : ObservableObject
 {
     private string _sourceImagePath = string.Empty;

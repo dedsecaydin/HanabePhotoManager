@@ -1,15 +1,19 @@
 namespace HanabePhotoManager.App.Compression;
 
+/// <summary>按固定大小、比例或总预算分配压缩目标。</summary>
 public enum CompressionTargetMode
 {
     PerImage,
     WholeBatch
 }
 
+/// <summary>规划压缩时需要的源文件大小和像素数量。</summary>
 public sealed record CompressionSource(string Path, long Length, long PixelCount);
 
+/// <summary>源图片及其分配到的目标字节数。</summary>
 public sealed record CompressionWorkItem(CompressionSource Source, long TargetBytes);
 
+/// <summary>在整批图片之间分配目标体积并保持预算约束。</summary>
 public sealed class ImageCompressionPlanner
 {
     public IReadOnlyList<CompressionWorkItem> CreatePlan(

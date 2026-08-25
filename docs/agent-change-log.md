@@ -944,3 +944,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 生成重构后的公开 API 与 WPF 契约快照；忽略声明行号及等价方法体格式后，公开 API 签名与基线一致，XAML Binding、Command、事件处理器和资源键与基线一致。
 - 全解决方案 Release `/warnaserror` 构建 0 警告、0 错误；Core 159、Infrastructure 55、App 410、InstallerShell 12，共 636 项测试全部通过。
 - Windows x64 自包含发布成功，共 939 个文件、约 567.4 MB；发布版主界面截图冒烟进程退出码 0，并成功生成 PNG。
+
+### `src/` 逐文件中文源码手册
+
+- 新增 `docs/source-code-handbook.zh-CN.md`，覆盖 `src/` 当前全部 207 个 C#、XAML、项目文件及地图/模型内嵌资源。
+- 手册按三层架构和功能链路说明每个文件的职责，并提供功能快速定位、标准修改步骤、危险边界和验证命令；README 新增直接入口。
+- 通过实际文件清单与手册路径机器比对：207 个实际文件全部有对应说明，无漏项、无额外虚构路径。

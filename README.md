@@ -12,7 +12,7 @@ Hanabe Photo Manager is a Windows desktop photo management tool designed for pho
 
 **Read this in:** [English](README.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
 
-**中文文档：** [软件使用说明](docs/user-guide.zh-CN.md) · [源码维护指南](docs/maintainer-guide.zh-CN.md)
+**中文文档：** [软件使用说明](docs/user-guide.zh-CN.md) · [源码维护指南](docs/maintainer-guide.zh-CN.md) · [逐文件源码手册](docs/source-code-handbook.zh-CN.md)
 
 ---
 

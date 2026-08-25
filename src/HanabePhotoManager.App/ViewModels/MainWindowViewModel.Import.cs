@@ -6,6 +6,7 @@ using System.Windows;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>主窗口中与多文件夹来源选择、拖放验证和导入队列初始化相关的职责。</summary>
 public sealed partial class MainWindowViewModel
 {
     private Task BrowseSourceFoldersAsync()

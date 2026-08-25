@@ -10,6 +10,7 @@ using Microsoft.Win32;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>协调参考脸选择、缓存扫描、相似度查询、取消和结果展示。</summary>
 public sealed class FaceSearchViewModel : ObservableObject
 {
     private readonly FaceSearchService _service = new();
@@ -358,6 +359,7 @@ public sealed class FaceSearchViewModel : ObservableObject
     }
 }
 
+/// <summary>按脸查找命中项的路径、相似度、缩略图和选择状态。</summary>
 public sealed class FaceSearchResultViewModel : ObservableObject
 {
     private ImageSource? _thumbnail;

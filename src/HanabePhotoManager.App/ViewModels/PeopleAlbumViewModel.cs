@@ -10,6 +10,7 @@ using HanabePhotoManager.Core.Performance;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>协调人物扫描、人物相册选择和相册内照片展示。</summary>
 public sealed class PeopleAlbumViewModel : ObservableObject
 {
     private static readonly HashSet<string> SupportedExtensions = new(
@@ -243,6 +244,7 @@ public sealed class PeopleAlbumViewModel : ObservableObject
     }
 }
 
+/// <summary>人物相册列表中的封面、名称和照片数量。</summary>
 public sealed class PersonAlbumItemViewModel : ObservableObject
 {
     private readonly PeopleAlbumService _service;
@@ -300,6 +302,7 @@ public sealed class PersonAlbumItemViewModel : ObservableObject
 /// which is triggered from the view when the virtualized tile is realized, so a
 /// person with hundreds of photos only decodes the tiles currently on screen.
 /// </summary>
+/// <summary>人物相册中的单张照片及其缩略图加载状态。</summary>
 public sealed class PersonPhotoViewModel : ObservableObject
 {
     private static readonly SemaphoreSlim ThumbnailGate = new(PreviewLoadingPolicy.ThumbnailConcurrency);

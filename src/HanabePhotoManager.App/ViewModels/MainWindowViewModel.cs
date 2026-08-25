@@ -37,12 +37,19 @@ using WinForms = System.Windows.Forms;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>浏览工作区使用普通网格或空间树视图。</summary>
 public enum BrowseDisplayMode
 {
     Grid,
     Treemap
 }
 
+/// <summary>
+/// 主窗口的应用级协调器：连接导航、照片库、导入、图库、设备、设置和后台任务状态。
+/// </summary>
+/// <remarks>
+/// 文件按功能使用 partial 扩展；任何异步刷新都必须遵守取消令牌或版本号的“最新请求优先”约束。
+/// </remarks>
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private static readonly string[] CategoryFolderNames =
@@ -102,22 +109,19 @@ public sealed partial class MainWindowViewModel : ObservableObject
         [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".psd", ".psb", ".mp4", ".mov"],
         StringComparer.OrdinalIgnoreCase);
 
-    // Video containers: their "thumbnail" is the first frame, which the Shell
-    // must extract from the file (it is never present in the thumbnail cache).
+    // 视频缩略图来自容器首帧，必须由 Shell 提取；它不是图库中独立展示的媒体文件。
     private static readonly HashSet<string> VideoExtensions = new(
         [".mp4", ".mov", ".avi", ".mkv", ".wmv", ".m4v", ".mxf", ".mts", ".m2ts", ".ts",
          ".webm", ".mpeg", ".mpg", ".3gp", ".flv", ".ogv", ".m2t", ".mod"],
         StringComparer.OrdinalIgnoreCase);
 
-    // RAW formats that Windows Shell cannot thumbnail without a third-party codec. Skipping
-    // the Shell fallback for these avoids a multi-second probe per file every time the
-    // preview page is reloaded; the WPF decoder (or a generic icon) is used instead.
+    // 未安装第三方编解码器时 Windows Shell 无法预览这些 RAW。跳过 Shell 探测可避免每个文件
+    // 数秒阻塞，后续改用 WPF 解码或通用占位图。
     private static readonly HashSet<string> RawExtensions = new(
         [".arw", ".cr2", ".cr3", ".nef", ".raf", ".rw2", ".orf", ".dng", ".raw"],
         StringComparer.OrdinalIgnoreCase);
 
-    // Per-app thumbnail cache keyed by (path + size + mtime) so the same file isn't
-    // re-decoded every time the preview page re-renders.
+    // 缩略图缓存键包含路径、尺寸和修改时间，避免页面重绘时重复解码，同时让外部编辑自然失效旧缓存。
     private static readonly ConcurrentDictionary<string, ImageSource> ThumbnailCache = new(StringComparer.OrdinalIgnoreCase);
     private static readonly ConcurrentQueue<string> ThumbnailCacheOrder = new();
 
@@ -2266,6 +2270,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string CalendarMonthTitle => $"{_calendarDisplayMonth:yyyy年 M月}";
 
+    /// <summary>
+    /// 读取设置、恢复主题和导航，随后异步启动照片库与设备状态初始化。
+    /// </summary>
     public async Task InitializeAsync()
     {
         var settings = await _settingsStore.LoadAsync().ConfigureAwait(true);
@@ -3001,6 +3008,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     }
 
+    /// <summary>把外部调用提供的散文件按指定类别加入一次导入流程。</summary>
     public async Task ImportLooseFilesAsync(IEnumerable<string> paths, MediaCategory category)
     {
         if (!HasLibraryRoot || _selectedDate is null)
@@ -3027,6 +3035,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         await RunImportAsync(items, deleteSourcesAfterVerify: false).ConfigureAwait(true);
     }
 
+    /// <summary>验证拖入的一个或多个文件夹，完成分析后进入用户可确认的导入队列。</summary>
     public async Task AutoImportDroppedSourceAsync(IEnumerable<string> paths)
     {
         // LibraryRoot 为空时直接弹出文件夹选择框引导首次配置，选完自动保存，
@@ -3547,6 +3556,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>继续上次未完成的导入（幂等：已完成文件由目标存在性/边传边删自动跳过）。</summary>
+    /// <summary>从磁盘恢复点继续尚未完成的导入计划。</summary>
     public async Task ResumePendingImportAsync()
     {
         var state = _importResumeStore.Load();
@@ -5253,6 +5263,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static bool IsClassifiableImage(string path) =>
         WpfImageExtensions.Contains(Path.GetExtension(path));
 
+    /// <summary>把快速标签应用到当前选中的全部图库媒体。</summary>
     public async Task AssignQuickTagAsync(string tag)
     {
         var paths = SelectedMetadataPaths();
@@ -7216,6 +7227,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 }
 
+/// <summary>照片库日历树中的月份或日期节点及其展开、选择和计数状态。</summary>
 public sealed class LibraryDateNode
 {
     public LibraryDateNode(string title, string fullPath, LibraryDate? date, IReadOnlyList<LibraryDateNode>? children = null)
@@ -7264,16 +7276,19 @@ public sealed class LibraryDateNode
         string.IsNullOrWhiteSpace(StatSummary) ? Title : $"{Title} {StatSummary}";
 }
 
+/// <summary>导入媒体类别的可展示选项。</summary>
 public sealed record CategoryChoice(MediaCategory Category, string Display)
 {
     public override string ToString() => Display;
 }
 
+/// <summary>导入传输策略的可展示选项。</summary>
 public sealed record TransferModeChoice(TransferMode Mode, string Display)
 {
     public override string ToString() => Display;
 }
 
+/// <summary>状态栏和取消按钮当前跟踪的后台任务类别。</summary>
 public enum ActiveTaskKind
 {
     None,
@@ -7282,28 +7297,37 @@ public enum ActiveTaskKind
     Preview
 }
 
+/// <summary>根据卷标、路径和文件特征推断的相机品牌展示信息。</summary>
 public sealed record CameraBrandGuess(string DisplayName, string Brand, string Reason, string? Icon, string BadgeText);
 
+/// <summary>主页中同类已连接设备的分组。</summary>
 public sealed record DeviceGroupViewModel(string Name, string Icon, string Subtitle, IReadOnlyList<ConnectedDeviceViewModel> Devices);
 
+/// <summary>主页快速操作的键、标题和命令。</summary>
 public sealed record QuickActionItemViewModel(string Key, string Title, IRelayCommand Command);
 
+/// <summary>外接磁盘、相机或照片库连接项。</summary>
 public sealed record ConnectedDeviceViewModel(string Name, string Kind, string Detail, bool IsConnected, string Icon, string Brand, string BadgeText, string Path)
 {
     public string StateText => IsConnected ? "已连接" : "未连接";
 }
 
+/// <summary>设备概览中的目录或媒体文件。</summary>
 public sealed record DeviceContentItemViewModel(string Name, string Kind, string FullPath, string Detail, string Icon);
 
+/// <summary>照片库分类目录的路径、文件数和容量摘要。</summary>
 public sealed record CategorySummaryViewModel(string Name, string FullPath, int FileCount, string SizeText)
 {
     public string Subtitle => $"{FileCount} 个文件 · {SizeText}";
 }
 
+/// <summary>导入队列按待确认状态和媒体类别分组的键。</summary>
 public sealed record ImportSectionKey(bool NeedsAttention, MediaCategory Category);
 
+/// <summary>多文件夹导入扫描的当前目录和已匹配文件数。</summary>
 public sealed record ImportFileScanProgress(string CurrentFolder, int MatchedFiles);
 
+/// <summary>导入队列中的类别分组及其全选状态。</summary>
 public sealed class ImportCategorySectionViewModel : ObservableObject
 {
     private const int PageSize = 120;
@@ -7353,15 +7377,19 @@ public sealed class ImportCategorySectionViewModel : ObservableObject
     }
 }
 
+/// <summary>一次导入运行的成功、跳过、失败和日志摘要。</summary>
 public sealed record ImportRunResult(int Success, int Skipped, int Failed, IReadOnlyList<string> Lines);
 
+/// <summary>图库日期分组的稳定键和标题。</summary>
 public sealed record PreviewDateSectionInfo(string Key, string Title);
 
+/// <summary>图库排序方式的可展示选项。</summary>
 public sealed record PreviewSortChoice(int Value, string Label)
 {
     public override string ToString() => Label;
 }
 
+/// <summary>图库按文件文本或语义内容搜索。</summary>
 public enum BrowseSearchMode
 {
     Auto,
@@ -7369,32 +7397,40 @@ public enum BrowseSearchMode
     Semantic
 }
 
+/// <summary>图库搜索模式的可展示选项。</summary>
 public sealed record BrowseSearchModeChoice(BrowseSearchMode Value, string Label);
 
+/// <summary>本地推理设备的配置值和展示文本。</summary>
 public sealed record InferenceDeviceChoice(string Value, string Label)
 {
     public override string ToString() => Label;
 }
 
+/// <summary>人脸识别引擎的可展示选项。</summary>
 public sealed record FaceEngineChoice(FaceRecognitionEngineKind Value, string Label)
 {
     public override string ToString() => Label;
 }
 
+/// <summary>人脸性能配置的可展示选项。</summary>
 public sealed record FaceProfileChoice(FaceRecognitionProfile Value, string Label)
 {
     public override string ToString() => Label;
 }
 
+/// <summary>浏览入口策略的展示选项和说明。</summary>
 public sealed record BrowseEntryChoice(BrowseEntryMode Value, string Label, string Description)
 {
     public override string ToString() => Label;
 }
 
+/// <summary>网格或空间树浏览模式选项。</summary>
 public sealed record BrowseDisplayChoice(BrowseDisplayMode Value, string Label);
 
+/// <summary>空间树权重方式的可展示选项。</summary>
 public sealed record TreemapWeightChoice(TreemapWeightMode Value, string Label);
 
+/// <summary>设置页日历中的自然日、照片数量和选择状态。</summary>
 public sealed record CalendarDayViewModel(
     DateOnly? Date,
     string DayText,
@@ -7402,8 +7438,10 @@ public sealed record CalendarDayViewModel(
     bool IsCurrentMonth,
     bool IsSelected);
 
+/// <summary>文件夹网格浏览层级的面包屑项。</summary>
 public sealed record GridBreadcrumbViewModel(string? Key, string Label);
 
+/// <summary>自然滚动照片墙中的日期标题、展开状态和所属媒体集合。</summary>
 public sealed class PreviewDateSectionViewModel : ObservableObject, IWallSectionHeader
 {
     private bool _isExpanded;
@@ -7453,6 +7491,7 @@ public sealed class PreviewDateSectionViewModel : ObservableObject, IWallSection
     }
 }
 
+/// <summary>图库单个媒体卡片的路径、缩略图、分类、评分和选择状态。</summary>
 public sealed partial class PreviewFileViewModel : ObservableObject
 {
     public string Name { get; init; }
@@ -7558,12 +7597,14 @@ public sealed partial class PreviewFileViewModel : ObservableObject
     }
 }
 
+/// <summary>兼容旧图库标记文件的分类、标签和评分数据。</summary>
 public sealed class FileMeta
 {
     public int Rating { get; set; }
     public string Tags { get; set; } = "";
 }
 
+/// <summary>读取和写入旧版单文件元数据，供迁移与兼容使用。</summary>
 public static class FileMetaStore
 {
     private static readonly ConcurrentDictionary<string, FileMeta> Cache = new(StringComparer.OrdinalIgnoreCase);
@@ -7626,6 +7667,7 @@ public static class FileMetaStore
     }
 }
 
+/// <summary>导入预览队列中的源媒体组、分类、日期、缩略图和启用状态。</summary>
 public sealed class ImportPreviewItemViewModel : ObservableObject
 {
     private bool _isSelected = true;

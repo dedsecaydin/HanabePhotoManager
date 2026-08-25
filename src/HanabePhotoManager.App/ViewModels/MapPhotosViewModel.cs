@@ -8,6 +8,7 @@ using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>协调地图位置增量扫描、缩略图缓存、聚合标记和选中照片。</summary>
 public sealed class MapPhotosViewModel : ObservableObject
 {
     private static readonly HashSet<string> SupportedExtensions = new(
@@ -290,6 +291,7 @@ public sealed class MapPhotosViewModel : ObservableObject
         || double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture, out result);
 }
 
+/// <summary>地图照片列表项的路径、位置、缩略图和选中状态。</summary>
 public sealed partial class MapPhotoItemViewModel : ObservableObject
 {
     public MapPhotoItemViewModel(string path, PhotoLocation? location)
@@ -306,4 +308,5 @@ public sealed partial class MapPhotoItemViewModel : ObservableObject
     [ObservableProperty] private bool _isSelected;
 }
 
+/// <summary>传给地图控件的稳定标记标识、坐标和聚合数量。</summary>
 public sealed record MapMarkerPayload(string Id, double Latitude, double Longitude, int Count);

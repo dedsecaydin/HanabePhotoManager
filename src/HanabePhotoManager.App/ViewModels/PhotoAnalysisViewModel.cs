@@ -6,6 +6,7 @@ using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>协调照片内容分析、检查点复用、进度、取消和结果写回。</summary>
 public sealed class PhotoAnalysisViewModel : ObservableObject
 {
     private readonly IMediaMetadataStore _store;
@@ -169,4 +170,5 @@ public sealed class PhotoAnalysisViewModel : ObservableObject
     }
 }
 
+/// <summary>一次照片分析任务的实时分析、缓存命中、失败和取消统计。</summary>
 public sealed record PhotoAnalysisRunResult(int Analyzed, int Cached, int Failed, bool Cancelled);

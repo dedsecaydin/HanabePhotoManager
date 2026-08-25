@@ -6,6 +6,7 @@ using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>维护无边框照片/视频查看器的媒体列表、当前位置和导航状态。</summary>
 public sealed class PhotoViewerViewModel : ObservableObject
 {
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)

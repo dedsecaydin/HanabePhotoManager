@@ -6,6 +6,7 @@ using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>管理自定义标签的创建、删除和可选列表。</summary>
 public sealed class TagManagerViewModel : ObservableObject
 {
     private static readonly string[] BuiltInCategories =

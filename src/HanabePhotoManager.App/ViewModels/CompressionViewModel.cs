@@ -7,6 +7,7 @@ using HanabePhotoManager.App.Compression;
 
 namespace HanabePhotoManager.App.ViewModels;
 
+/// <summary>协调图片压缩、拼图工具的输入发现、规划、执行、取消和摘要。</summary>
 public sealed class CompressionViewModel : ObservableObject
 {
     private readonly ImageInputDiscovery _discovery;
@@ -347,10 +348,12 @@ public sealed class CompressionViewModel : ObservableObject
     }
 }
 
+/// <summary>压缩输入扫描的文件、警告和总大小。</summary>
 internal sealed record CompressionInputScan(
     IReadOnlyList<CompressionInputItem> Inputs,
     IReadOnlyList<string> Warnings);
 
+/// <summary>压缩队列中的文件路径、体积和可展示名称。</summary>
 public sealed record CompressionInputItem(string Path, long Length)
 {
     public string Name => System.IO.Path.GetFileName(Path);
@@ -360,7 +363,9 @@ public sealed record CompressionInputItem(string Path, long Length)
         : $"{bytes / 1024d:F0} KB";
 }
 
+/// <summary>压缩目标模式的可展示选项。</summary>
 public sealed record CompressionTargetChoice(CompressionTargetMode Value, string Label);
+/// <summary>图片工具页当前选择压缩还是拼图。</summary>
 public enum ImageToolMode
 {
     Compression,
@@ -369,5 +374,7 @@ public enum ImageToolMode
     PixelArt,
 }
 
+/// <summary>图片工具模式的可展示选项。</summary>
 public sealed record ImageToolModeChoice(ImageToolMode Value, string Label);
+/// <summary>拼图方向的可展示选项。</summary>
 public sealed record CollageOrientationChoice(CollageOrientation Value, string Label);

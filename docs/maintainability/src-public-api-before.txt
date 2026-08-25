@@ -1,0 +1,819 @@
+src\HanabePhotoManager.App\Albums\CustomAlbumItemViewModel.cs:20:    public bool IsFolderAvailable => Directory.Exists(FolderPath);
+src\HanabePhotoManager.App\Albums\CustomAlbumItemViewModel.cs:24:    public void Rename(string displayName)
+src\HanabePhotoManager.App\Albums\CustomAlbumItemViewModel.cs:30:    public void RefreshAvailability()
+src\HanabePhotoManager.App\Albums\CustomAlbumItemViewModel.cs:7:public sealed partial class CustomAlbumItemViewModel : ObservableObject
+src\HanabePhotoManager.App\Albums\CustomAlbumItemViewModel.cs:9:    public CustomAlbumItemViewModel(CustomAlbum album)
+src\HanabePhotoManager.App\Albums\CustomAlbumPhotoScanner.cs:11:    public Task<IReadOnlyList<CustomAlbumPhoto>> ScanAsync(
+src\HanabePhotoManager.App\Albums\CustomAlbumPhotoScanner.cs:5:public sealed class CustomAlbumPhotoScanner
+src\HanabePhotoManager.App\Albums\CustomAlbumPhotoScanner.cs:54:public sealed record CustomAlbumPhoto(string Name, string FullPath, long Length);
+src\HanabePhotoManager.App\Albums\CustomAlbumsPage.xaml.cs:15:    public CustomAlbumsPage() => InitializeComponent();
+src\HanabePhotoManager.App\Albums\CustomAlbumsPage.xaml.cs:9:public partial class CustomAlbumsPage : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:108:    public async Task RenameSelectedAsync()
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:121:    public async Task RemoveSelectedAsync()
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:136:    public async Task OpenSelectedAsync()
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:19:    public CustomAlbumsViewModel(ICustomAlbumStore store, CustomAlbumPhotoScanner photoScanner)
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:31:    public async Task ReplaceStoreAsync(ICustomAlbumStore newStore, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:70:    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:86:    public async Task AddFolderAsync(string folderPath, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Albums\CustomAlbumsViewModel.cs:9:public sealed partial class CustomAlbumsViewModel : ObservableObject
+src\HanabePhotoManager.App\App.xaml.cs:6:public partial class App : System.Windows.Application
+src\HanabePhotoManager.App\Browsing\Grid\GalleryZoomPolicy.cs:16:    public static double? ResolveWheelTileSize(double currentTileSize, int wheelDelta, bool isControlPressed)
+src\HanabePhotoManager.App\Browsing\Grid\GalleryZoomPolicy.cs:27:    public static double CalculateAnchoredVerticalOffset(
+src\HanabePhotoManager.App\Browsing\Grid\GalleryZoomPolicy.cs:7:public static class GalleryZoomPolicy
+src\HanabePhotoManager.App\Browsing\Grid\UniformSquarePanel.cs:15:public sealed class UniformSquarePanel : WpfPanel
+src\HanabePhotoManager.App\Browsing\Grid\UniformSquarePanel.cs:17:    public static readonly DependencyProperty TileSizeProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Grid\UniformSquarePanel.cs:25:    public static readonly DependencyProperty SpacingProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\ImageDimensionReader.cs:18:    public static (int width, int height)? ReadDimensions(string filePath)
+src\HanabePhotoManager.App\Browsing\Treemap\ImageDimensionReader.cs:7:internal static class ImageDimensionReader
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:100:    public static readonly DependencyProperty IsBorderlessProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:106:    public static readonly DependencyProperty OpenItemCommandProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:111:    public static readonly DependencyProperty ZoomCommandProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:116:    public static readonly DependencyProperty ZoomScaleProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:130:    public PhotoTreemapControl()
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:16:public sealed class PhotoTreemapControl : FrameworkElement
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:189:    public static bool IsPanoramaZoom(double zoom) => PanoramaPhotoLayout.IsActive(zoom);
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:210:    public static bool ShouldRequestThumbnail(double width, double height) =>
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:216:    public static bool IntersectsViewport(Rect viewport, Rect tile) =>
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:219:    public static TreemapItemViewModel? FindItemAt(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:77:    public static readonly DependencyProperty ItemsSourceProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:85:    public static readonly DependencyProperty RootKeyProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:91:    public static readonly DependencyProperty SelectedPathProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Browsing\Treemap\PhotoTreemapControl.cs:970:public sealed record TreemapHitRegion(TreemapItemViewModel Item, TreemapBounds Bounds)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:11:    public static readonly TimeSpan DefaultRefreshInterval = TimeSpan.FromMilliseconds(150);
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:117:    public int BeginScan(string rootPath)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:145:    public void ApplyBatch(int generation, LibraryDateSnapshotBatch batch)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:179:    public void Complete(int generation, bool isPartial)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:196:    public void UpdateThumbnail(string fullPath, ImageSource? thumbnail)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:219:    public void ZoomTo(string containerKey)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:231:    public void NavigateToAncestor(string? containerKey)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:243:    public void Dispose()
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:399:    public void SubmitDimensions(IReadOnlyList<(string fullPath, double aspectRatio)> dimensions)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:40:    public ProgressiveTreemapViewModel(TimeSpan? refreshInterval = null)
+src\HanabePhotoManager.App\Browsing\Treemap\ProgressiveTreemapViewModel.cs:9:public sealed class ProgressiveTreemapViewModel : ObservableObject, IDisposable
+src\HanabePhotoManager.App\Browsing\Treemap\TreemapItemViewModel.cs:18:public sealed record TreemapBreadcrumbViewModel(string? Key, string Label);
+src\HanabePhotoManager.App\Browsing\Treemap\TreemapItemViewModel.cs:5:public sealed record TreemapItemViewModel(
+src\HanabePhotoManager.App\CategoryEqualityMultiConverter.cs:12:internal sealed class CategoryEqualityMultiConverter : IMultiValueConverter
+src\HanabePhotoManager.App\CategoryEqualityMultiConverter.cs:14:    public object Convert(object?[] values, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\CategoryEqualityMultiConverter.cs:24:    public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture) =>
+src\HanabePhotoManager.App\CategoryEqualsConverter.cs:10:internal sealed class CategoryEqualsConverter : System.Windows.Data.IValueConverter
+src\HanabePhotoManager.App\CategoryEqualsConverter.cs:12:    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\CategoryEqualsConverter.cs:22:    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\Collections\RangeObservableCollection.cs:13:    public RangeObservableCollection(IEnumerable<T> items)
+src\HanabePhotoManager.App\Collections\RangeObservableCollection.cs:18:    public void AddRange(IEnumerable<T> items)
+src\HanabePhotoManager.App\Collections\RangeObservableCollection.cs:36:    public void ReplaceRange(IEnumerable<T> items)
+src\HanabePhotoManager.App\Collections\RangeObservableCollection.cs:7:public sealed class RangeObservableCollection<T> : ObservableCollection<T>
+src\HanabePhotoManager.App\Collections\RangeObservableCollection.cs:9:    public RangeObservableCollection()
+src\HanabePhotoManager.App\Compression\CompressionPage.xaml.cs:11:    public CompressionPage()
+src\HanabePhotoManager.App\Compression\CompressionPage.xaml.cs:7:public partial class CompressionPage : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:12:public enum CollageOrientation
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:18:public sealed record CollageOptions(
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:24:public sealed record CollageProgress(int Processed, int Total, string CurrentFile);
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:26:public sealed record CollageResult(
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:35:public sealed class ImageCollageService
+src\HanabePhotoManager.App\Compression\ImageCollageService.cs:37:    public async Task<CollageResult> ComposeAsync(
+src\HanabePhotoManager.App\Compression\ImageCompressionPlanner.cs:11:public sealed record CompressionWorkItem(CompressionSource Source, long TargetBytes);
+src\HanabePhotoManager.App\Compression\ImageCompressionPlanner.cs:13:public sealed class ImageCompressionPlanner
+src\HanabePhotoManager.App\Compression\ImageCompressionPlanner.cs:15:    public IReadOnlyList<CompressionWorkItem> CreatePlan(
+src\HanabePhotoManager.App\Compression\ImageCompressionPlanner.cs:3:public enum CompressionTargetMode
+src\HanabePhotoManager.App\Compression\ImageCompressionPlanner.cs:9:public sealed record CompressionSource(string Path, long Length, long PixelCount);
+src\HanabePhotoManager.App\Compression\ImageCompressionService.cs:11:public enum CompressionItemStatus
+src\HanabePhotoManager.App\Compression\ImageCompressionService.cs:19:public sealed record CompressionOptions(
+src\HanabePhotoManager.App\Compression\ImageCompressionService.cs:25:public sealed record CompressionItemResult(
+src\HanabePhotoManager.App\Compression\ImageCompressionService.cs:34:public sealed class ImageCompressionService
+src\HanabePhotoManager.App\Compression\ImageCompressionService.cs:41:    public async Task<CompressionItemResult> CompressAsync(
+src\HanabePhotoManager.App\Compression\ImageInputDiscovery.cs:15:    public ImageDiscoveryResult Discover(IEnumerable<string> inputs, bool recursive, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Compression\ImageInputDiscovery.cs:5:public sealed record ImageDiscoveryResult(IReadOnlyList<string> Files, IReadOnlyList<string> Warnings);
+src\HanabePhotoManager.App\Compression\ImageInputDiscovery.cs:51:    public static bool IsSupported(string path) => SupportedExtensions.Contains(Path.GetExtension(path));
+src\HanabePhotoManager.App\Compression\ImageInputDiscovery.cs:7:public sealed class ImageInputDiscovery
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:104:    public static readonly DependencyProperty SectionBackgroundProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:110:    public static readonly DependencyProperty SectionBorderBrushProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:116:    public static readonly DependencyProperty SectionCornerRadiusProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:122:    public static readonly DependencyProperty SectionPaddingProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:128:    public static readonly DependencyProperty SectionSpacingProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:20:public interface IWallSectionHeader
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:208:    public void LineUp() => SetVerticalOffset(VerticalOffset - ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:209:    public void LineDown() => SetVerticalOffset(VerticalOffset + ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:210:    public void LineLeft() => SetHorizontalOffset(HorizontalOffset - ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:211:    public void LineRight() => SetHorizontalOffset(HorizontalOffset + ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:212:    public void MouseWheelUp() => SetVerticalOffset(VerticalOffset - 3 * ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:213:    public void MouseWheelDown() => SetVerticalOffset(VerticalOffset + 3 * ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:214:    public void MouseWheelLeft() => SetHorizontalOffset(HorizontalOffset - 3 * ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:215:    public void MouseWheelRight() => SetHorizontalOffset(HorizontalOffset + 3 * ScrollLineAmount);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:216:    public void PageUp() => SetVerticalOffset(VerticalOffset - ViewportHeight);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:217:    public void PageDown() => SetVerticalOffset(VerticalOffset + ViewportHeight);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:218:    public void PageLeft() => SetHorizontalOffset(HorizontalOffset - ViewportWidth);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:219:    public void PageRight() => SetHorizontalOffset(HorizontalOffset + ViewportWidth);
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:221:    public void SetHorizontalOffset(double offset)
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:235:    public void SetVerticalOffset(double offset)
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:249:    public Rect MakeVisible(Visual visual, Rect rectangle)
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:42:public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:598:    public IReadOnlyList<(int ItemIndex, Rect Bounds, bool IsHeader)> GetItemBounds()
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:82:    public static readonly DependencyProperty ItemWidthProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:88:    public static readonly DependencyProperty ItemHeightProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\Controls\VirtualizingWrapPanel.cs:98:    public static readonly DependencyProperty HeaderHeightProperty = DependencyProperty.Register(
+src\HanabePhotoManager.App\DeleteConfirmationWindow.xaml.cs:17:    public static bool Confirm(Window? owner, string message, int selectedCount, int actualFileCount)
+src\HanabePhotoManager.App\DeleteConfirmationWindow.xaml.cs:6:public partial class DeleteConfirmationWindow : Window
+src\HanabePhotoManager.App\DeleteConfirmationWindow.xaml.cs:8:    public DeleteConfirmationWindow(string message, int selectedCount, int actualFileCount)
+src\HanabePhotoManager.App\Duplicates\DuplicateCandidateGroup.cs:14:public sealed record DuplicateCandidateGroup(IReadOnlyList<string> Paths, bool IsSuspected);
+src\HanabePhotoManager.App\Duplicates\DuplicateReviewWindow.xaml.cs:10:public partial class DuplicateReviewWindow : Window
+src\HanabePhotoManager.App\Duplicates\DuplicateReviewWindow.xaml.cs:15:    public HashSet<string> FilesToDelete { get; } = new(StringComparer.OrdinalIgnoreCase);
+src\HanabePhotoManager.App\Duplicates\DuplicateReviewWindow.xaml.cs:17:    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates, string libraryRoot)
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionPolicy.cs:10:public static class ImportDuplicateBatchDecisionPolicy
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionPolicy.cs:12:    public static bool ShouldTransfer(ImportDuplicateBatchDecision decision) =>
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionPolicy.cs:15:    public static bool ShouldPromptIndividually(ImportDuplicateBatchDecision decision) =>
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionPolicy.cs:19:public sealed record ImportDuplicateMatch(string IncomingPath, string ExistingPath, bool ExistingIsReadOnlyRetouched);
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionPolicy.cs:3:public enum ImportDuplicateBatchDecision
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionWindow.xaml.cs:10:    public ImportDuplicateBatchDecisionWindow(IReadOnlyList<ImportDuplicateMatch> matches)
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateBatchDecisionWindow.xaml.cs:6:public partial class ImportDuplicateBatchDecisionWindow : Window
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateDecisionPolicy.cs:10:public static class ImportDuplicateDecisionPolicy
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateDecisionPolicy.cs:12:    public static bool ShouldTransfer(ImportDuplicateDecision decision) =>
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateDecisionPolicy.cs:3:public enum ImportDuplicateDecision
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateDecisionWindow.xaml.cs:13:    public ImportDuplicateDecisionWindow(string incomingPath, string existingPath, bool existingIsReadOnlyRetouched)
+src\HanabePhotoManager.App\Duplicates\ImportDuplicateDecisionWindow.xaml.cs:7:public partial class ImportDuplicateDecisionWindow : Window
+src\HanabePhotoManager.App\ExtensionBadgeConverter.cs:11:    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\ExtensionBadgeConverter.cs:21:    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\ExtensionBadgeConverter.cs:9:internal sealed class ExtensionBadgeConverter : System.Windows.Data.IValueConverter
+src\HanabePhotoManager.App\FileSizeConverter.cs:10:public sealed class FileSizeConverter : IValueConverter
+src\HanabePhotoManager.App\FileSizeConverter.cs:12:    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\FileSizeConverter.cs:28:    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+src\HanabePhotoManager.App\Imports\ImportSourcePicker.cs:10:public sealed class WindowsImportSourcePicker : IImportSourcePicker
+src\HanabePhotoManager.App\Imports\ImportSourcePicker.cs:12:    public IReadOnlyList<string> PickFolders(string initialDirectory)
+src\HanabePhotoManager.App\Imports\ImportSourcePicker.cs:5:public interface IImportSourcePicker
+src\HanabePhotoManager.App\MainWindow.xaml.cs:17:public partial class MainWindow : Window
+src\HanabePhotoManager.App\MainWindow.xaml.cs:2028:    public static object? FindContextMenuTag(this System.Windows.FrameworkElement child)
+src\HanabePhotoManager.App\MainWindow.xaml.cs:317:    public MainWindow()
+src\HanabePhotoManager.App\Map\MapPage.xaml.cs:11:public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
+src\HanabePhotoManager.App\Map\MapPage.xaml.cs:18:    public MapPage()
+src\HanabePhotoManager.App\Map\MapPage.xaml.cs:291:    public void Dispose()
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:11:public sealed record LibraryDateCategorySnapshot(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:17:public enum LibraryDateSnapshotWarningKind
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:25:public sealed record LibraryDateSnapshotWarning(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:3:public sealed record LibraryDateMediaItem(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:30:public sealed record LibraryDateSnapshot(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:39:public sealed record LibraryDateSnapshotBatch(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:44:public sealed record LibraryDirectoryCapacityResult(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:51:public sealed record LibraryDateFileProperties(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:58:public sealed record LibraryDateFileReadResult(
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:65:    public static LibraryDateFileReadResult Success(LibraryDateFileProperties file)
+src\HanabePhotoManager.App\Models\LibraryDateSnapshot.cs:71:    public static LibraryDateFileReadResult Failure(string path, string message) =>
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:14:public sealed class MediaMetadataEntry
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:3:public sealed class MediaMetadataSnapshot
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:42:    public string EffectiveCategory => !string.IsNullOrWhiteSpace(ManualCategory)
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:49:public sealed record PhotoLabelScore(string Label, double Score);
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:51:public sealed record PhotoLocation(double Latitude, double Longitude, PhotoLocationSource Source, string? DisplayName = null);
+src\HanabePhotoManager.App\Models\MediaMetadata.cs:53:public enum PhotoLocationSource
+src\HanabePhotoManager.App\Navigation\NavigationDisplayMode.cs:3:public enum NavigationDisplayMode
+src\HanabePhotoManager.App\Navigation\NavigationItemViewModel.cs:5:public sealed class NavigationItemViewModel
+src\HanabePhotoManager.App\Navigation\NavigationItemViewModel.cs:7:    public NavigationItemViewModel(
+src\HanabePhotoManager.App\Navigation\NavigationOrderPolicy.cs:3:public static class NavigationOrderPolicy
+src\HanabePhotoManager.App\Navigation\NavigationOrderPolicy.cs:5:    public static IReadOnlyList<string> Normalize(
+src\HanabePhotoManager.App\NullToVisibilityConverter.cs:14:public sealed class NullToVisibilityConverter : IValueConverter
+src\HanabePhotoManager.App\NullToVisibilityConverter.cs:16:    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\NullToVisibilityConverter.cs:24:    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+src\HanabePhotoManager.App\PathThumbnailConverter.cs:16:public sealed class PathThumbnailConverter : IValueConverter
+src\HanabePhotoManager.App\PathThumbnailConverter.cs:18:    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+src\HanabePhotoManager.App\PathThumbnailConverter.cs:49:    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+src\HanabePhotoManager.App\People\MergePersonDialog.xaml.cs:12:public partial class MergePersonDialog : Window
+src\HanabePhotoManager.App\People\MergePersonDialog.xaml.cs:17:    public MergePersonDialog(IEnumerable<PersonAlbumItemViewModel> candidates)
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:21:public partial class PhotoViewerWindow : Window
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:728:    public async Task CaptureScreenshotAsync(string outPath, bool showOverlays = true)
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:804:public sealed class ViewerSliderWidthConverter : IMultiValueConverter
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:806:    public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:81:    public PhotoViewerWindow(IEnumerable<string> paths, string selectedPath, Action<string>? photoDeleted = null)
+src\HanabePhotoManager.App\PhotoViewerWindow.xaml.cs:817:    public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:12:public static class PixelArtRenderer
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:15:    public static BitmapSource Load(string path)
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:28:    public static (int Width, int Height) CalculateGridSize(int sourceWidth, int sourceHeight, int targetSize)
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:35:    public static int CalculateBlockSize(int gridWidth, int gridHeight)
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:41:    public static BitmapSource DownscaleToGrid(BitmapSource source, int targetSize, out int width, out int height)
+src\HanabePhotoManager.App\PixelArt\PixelArtRenderer.cs:55:    public static void Export(BitmapSource grid, string outputPath)
+src\HanabePhotoManager.App\PixelArt\PixelArtView.xaml.cs:5:public partial class PixelArtView : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\PixelArt\PixelArtView.xaml.cs:7:    public PixelArtView() => InitializeComponent();
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:101:    public int ResolveEffectiveSize()
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:108:    public void Generate()
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:11:public sealed class PixelArtViewModel : ObservableObject
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:138:    public void Export(string outputPath)
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:25:    public PixelArtViewModel()
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:34:    public string SourceImagePath { get => _sourceImagePath; private set => SetProperty(ref _sourceImagePath, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:35:    public ImageSource? SourceImage { get => _sourceImage; private set => SetProperty(ref _sourceImage, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:36:    public ImageSource? PixelArtImage { get => _pixelArtImage; private set => SetProperty(ref _pixelArtImage, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:37:    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:38:    public int PixelWidth { get => _pixelWidth; private set => SetProperty(ref _pixelWidth, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:39:    public int PixelHeight { get => _pixelHeight; private set => SetProperty(ref _pixelHeight, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:42:    public int SelectedSize { get => _selectedSize; private set => SetProperty(ref _selectedSize, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:45:    public bool IsCustom { get => _isCustom; private set => SetProperty(ref _isCustom, value); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:48:    public string CustomSizeText { get => _customSizeText; set => SetProperty(ref _customSizeText, value ?? string.Empty); }
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:56:    public bool HasSource => !string.IsNullOrWhiteSpace(SourceImagePath);
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:60:    public void SetSourceImage(string path)
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:87:    public void SelectPreset(int size)
+src\HanabePhotoManager.App\PixelArt\PixelArtViewModel.cs:95:    public void SelectCustom()
+src\HanabePhotoManager.App\ReleaseNotes\ReleaseNotesViewModel.cs:106:public static class ReleaseNotesCatalog
+src\HanabePhotoManager.App\ReleaseNotes\ReleaseNotesViewModel.cs:11:public sealed record ReleaseVersionItemViewModel(
+src\HanabePhotoManager.App\ReleaseNotes\ReleaseNotesViewModel.cs:18:public sealed class ReleaseNotesViewModel : ObservableObject
+src\HanabePhotoManager.App\ReleaseNotes\ReleaseNotesViewModel.cs:22:    public ReleaseNotesViewModel(
+src\HanabePhotoManager.App\ReleaseNotes\ReleaseNotesViewModel.cs:6:public sealed record ReleaseVersionInfo(
+src\HanabePhotoManager.App\RemarkPromptWindow.xaml.cs:14:    public string Remark => RemarkBox.Text.Trim();
+src\HanabePhotoManager.App\RemarkPromptWindow.xaml.cs:5:public partial class RemarkPromptWindow : Window
+src\HanabePhotoManager.App\RemarkPromptWindow.xaml.cs:7:    public RemarkPromptWindow(string dateText)
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:10:public sealed class SearchResultItemViewModel : ObservableObject
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:14:    public SearchResultItemViewModel(SemanticSearchResult result)
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:21:    public string Name => Path.GetFileName(FilePath);
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:22:    public string Folder => Path.GetDirectoryName(FilePath) ?? string.Empty;
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:25:    public ImageSource? Thumbnail { get => _thumbnail; set => SetProperty(ref _thumbnail, value); }
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:27:    public void Open()
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:32:    public void OpenFolder()
+src\HanabePhotoManager.App\Search\SearchResultItemViewModel.cs:37:    public async Task LoadThumbnailAsync(CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Search\SemanticBrowseRanking.cs:3:public static class SemanticBrowseRanking
+src\HanabePhotoManager.App\Search\SemanticBrowseRanking.cs:5:    public static IEnumerable<T> Apply<T>(
+src\HanabePhotoManager.App\Search\SemanticSearchView.xaml.cs:6:public partial class SemanticSearchView : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\Search\SemanticSearchView.xaml.cs:8:    public SemanticSearchView() => InitializeComponent();
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:164:    public void Dispose() { _operationCancellation?.Cancel(); _operationCancellation?.Dispose(); }
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:24:    public SemanticSearchViewModel(
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:59:    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:60:    public double ProgressValue { get => _progressValue; private set => SetProperty(ref _progressValue, value); }
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:61:    public bool IsBusy { get => _isBusy; private set { if (SetProperty(ref _isBusy, value)) { CancelCommand.NotifyCanExecuteChanged(); ReindexCommand.NotifyCanExecuteChanged(); } } }
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:63:    public bool HasActiveQuery => !string.IsNullOrWhiteSpace(QueryText);
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:64:    public IReadOnlyList<string> RankedResultPaths => Results.Select(result => result.FilePath).ToArray();
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:67:    public void NotifyLibraryRootChanged()
+src\HanabePhotoManager.App\Search\SemanticSearchViewModel.cs:9:public sealed class SemanticSearchViewModel : ObservableObject, IDisposable
+src\HanabePhotoManager.App\Services\AppDataPaths.cs:22:    public static string CustomAlbumsFile => Path.Combine(Root, "custom-albums.json");
+src\HanabePhotoManager.App\Services\AppDataPaths.cs:5:public static class AppDataPaths
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:101:    public static string? NormalizeLibraryRoot(string? path)
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:140:    public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:16:public sealed class AppSettingsStore
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:176:    public async Task UpdateAsync(Action<AppSettings> mutate, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:185:public sealed class AppSettings
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:26:    public AppSettingsStore(string? settingsPath = null)
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:273:    public string BrowseEntryMode { get; set; } = nameof(global::HanabePhotoManager.App.Services.BrowseEntryMode.SessionRestore);
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:277:    public string BrowseDisplayMode { get; set; } = nameof(global::HanabePhotoManager.App.ViewModels.BrowseDisplayMode.Grid);
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:279:    public string TreemapWeightMode { get; set; } = nameof(global::HanabePhotoManager.Core.Browsing.Treemap.TreemapWeightMode.FileSize);
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:35:    public async Task<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\AppSettingsStore.cs:9:public enum GalleryGroupTitleMode
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:10:public sealed record BrowseSnapshot(
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:18:    public static BrowseSnapshot AllDates { get; } = new(null, "全部", string.Empty, 0, 150, null);
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:21:public sealed record BrowseDefaults(string RatingFilter, int SortIndex, double ThumbnailSize);
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:23:public sealed class BrowseStatePolicy
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:25:    public BrowseSnapshot ResolveOnEntry(
+src\HanabePhotoManager.App\Services\BrowseStatePolicy.cs:3:public enum BrowseEntryMode
+src\HanabePhotoManager.App\Services\EdgeAutoScrollPolicy.cs:5:public sealed class EdgeAutoScrollPolicy(double maximumDelta = 22)
+src\HanabePhotoManager.App\Services\EdgeAutoScrollPolicy.cs:7:    public Vector Calculate(System.Windows.Point pointer, System.Windows.Size viewport, double edge = 48)
+src\HanabePhotoManager.App\Services\ExifLocationReader.cs:12:public sealed class ExifLocationReader : IExifLocationReader
+src\HanabePhotoManager.App\Services\ExifLocationReader.cs:14:    public PhotoCoordinate? TryRead(string path)
+src\HanabePhotoManager.App\Services\ExifLocationReader.cs:31:    public static PhotoCoordinate? Validate(double latitude, double longitude)
+src\HanabePhotoManager.App\Services\ExifLocationReader.cs:39:public sealed record PhotoCoordinate(double Latitude, double Longitude);
+src\HanabePhotoManager.App\Services\ExifLocationReader.cs:7:public interface IExifLocationReader
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:10:public static class FaceRecognitionRuntimeOptions
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:101:    public async Task<IReadOnlyList<DetectedFace>> DetectBatchAsync(
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:227:internal sealed record YuNetDetection(float X, float Y, float Width, float Height, float Score, Point2f[] Landmarks);
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:229:internal static class YuNetDecoder
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:231:    public static IReadOnlyList<YuNetDetection> Decode(
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:34:public static class FaceRecognitionEngineFactory
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:38:    public static ILocalFaceEmbeddingService Create(FaceRecognitionOptions options)
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:65:public sealed class OnnxFaceRecognitionEngine : ILocalFaceEmbeddingService
+src\HanabePhotoManager.App\Services\FaceRecognitionEngineFactory.cs:95:    public async Task<IReadOnlyList<DetectedFace>> DetectAsync(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:13:public enum FaceRecognitionProfile
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:20:public static class FaceRecognitionDefaults
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:27:public sealed record FaceEngineAvailability(bool IsAvailable, string Reason)
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:29:    public static FaceEngineAvailability Available { get; } = new(true, string.Empty);
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:32:public sealed class FaceRecognitionOptions
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:44:    public FaceEngineAvailability EvaluateAvailability()
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:58:public sealed record FaceModelIdentity(
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:7:public enum FaceRecognitionEngineKind
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:72:    public static FaceModelIdentity CreateArcFace(string detectorPath, string recognizerPath, double threshold)
+src\HanabePhotoManager.App\Services\FaceRecognitionModels.cs:95:public sealed class FaceModelMismatchException(string stored, string requested)
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:17:public static class FaceRecognitionMath
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:19:    public static bool IsAcceptableFaceDetection(float confidence, int width, int height) =>
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:22:    public static float PrepareInputValue(byte pixel, FaceRecognitionEngineKind engine) =>
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:27:    public static void L2Normalize(float[] vector)
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:3:public sealed record FaceRuntimeLimits(int MaximumImageEdge, int MaxConcurrency, int BatchSize)
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:37:    public static double Cosine(IReadOnlyList<float> first, IReadOnlyList<float> second)
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:5:    public static FaceRuntimeLimits For(FaceRecognitionProfile profile, int? logicalProcessors = null)
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:53:public static class FaceBatchExecutor
+src\HanabePhotoManager.App\Services\FaceRecognitionRuntime.cs:55:    public static async Task<IReadOnlyList<TResult>> RunAsync<TSource, TResult>(
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:14:public sealed class FaceSearchService
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:225:        public static FaceEngine Create()
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:24:    public async Task<FaceReference> CreateReferenceAsync(string imagePath, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:241:        public IReadOnlyList<float[]> ExtractEmbeddings(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:309:        public void Dispose()
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:319:public sealed record FaceReference(string Path, float[] Embedding);
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:321:public sealed record FaceSearchMatch(string Path, double Similarity, int FacesInImage);
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:323:public sealed record FaceSearchProgress(int Processed, int Total, int Matches, bool FromCache, string CurrentFile);
+src\HanabePhotoManager.App\Services\FaceSearchService.cs:42:    public async Task<IReadOnlyList<FaceSearchMatch>> SearchAsync(
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:20:public sealed class ImportResumeState
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:27:public sealed class ImportResumeStore
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:32:    public ImportResumeStore(string? path = null)
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:37:    public bool HasPending => File.Exists(_path);
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:39:    public ImportResumeState? Load()
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:57:    public void Save(ImportResumeState state)
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:70:    public void Delete()
+src\HanabePhotoManager.App\Services\ImportResumeStore.cs:8:public sealed class ImportResumeEntry
+src\HanabePhotoManager.App\Services\IPhotoClassifier.cs:14:public sealed record PhotoClassificationResult(
+src\HanabePhotoManager.App\Services\IPhotoClassifier.cs:5:public interface IPhotoClassifier
+src\HanabePhotoManager.App\Services\LibraryDateFolderService.cs:13:public static class LibraryDateFolderService
+src\HanabePhotoManager.App\Services\LibraryDateFolderService.cs:27:    public static bool TryParseName(
+src\HanabePhotoManager.App\Services\LibraryDateFolderService.cs:7:public sealed record LibraryDateFolderName(
+src\HanabePhotoManager.App\Services\LibraryDateFolderService.cs:96:    public static string NormalizeDirectoryName(
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:101:    public void ClearCache()
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:19:public sealed class LibraryDateSnapshotService
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:413:public sealed class PhysicalLibraryDateFileSystem : ILibraryDateFileSystem
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:415:    public bool DirectoryExists(string path) => Directory.Exists(path);
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:417:    public DateTime GetDirectoryLastWriteTimeUtc(string path) =>
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:420:    public IEnumerable<LibraryDateFileReadResult> EnumerateTopLevelFiles(string path) =>
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:423:    public IEnumerable<LibraryDateFileReadResult> EnumerateFilesRecursively(string path) =>
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:47:    public LibraryDateSnapshotService(ILibraryDateFileSystem? fileSystem = null)
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:63:    public Task<LibraryDateSnapshot> LoadAsync(
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:68:    public Task<LibraryDateSnapshot> LoadAsync(
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:8:public interface ILibraryDateFileSystem
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:80:    public Task<LibraryDirectoryCapacityResult> CalculateCapacityAsync(
+src\HanabePhotoManager.App\Services\LibraryDateSnapshotService.cs:91:    public void Invalidate(string dateDirectory)
+src\HanabePhotoManager.App\Services\LibraryMaintenanceService.cs:102:public sealed record LibraryMaintenanceFailure(string Path, string Reason);
+src\HanabePhotoManager.App\Services\LibraryMaintenanceService.cs:16:    public static bool IsNetworkLibraryRoot(string path) =>
+src\HanabePhotoManager.App\Services\LibraryMaintenanceService.cs:19:    public Task<LibraryMaintenanceResult> RemoveEmptyDateDirectoriesAsync(
+src\HanabePhotoManager.App\Services\LibraryMaintenanceService.cs:6:public sealed class LibraryMaintenanceService
+src\HanabePhotoManager.App\Services\LibraryMaintenanceService.cs:98:public sealed record LibraryMaintenanceResult(
+src\HanabePhotoManager.App\Services\LocalFaceEmbeddingService.cs:25:public sealed record DetectedFace(
+src\HanabePhotoManager.App\Services\LocalFaceEmbeddingService.cs:34:public sealed class LocalFaceEmbeddingService : ILocalFaceEmbeddingService
+src\HanabePhotoManager.App\Services\LocalFaceEmbeddingService.cs:38:    public Task<IReadOnlyList<DetectedFace>> DetectAsync(string path, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\LocalFaceEmbeddingService.cs:41:    public Task<IReadOnlyList<DetectedFace>> DetectBatchAsync(IReadOnlyList<string> paths, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\LocalFaceEmbeddingService.cs:8:public interface ILocalFaceEmbeddingService
+src\HanabePhotoManager.App\Services\LocalPersonClusterer.cs:14:    public Task<PersonClusteringResult> ClusterAsync(
+src\HanabePhotoManager.App\Services\LocalPersonClusterer.cs:320:public sealed record PersonClusteringProgress(int Processed, int Total, int Recognized);
+src\HanabePhotoManager.App\Services\LocalPersonClusterer.cs:322:public sealed record PersonClusteringResult(IReadOnlyDictionary<string, string> LabelsByPrimaryPath, int RecognizedImages, int ClusterCount);
+src\HanabePhotoManager.App\Services\LocalPersonClusterer.cs:8:public sealed class LocalPersonClusterer
+src\HanabePhotoManager.App\Services\MapMediaSourceService.cs:11:    public Task<MapMediaScanResult> ScanAsync(
+src\HanabePhotoManager.App\Services\MapMediaSourceService.cs:5:public sealed record MapMediaScanResult(IReadOnlyList<string> Files, IReadOnlyList<string> Warnings);
+src\HanabePhotoManager.App\Services\MapMediaSourceService.cs:7:public sealed class MapMediaSourceService
+src\HanabePhotoManager.App\Services\MapThumbnailCache.cs:10:public sealed class MapThumbnailCache
+src\HanabePhotoManager.App\Services\MapThumbnailCache.cs:12:    public MapThumbnailCache(string? directory = null) =>
+src\HanabePhotoManager.App\Services\MapThumbnailCache.cs:17:    public async Task<string?> GetUrlAsync(string sourcePath, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:18:public sealed class MediaMetadataStore : IMediaMetadataStore
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:29:    public MediaMetadataStore(string? path = null)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:34:    public async Task<MediaMetadataSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:41:    public async Task<MediaMetadataEntry?> GetAsync(string path, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:49:    public async Task UpsertAsync(MediaMetadataEntry entry, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:66:    public async Task SaveAsync(MediaMetadataSnapshot snapshot, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\MediaMetadataStore.cs:7:public interface IMediaMetadataStore
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:10:public static class MobileClipRuntimeOptions
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:104:    public void Dispose() { _network?.Dispose(); _gate.Dispose(); }
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:17:public sealed class MobileClipPhotoClassifier : IPhotoClassifier, IDisposable
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:26:    public MobileClipPhotoClassifier(string modelPath, string embeddingsPath, IPhotoClassifier? fallback = null)
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:31:    public async Task<PhotoClassificationResult> ClassifyAsync(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\MobileClipPhotoClassifier.cs:87:    public static IReadOnlyList<PhotoLabelScore> RankLabels(IReadOnlyList<float> image, IReadOnlyDictionary<string, float[]> labels)
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:10:public sealed class OnnxPhotoClassifier : IPhotoClassifier, IDisposable
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:138:    public static IReadOnlyList<PhotoLabelScore> MapImageNetLabels(
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:197:    public void Dispose()
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:21:    public OnnxPhotoClassifier(
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:37:    public async Task<PhotoClassificationResult> ClassifyAsync(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\OnnxPhotoClassifier.cs:99:    public static Mat PreprocessImage(Mat source)
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:105:    public Task RenameAsync(string albumId, string name, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:112:    public Task RemovePhotoAsync(string albumId, string path, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:123:    public Task MergeAsync(string targetId, string sourceId, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:15:    public PeopleAlbumService(string? storePath = null, ILocalFaceEmbeddingService? embeddingService = null)
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:23:    public async Task<PeopleAlbumSnapshot> LoadAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:295:public sealed record PeopleScanProgress(
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:30:    public async Task<PeopleAlbumSnapshot> ScanAsync(IEnumerable<string> paths, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:302:public sealed record PeopleScanAlbumProgress(
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:311:public sealed class PeopleAlbumSnapshot
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:317:    public Dictionary<string, List<string>> RemovedPhotos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:320:public sealed class PersonAlbum
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:33:    public async Task<PeopleAlbumSnapshot> ScanAsync(
+src\HanabePhotoManager.App\Services\PeopleAlbumService.cs:8:public sealed class PeopleAlbumService
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:14:public sealed class PhotoAnalysisCheckpointStore : IPhotoAnalysisCheckpointStore
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:18:    public PhotoAnalysisCheckpointStore(string? path = null) =>
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:21:    public async Task<IReadOnlyList<MediaMetadataEntry>> LoadAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:37:    public async Task AppendAsync(MediaMetadataEntry entry, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:49:    public async Task ClearAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\Services\PhotoAnalysisCheckpointStore.cs:7:public interface IPhotoAnalysisCheckpointStore
+src\HanabePhotoManager.App\Services\PhotoClassifierFactory.cs:12:    public static IPhotoClassifier Create(string? mode)
+src\HanabePhotoManager.App\Services\PhotoClassifierFactory.cs:5:public static class PhotoClassifierFactory
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:11:public sealed record PhotoDetailMetadata(
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:26:    public static PhotoDetailMetadata Empty(string path) => new(
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:32:public sealed class PhotoDetailMetadataReader : IPhotoDetailMetadataReader
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:35:    public PhotoDetailMetadataReader(IExifLocationReader? locationReader = null) =>
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:38:    public PhotoDetailMetadata Read(string path)
+src\HanabePhotoManager.App\Services\PhotoDetailMetadataReader.cs:6:public interface IPhotoDetailMetadataReader
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:10:    public PhotoLocationService(IMediaMetadataStore store) => _store = store;
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:12:    public async Task<PhotoLocation?> GetEffectiveAsync(string path, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:15:    public async Task<IReadOnlyList<LocatedPhoto>> GetLocatedAsync(
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:29:    public async Task AssignManualAsync(
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:57:    public async Task ClearManualAsync(IEnumerable<string> paths, CancellationToken cancellationToken)
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:6:public sealed class PhotoLocationService
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:67:    public static IReadOnlyList<LocationCluster> Cluster(IEnumerable<LocatedPhoto> photos, int zoom)
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:85:public sealed record LocatedPhoto(string Path, PhotoLocation Location);
+src\HanabePhotoManager.App\Services\PhotoLocationService.cs:87:public sealed record LocationCluster(
+src\HanabePhotoManager.App\Services\PhotoViewportMath.cs:13:    public static double DragOffset(double startOffset, double pointerDelta, double maximumOffset) =>
+src\HanabePhotoManager.App\Services\PhotoViewportMath.cs:3:public static class PhotoViewportMath
+src\HanabePhotoManager.App\Services\PhotoViewportMath.cs:5:    public static double AnchoredOffset(
+src\HanabePhotoManager.App\Services\RecycleBinFileService.cs:11:public sealed class RecycleBinFileService : IRecycleBinFileService
+src\HanabePhotoManager.App\Services\RecycleBinFileService.cs:13:    public void MoveToRecycleBin(string path)
+src\HanabePhotoManager.App\Services\RecycleBinFileService.cs:6:public interface IRecycleBinFileService
+src\HanabePhotoManager.App\Services\RetouchedMediaIndex.cs:20:    public RetouchedMediaSnapshot Build(
+src\HanabePhotoManager.App\Services\RetouchedMediaIndex.cs:55:    public static string NormalizeStem(string stem) =>
+src\HanabePhotoManager.App\Services\RetouchedMediaIndex.cs:6:public sealed class RetouchedMediaIndex
+src\HanabePhotoManager.App\Services\RetouchedMediaIndex.cs:70:public sealed record RetouchedMediaSnapshot(
+src\HanabePhotoManager.App\Services\RuleBasedPhotoClassifier.cs:14:    public RuleBasedPhotoClassifier(Func<Mat, bool>? faceDetector = null)
+src\HanabePhotoManager.App\Services\RuleBasedPhotoClassifier.cs:23:    public Task<PhotoClassificationResult> ClassifyAsync(string path, CancellationToken cancellationToken) =>
+src\HanabePhotoManager.App\Services\RuleBasedPhotoClassifier.cs:9:public sealed class RuleBasedPhotoClassifier : IPhotoClassifier
+src\HanabePhotoManager.App\Services\ShellThumbnailProvider.cs:22:    public static BitmapSource? TryGetThumbnail(string path, int size = 512, bool allowExtraction = false)
+src\HanabePhotoManager.App\Services\ShellThumbnailProvider.cs:9:internal static class ShellThumbnailProvider
+src\HanabePhotoManager.App\Services\StartupRegistrationService.cs:11:public sealed class WindowsStartupRegistrationService : IStartupRegistrationService
+src\HanabePhotoManager.App\Services\StartupRegistrationService.cs:16:    public bool IsEnabled()
+src\HanabePhotoManager.App\Services\StartupRegistrationService.cs:22:    public void SetEnabled(bool enabled)
+src\HanabePhotoManager.App\Services\StartupRegistrationService.cs:5:public interface IStartupRegistrationService
+src\HanabePhotoManager.App\Services\ThemeManager.cs:11:public enum AppColorScheme { Dynamic, Forest, Violet, Classic }
+src\HanabePhotoManager.App\Services\ThemeManager.cs:13:public static class ThemeManager
+src\HanabePhotoManager.App\Services\ThemeManager.cs:19:    public static AppTheme ParsePreference(string? value) => string.Equals(value?.Trim(), "dark", StringComparison.OrdinalIgnoreCase) ? AppTheme.Dark : AppTheme.Light;
+src\HanabePhotoManager.App\Services\ThemeManager.cs:21:    public static AppColorScheme ParseSchemePreference(string? value) => value?.Trim().ToLowerInvariant() switch
+src\HanabePhotoManager.App\Services\ThemeManager.cs:29:    public static void LoadAndApply()
+src\HanabePhotoManager.App\Services\ThemeManager.cs:36:    public static void Toggle() => Apply(Current == AppTheme.Light ? AppTheme.Dark : AppTheme.Light);
+src\HanabePhotoManager.App\Services\ThemeManager.cs:39:    public static void Apply(AppTheme theme, bool persist = true) => Apply(theme, CurrentScheme, persist);
+src\HanabePhotoManager.App\Services\ThemeManager.cs:42:    public static void Apply(AppColorScheme scheme, bool persist = true) => Apply(Current, scheme, persist);
+src\HanabePhotoManager.App\Services\ThemeManager.cs:44:    public static void Apply(AppTheme theme, AppColorScheme scheme, bool persist = true)
+src\HanabePhotoManager.App\Services\ThemeManager.cs:6:public enum AppTheme { Light, Dark }
+src\HanabePhotoManager.App\Services\ThemeTransitionService.cs:13:public static class ThemeTransitionService
+src\HanabePhotoManager.App\Services\ThemeTransitionService.cs:17:    public static void Apply(Window window, FrameworkElement sourceElement, Action applyTheme)
+src\HanabePhotoManager.App\Services\ThemeTransitionService.cs:62:        public ThemeRevealAdorner(UIElement adornedElement, ImageSource snapshot, WpfPoint origin)
+src\HanabePhotoManager.App\Services\ThemeTransitionService.cs:88:        public void Begin(Action completed)
+src\HanabePhotoManager.App\Services\WindowsWallpaperService.cs:11:public sealed class WindowsWallpaperService : IWindowsWallpaperService
+src\HanabePhotoManager.App\Services\WindowsWallpaperService.cs:15:    public WindowsWallpaperService() : this(ReadWindowsWallpaperPath)
+src\HanabePhotoManager.App\Services\WindowsWallpaperService.cs:19:    public WindowsWallpaperService(Func<string?> readConfiguredPath)
+src\HanabePhotoManager.App\Services\WindowsWallpaperService.cs:24:    public string? GetCurrentWallpaperPath()
+src\HanabePhotoManager.App\Services\WindowsWallpaperService.cs:6:public interface IWindowsWallpaperService
+src\HanabePhotoManager.App\SettingsCenterPage.xaml.cs:11:    public SettingsCenterPage() => InitializeComponent();
+src\HanabePhotoManager.App\SettingsCenterPage.xaml.cs:9:public partial class SettingsCenterPage : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:10:public sealed class CompressionViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:144:    public long OriginalTotalBytes => Items.Sum(item => item.Length);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:145:    public long OutputTotalBytes => Results.Where(result => result.Status == CompressionItemStatus.Success).Sum(result => result.OutputBytes);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:151:    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:152:    public string CurrentFile { get => _currentFile; private set => SetProperty(ref _currentFile, value); }
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:153:    public double ProgressValue { get => _progressValue; private set => SetProperty(ref _progressValue, value); }
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:178:    public async Task AddInputsAsync(
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:31:    public CompressionViewModel(
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:350:internal sealed record CompressionInputScan(
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:354:public sealed record CompressionInputItem(string Path, long Length)
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:356:    public string Name => System.IO.Path.GetFileName(Path);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:357:    public string SizeText => FormatBytes(Length);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:363:public sealed record CompressionTargetChoice(CompressionTargetMode Value, string Label);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:364:public enum ImageToolMode
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:372:public sealed record ImageToolModeChoice(ImageToolMode Value, string Label);
+src\HanabePhotoManager.App\ViewModels\CompressionViewModel.cs:373:public sealed record CollageOrientationChoice(CollageOrientation Value, string Label);
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:13:public sealed class FaceSearchViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:147:    public async Task SetReferenceAsync(string path)
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:196:    public void Cancel() => _cancellation?.Cancel();
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:198:    public void NotifyLibraryRootChanged() => StartSearchCommand.NotifyCanExecuteChanged();
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:29:    public FaceSearchViewModel(Func<string> libraryRoot)
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:361:public sealed class FaceSearchResultViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:365:    public FaceSearchResultViewModel(FaceSearchMatch match)
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:373:    public string Name => System.IO.Path.GetFileName(Path);
+src\HanabePhotoManager.App\ViewModels\FaceSearchViewModel.cs:374:    public string Folder => System.IO.Path.GetDirectoryName(Path) ?? string.Empty;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1346:    public void UpdateResponsiveBrowseLayout(double width, double height)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1637:    public double PanelOpacity => Math.Clamp(0.46 + (GlassIntensity * 0.42), 0.56, 0.86);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1639:    public double BackgroundOverlayOpacity => Math.Clamp(0.18 + (GlassIntensity * 0.45), 0.29, 0.61);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1664:    public bool HasEffectiveBackground => !string.IsNullOrWhiteSpace(EffectiveBackgroundPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1711:    public ImageSource? BackgroundImage => LoadBackgroundImage(CustomBackgroundPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1713:    public bool UsesCustomBackground => BackgroundMode == "自定义图片" && File.Exists(CustomBackgroundPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1715:    public ImageSource? EffectiveBackgroundImage => LoadBackgroundImage(EffectiveBackgroundPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1717:    public void RefreshWindowsWallpaper()
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1758:    public ImageSource? AppIconImage => LoadImage(CustomAppIconPath, 256);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1760:    public bool HasCustomAppIcon => File.Exists(CustomAppIconPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1774:    public bool RestoreWindowState { get => _restoreWindowState; set { if (SetProperty(ref _restoreWindowState, value)) _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1956:    public void ToggleFileTypeFilter(string typeGroup)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:1974:    public bool IsFileTypeFilterActive(string typeGroup)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2200:    public bool HasNextPreviewPage => (_previewPage + 1) * PreviewLoadingPolicy.VisiblePageSize < FilteredPreviewCount;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2261:    public bool HasLibraryRoot => !string.IsNullOrWhiteSpace(LibraryRoot);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2265:    public int DiscoveredDateCount => FlattenDateNodes(LibraryDates).Count;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2269:    public async Task InitializeAsync()
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:238:    public MainWindowViewModel(
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2443:    public void AdjustThumbnailSize(bool larger)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2533:    public static IReadOnlyList<CalendarDayViewModel> BuildCalendarDays(
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2843:    public static string NormalizeRetouchedStem(string stem)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:2853:    public static string? SelectPreferredRetouchedOutput(IEnumerable<string> paths, string sourceStem)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:3004:    public async Task ImportLooseFilesAsync(IEnumerable<string> paths, MediaCategory category)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:3030:    public async Task AutoImportDroppedSourceAsync(IEnumerable<string> paths)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:3550:    public async Task ResumePendingImportAsync()
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:40:public enum BrowseDisplayMode
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:46:public sealed partial class MainWindowViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:4651:    public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:4973:    public static PreviewDateSectionInfo ResolvePreviewDateSection(string filePath)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:505:    public void OpenPhotoViewer(PreviewFileViewModel file)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5155:    public void DeletePreviewFile(PreviewFileViewModel file)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5161:    public void NotifyPreviewSelectionChanged()
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5256:    public async Task AssignQuickTagAsync(string tag)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:529:    public void RemoveDeletedViewerPhoto(string path)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5375:    public static IReadOnlyList<string> ResolveRawJpegPairPaths(string path)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5439:    public void BatchCopyFilesTo(string targetFolder)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:5458:    public void BatchMoveFilesTo(string targetFolder)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:573:    public int RetouchedGroupCount => CountPhotoGroups(RetouchedFiles);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:575:    public int TotalPhotoGroupCount => CountPhotoGroups(PreviewFiles);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:583:    public int SelectedFileCount => PreviewFiles.Count(file => file.IsSelected);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:6066:    public void MoveNavigationItem(string sourceKey, string targetKey, bool insertAfter = false)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:6133:    public void RememberWindowSize(double width, double height)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:6145:    public void RememberWindowState(double left, double top, double width, double height, string state)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:6851:    public void DiscardPendingImportResume() => _importResumeStore.Delete();
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7219:public sealed class LibraryDateNode
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7221:    public LibraryDateNode(string title, string fullPath, LibraryDate? date, IReadOnlyList<LibraryDateNode>? children = null)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7263:    public override string ToString() =>
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7267:public sealed record CategoryChoice(MediaCategory Category, string Display)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7269:    public override string ToString() => Display;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7272:public sealed record TransferModeChoice(TransferMode Mode, string Display)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7274:    public override string ToString() => Display;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7277:public enum ActiveTaskKind
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7285:public sealed record CameraBrandGuess(string DisplayName, string Brand, string Reason, string? Icon, string BadgeText);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7287:public sealed record DeviceGroupViewModel(string Name, string Icon, string Subtitle, IReadOnlyList<ConnectedDeviceViewModel> Devices);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7289:public sealed record QuickActionItemViewModel(string Key, string Title, IRelayCommand Command);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7291:public sealed record ConnectedDeviceViewModel(string Name, string Kind, string Detail, bool IsConnected, string Icon, string Brand, string BadgeText, string Path)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7296:public sealed record DeviceContentItemViewModel(string Name, string Kind, string FullPath, string Detail, string Icon);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7298:public sealed record CategorySummaryViewModel(string Name, string FullPath, int FileCount, string SizeText)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7303:public sealed record ImportSectionKey(bool NeedsAttention, MediaCategory Category);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7305:public sealed record ImportFileScanProgress(string CurrentFolder, int MatchedFiles);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7307:public sealed class ImportCategorySectionViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7312:    public ImportCategorySectionViewModel(string name, string icon, string subtitle, string accentBrush, IReadOnlyList<ImportPreviewItemViewModel> items)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7333:    public IReadOnlyList<ImportPreviewItemViewModel> VisibleItems => Items.Take(_displayLimit).ToArray();
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7335:    public int HiddenCount => Math.Max(0, Items.Count - _displayLimit);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7356:public sealed record ImportRunResult(int Success, int Skipped, int Failed, IReadOnlyList<string> Lines);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7358:public sealed record PreviewDateSectionInfo(string Key, string Title);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7360:public sealed record PreviewSortChoice(int Value, string Label)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7362:    public override string ToString() => Label;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7365:public enum BrowseSearchMode
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7372:public sealed record BrowseSearchModeChoice(BrowseSearchMode Value, string Label);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7374:public sealed record InferenceDeviceChoice(string Value, string Label)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7376:    public override string ToString() => Label;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7379:public sealed record FaceEngineChoice(FaceRecognitionEngineKind Value, string Label)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:738:    public IReadOnlyList<InferenceDeviceChoice> InferenceDevices { get; } = [new("auto", "自动"), new("cpu", "CPU")];
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7381:    public override string ToString() => Label;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7384:public sealed record FaceProfileChoice(FaceRecognitionProfile Value, string Label)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7386:    public override string ToString() => Label;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7389:public sealed record BrowseEntryChoice(BrowseEntryMode Value, string Label, string Description)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7391:    public override string ToString() => Label;
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7394:public sealed record BrowseDisplayChoice(BrowseDisplayMode Value, string Label);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7396:public sealed record TreemapWeightChoice(TreemapWeightMode Value, string Label);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7398:public sealed record CalendarDayViewModel(
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7405:public sealed record GridBreadcrumbViewModel(string? Key, string Label);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7407:public sealed class PreviewDateSectionViewModel : ObservableObject, IWallSectionHeader
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7412:    public PreviewDateSectionViewModel(
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7456:public sealed partial class PreviewFileViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7490:    public bool HasManualTags => !string.IsNullOrWhiteSpace(ManualTagsDisplay);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7494:    public PreviewFileViewModel(string name, string category, string fullPath, string sizeText, string extension, ImageSource? thumbnail, long length = 0, DateTime capturedAt = default)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7536:    public string PreviewPath => IsRetouched && !string.IsNullOrWhiteSpace(RetouchedPath)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7561:public sealed class FileMeta
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7567:public static class FileMetaStore
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7572:    public static FileMeta TryGet(string filePath)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7598:    public static void Update(string filePath, Action<FileMeta> mutate)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7629:public sealed class ImportPreviewItemViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7635:    public ImportPreviewItemViewModel(MediaGroup group, MediaCategory category, IReadOnlyList<CategoryChoice> categoryChoices, bool requiresConfirmation, LibraryDate? targetDate, ImageSource? thumbnail, string personLabel, int queueIndex)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7668:    public bool HasPersonLabel => !string.IsNullOrWhiteSpace(PersonLabel);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7674:    public void SetThumbnail(ImageSource? thumbnail)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7687:    public string SourceFileName => Path.GetFileName(Group.Primary.FullPath);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7700:    public long TotalBytes => Group.Primary.Length + Group.Sidecars.Sum(file => file.Length);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7702:    public string Detail => string.IsNullOrWhiteSpace(PersonLabel)
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7706:    public string SizeText => FormatBytes(TotalBytes);
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:7736:    public MediaGroup ToMediaGroup()
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:818:    public string DefaultRatingFilter { get => _defaultRatingFilter; set { if (SetProperty(ref _defaultRatingFilter, RatingFilters.Contains(value) ? value : "全部评分")) _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:819:    public int DefaultPreviewSort { get => _defaultPreviewSort; set { if (SetProperty(ref _defaultPreviewSort, Math.Clamp(value, 0, 10))) _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:820:    public double DefaultThumbnailSize { get => _defaultThumbnailSize; set { if (SetProperty(ref _defaultThumbnailSize, Math.Clamp(value, 96, 260))) _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:832:    public bool IsGpuProviderAvailable => File.Exists(Path.Combine(AppContext.BaseDirectory, "onnxruntime_providers_cuda.dll"));
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:836:    public int SemanticMaxLabels { get => MobileClipRuntimeOptions.MaximumLabels; set { MobileClipRuntimeOptions.MaximumLabels = Math.Clamp(value, 1, 5); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.cs:837:    public double SemanticSimilarityWindow { get => MobileClipRuntimeOptions.SimilarityWindow; set { MobileClipRuntimeOptions.SimilarityWindow = Math.Clamp(value, .02, .30); OnPropertyChanged(); _ = SaveSettingsAsync(); } }
+src\HanabePhotoManager.App\ViewModels\MainWindowViewModel.Import.cs:9:public sealed partial class MainWindowViewModel
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:11:public sealed class MapPhotosViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:112:    public async Task ClearImportedSourcesAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:123:    public async Task AddSourcesAsync(IEnumerable<string> paths, bool recursive, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:144:    public async Task RefreshAsync()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:223:    public async Task AssignSelectedAsync()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:239:    public async Task ClearSelectedManualAsync()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:249:    public void SetPendingMapPoint(double latitude, double longitude)
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:27:    public MapPhotosViewModel(
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:293:public sealed partial class MapPhotoItemViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:295:    public MapPhotoItemViewModel(string path, PhotoLocation? location)
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:309:public sealed record MapMarkerPayload(string Id, double Latitude, double Longitude, int Count);
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:49:    public string PendingLatitude { get => _pendingLatitude; set => SetProperty(ref _pendingLatitude, value ?? string.Empty); }
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:50:    public string PendingLongitude { get => _pendingLongitude; set => SetProperty(ref _pendingLongitude, value ?? string.Empty); }
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:51:    public string PendingDisplayName { get => _pendingDisplayName; set => SetProperty(ref _pendingDisplayName, value ?? string.Empty); }
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:52:    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:68:    public void SelectMarker(string markerId)
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:77:    public IReadOnlyList<string> GetMarkerPhotoPaths(string markerId, int maximum = 40) =>
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:82:    public void SelectAllUnlocated()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:87:    public void InvertUnlocatedSelection()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:92:    public void ClearSelection()
+src\HanabePhotoManager.App\ViewModels\MapPhotosViewModel.cs:97:    public async Task RemoveSelectedSourcesAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:106:    public async Task ScanPathsAsync(IEnumerable<string> sourcePaths)
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:13:public sealed class PeopleAlbumViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:143:    public void RefreshRecognitionStatus()
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:246:public sealed class PersonAlbumItemViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:252:    public PersonAlbumItemViewModel(PersonAlbum album, PeopleAlbumService service, Action<PersonAlbumItemViewModel> select)
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:266:    public string Name { get => _name; set => SetProperty(ref _name, value ?? string.Empty); }
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:274:    public void UpdateFromProgress(PeopleScanAlbumProgress progress)
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:29:    public PeopleAlbumViewModel(
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:303:public sealed class PersonPhotoViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:309:    public PersonPhotoViewModel(string path)
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:330:    public void EnsureThumbnailLoaded()
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:77:    public bool AreBubblesOpen { get => _areBubblesOpen; set => SetProperty(ref _areBubblesOpen, value); }
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:78:    public double ScanProgressValue { get => _scanProgressValue; private set => SetProperty(ref _scanProgressValue, value); }
+src\HanabePhotoManager.App\ViewModels\PeopleAlbumViewModel.cs:96:    public async Task InitializeAsync()
+src\HanabePhotoManager.App\ViewModels\PhotoAnalysisViewModel.cs:172:public sealed record PhotoAnalysisRunResult(int Analyzed, int Cached, int Failed, bool Cancelled);
+src\HanabePhotoManager.App\ViewModels\PhotoAnalysisViewModel.cs:20:    public PhotoAnalysisViewModel(
+src\HanabePhotoManager.App\ViewModels\PhotoAnalysisViewModel.cs:63:    public async Task<PhotoAnalysisRunResult> AnalyzeAsync(
+src\HanabePhotoManager.App\ViewModels\PhotoAnalysisViewModel.cs:9:public sealed class PhotoAnalysisViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:118:    public void Close()
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:30:    public PhotoViewerViewModel(
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:57:    public bool IsOpen { get => _isOpen; private set { if (SetProperty(ref _isOpen, value)) CloseCommand.NotifyCanExecuteChanged(); } }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:59:    public PhotoDetailMetadata Metadata { get => _metadata; private set => SetProperty(ref _metadata, value); }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:60:    public BitmapSource? Image { get => _image; private set => SetProperty(ref _image, value); }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:64:    public string? FileName => CurrentPath is { } path ? System.IO.Path.GetFileName(path) : null;
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:65:    public bool IsVideo => CurrentPath is { } path && VideoExtensions.Contains(System.IO.Path.GetExtension(path));
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:66:    public int Rating { get => _rating; private set => SetProperty(ref _rating, value); }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:67:    public double ZoomScale { get => _zoomScale; private set => SetProperty(ref _zoomScale, value); }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:68:    public string ErrorText { get => _errorText; private set => SetProperty(ref _errorText, value); }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:70:    public void Open(IEnumerable<string> paths, string selectedPath)
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:79:    public void Previous() { if (CanPrevious) { _index--; RefreshCurrent(); } }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:80:    public void Next() { if (CanNext) { _index++; RefreshCurrent(); } }
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:81:    public void SetRating(int value)
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:87:    public void AdjustZoom(int direction)
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:9:public sealed class PhotoViewerViewModel : ObservableObject
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:92:    public void ResetZoom() => ZoomScale = 1;
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:95:    public void ReportError(string message) => ErrorText = message;
+src\HanabePhotoManager.App\ViewModels\PhotoViewerViewModel.cs:97:    public void DeleteCurrent()
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:112:    public async Task RemoveTagAsync(IEnumerable<string> paths, string? tag, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:128:    public async Task SetManualCategoryAsync(IEnumerable<string> paths, string? category, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:19:    public TagManagerViewModel(IMediaMetadataStore store)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:29:    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:35:    public async Task CreateTagAsync(string? name, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:47:    public async Task RenameTagAsync(string? oldName, string? newName, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:70:    public async Task DeleteTagAsync(string? name, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:89:    public async Task AssignTagAsync(IEnumerable<string> paths, string? tag, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.App\ViewModels\TagManagerViewModel.cs:9:public sealed class TagManagerViewModel : ObservableObject
+src\HanabePhotoManager.App\Watermark\BooleanNotConverter.cs:6:public sealed class BooleanNotConverter : IValueConverter
+src\HanabePhotoManager.App\Watermark\BooleanNotConverter.cs:8:    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) => value is bool flag && !flag;
+src\HanabePhotoManager.App\Watermark\BooleanNotConverter.cs:9:    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => value is bool flag && !flag;
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:17:public enum WatermarkMode { Signature, Tiled }
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:18:public enum WatermarkExportStatus { Success, Skipped, Failed }
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:19:public sealed record WatermarkExportOptions(string OutputDirectory, string Suffix, bool PreserveMetadata, WatermarkMode Mode,
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:21:public sealed record WatermarkExportResult(string SourcePath, string? OutputPath, WatermarkExportStatus Status, string Message);
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:22:public sealed record WatermarkBatchProgress(int Completed, int Total, int Success, int Failed, string CurrentFile);
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:24:public sealed class WatermarkExportService
+src\HanabePhotoManager.App\Watermark\WatermarkExportService.cs:26:    public async Task<IReadOnlyList<WatermarkExportResult>> ExportAsync(IReadOnlyList<string> sources, string watermarkPath,
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:11:public sealed record WatermarkFolderBatchProgress(
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:18:public sealed record WatermarkFolderBatchResult(
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:23:public sealed class WatermarkFolderBatchService
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:27:    public WatermarkFolderBatchService()
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:37:    public Task<WatermarkFolderScanResult> ScanAsync(
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:48:    public async Task<WatermarkFolderBatchResult> ProcessAsync(
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:5:public sealed record WatermarkFolderBatchItem(string SourceRoot, string SourcePath, string RelativeDirectory);
+src\HanabePhotoManager.App\Watermark\WatermarkFolderBatchService.cs:7:public sealed record WatermarkFolderScanResult(
+src\HanabePhotoManager.App\Watermark\WatermarkInputDiscovery.cs:12:    public WatermarkDiscoveryResult Discover(IEnumerable<string> inputs, bool recursive, CancellationToken token = default)
+src\HanabePhotoManager.App\Watermark\WatermarkInputDiscovery.cs:27:    public static bool IsSupported(string path) => Extensions.Contains(Path.GetExtension(path));
+src\HanabePhotoManager.App\Watermark\WatermarkInputDiscovery.cs:5:public sealed record WatermarkDiscoveryResult(IReadOnlyList<string> Files, IReadOnlyList<string> Warnings);
+src\HanabePhotoManager.App\Watermark\WatermarkInputDiscovery.cs:7:public sealed class WatermarkInputDiscovery
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:20:    public static IReadOnlyList<WatermarkPlacement> CalculateTiled(int imageWidth, int imageHeight, int markWidth, int markHeight, WatermarkTileSettings settings)
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:3:public sealed record WatermarkLayoutSettings(double CenterX, double CenterY, double WidthRatio, double Opacity);
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:4:public sealed record WatermarkTileSettings(bool Automatic, double Density, double HorizontalGapRatio, double VerticalGapRatio, double RotationDegrees, bool Stagger, double Opacity, double WidthRatio = 0.16);
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:5:public sealed record WatermarkPlacement(int X, int Y, int Width, int Height, double RotationDegrees, double Opacity);
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:7:public static class WatermarkLayoutCalculator
+src\HanabePhotoManager.App\Watermark\WatermarkLayoutCalculator.cs:9:    public static WatermarkPlacement CalculateSingle(int imageWidth, int imageHeight, int markWidth, int markHeight, WatermarkLayoutSettings settings)
+src\HanabePhotoManager.App\Watermark\WatermarkPage.xaml.cs:11:    public WatermarkPage() => InitializeComponent();
+src\HanabePhotoManager.App\Watermark\WatermarkPage.xaml.cs:7:public partial class WatermarkPage : System.Windows.Controls.UserControl
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:112:    public double PreviewWatermarkWidth => 60 + ((SelectedItem?.UseIndividualSettings == true ? SelectedItem.SizeRatio : SizeRatio) * 500);
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:13:public sealed partial class WatermarkQueueItem : ObservableObject
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:15:    public WatermarkQueueItem(string path) { Path = path; Name = System.IO.Path.GetFileName(path); }
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:202:    public void AddInputs(IEnumerable<string> paths)
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:214:    public void AddSourceFolders(IEnumerable<string> paths)
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:227:    public void SetWatermark(string path) { if (string.Equals(Path.GetExtension(path), ".png", StringComparison.OrdinalIgnoreCase)) WatermarkPath = path; else StatusText = "水印必须是 PNG 文件。"; }
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:228:    public void SetNormalizedPosition(double x, double y)
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:27:public sealed partial class WatermarkViewModel : ObservableObject
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:73:    public bool CanExport => HasItems && File.Exists(WatermarkPath) && Directory.Exists(OutputDirectory) && !IsBusy;
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:74:    public bool CanScanFolderBatch => FolderSources.Count > 0 && Directory.Exists(FolderOutputDirectory) && !IsBusy;
+src\HanabePhotoManager.App\Watermark\WatermarkViewModel.cs:75:    public bool CanStartFolderBatch => FolderSources.Count > 0 && File.Exists(WatermarkPath) && Directory.Exists(FolderOutputDirectory) && !IsBusy;
+src\HanabePhotoManager.Core\Albums\CustomAlbum.cs:5:public sealed record CustomAlbum(Guid Id, string DisplayName, string FolderPath)
+src\HanabePhotoManager.Core\Albums\CustomAlbum.cs:7:    public static CustomAlbum Create(Guid id, string? displayName, string folderPath)
+src\HanabePhotoManager.Core\Albums\ICustomAlbumStore.cs:3:public interface ICustomAlbumStore
+src\HanabePhotoManager.Core\Browsing\Treemap\JustifiedGalleryLayout.cs:12:public sealed class JustifiedGalleryLayout
+src\HanabePhotoManager.Core\Browsing\Treemap\JustifiedGalleryLayout.cs:27:    public JustifiedGalleryLayout(
+src\HanabePhotoManager.Core\Browsing\Treemap\JustifiedGalleryLayout.cs:45:    public IReadOnlyList<JustifiedItem> Arrange(
+src\HanabePhotoManager.Core\Browsing\Treemap\JustifiedGalleryLayout.cs:6:public sealed record JustifiedItem(double X, double Y, double Width, double Height, double AspectRatio);
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:15:    public PanoramaPhotoLayout(double minimumTileSize = 32, double gap = 1)
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:21:    public static bool IsActive(double zoom) =>
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:28:    public PanoramaLayoutResult Arrange(
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:56:public sealed record PanoramaLayoutResult(
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:61:    public static PanoramaLayoutResult Empty { get; } = new(Array.Empty<JustifiedItem>(), 0, 0);
+src\HanabePhotoManager.Core\Browsing\Treemap\PanoramaPhotoLayout.cs:8:public sealed class PanoramaPhotoLayout
+src\HanabePhotoManager.Core\Browsing\Treemap\SquarifiedTreemapLayout.cs:3:public sealed class SquarifiedTreemapLayout
+src\HanabePhotoManager.Core\Browsing\Treemap\SquarifiedTreemapLayout.cs:5:    public IReadOnlyList<TreemapTile> Calculate(
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:11:    public TreemapNode(string key, string label, double weight, bool isContainer)
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:3:public enum TreemapWeightMode
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:31:public sealed record TreemapBounds
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:33:    public TreemapBounds(double x, double y, double width, double height)
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:74:public sealed record TreemapTile(TreemapNode Node, TreemapBounds Bounds);
+src\HanabePhotoManager.Core\Browsing\Treemap\TreemapModels.cs:9:public sealed record TreemapNode
+src\HanabePhotoManager.Core\Imports\CameraFolderDateResolver.cs:11:public sealed class CameraFolderDateResolver
+src\HanabePhotoManager.Core\Imports\CameraFolderDateResolver.cs:13:    public DateResolution Resolve(string folderName, IReadOnlyCollection<int> metadataYears)
+src\HanabePhotoManager.Core\Imports\CameraFolderDateResolver.cs:6:public sealed record DateResolution(
+src\HanabePhotoManager.Core\Imports\IFileHasher.cs:3:public interface IFileHasher
+src\HanabePhotoManager.Core\Imports\IFileHasher.cs:8:public interface IDestinationProbe
+src\HanabePhotoManager.Core\Imports\ImportNamingFormatter.cs:10:public static class ImportNamingFormatter
+src\HanabePhotoManager.Core\Imports\ImportNamingFormatter.cs:18:    public static string Format(string? template, int sequence, string originalStem, LibraryDate date)
+src\HanabePhotoManager.Core\Imports\ImportNamingFormatter.cs:35:    public static bool UsesOriginalName(string? template)
+src\HanabePhotoManager.Core\Imports\ImportPlanBuilder.cs:17:    public async Task<ImportPlan> BuildAsync(
+src\HanabePhotoManager.Core\Imports\ImportPlanBuilder.cs:199:        public static NaturalStringComparer OrdinalIgnoreCase { get; } = new();
+src\HanabePhotoManager.Core\Imports\ImportPlanBuilder.cs:201:        public int Compare(string? x, string? y)
+src\HanabePhotoManager.Core\Imports\ImportPlanBuilder.cs:3:public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
+src\HanabePhotoManager.Core\Imports\ImportProgress.cs:11:    public static ImportProgress Create(int totalUnits)
+src\HanabePhotoManager.Core\Imports\ImportProgress.cs:17:    public ImportProgress Complete(int units)
+src\HanabePhotoManager.Core\Imports\ImportProgress.cs:23:    public ImportProgress Cancel() => this with { IsCanceled = true };
+src\HanabePhotoManager.Core\Imports\ImportProgress.cs:7:public sealed record ImportProgress(int CompletedUnits, int TotalUnits, bool IsCanceled)
+src\HanabePhotoManager.Core\Imports\LibraryRootNormalizer.cs:11:public static class LibraryRootNormalizer
+src\HanabePhotoManager.Core\Imports\LibraryRootNormalizer.cs:14:    public static string? Normalize(string? path)
+src\HanabePhotoManager.Core\Imports\LibraryRootNormalizer.cs:21:    public static string? Normalize(string? path, Func<string, bool>? directoryExists)
+src\HanabePhotoManager.Core\Imports\MediaClassifier.cs:14:    public MediaClassifier(IEnumerable<string> rawExtensions, IEnumerable<string>? videoExtensions = null)
+src\HanabePhotoManager.Core\Imports\MediaClassifier.cs:29:    public ImportCandidate Classify(SourceMediaFile file)
+src\HanabePhotoManager.Core\Imports\MediaClassifier.cs:5:public sealed partial class MediaClassifier
+src\HanabePhotoManager.Core\Imports\MediaGroupBuilder.cs:10:    public IReadOnlyList<MediaGroup> Build(IEnumerable<SourceMediaFile> files)
+src\HanabePhotoManager.Core\Imports\MediaGroupBuilder.cs:6:public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
+src\HanabePhotoManager.Core\Imports\Models.cs:14:public enum TransferMode
+src\HanabePhotoManager.Core\Imports\Models.cs:21:public enum ConflictKind
+src\HanabePhotoManager.Core\Imports\Models.cs:28:public enum ImportItemState
+src\HanabePhotoManager.Core\Imports\Models.cs:3:public enum MediaCategory
+src\HanabePhotoManager.Core\Imports\Models.cs:42:    public LibraryDate(int year, int month, int day)
+src\HanabePhotoManager.Core\Imports\Models.cs:53:    public string RelativePath => Path.Combine($"{Month}月", $"{Month:00}.{Day:00}");
+src\HanabePhotoManager.Core\Imports\Models.cs:56:public sealed record SourceMediaFile(string FullPath, long Length, DateTimeOffset LastWriteTime);
+src\HanabePhotoManager.Core\Imports\Models.cs:58:public sealed record MediaGroup(
+src\HanabePhotoManager.Core\Imports\Models.cs:64:    public IReadOnlyList<SourceMediaFile> Sidecars { get; } = Array.AsReadOnly(Sidecars.ToArray());
+src\HanabePhotoManager.Core\Imports\Models.cs:67:public sealed record ImportCandidate(
+src\HanabePhotoManager.Core\Imports\Models.cs:73:public sealed record PlannedFile(
+src\HanabePhotoManager.Core\Imports\Models.cs:79:public sealed record ImportPlanItem(
+src\HanabePhotoManager.Core\Imports\Models.cs:86:    public IReadOnlyList<PlannedFile> Files { get; } = Array.AsReadOnly(Files.ToArray());
+src\HanabePhotoManager.Core\Imports\Models.cs:89:public sealed record ImportPlan(
+src\HanabePhotoManager.Core\Imports\Models.cs:95:    public IReadOnlyList<ImportPlanItem> Items { get; } = Array.AsReadOnly(Items.ToArray());
+src\HanabePhotoManager.Core\Performance\PreviewLoadingPolicy.cs:11:    public static int DispatcherBatchCount(int itemCount) =>
+src\HanabePhotoManager.Core\Performance\PreviewLoadingPolicy.cs:3:public static class PreviewLoadingPolicy
+src\HanabePhotoManager.Core\Performance\ThrottledProgress.cs:11:    public ThrottledProgress(IProgress<T> inner, TimeSpan minimumInterval)
+src\HanabePhotoManager.Core\Performance\ThrottledProgress.cs:16:    public ThrottledProgress(Action<T> report, TimeSpan minimumInterval, Func<DateTimeOffset>? clock = null)
+src\HanabePhotoManager.Core\Performance\ThrottledProgress.cs:3:public sealed class ThrottledProgress<T> : IProgress<T>
+src\HanabePhotoManager.Core\Performance\ThrottledProgress.cs:35:    public void Report(T value)
+src\HanabePhotoManager.Core\Performance\ThrottledProgress.cs:53:        public void Report(T value) => report(value);
+src\HanabePhotoManager.Core\Search\ISemanticIndexStore.cs:3:public interface ISemanticIndexStore
+src\HanabePhotoManager.Core\Search\ISemanticSearchService.cs:3:public interface ISemanticSearchService
+src\HanabePhotoManager.Core\Search\SemanticSearchModels.cs:17:public sealed record SemanticIndexEntry(
+src\HanabePhotoManager.Core\Search\SemanticSearchModels.cs:3:public sealed record SemanticSearchQuery(string Text, int Limit = 50);
+src\HanabePhotoManager.Core\Search\SemanticSearchModels.cs:5:public sealed record SemanticSearchResult(string FileKey, double Score);
+src\HanabePhotoManager.Core\Search\SemanticSearchModels.cs:7:public sealed record SemanticIndexStatus(
+src\HanabePhotoManager.Infrastructure\Albums\JsonCustomAlbumStore.cs:16:    public JsonCustomAlbumStore(string filePath)
+src\HanabePhotoManager.Infrastructure\Albums\JsonCustomAlbumStore.cs:22:    public async Task<IReadOnlyList<CustomAlbum>> LoadAsync(CancellationToken cancellationToken = default)
+src\HanabePhotoManager.Infrastructure\Albums\JsonCustomAlbumStore.cs:37:    public async Task SaveAsync(IReadOnlyCollection<CustomAlbum> albums, CancellationToken cancellationToken = default)
+src\HanabePhotoManager.Infrastructure\Albums\JsonCustomAlbumStore.cs:6:public sealed class JsonCustomAlbumStore : ICustomAlbumStore
+src\HanabePhotoManager.Infrastructure\Files\DestinationProbe.cs:5:public sealed class DestinationProbe(IFileHasher fileHasher) : IDestinationProbe
+src\HanabePhotoManager.Infrastructure\Files\DestinationProbe.cs:9:    public async Task<ConflictKind> CheckAsync(
+src\HanabePhotoManager.Infrastructure\Files\JsonImportJournal.cs:11:    public async Task SaveAsync(ImportPlan plan, string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Files\JsonImportJournal.cs:124:        public override LibraryDate Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+src\HanabePhotoManager.Infrastructure\Files\JsonImportJournal.cs:178:        public override void Write(Utf8JsonWriter writer, LibraryDate value, JsonSerializerOptions options)
+src\HanabePhotoManager.Infrastructure\Files\JsonImportJournal.cs:48:    public async Task<ImportPlan?> LoadAsync(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Files\JsonImportJournal.cs:7:public sealed class JsonImportJournal
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:120:    public async Task<List<List<string>>> FindAllDuplicatesAsync(
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:15:public sealed class LibraryContentScanner
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:19:    public LibraryContentScanner(IFileHasher fileHasher)
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:208:    public async Task<List<List<string>>> FindVisualDuplicatesAsync(
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:29:    public async Task<Dictionary<long, List<string>>> BuildSizeMapAsync(
+src\HanabePhotoManager.Infrastructure\Files\LibraryContentScanner.cs:71:    public async Task<string?> FindContentDuplicateAsync(
+src\HanabePhotoManager.Infrastructure\Files\LibraryDirectoryInitializer.cs:17:    public void EnsureDateTree(string root, LibraryDate date)
+src\HanabePhotoManager.Infrastructure\Files\LibraryDirectoryInitializer.cs:5:public sealed class LibraryDirectoryInitializer
+src\HanabePhotoManager.Infrastructure\Files\LibraryDirectoryInitializer.cs:7:    public static readonly IReadOnlyList<string> CategoryFolders = Array.AsReadOnly(
+src\HanabePhotoManager.Infrastructure\Files\LibraryResequenceService.cs:14:    public static void ResequenceLibrary(string libraryRoot)
+src\HanabePhotoManager.Infrastructure\Files\LibraryResequenceService.cs:45:    public static void ResequenceDirectory(string categoryDir)
+src\HanabePhotoManager.Infrastructure\Files\LibraryResequenceService.cs:8:public static class LibraryResequenceService
+src\HanabePhotoManager.Infrastructure\Files\PersistentAssetStore.cs:17:    public string Import(string sourcePath, string assetName)
+src\HanabePhotoManager.Infrastructure\Files\PersistentAssetStore.cs:3:public sealed class PersistentAssetStore
+src\HanabePhotoManager.Infrastructure\Files\PersistentAssetStore.cs:56:    public string? Find(string assetName)
+src\HanabePhotoManager.Infrastructure\Files\PersistentAssetStore.cs:7:    public PersistentAssetStore(string managedDirectory)
+src\HanabePhotoManager.Infrastructure\Files\PersistentAssetStore.cs:76:    public void Delete(string assetName)
+src\HanabePhotoManager.Infrastructure\Files\RetouchedDirectoryPolicy.cs:10:    public static bool IsReadOnlyRetouchedPath(string libraryRoot, string path)
+src\HanabePhotoManager.Infrastructure\Files\RetouchedDirectoryPolicy.cs:6:public static class RetouchedDirectoryPolicy
+src\HanabePhotoManager.Infrastructure\Files\Sha256FileHasher.cs:6:public sealed class Sha256FileHasher : IFileHasher
+src\HanabePhotoManager.Infrastructure\Files\Sha256FileHasher.cs:8:    public async Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Files\VerifiedFileTransfer.cs:11:public sealed record GroupTransferResult(bool Success, string? Error, IReadOnlyList<VerifiedFileResult> VerifiedFiles);
+src\HanabePhotoManager.Infrastructure\Files\VerifiedFileTransfer.cs:13:public sealed class VerifiedFileTransfer(IFileHasher hasher)
+src\HanabePhotoManager.Infrastructure\Files\VerifiedFileTransfer.cs:17:    public async Task<GroupTransferResult> TransferGroupAsync(
+src\HanabePhotoManager.Infrastructure\Files\VerifiedFileTransfer.cs:9:public sealed record VerifiedFileResult(PlannedFile File, string Sha256);
+src\HanabePhotoManager.Infrastructure\Search\ClipImagePreprocessor.cs:13:    public async Task<float[]> PreprocessAsync(string imagePath, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Search\ClipImagePreprocessor.cs:7:public sealed class ClipImagePreprocessor
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:120:    public void Dispose() { _imageSession?.Dispose(); _textSession?.Dispose(); }
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:20:    public ClipSemanticSearchService(ISemanticIndexStore store, ModelCatalog catalog, ClipImagePreprocessor? preprocessor = null)
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:27:    public SemanticIndexStatus GetIndexStatus()
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:32:    public async Task EnsureIndexAsync(string libraryRoot, IProgress<SemanticIndexStatus>? progress, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:68:    public async Task<IReadOnlyList<SemanticSearchResult>> SearchAsync(string query, int limit, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Search\ClipSemanticSearchService.cs:7:public sealed class ClipSemanticSearchService : ISemanticSearchService, IDisposable
+src\HanabePhotoManager.Infrastructure\Search\ClipTokenizer.cs:15:    public ClipTokenizer(string vocabularyPath)
+src\HanabePhotoManager.Infrastructure\Search\ClipTokenizer.cs:31:    public ClipTokenization Tokenize(string text, int maximumLength = 52)
+src\HanabePhotoManager.Infrastructure\Search\ClipTokenizer.cs:7:public sealed class ClipTokenizer
+src\HanabePhotoManager.Infrastructure\Search\ClipTokenizer.cs:91:public sealed record ClipTokenization(IReadOnlyList<long> TokenIds, IReadOnlyList<long> AttentionMask);
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:13:    public string ImageEncoderPath => Path.Combine(ModelRoot, "image_encoder.onnx");
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:14:    public string TextEncoderPath => Path.Combine(ModelRoot, "text_encoder.onnx");
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:15:    public string VocabularyPath => Path.Combine(ModelRoot, "vocab.txt");
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:16:    public bool IsReady => File.Exists(ImageEncoderPath) && File.Exists(TextEncoderPath) && File.Exists(VocabularyPath);
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:18:    public string GetMissingModelMessage() => IsReady
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:3:public sealed class ModelCatalog
+src\HanabePhotoManager.Infrastructure\Search\ModelCatalog.cs:5:    public ModelCatalog(string? modelRoot = null)
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:20:    public SqliteSemanticIndexStore(string databasePath)
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:27:    public Task UpsertAsync(IReadOnlyList<SemanticIndexEntry> entries, CancellationToken cancellationToken) => ExecuteAsync(async connection =>
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:49:    public Task<IReadOnlyList<SemanticIndexEntry>> GetAllAsync(CancellationToken cancellationToken) => ExecuteAsync(async connection =>
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:60:    public Task<int> CountAsync(CancellationToken cancellationToken) => ExecuteAsync(async connection =>
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:67:    public Task RemoveMissingAsync(IEnumerable<string> existingPaths, CancellationToken cancellationToken)
+src\HanabePhotoManager.Infrastructure\Search\SqliteSemanticIndexStore.cs:7:public sealed class SqliteSemanticIndexStore : ISemanticIndexStore

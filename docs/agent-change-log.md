@@ -897,3 +897,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 
 - 普通复制在写入临时文件时同步计算源文件 SHA-256，消除了复制完成后对源文件的第二次完整读取；临时文件仍会被独立读取并做 SHA-256 比对，保留原有校验、失败回滚和移动模式的源文件变更检查。
 - 传输层新增大文件校验回归测试；Release 构建 0 警告、0 错误，Core 159、Infrastructure 55、App 410、InstallerShell 12，共 636 项测试通过。
+
+### `src/` 可维护性重构基线
+
+- 为生产代码注释与等价精简建立文件、公共 API、WPF Binding/Command/事件/资源键三类基线清单。
+- 基线 Release 构建 0 警告、0 错误；Core 159、Infrastructure 55、App 410、InstallerShell 12，共 636 项测试通过。
+- 后续重构仅处理 `src/`，并以基线清单保护公开接口、WPF 契约、主题资源和现有操作结果。

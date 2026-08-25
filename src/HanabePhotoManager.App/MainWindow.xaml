@@ -906,7 +906,7 @@
                           <Path Data="{StaticResource Icon.Import}" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
                         </Viewbox>
                         <TextBlock Text="拖入相机文件夹" FontWeight="SemiBold" FontSize="{StaticResource Typography.Label}" HorizontalAlignment="Center" />
-                        <TextBlock Text="自动读取 · 自动分类 · 自动生成日期目录" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,6,0,0" />
+                        <TextBlock Text="支持一次拖入多个文件夹 · 自动读取 · 自动分类 · 自动生成日期目录" TextWrapping="Wrap" TextAlignment="Center" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,6,0,0" />
                         <Border Height="1" Background="{DynamicResource Brush.OutlineVariant}" Margin="0,14" />
                         <TextBlock Text="来源" FontWeight="SemiBold" FontSize="{StaticResource Typography.Label}" />
                         <Border Margin="0,8,0,0" Padding="10,8" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
@@ -915,7 +915,7 @@
                         <Grid Margin="0,10,0,0">
                           <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="8" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                           <Button Grid.Column="0" Content="选择来源文件夹" Style="{StaticResource Button.Secondary}" Command="{Binding BrowseSourceCommand}" Padding="10,7" />
-                          <Button Grid.Column="2" Content="选择多个文件" Style="{StaticResource Button.Secondary}" Command="{Binding BrowseSourceFilesCommand}" Padding="10,7" />
+                          <Button Grid.Column="2" Content="选择多个文件夹" Style="{StaticResource Button.Secondary}" Command="{Binding BrowseSourceFoldersCommand}" Padding="10,7" />
                         </Grid>
                       </StackPanel>
                     </Border>

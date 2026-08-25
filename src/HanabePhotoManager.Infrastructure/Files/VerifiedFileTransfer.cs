@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using HanabePhotoManager.Core.Imports;
@@ -94,15 +95,20 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                             File.Delete(file.TemporaryPath);
                         }
 
+                        string sourceHash;
                         await using (var temporaryStream = new FileStream(
                                          file.TemporaryPath,
                                          FileMode.CreateNew,
                                          FileAccess.Write,
                                          FileShare.None,
-                                         bufferSize: 1024 * 64,
+                                         bufferSize: 1024 * 1024,
                                          options: FileOptions.Asynchronous | FileOptions.SequentialScan))
                         {
-                            await lease.Stream.CopyToAsync(temporaryStream, 1024 * 64, cancellationToken).ConfigureAwait(false);
+                            sourceHash = await CopyAndComputeSha256Async(
+                                    lease.Stream,
+                                    temporaryStream,
+                                    cancellationToken)
+                                .ConfigureAwait(false);
                             await temporaryStream.FlushAsync(cancellationToken).ConfigureAwait(false);
                         }
 
@@ -113,8 +119,6 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                             return Failure($"临时文件大小不匹配：{file.TemporaryPath}", verifiedFiles);
                         }
 
-                        lease.Stream.Position = 0;
-                        var sourceHash = await ComputeSha256Async(lease.Stream, cancellationToken).ConfigureAwait(false);
                         var temporaryHash = await _hasher
                             .ComputeSha256Async(file.TemporaryPath, cancellationToken)
                             .ConfigureAwait(false);
@@ -268,6 +272,39 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
     {
         var hash = await SHA256.HashDataAsync(stream, cancellationToken).ConfigureAwait(false);
         return Convert.ToHexString(hash);
+    }
+
+    private static async Task<string> CopyAndComputeSha256Async(
+        Stream source,
+        Stream destination,
+        CancellationToken cancellationToken)
+    {
+        var buffer = ArrayPool<byte>.Shared.Rent(1024 * 1024);
+        try
+        {
+            using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            while (true)
+            {
+                var bytesRead = await source
+                    .ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
+                    .ConfigureAwait(false);
+                if (bytesRead == 0)
+                {
+                    break;
+                }
+
+                hasher.AppendData(buffer, 0, bytesRead);
+                await destination
+                    .WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            return Convert.ToHexString(hasher.GetHashAndReset());
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     private static FileStream OpenSourceLeaseStream(string sourcePath)

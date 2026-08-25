@@ -1,29 +1,25 @@
-using WinForms = System.Windows.Forms;
 using System.IO;
 
 namespace HanabePhotoManager.App.Imports;
 
 public interface IImportSourcePicker
 {
-    IReadOnlyList<string> PickFiles(string initialDirectory);
+    IReadOnlyList<string> PickFolders(string initialDirectory);
 }
 
-public sealed class WinFormsImportSourcePicker : IImportSourcePicker
+public sealed class WindowsImportSourcePicker : IImportSourcePicker
 {
-    public IReadOnlyList<string> PickFiles(string initialDirectory)
+    public IReadOnlyList<string> PickFolders(string initialDirectory)
     {
-        using var dialog = new WinForms.OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "选择要导入的照片或视频",
-            Filter = "媒体文件|*.jpg;*.jpeg;*.png;*.heic;*.dng;*.cr2;*.cr3;*.nef;*.arw;*.raf;*.rw2;*.orf;*.mp4;*.mov|所有文件 (*.*)|*.*",
+            Title = "选择一个或多个相机来源文件夹",
             InitialDirectory = Directory.Exists(initialDirectory) ? initialDirectory : string.Empty,
-            Multiselect = true,
-            CheckFileExists = true,
-            CheckPathExists = true
+            Multiselect = true
         };
 
-        return dialog.ShowDialog() == WinForms.DialogResult.OK
-            ? dialog.FileNames
+        return dialog.ShowDialog() == true
+            ? dialog.FolderNames
             : Array.Empty<string>();
     }
 }

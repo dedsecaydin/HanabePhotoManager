@@ -171,7 +171,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     // 本次会话已弹过「添加备注」窗口的日期：同批日期只提示一次，避免拖入分析后
     // 再点“开始分析与导入”重复弹窗。
     private readonly HashSet<LibraryDate> _dateRemarksPromptedFor = [];
-    private readonly IImportSourcePicker _importSourcePicker = new WinFormsImportSourcePicker();
+    private readonly IImportSourcePicker _importSourcePicker = new WindowsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
     private int _previewScanVersion;
@@ -320,7 +320,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ChangeCustomAlbumsDirectoryCommand = new AsyncRelayCommand(ChangeCustomAlbumsDirectoryAsync, CanRunCommand);
         ResetCustomAlbumsDirectoryCommand = new RelayCommand(ResetCustomAlbumsDirectory);
         BrowseSourceCommand = new AsyncRelayCommand(BrowseSourceAsync, CanRunCommand);
-        BrowseSourceFilesCommand = new AsyncRelayCommand(BrowseSourceFilesAsync, CanRunCommand);
+        BrowseSourceFoldersCommand = new AsyncRelayCommand(BrowseSourceFoldersAsync, CanRunCommand);
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
         AnalyzeAndImportCommand = new AsyncRelayCommand(AnalyzeAndImportAsync, CanAnalyzeAndImport);
@@ -862,7 +862,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IAsyncRelayCommand BrowseSourceCommand { get; }
 
-    public IAsyncRelayCommand BrowseSourceFilesCommand { get; }
+    public IAsyncRelayCommand BrowseSourceFoldersCommand { get; }
 
     public IAsyncRelayCommand AnalyzeSourceCommand { get; }
 
@@ -3043,12 +3043,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         var droppedPaths = paths
-            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Where(path => !string.IsNullOrWhiteSpace(path) && Directory.Exists(path))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
         if (droppedPaths.Length == 0)
         {
+            ImportReport = "拖入内容中没有可用文件夹。导入区仅支持拖入一个或多个相机文件夹。";
+            StatusMessage = "请拖入相机文件夹，而不是单个文件。";
             return;
         }
 
@@ -6752,6 +6754,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         BrowseLibraryCommand.NotifyCanExecuteChanged();
         BrowseSourceCommand.NotifyCanExecuteChanged();
+        BrowseSourceFoldersCommand.NotifyCanExecuteChanged();
         AnalyzeSourceCommand.NotifyCanExecuteChanged();
         ImportSelectedCommand.NotifyCanExecuteChanged();
         AnalyzeAndImportCommand.NotifyCanExecuteChanged();

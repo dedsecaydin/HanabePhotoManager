@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using HanabePhotoManager.Core.Imports;
+using System.Security.Cryptography;
 using HanabePhotoManager.Infrastructure.Files;
 
 namespace HanabePhotoManager.Infrastructure.Tests.Files;
@@ -23,6 +24,23 @@ public sealed class VerifiedFileTransferTests
         File.Exists(file.TemporaryPath).Should().BeFalse();
         File.ReadAllBytes(file.DestinationPath).Should().Equal(1, 2, 3);
         result.VerifiedFiles.Should().ContainSingle().Which.File.Should().Be(file);
+    }
+
+    [Fact]
+    public async Task TransferGroupAsync_LargeCopyReturnsTheSourceSha256AfterDestinationVerification()
+    {
+        using var workspace = new TransferWorkspace();
+        var contents = Enumerable.Range(0, 2 * 1024 * 1024 + 17).Select(index => (byte)(index % 251)).ToArray();
+        var source = workspace.WriteSource("large.raw", contents);
+        var file = workspace.Plan(source, "RAW生图", ConflictKind.None);
+
+        var result = await new VerifiedFileTransfer(new Sha256FileHasher())
+            .TransferGroupAsync(CreateItem(file), deleteSourcesAfterVerify: false, CancellationToken.None);
+
+        result.Success.Should().BeTrue(result.Error);
+        result.VerifiedFiles.Should().ContainSingle().Which.Sha256
+            .Should().Be(Convert.ToHexString(SHA256.HashData(contents)));
+        File.ReadAllBytes(file.DestinationPath).Should().Equal(contents);
     }
 
     [Fact]

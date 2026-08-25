@@ -8,10 +8,10 @@ namespace HanabePhotoManager.App.ViewModels;
 
 public sealed partial class MainWindowViewModel
 {
-    private Task BrowseSourceFilesAsync()
+    private Task BrowseSourceFoldersAsync()
     {
-        var selectedPaths = _importSourcePicker.PickFiles(SourceFolder)
-            .Where(File.Exists)
+        var selectedPaths = _importSourcePicker.PickFolders(SourceFolder)
+            .Where(Directory.Exists)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         if (selectedPaths.Length == 0)
@@ -26,9 +26,9 @@ public sealed partial class MainWindowViewModel
         ImportSections.Clear();
         SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
-        ImportReport = $"已选择 {selectedPaths.Length} 个文件，尚未开始分析。";
-        ImportActionHint = "已保留 Ctrl/Shift 多选文件；点击“开始分析与导入”后加入同一导入队列。";
-        StatusMessage = $"已选择 {selectedPaths.Length} 个来源文件。";
+        ImportReport = $"已选择 {selectedPaths.Length} 个来源文件夹，尚未开始分析。";
+        ImportActionHint = "已保留 Ctrl/Shift 多选文件夹；点击“开始分析与导入”后加入同一导入队列。";
+        StatusMessage = $"已选择 {selectedPaths.Length} 个来源文件夹。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
         NotifyCommandStates();

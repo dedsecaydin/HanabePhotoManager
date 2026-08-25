@@ -6,8 +6,7 @@ using HanabePhotoManager.App.ViewModels;
 namespace HanabePhotoManager.App.People;
 
 /// <summary>
-/// Modal picker that lets the user choose the target person for a merge. The
-/// current person is excluded from the candidate list by the caller.
+/// 人物合并目标选择窗口；调用方需预先从候选集合排除当前人物。
 /// </summary>
 public partial class MergePersonDialog : Window
 {

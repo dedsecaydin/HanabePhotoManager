@@ -3,6 +3,9 @@ using System.Windows.Input;
 
 namespace HanabePhotoManager.App;
 
+/// <summary>
+/// 删除前的模态确认窗口，同时向用户说明配对 RAW/JPG 后的实际文件数量。
+/// </summary>
 public partial class DeleteConfirmationWindow : Window
 {
     public DeleteConfirmationWindow(string message, int selectedCount, int actualFileCount)

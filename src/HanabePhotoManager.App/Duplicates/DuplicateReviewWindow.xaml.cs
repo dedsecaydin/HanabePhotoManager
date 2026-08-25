@@ -7,6 +7,9 @@ using WpfCheckBox = System.Windows.Controls.CheckBox;
 
 namespace HanabePhotoManager.App;
 
+/// <summary>
+/// 重复内容复核窗口，让用户逐组选择需要删除的副本并保留最终决定。
+/// </summary>
 public partial class DuplicateReviewWindow : Window
 {
     private readonly List<DuplicateItem> _items = [];

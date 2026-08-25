@@ -14,6 +14,12 @@ using HanabePhotoManager.Core.Imports;
 
 namespace HanabePhotoManager.App;
 
+/// <summary>
+/// 主窗口视图适配层，负责导航、图库输入手势、拖放、选择框、主题动画与窗口状态。
+/// </summary>
+/// <remarks>
+/// 业务状态属于 <see cref="MainWindowViewModel"/>；此处仅保留必须接触 WPF 视觉树和输入设备的逻辑。
+/// </remarks>
 public partial class MainWindow : Window
 {
     private static readonly ImageSource DefaultAppIcon = BitmapFrame.Create(

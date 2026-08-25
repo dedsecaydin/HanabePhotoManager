@@ -13,6 +13,12 @@ using WpfSystemColors = System.Windows.SystemColors;
 
 namespace HanabePhotoManager.App.Browsing.Treemap;
 
+/// <summary>
+/// 使用单个 WPF 绘制表面呈现照片空间树、等高图库和全景缩放布局。
+/// </summary>
+/// <remarks>
+/// 控件只负责布局、命中测试和可见项上报；缩略图加载与浏览状态仍由 ViewModel 管理。
+/// </remarks>
 public sealed class PhotoTreemapControl : FrameworkElement
 {
     private const double ViewportPadding = 20;
@@ -35,11 +41,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private double _contentHeight;
     private double _contentWidth;
 
-    // Memoization for the custom-rendered treemap. The derived item groups
-    // (root categories / per-category children) and the justified layouts depend
-    // only on the ItemsSource identity, the active RootKey, and the container
-    // width. Reusing them across scroll frames keeps OnRender O(visible) instead
-    // of re-walking and re-laying out every item on each frame.
+    // 自绘布局只依赖 ItemsSource 实例、当前 RootKey 和容器宽度；跨滚动帧复用派生分组与布局，
+    // 可将 OnRender 的主要工作限制在可见项，避免每帧重新遍历和排列整个图库。
     private object? _layoutCacheItemsSource;
     private string? _layoutCacheRootKey;
     private double _layoutCacheWidth = double.NaN;
@@ -51,26 +54,23 @@ public sealed class PhotoTreemapControl : FrameworkElement
     private string? _hoveredKey;
 
     /// <summary>
-    /// Total content height of all items. Used by the code-behind's
-    /// UpdateTreemapSize to grow the control beyond the viewport.
+    /// 所有项目的内容总高度，供代码后置将控件扩展到视口之外。
     /// </summary>
     internal double ContentHeight => _contentHeight;
 
     /// <summary>
-    /// Total content width of all items. Used by the code-behind's
-    /// UpdateTreemapSize to enable horizontal scrolling.
+    /// 所有项目的内容总宽度，供代码后置启用横向滚动。
     /// </summary>
     internal double ContentWidth => _contentWidth;
 
     /// <summary>
-    /// FullPaths of non-container tiles currently intersecting the visible rect,
-    /// ordered by distance from viewport center (closest first).
-    /// Populated during OnRender; read after render completes.
+    /// 当前与可见区域相交的非容器项目路径，按到视口中心的距离由近到远排列。
+    /// 在 <c>OnRender</c> 中更新，渲染结束后由缩略图调度器读取。
     /// </summary>
     internal IReadOnlyList<string> VisibleItemPaths => _visiblePaths;
 
     /// <summary>
-    /// Subset of VisibleItemPaths whose Thumbnail is still null.
+    /// <see cref="VisibleItemPaths"/> 中尚未生成缩略图的路径子集。
     /// </summary>
     internal IReadOnlyList<string> VisibleItemPathsNeedingThumbnail => _visibleWithoutThumbnail;
 
@@ -177,8 +177,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
     }
 
     /// <summary>
-    /// Current Ctrl+wheel scale. The lowest semantic band renders a dense
-    /// panorama instead of shrinking ordinary treemap cells into noise.
+    /// 当前 Ctrl+滚轮缩放比例；最低语义层级改用密集全景，避免普通单元格缩小成视觉噪声。
     /// </summary>
     public double ZoomScale
     {
@@ -443,7 +442,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var tileRect = new Rect(categoryTile.Bounds.X, categoryTile.Bounds.Y,
                 categoryTile.Bounds.Width, categoryTile.Bounds.Height);
 
-            // Track full content bounds for scrolling
+            // 持续扩展完整内容边界，供外层 ScrollViewer 计算滚动范围。
             var right = categoryTile.Bounds.X + categoryTile.Bounds.Width;
             var bottom = categoryTile.Bounds.Y + categoryTile.Bounds.Height;
             if (right > maxRight) maxRight = right;
@@ -470,15 +469,13 @@ public sealed class PhotoTreemapControl : FrameworkElement
             var children = ChildrenOf(categoryTile.Item.Key);
             if (children.Count == 0) continue;
 
-            // Semantic zoom: very small category cells stay as labelled area
-            // summaries.  Rendering photo strips there is both illegible and
-            // needlessly schedules thumbnail work.
+            // 语义缩放：过小的分类区域只显示文字摘要，避免不可读的图片条和无意义缩略图任务。
             if (childWidth < 160 || childHeight < 120)
             {
                 continue;
             }
 
-            // Justified gallery layout for inner category tiles (memoized).
+            // 分类内部采用带缓存的等高图库布局。
             var justifiedItems = GetCategoryLayout(categoryTile.Item.Key, children, childWidth);
 
             var childOffsetX = categoryTile.Bounds.X + inset;
@@ -541,7 +538,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var justifiedItems = GetSubtreeLayout(children, bounds.Width);
         var gap = ResourceDouble("Spacing.Hairline", 2);
 
-        // Calculate full content dimensions
+        // 汇总完整内容尺寸，供外层滚动容器使用。
         var totalHeight = 0.0;
         var maxRight = 0.0;
         if (justifiedItems.Count > 0)
@@ -597,8 +594,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
     }
 
     /// <summary>
-    /// Resets the derived-group and layout memo caches whenever the ItemsSource
-    /// identity, the active RootKey, or the container width changes.
+    /// 当 ItemsSource 实例、RootKey 或容器宽度变化时重建派生分组与布局缓存。
     /// </summary>
     private void EnsureLayoutCache(double width)
     {
@@ -682,10 +678,8 @@ public sealed class PhotoTreemapControl : FrameworkElement
     }
 
     /// <summary>
-    /// Returns the index range [start, end) of a justified item list whose rows
-    /// vertically overlap the span [topY, bottomY]. Justified rows are laid out
-    /// top-to-bottom with monotonically non-decreasing Y, so a binary search
-    /// skips the off-screen prefix instead of walking every item on each frame.
+    /// 返回与垂直区间 [topY, bottomY] 重叠的等高布局项目索引范围 [start, end)。
+    /// 项目 Y 值单调递增，因此可用二分查找跳过屏幕外前缀，避免每帧遍历全部项目。
     /// </summary>
     private static (int Start, int End) VisibleRowRange(
         IReadOnlyList<JustifiedItem> items,
@@ -746,7 +740,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             if (item.Thumbnail is not null) _debugThumbnailCount++;
         }
 
-        // Collect visible items for viewport-driven loading
+        // 收集可见项目，驱动按视口加载缩略图。
         if (!item.IsContainer && !string.IsNullOrEmpty(item.FullPath))
         {
             _visiblePaths.Add(item.FullPath);
@@ -758,12 +752,11 @@ public sealed class PhotoTreemapControl : FrameworkElement
         var isHovered = !item.IsContainer &&
             string.Equals(item.Key, _hoveredKey, StringComparison.Ordinal);
 
-        // In justified/borderless mode, skip background fill for non-container tiles
-        // so images flow seamlessly edge-to-edge
+        // 等高无边框模式不填充普通项目背景，让相邻图片无缝衔接。
         var isPanorama = IsPanoramaZoom(ZoomScale);
         if (!item.IsContainer && (IsBorderless || isPanorama))
         {
-            // No background fill — just draw image and extension badge
+            // 仅绘制图片与扩展名徽标，不额外铺底。
             if (item.Thumbnail is not null && CanDrawThumbnail(rect, isPanorama))
             {
                 DrawThumbnail(drawingContext, item.Thumbnail, rect, 0);
@@ -780,7 +773,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
                 drawingContext.DrawRectangle(null, new MediaPen(hoverBorder, 1.5), rect);
             }
 
-            // Extension badge
+            // 文件扩展名徽标。
             if (!isPanorama)
             {
                 DrawExtensionBadge(drawingContext, item, rect, gap);
@@ -805,7 +798,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
             drawBorder ? new MediaPen(border, isSelected ? 2 : 1) : null,
             rect, radius, radius);
 
-        // Container header — draw category name at the top
+        // 容器标题绘制在分类区域顶部。
         if (drawContainerHeader && item.IsContainer && !string.IsNullOrWhiteSpace(item.Label))
         {
             var headerHeight = Math.Min(
@@ -872,7 +865,7 @@ public sealed class PhotoTreemapControl : FrameworkElement
 
         if (DebugOverlay && !item.IsContainer)
         {
-            // Green border = has thumbnail  /  Gray border = no thumbnail
+            // 绿色边框表示已有缩略图，灰色表示尚未加载。
             var debugBorderColor = item.Thumbnail is not null
                 ? System.Windows.Media.Brushes.LimeGreen
                 : System.Windows.Media.Brushes.Gray;
@@ -967,6 +960,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
     }
 }
 
+/// <summary>
+/// 将已绘制项目与其命中区域关联，供鼠标选择和打开操作使用。
+/// </summary>
 public sealed record TreemapHitRegion(TreemapItemViewModel Item, TreemapBounds Bounds)
 {
     public string AutomationName => Item.IsContainer

@@ -4,6 +4,9 @@ using System.Windows.Media.Imaging;
 
 namespace HanabePhotoManager.App.Duplicates;
 
+/// <summary>
+/// 单个重复文件决策窗口，对比待导入文件与图库中的现有文件。
+/// </summary>
 public partial class ImportDuplicateDecisionWindow : Window
 {
     private readonly string _existingPath;

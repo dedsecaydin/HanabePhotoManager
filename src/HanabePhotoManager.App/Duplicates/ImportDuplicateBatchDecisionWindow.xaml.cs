@@ -3,6 +3,9 @@ using System.IO;
 
 namespace HanabePhotoManager.App.Duplicates;
 
+/// <summary>
+/// 批量重复文件决策窗口，统一选择跳过、仍导入或逐项确认。
+/// </summary>
 public partial class ImportDuplicateBatchDecisionWindow : Window
 {
     public ImportDuplicateBatchDecision Decision { get; private set; } = ImportDuplicateBatchDecision.SkipAll;

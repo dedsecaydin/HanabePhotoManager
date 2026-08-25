@@ -4,6 +4,9 @@ using WinForms = System.Windows.Forms;
 
 namespace HanabePhotoManager.App.Compression;
 
+/// <summary>
+/// 图片工具页面的视图适配层，连接压缩/水印工作区与文件选择对话框。
+/// </summary>
 public partial class CompressionPage : System.Windows.Controls.UserControl
 {
     private CompressionViewModel? _viewModel;

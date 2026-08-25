@@ -4,19 +4,46 @@ using System.Windows.Input;
 
 namespace HanabePhotoManager.App.Watermark;
 
+/// <summary>
+/// 水印编辑视图，负责文件拖放、预览画布定位和导出对话框。
+/// </summary>
 public partial class WatermarkPage : System.Windows.Controls.UserControl
 {
     private bool _isDraggingWatermark;
 
     public WatermarkPage() => InitializeComponent();
+
     private WatermarkViewModel? ViewModel => DataContext as WatermarkViewModel;
-    private void Page_DragOver(object sender, System.Windows.DragEventArgs e) { e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop) ? System.Windows.DragDropEffects.Copy : System.Windows.DragDropEffects.None; e.Handled = true; }
+
+    private void Page_DragOver(object sender, System.Windows.DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop)
+            ? System.Windows.DragDropEffects.Copy
+            : System.Windows.DragDropEffects.None;
+        e.Handled = true;
+    }
+
     private void Page_Drop(object sender, System.Windows.DragEventArgs e)
     {
-        if (ViewModel is null || e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths) return;
-        var png = paths.Length == 1 && string.Equals(System.IO.Path.GetExtension(paths[0]), ".png", StringComparison.OrdinalIgnoreCase);
-        if (png && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift)) ViewModel.SetWatermark(paths[0]); else ViewModel.AddInputs(paths);
+        if (ViewModel is null ||
+            e.Data.GetData(System.Windows.DataFormats.FileDrop) is not string[] paths)
+        {
+            return;
+        }
+
+        // Shift+拖入单个 PNG 表示更换水印；其余拖入均作为待处理图片加入。
+        var isSinglePng = paths.Length == 1 &&
+            string.Equals(System.IO.Path.GetExtension(paths[0]), ".png", StringComparison.OrdinalIgnoreCase);
+        if (isSinglePng && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            ViewModel.SetWatermark(paths[0]);
+        }
+        else
+        {
+            ViewModel.AddInputs(paths);
+        }
     }
+
     private void Preview_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         _isDraggingWatermark = true;
@@ -26,7 +53,10 @@ public partial class WatermarkPage : System.Windows.Controls.UserControl
 
     private void Preview_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
     {
-        if (_isDraggingWatermark && e.LeftButton == MouseButtonState.Pressed) UpdateWatermarkPosition(e);
+        if (_isDraggingWatermark && e.LeftButton == MouseButtonState.Pressed)
+        {
+            UpdateWatermarkPosition(e);
+        }
     }
 
     private void Preview_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)

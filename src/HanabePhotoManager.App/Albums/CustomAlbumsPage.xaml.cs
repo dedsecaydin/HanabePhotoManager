@@ -6,6 +6,9 @@ using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.Albums;
 
+/// <summary>
+/// 自定义相册页面的视图适配层，负责文件夹选择、相册/照片选中与详情面板切换。
+/// </summary>
 public partial class CustomAlbumsPage : System.Windows.Controls.UserControl
 {
     private readonly PhotoDetailMetadataReader _metadataReader = new();

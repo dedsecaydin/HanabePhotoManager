@@ -8,6 +8,9 @@ using Microsoft.Web.WebView2.Core;
 
 namespace HanabePhotoManager.App.Map;
 
+/// <summary>
+/// 地图照片页面的 WebView2 适配层，负责地图初始化、标记同步与缩略图消息通信。
+/// </summary>
 public partial class MapPage : System.Windows.Controls.UserControl, IDisposable
 {
     private MapPhotosViewModel? _viewModel;

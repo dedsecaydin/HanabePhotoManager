@@ -1,7 +1,7 @@
 namespace HanabePhotoManager.App;
 
 /// <summary>
-/// Interaction logic for App.xaml
+/// 应用程序入口，负责单实例约束、启动参数、全局异常处理和主窗口生命周期。
 /// </summary>
 public partial class App : System.Windows.Application
 {

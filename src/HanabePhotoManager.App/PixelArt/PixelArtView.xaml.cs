@@ -2,6 +2,9 @@ using System.Windows;
 
 namespace HanabePhotoManager.App.PixelArt;
 
+/// <summary>
+/// 像素画工具视图，负责选择源图片和导出处理结果。
+/// </summary>
 public partial class PixelArtView : System.Windows.Controls.UserControl
 {
     public PixelArtView() => InitializeComponent();

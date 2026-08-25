@@ -18,6 +18,9 @@ using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 
 namespace HanabePhotoManager.App;
 
+/// <summary>
+/// 无边框照片/视频查看器，负责媒体渲染、缩放平移、播放控制与沉浸式工具栏。
+/// </summary>
 public partial class PhotoViewerWindow : Window
 {
     private readonly PhotoViewerViewModel _viewModel;

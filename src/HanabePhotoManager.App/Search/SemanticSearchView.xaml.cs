@@ -3,6 +3,9 @@ using System.Windows;
 
 namespace HanabePhotoManager.App.Search;
 
+/// <summary>
+/// 语义搜索结果视图，保留双击结果打开媒体的 WPF 输入适配。
+/// </summary>
 public partial class SemanticSearchView : System.Windows.Controls.UserControl
 {
     public SemanticSearchView() => InitializeComponent();

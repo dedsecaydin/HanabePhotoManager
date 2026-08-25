@@ -6,6 +6,9 @@ using HanabePhotoManager.App.ViewModels;
 
 namespace HanabePhotoManager.App;
 
+/// <summary>
+/// 设置中心视图适配层，负责二级导航、主题预览和需要读取视觉树的交互同步。
+/// </summary>
 public partial class SettingsCenterPage : System.Windows.Controls.UserControl
 {
     public SettingsCenterPage() => InitializeComponent();

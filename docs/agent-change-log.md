@@ -903,3 +903,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 为生产代码注释与等价精简建立文件、公共 API、WPF Binding/Command/事件/资源键三类基线清单。
 - 基线 Release 构建 0 警告、0 错误；Core 159、Infrastructure 55、App 410、InstallerShell 12，共 636 项测试通过。
 - 后续重构仅处理 `src/`，并以基线清单保护公开接口、WPF 契约、主题资源和现有操作结果。
+
+### Core 领域层注释与等价精简
+
+- 为 Core 的相册、导入、空间树、性能策略和语义搜索共 20 个生产文件补充中文 XML 契约注释与关键算法原因批注。
+- 使用 `Math.Clamp` 简化等高相册行高限制，并以 Span 顺序比较替代自然排序中的临时字符串分配；排序和布局结果保持不变。
+- 公共 API 声明集合与重构基线一致；Core Release 构建 0 警告、0 错误，159 项测试全部通过。

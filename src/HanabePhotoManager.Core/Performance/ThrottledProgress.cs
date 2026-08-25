@@ -1,5 +1,9 @@
 namespace HanabePhotoManager.Core.Performance;
 
+/// <summary>
+/// 以最小时间间隔转发进度快照，避免高频任务持续占用 UI Dispatcher。
+/// </summary>
+/// <typeparam name="T">进度值类型。</typeparam>
 public sealed class ThrottledProgress<T> : IProgress<T>
 {
     private readonly IProgress<T> _inner;
@@ -8,11 +12,13 @@ public sealed class ThrottledProgress<T> : IProgress<T>
     private readonly object _gate = new();
     private DateTimeOffset? _lastReportAt;
 
+    /// <summary>包装已有进度接收器，并使用系统 UTC 时钟节流。</summary>
     public ThrottledProgress(IProgress<T> inner, TimeSpan minimumInterval)
         : this(inner, minimumInterval, () => DateTimeOffset.UtcNow)
     {
     }
 
+    /// <summary>包装委托；可注入时钟以支持确定性的时间相关测试。</summary>
     public ThrottledProgress(Action<T> report, TimeSpan minimumInterval, Func<DateTimeOffset>? clock = null)
         : this(new DelegateProgress(report), minimumInterval, clock ?? (() => DateTimeOffset.UtcNow))
     {
@@ -32,6 +38,9 @@ public sealed class ThrottledProgress<T> : IProgress<T>
         _clock = clock;
     }
 
+    /// <summary>
+    /// 在线程安全的临界区内判断是否转发；真正的回调在锁外执行，避免接收器重入死锁。
+    /// </summary>
     public void Report(T value)
     {
         lock (_gate)

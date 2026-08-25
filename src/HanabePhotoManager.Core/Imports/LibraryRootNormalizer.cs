@@ -10,13 +10,12 @@ namespace HanabePhotoManager.Core.Imports;
 /// </summary>
 public static class LibraryRootNormalizer
 {
-    /// <summary>用真实文件系统探测目录可访问性。</summary>
+    /// <summary>使用真实文件系统探测目录可访问性并规范化照片库根路径。</summary>
     public static string? Normalize(string? path)
         => Normalize(path, directoryExists: null);
 
     /// <summary>
-    /// 可注入目录探测器的规范化入口（测试用：注入固定返回值即可确定性验证 UNC 分支，
-    /// 不依赖真实网络共享是否在线）。
+    /// 可注入目录探测器的规范化入口；用于确定性验证 UNC 分支而不依赖真实共享在线状态。
     /// </summary>
     public static string? Normalize(string? path, Func<string, bool>? directoryExists)
     {

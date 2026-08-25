@@ -2,6 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.Core.Imports;
 
+/// <summary>
+/// 按文件名规则、内置容器扩展名和用户扩展名对导入媒体进行初步分类。
+/// </summary>
 public sealed partial class MediaClassifier
 {
     private static readonly HashSet<string> BuiltInExtensions = new(
@@ -11,6 +14,7 @@ public sealed partial class MediaClassifier
     private readonly HashSet<string> _rawExtensions;
     private readonly HashSet<string> _customVideoExtensions;
 
+    /// <summary>创建分类器并验证自定义 RAW/视频扩展名不与内置格式冲突。</summary>
     public MediaClassifier(IEnumerable<string> rawExtensions, IEnumerable<string>? videoExtensions = null)
     {
         ArgumentNullException.ThrowIfNull(rawExtensions);
@@ -26,6 +30,9 @@ public sealed partial class MediaClassifier
                 StringComparer.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// 返回单个文件的建议类别；无法识别的文件会保留为待确认而不会被静默忽略。
+    /// </summary>
     public ImportCandidate Classify(SourceMediaFile file)
     {
         ArgumentNullException.ThrowIfNull(file);

@@ -9,12 +9,14 @@ namespace HanabePhotoManager.Core.Imports;
 /// </summary>
 public static class ImportNamingFormatter
 {
+    /// <summary>未配置模板时使用的兼容命名格式。</summary>
     public const string DefaultTemplate = "JK{seq}";
 
     private static readonly Regex SequencePattern = new(
         @"\{seq(?::(\d+))?\}",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    /// <summary>展开序号、原文件名和日期占位符，生成不含扩展名的目标名称。</summary>
     public static string Format(string? template, int sequence, string originalStem, LibraryDate date)
     {
         var effective = string.IsNullOrWhiteSpace(template) ? DefaultTemplate : template;
@@ -32,6 +34,7 @@ public static class ImportNamingFormatter
         return result;
     }
 
+    /// <summary>判断模板是否保留原文件名，以决定是否需要同扩展名序号后缀。</summary>
     public static bool UsesOriginalName(string? template)
     {
         var effective = string.IsNullOrWhiteSpace(template) ? DefaultTemplate : template;

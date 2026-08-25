@@ -1,9 +1,8 @@
 namespace HanabePhotoManager.Core.Browsing.Treemap;
 
 /// <summary>
-/// Lays every photo out as a dense, viewport-scaled panorama wall for the
-/// lowest semantic zoom band. The logical canvas grows as zoom decreases so
-/// the rendered thumbnails retain their minimum recognizable size.
+/// 在最低语义缩放区间把全部照片排列为稠密全景墙。缩放越小，逻辑画布越大，
+/// 从而让最终显示的缩略图仍保持可辨认的最小尺寸。
 /// </summary>
 public sealed class PanoramaPhotoLayout
 {
@@ -18,12 +17,13 @@ public sealed class PanoramaPhotoLayout
         _gap = Math.Max(0, gap);
     }
 
+    /// <summary>判断当前缩放是否进入全景照片墙区间。</summary>
     public static bool IsActive(double zoom) =>
         double.IsFinite(zoom) && zoom > 0 && zoom <= SemanticZoomThreshold;
 
     /// <summary>
-    /// Arranges every supplied item in a justified wall. <paramref name="viewportWidth"/>
-    /// is measured in screen pixels; the returned bounds are logical control pixels.
+    /// 将所有项目排列为等高填充墙。<paramref name="viewportWidth"/> 使用屏幕像素，
+    /// 返回矩形使用控件逻辑坐标。
     /// </summary>
     public PanoramaLayoutResult Arrange(
         IReadOnlyList<(double aspectRatio, string? key)> items,
@@ -53,6 +53,7 @@ public sealed class PanoramaPhotoLayout
     }
 }
 
+/// <summary>全景照片墙的项目矩形与逻辑画布尺寸。</summary>
 public sealed record PanoramaLayoutResult(
     IReadOnlyList<JustifiedItem> Items,
     double ContentWidth,

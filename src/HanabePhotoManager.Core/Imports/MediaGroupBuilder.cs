@@ -3,15 +3,22 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.Core.Imports;
 
+/// <summary>
+/// 将主视频与相同目录、相同媒体键的 XML/LRF/AAC 附属文件组合为原子媒体组。
+/// </summary>
 public sealed partial class MediaGroupBuilder(MediaClassifier classifier)
 {
     private readonly MediaClassifier _classifier = classifier ?? throw new ArgumentNullException(nameof(classifier));
 
+    /// <summary>
+    /// 验证并规范化源路径后构建稳定排序的媒体组；重复路径会被明确拒绝。
+    /// </summary>
     public IReadOnlyList<MediaGroup> Build(IEnumerable<SourceMediaFile> files)
     {
         ArgumentNullException.ThrowIfNull(files);
 
         var normalizedFiles = ValidateAndNormalize(files);
+        // 双重排序让仅大小写不同的路径在所有区域设置下仍有确定顺序。
         var sortedFiles = normalizedFiles
             .OrderBy(file => file.PathIdentity, StringComparer.OrdinalIgnoreCase)
             .ThenBy(file => file.PathIdentity, StringComparer.Ordinal)

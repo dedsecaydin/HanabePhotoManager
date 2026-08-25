@@ -1,5 +1,9 @@
 namespace HanabePhotoManager.Core.Imports;
 
+/// <summary>
+/// 把已确认的媒体组转换为目标路径、临时路径和冲突状态完整的不可变导入计划。
+/// </summary>
+/// <remarks>此类型只规划文件；实际复制、校验和删除由 Infrastructure 执行。</remarks>
 public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
 {
     private static readonly IReadOnlyDictionary<MediaCategory, string> CategoryFolders = new Dictionary<MediaCategory, string>
@@ -14,6 +18,9 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
 
     private readonly IDestinationProbe _destinationProbe = destinationProbe ?? throw new ArgumentNullException(nameof(destinationProbe));
 
+    /// <summary>
+    /// 按日期、类别和命名模板规划导入，并在计划内阻止不同源文件占用同一目标路径。
+    /// </summary>
     public async Task<ImportPlan> BuildAsync(
         string root,
         LibraryDate date,
@@ -243,7 +250,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
                         return lengthCompare;
                     }
 
-                    var numericCompare = string.Compare(nx.ToString(), ny.ToString(), StringComparison.Ordinal);
+                    var numericCompare = nx.SequenceCompareTo(ny);
                     if (numericCompare != 0)
                     {
                         return numericCompare;

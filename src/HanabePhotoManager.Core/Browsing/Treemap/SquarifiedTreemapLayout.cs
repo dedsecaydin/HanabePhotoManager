@@ -1,7 +1,13 @@
 namespace HanabePhotoManager.Core.Browsing.Treemap;
 
+/// <summary>
+/// 使用 squarified treemap 算法将带权节点分配为尽量接近正方形的矩形。
+/// </summary>
 public sealed class SquarifiedTreemapLayout
 {
+    /// <summary>
+    /// 过滤无效权重、稳定排序并在给定边界内计算互不重叠的磁贴。
+    /// </summary>
     public IReadOnlyList<TreemapTile> Calculate(
         IReadOnlyList<TreemapNode> nodes,
         TreemapBounds bounds)
@@ -9,6 +15,7 @@ public sealed class SquarifiedTreemapLayout
         ArgumentNullException.ThrowIfNull(nodes);
         ArgumentNullException.ThrowIfNull(bounds);
 
+        // 同权重节点按键排序，保证缓存、测试和连续渲染不会因枚举顺序而抖动。
         var ordered = nodes
             .Where(node => double.IsFinite(node.Weight) && node.Weight > 0)
             .OrderByDescending(node => node.Weight)

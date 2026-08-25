@@ -3,13 +3,20 @@ using System.Text.RegularExpressions;
 
 namespace HanabePhotoManager.Core.Imports;
 
+/// <summary>相机目录日期解析结果，以及需要用户确认的原因。</summary>
 public sealed record DateResolution(
     LibraryDate? Date,
     IReadOnlyList<string> Warnings,
     bool RequiresConfirmation);
 
+/// <summary>
+/// 结合文件夹末尾的月日数字与媒体元数据年份，推断照片库目标日期。
+/// </summary>
 public sealed class CameraFolderDateResolver
 {
+    /// <summary>
+    /// 解析日期；年份缺失、并列或组合成非法自然日时返回待确认结果，而不是猜测。
+    /// </summary>
     public DateResolution Resolve(string folderName, IReadOnlyCollection<int> metadataYears)
     {
         var digitSequence = Regex.Matches(folderName ?? string.Empty, "[0-9]{4,}")

@@ -974,3 +974,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - `0.3.2-alpha.19`: bottom-aligned the multi-select switch and advanced-filter disclosure as one right-aligned 36px action group with consistent spacing; added matching release notes.
 - `0.3.2-alpha.20`: moved category, retouch, rating, and multi-select into one common-filter row, with the advanced-filter disclosure on its own left-aligned second row; added matching release notes.
 - `0.3.2-alpha.20` video follow-up: moved LibVLC initialization off the UI thread, reused one MediaPlayer per viewer window, and enabled hardware decoding plus local-file buffering/late-frame policies; added regression coverage.
+- GitHub presentation: refreshed English, Simplified Chinese, and Japanese READMEs to `0.3.2-alpha.20` / 647 tests, documented the current gallery, watermark, collage, and video improvements, and removed obsolete cloud-drive claims.

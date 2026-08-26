@@ -4,10 +4,10 @@
 
 Hanabe Photo Manager is a Windows desktop photo management tool designed for photographers — especially Cosplay photographers. It combines **Lightroom-style organization**, **Google Photos-style smart search**, and a **Material Design 3 interface** in a local application — your photos always stay on your own hard drive.
 
-![version](https://img.shields.io/badge/version-0.3.0--alpha-blue)
+![version](https://img.shields.io/badge/version-0.3.2--alpha.20-blue)
 ![.NET 8](https://img.shields.io/badge/.NET-8.0-512BD4)
 ![WPF](https://img.shields.io/badge/UI-WPF-lightgrey)
-![tests](https://img.shields.io/badge/tests-926%20passing-brightgreen)
+![tests](https://img.shields.io/badge/tests-647%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 **Read this in:** [English](README.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md)
@@ -23,6 +23,7 @@ Hanabe Photo Manager is a Windows desktop photo management tool designed for pho
 - **Smart filters**: category (RAW / JPG / retouched / video / assets), retouch status, rating, file type
 - **Date calendar**: quickly locate photos by capture date
 - **Ctrl+scroll** to zoom thumbnails instantly
+- Multi-select mode with dark checkmarked selections, proportional scroll progress, and a stable three-pane layout down to its protected minimum size
 
 ### 🔍 Semantic Search (Local AI)
 - **CLIP model semantic retrieval**: type "red dress", "night portrait", "by the river with friends" and the photo wall shows relevant results directly — pure local ONNX inference, photos never leave your machine
@@ -39,6 +40,8 @@ Hanabe Photo Manager is a Windows desktop photo management tool designed for pho
 
 ### 🧰 Batch Tools
 - **Image compression** / **collage** / **watermark** batch processing
+- Drag watermarks directly on the real image; resizing preserves the signature center, while tiled watermarks support dense coverage
+- Optional blurred glass background fills collage gaps when source aspect ratios differ
 - **WeChat sending**: three-step flow (detect WeChat → locate target → batch send)
 - **Duplicate detection**: SHA-256 exact dedup + similarity review, smart dedup on import
 
@@ -47,9 +50,9 @@ Hanabe Photo Manager is a Windows desktop photo management tool designed for pho
 - Custom albums / folder references, card-flow browsing with grid/list toggle
 - Retouched-directory read-only protection (prevents accidentally overwriting originals)
 
-### ☁️ Cloud Drive & Submissions
-- Embedded WebView2 cloud drive client (Baidu Cloud OAuth) with transfer queue management
-- Submission / showcase projects: WebView2 browser + local photo integration
+### 🎬 Video Preview
+- LibVLC-based local video playback with background engine warm-up and a reused player for faster opening
+- Hardware decoding, local-file buffering, late-frame handling, seeking, playback speed, and fullscreen controls
 
 ### 🎨 Material Design 3 Design System
 - **6 themes**: Dynamic Color (indigo) / Forest Green / Violet × light/dark, one-click switching in-app
@@ -92,7 +95,7 @@ dotnet build HanabePhotoManager.sln -c Release
 # Run
 dotnet run --project src/HanabePhotoManager.App
 
-# Test (917 unit tests)
+# Test (647 automated tests)
 dotnet test HanabePhotoManager.sln
 ```
 
@@ -115,7 +118,6 @@ src/
     ├── Search/                       # Semantic search integration
     ├── People/                       # Face recognition & albums
     ├── Compression/ Watermark/       # Batch tools
-    ├── Cloud/                        # Cloud drive client
     └── Themes/                       # Six Material Design 3 theme tokens
 ```
 
@@ -128,8 +130,7 @@ src/
 | Framework | .NET 8 · WPF · MVVM (CommunityToolkit.Mvvm) |
 | Semantic search | ONNX Runtime · CLIP model · SQLite vector index |
 | Face recognition | OpenCvSharp4 · YuNet · SFace (OpenVINO) |
-| Cloud drive | WebView2 · OAuth2 |
-| Testing | xUnit · 917+ unit tests |
+| Testing | xUnit · 647 automated tests |
 
 ---
 
@@ -144,8 +145,8 @@ This project is a complete **vibe coding (AI-assisted development)** case study 
   - **dsh / DeepSeek subagents**: UI refactoring, feature-page design, test completion
   - **Hermes (orchestrator)**: requirement analysis, task breakdown, review, release, operations
 - **Design-first**: every major redesign started with HTML design mockups; XAML was only implemented after the user confirmed the direction
-- **Test-driven**: 917 unit tests guard the project (design-system regression tests automatically catch UI violations such as hardcoded colors or out-of-spec corner radii)
-- **Iteration cadence**: 20% → 60% → 70% → feature-page redesigns (People/Albums/Import/Settings/Tools/Map/Cloud) → 6 themes
+- **Test-driven**: 647 automated tests guard the project (design-system regression tests automatically catch UI violations such as hardcoded colors or out-of-spec corner radii)
+- **Iteration cadence**: 20% → 60% → 70% → feature-page redesigns (People/Albums/Import/Settings/Tools/Map) → 6 themes
 
 ### Key Decisions
 | Decision | Reason |

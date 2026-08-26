@@ -39,20 +39,21 @@ public sealed class NavigationMotionTests
         var xaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("x:Name=\"PrimaryNavigationSelectionIndicator\"");
-        xaml.Should().Contain("x:Name=\"PrimaryNavigationSelectionTransform\"");
+        xaml.Should().NotContain("x:Name=\"PrimaryNavigationSelectionIndicator\"");
+        xaml.Should().NotContain("x:Name=\"PrimaryNavigationSelectionTransform\"");
         xaml.Should().NotContain("x:Name=\"NavSelectionSurface\"");
-        xaml.Should().Contain("x:Name=\"NavIconSurface\"");
+        xaml.Should().NotContain("x:Name=\"NavIconSurface\"");
+        xaml.Should().Contain("MinWidth=\"1440\" MinHeight=\"900\"");
         xaml.Should().Contain("Source=\"{DynamicResource Image.AppLogo}\"");
         xaml.Should().Contain("Motion.Duration.Normal");
         xaml.Should().Contain("KeyboardNavigation.DirectionalNavigation=\"Cycle\"");
         xaml.Should().Contain("KeyboardNavigation.TabNavigation=\"Once\"");
+        xaml.Should().Contain("Name=\"PreviewPhotoScrollViewer\" CanContentScroll=\"True\" VerticalScrollBarVisibility=\"Visible\"");
+        xaml.Should().NotContain("x:Name=\"BrowseImportFab\"");
 
         var code = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
-        code.Should().Contain("UpdatePrimaryNavigationIndicator");
-        code.Should().Contain("TranslateTransform.YProperty");
-        code.Should().Contain("Motion.Easing.Standard");
+        code.Should().NotContain("UpdatePrimaryNavigationIndicator");
         code.Should().Contain("ResetGalleryScrollToFirstDate");
         code.Should().Contain("GetGalleryPanel()?.SetVerticalOffset(0)");
     }

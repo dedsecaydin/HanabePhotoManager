@@ -61,6 +61,7 @@ public partial class DuplicateReviewWindow : Window
                     Margin = new Thickness(16, 2, 0, 2),
                     IsChecked = true
                 };
+                checkbox.SetResourceReference(FrameworkElement.StyleProperty, "Selection.CheckBox");
 
                 var fileName = Path.GetFileName(path);
                 var dirName = Path.GetDirectoryName(path);

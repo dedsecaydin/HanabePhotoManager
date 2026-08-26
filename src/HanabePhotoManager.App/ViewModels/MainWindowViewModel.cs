@@ -81,7 +81,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static readonly IReadOnlyList<string> LibraryPreviewExtensions =
     [
         ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
-        ".mp4", ".mov", ".xml", ".lrf", ".aac"
+        ".mp4", ".mov", ".xml", ".aac"
     ];
 
     private static readonly HashSet<string> ContentScanExtensions = new(

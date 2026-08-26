@@ -209,6 +209,10 @@ public sealed class ControlThemeTests
             FindSourceRoot(), "src", "HanabePhotoManager.App", "App.xaml"));
 
         appXaml.Should().Contain("x:Key=\"GlassScrollTrack\"");
+        appXaml.Should().Contain("x:Key=\"GlassScrollTrack\" Color=\"{DynamicResource Color.OutlineVariant}\"");
+        appXaml.Should().Contain("<Setter Property=\"Background\" Value=\"{DynamicResource Brush.Primary}\" />");
+        appXaml.Should().Contain("Property=\"IsDragging\" Value=\"True\"");
+        appXaml.Should().Contain("Property=\"Background\" Value=\"{DynamicResource Brush.Accent.Pressed}\"");
         appXaml.Should().Contain("<Setter Property=\"Width\" Value=\"12\" />");
         appXaml.Should().Contain("<Setter Property=\"Height\" Value=\"12\" />");
         appXaml.Should().Contain("<Setter Property=\"MinHeight\" Value=\"28\" />");
@@ -216,6 +220,35 @@ public sealed class ControlThemeTests
         appXaml.Should().Contain("Value=\"6\"");
         appXaml.Should().Contain("Value=\"8\"");
         appXaml.Should().Contain("Background=\"{StaticResource GlassScrollTrack}\"");
+    }
+
+    [Fact]
+    public void MainWindow_UsesTheSameContainerRadiusForOuterAndInnerCorners()
+    {
+        var xaml = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        xaml.Should().Contain("WindowChrome CaptionHeight=\"0\"");
+        xaml.Should().Contain("CornerRadius=\"{StaticResource Radius.Container}\" UseAeroCaptionButtons=\"False\"");
+        xaml.Should().NotContain("GlassFrameThickness=\"-1\" CornerRadius=\"0\"");
+    }
+
+    [Fact]
+    public void MultiSelectModeUsesSwitchWhileItemSelectionUsesDarkCheckmarks()
+    {
+        var root = FindSourceRoot();
+        var main = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var duplicateCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Duplicates", "DuplicateReviewWindow.xaml.cs"));
+
+        main.Should().Contain("<CheckBox Content=\"多选\"");
+        main.Should().Contain("<TextBlock Text=\"选择模式\"");
+        main.Should().Contain("<Button Grid.Row=\"1\" Height=\"36\" HorizontalAlignment=\"Left\" Style=\"{StaticResource Button.Disclosure}\"");
+        main.Should().NotContain("Orientation=\"Horizontal\" HorizontalAlignment=\"Right\" VerticalAlignment=\"Bottom\" Margin=\"12,0,0,10\"");
+        main.Should().Contain("IsChecked=\"{Binding IsMultiSelectMode, Mode=TwoWay}\"");
+        main.Should().NotContain("<ToggleButton Style=\"{StaticResource Toggle.ModeButton}\"\n                                        IsChecked=\"{Binding IsMultiSelectMode, Mode=TwoWay}\"");
+        main.Should().Contain("Background=\"{DynamicResource Brush.Overlay.Scrim}\"");
+        main.Should().Contain("Margin=\"8\" Style=\"{DynamicResource Selection.CheckBox}\" ToolTip=\"勾选后可批量操作\"");
+        duplicateCode.Should().Contain("SetResourceReference(FrameworkElement.StyleProperty, \"Selection.CheckBox\")");
     }
 
     [Fact]

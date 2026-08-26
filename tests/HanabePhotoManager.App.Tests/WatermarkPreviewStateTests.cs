@@ -34,6 +34,18 @@ public sealed class WatermarkPreviewStateTests
     }
 
     [Fact]
+    public void SignatureSizeChange_DoesNotMoveItsNormalizedCenter()
+    {
+        var viewModel = new WatermarkViewModel();
+        viewModel.SetNormalizedPosition(0.37, 0.64);
+
+        viewModel.SizeRatio = 0.55;
+
+        viewModel.PreviewCenterX.Should().Be(0.37);
+        viewModel.PreviewCenterY.Should().Be(0.64);
+    }
+
+    [Fact]
     public void WatermarkSource_IsRemovedFromThePhotoQueue()
     {
         var directory = Directory.CreateTempSubdirectory("hanabe-watermark-test-");

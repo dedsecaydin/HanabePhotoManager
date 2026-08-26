@@ -10,6 +10,10 @@ public sealed record WatermarkPlacement(int X, int Y, int Width, int Height, dou
 /// <summary>把归一化水印设置转换为具体导出尺寸下的绘制位置。</summary>
 public static class WatermarkLayoutCalculator
 {
+    /// <summary>自动密度对应的相邻水印间距比例；最高密度允许 12% 轻微重叠。</summary>
+    public static double CalculateAutomaticGapRatio(double density) =>
+        0.40 - (0.52 * Math.Clamp(density, 0, 1));
+
     public static WatermarkPlacement CalculateSingle(int imageWidth, int imageHeight, int markWidth, int markHeight, WatermarkLayoutSettings settings)
     {
         Validate(imageWidth, imageHeight, markWidth, markHeight);
@@ -26,8 +30,8 @@ public static class WatermarkLayoutCalculator
         Validate(imageWidth, imageHeight, markWidth, markHeight);
         var width = Math.Max(1, (int)Math.Round(imageWidth * Math.Clamp(settings.WidthRatio, .03, .6)));
         var height = Math.Max(1, (int)Math.Round(width * markHeight / (double)markWidth));
-        double hGap = settings.Automatic ? .42 - .34 * Math.Clamp(settings.Density, 0, 1) : Math.Clamp(settings.HorizontalGapRatio, 0, 1);
-        double vGap = settings.Automatic ? .38 - .30 * Math.Clamp(settings.Density, 0, 1) : Math.Clamp(settings.VerticalGapRatio, 0, 1);
+        double hGap = settings.Automatic ? CalculateAutomaticGapRatio(settings.Density) : Math.Clamp(settings.HorizontalGapRatio, 0, 1);
+        double vGap = settings.Automatic ? CalculateAutomaticGapRatio(settings.Density) : Math.Clamp(settings.VerticalGapRatio, 0, 1);
         var stepX = Math.Max(1, (int)Math.Round(width * (1 + hGap)));
         var stepY = Math.Max(1, (int)Math.Round(height * (1 + vGap)));
         var angle = settings.Automatic ? -24 : Math.Clamp(settings.RotationDegrees, -90, 90);

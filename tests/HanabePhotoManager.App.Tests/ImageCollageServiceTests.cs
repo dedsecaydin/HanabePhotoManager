@@ -54,6 +54,24 @@ public sealed class ImageCollageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task VerticalCollage_BlurredBackgroundOptionFillsNarrowImageLetterbox()
+    {
+        var red = await CreateImageAsync("wide.png", 20, 10, Color.Red);
+        var blue = await CreateImageAsync("narrow.png", 10, 30, Color.Blue);
+
+        var result = await new ImageCollageService().ComposeAsync(
+            [red, blue],
+            new CollageOptions(_root, CollageOrientation.Vertical, TargetBytes: null, UseBlurredBackground: true),
+            progress: null,
+            CancellationToken.None);
+
+        using var output = await Image.LoadAsync<Rgba32>(result.OutputPath!);
+        output[1, 25].B.Should().BeGreaterThan(80);
+        output[1, 25].R.Should().BeLessThan(80);
+        output[10, 25].B.Should().BeGreaterThan(180);
+    }
+
+    [Fact]
     public async Task Collage_ObservesCancellationBeforeAllocatingTheCanvas()
     {
         var source = await CreateImageAsync("cancel.png", 20, 20, Color.Red);

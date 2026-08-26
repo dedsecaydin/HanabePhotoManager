@@ -1,4 +1,5 @@
 using HanabePhotoManager.App.Watermark;
+using FluentAssertions;
 using System.IO;
 using Xunit;
 
@@ -40,6 +41,17 @@ public sealed class WatermarkLayoutCalculatorTests
     }
 
     [Fact]
+    public void Tiled_MaximumAutomaticDensityAllowsSlightOverlap()
+    {
+        var items = WatermarkLayoutCalculator.CalculateTiled(1200, 800, 300, 100,
+            new WatermarkTileSettings(true, 1, 0.2, 0.2, -25, true, 0.5, 0.2));
+        var firstRow = items.GroupBy(item => item.Y).First(group => group.Count() > 2).OrderBy(item => item.X).ToArray();
+
+        (firstRow[1].X - firstRow[0].X).Should().BeLessThan(firstRow[0].Width);
+        WatermarkLayoutCalculator.CalculateAutomaticGapRatio(1).Should().BeNegative();
+    }
+
+    [Fact]
     public void Tiled_ManualHonorsSpacingRotationAndStagger()
     {
         var items = WatermarkLayoutCalculator.CalculateTiled(1000, 600, 200, 100,
@@ -61,6 +73,8 @@ public sealed class WatermarkLayoutCalculatorTests
         Assert.Contains("Content=\"文件夹批处理\"", xaml);
         Assert.Contains("Command=\"{Binding StartFolderBatchCommand}\"", xaml);
         Assert.Contains("ItemsSource=\"{Binding FolderSources}\"", xaml);
+        Assert.Contains("x:Name=\"SignaturePreview\"", xaml);
+        Assert.DoesNotContain("PreviewHorizontalAlignment", xaml);
     }
 
     private static string FindSourceRoot()

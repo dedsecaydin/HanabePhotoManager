@@ -281,6 +281,8 @@
                               SelectedValuePath="Value" SelectedValue="{Binding CollageOrientation}"
                               Style="{DynamicResource Input.SettingsComboBox}" HorizontalAlignment="Stretch" MaxWidth="Infinity"/>
                     <TextBlock Margin="0,6,0,0" Opacity="0.72"><Run Text="纵向拼接"/><Run Text=" · "/><Run Text="横向拼接"/></TextBlock>
+                    <CheckBox Margin="0,14,0,0" Content="用当前位置图片的虚化玻璃背景填充留白" IsChecked="{Binding CollageUseBlurredBackground}"/>
+                    <TextBlock Text="可选；仅在图片长宽不一致产生留白时生效，清晰原图仍保持居中。" Style="{DynamicResource Status.Description}" Margin="0,7,0,0"/>
                     <CheckBox Margin="0,14,0,0" Content="限制输出文件大小" IsChecked="{Binding CollageLimitOutputSize}"/>
                     <Grid Margin="0,8,0,0" Visibility="{Binding CollageLimitOutputSize, Converter={StaticResource BoolToVis}}">
                       <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>

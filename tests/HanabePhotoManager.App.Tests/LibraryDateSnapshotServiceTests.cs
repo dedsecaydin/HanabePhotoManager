@@ -20,11 +20,13 @@ public sealed class LibraryDateSnapshotServiceTests : IDisposable
         Directory.CreateDirectory(jpegDirectory);
         await File.WriteAllBytesAsync(Path.Combine(jpegDirectory, "a.jpg"), new byte[12]);
         await File.WriteAllBytesAsync(Path.Combine(jpegDirectory, "b.jpg"), new byte[30]);
+        await File.WriteAllBytesAsync(Path.Combine(jpegDirectory, "sidecar.lrf"), new byte[8]);
         await File.WriteAllTextAsync(Path.Combine(jpegDirectory, "ignored.txt"), "not media");
 
         var snapshot = await new LibraryDateSnapshotService().LoadAsync(_root);
 
         snapshot.Items.Should().HaveCount(2);
+        snapshot.Items.Should().NotContain(item => item.Extension.Equals(".lrf", StringComparison.OrdinalIgnoreCase));
         snapshot.Items.Should().OnlyContain(item => item.Category == "JPG生图");
         snapshot.Categories.Single(item => item.Name == "JPG生图")
             .Should().BeEquivalentTo(new

@@ -38,7 +38,10 @@ public partial class PhotoViewerWindow : Window
     // LibVLC 视频引擎（仅在打开视频文件时惰性创建；窗口关闭时释放）
     private LibVLC? _libVlc;
     private MediaPlayer? _mediaPlayer;
+    private Task<LibVLC>? _videoEngineTask;
     private Media? _currentMedia;
+    private int _mediaRequestVersion;
+    private bool _isClosing;
     private bool _videoActive;
     private bool _updatingSlider;
 
@@ -99,6 +102,8 @@ public partial class PhotoViewerWindow : Window
 
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.Open(paths, selectedPath);
+        if (_viewModel.IsVideo)
+            _videoEngineTask = Task.Run(CreateVideoEngine);
 
         // 构造完成标志（Window_Loaded 会重新走 RefreshMediaDisplay）
         _initialized = true;
@@ -121,28 +126,28 @@ public partial class PhotoViewerWindow : Window
 
     // ---------- 媒体切换：照片 ⇄ 视频 ----------
 
-    private void RefreshMediaDisplay()
+    private async void RefreshMediaDisplay()
     {
         // 构造完成前直接 return（Window_Loaded 会重新调用；防止 StopVideo 访问未初始化字段）
         if (!_initialized) return;
+        var requestVersion = ++_mediaRequestVersion;
         if (_viewModel.IsVideo && _viewModel.CurrentPath is { } videoPath)
-            PlayVideo(videoPath);
+            await PlayVideoAsync(videoPath, requestVersion);
         else
             StopVideo();
     }
 
-    private void PlayVideo(string path)
+    private async Task PlayVideoAsync(string path, int requestVersion)
     {
-        EnsureVideoEngine();
+        await EnsureVideoEngineAsync();
         if (_libVlc is null) return;
+        if (requestVersion != _mediaRequestVersion ||
+            !string.Equals(path, _viewModel.CurrentPath, StringComparison.OrdinalIgnoreCase))
+            return;
 
         StopVideo();
 
-        _mediaPlayer = new MediaPlayer(_libVlc);
-        _mediaPlayer.Playing += OnMediaPlaying;
-        _mediaPlayer.Paused += OnMediaPaused;
-        _mediaPlayer.Stopped += OnMediaStopped;
-        _mediaPlayer.EndReached += OnMediaEndReached;
+        _mediaPlayer ??= CreateMediaPlayer(_libVlc);
 
         VideoHost.Visibility = Visibility.Visible;
         VideoHost.MediaPlayer = _mediaPlayer;
@@ -173,13 +178,7 @@ public partial class PhotoViewerWindow : Window
         _videoActive = false;
         if (_mediaPlayer is not null)
         {
-            _mediaPlayer.Playing -= OnMediaPlaying;
-            _mediaPlayer.Paused -= OnMediaPaused;
-            _mediaPlayer.Stopped -= OnMediaStopped;
-            _mediaPlayer.EndReached -= OnMediaEndReached;
             _mediaPlayer.Stop();
-            _mediaPlayer.Dispose();
-            _mediaPlayer = null;
         }
         _currentMedia?.Dispose();
         _currentMedia = null;
@@ -191,17 +190,40 @@ public partial class PhotoViewerWindow : Window
         UpdateVideoHostLayout();
     }
 
-    private void EnsureVideoEngine()
+    private async Task EnsureVideoEngineAsync()
     {
         if (_libVlc is not null) return;
         try
         {
-            _libVlc = new LibVLC();
+            _videoEngineTask ??= Task.Run(CreateVideoEngine);
+            var engine = await _videoEngineTask;
+            if (_isClosing)
+            {
+                engine?.Dispose();
+                return;
+            }
+            _libVlc = engine;
         }
         catch (Exception ex)
         {
             _viewModel.ReportError($"无法初始化视频播放引擎（libvlc）：{ex.Message}");
         }
+    }
+
+    private static LibVLC CreateVideoEngine() => new(
+        "--avcodec-hw=any",
+        "--file-caching=1000",
+        "--drop-late-frames",
+        "--skip-frames");
+
+    private MediaPlayer CreateMediaPlayer(LibVLC libVlc)
+    {
+        var player = new MediaPlayer(libVlc);
+        player.Playing += OnMediaPlaying;
+        player.Paused += OnMediaPaused;
+        player.Stopped += OnMediaStopped;
+        player.EndReached += OnMediaEndReached;
+        return player;
     }
 
     // LibVLC 事件回调运行在 VLC 内部线程（非 UI 线程），触碰 WPF 元素必须 marshal 到 UI 线程，
@@ -713,9 +735,20 @@ public partial class PhotoViewerWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        _isClosing = true;
+        _mediaRequestVersion++;
         _positionTimer?.Stop();
         _hideTimer?.Stop();
         StopVideo();
+        if (_mediaPlayer is not null)
+        {
+            _mediaPlayer.Playing -= OnMediaPlaying;
+            _mediaPlayer.Paused -= OnMediaPaused;
+            _mediaPlayer.Stopped -= OnMediaStopped;
+            _mediaPlayer.EndReached -= OnMediaEndReached;
+            _mediaPlayer.Dispose();
+            _mediaPlayer = null;
+        }
         _libVlc?.Dispose();
         _libVlc = null;
     }

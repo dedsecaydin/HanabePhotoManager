@@ -950,3 +950,27 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 新增 `docs/source-code-handbook.zh-CN.md`，覆盖 `src/` 当前全部 207 个 C#、XAML、项目文件及地图/模型内嵌资源。
 - 手册按三层架构和功能链路说明每个文件的职责，并提供功能快速定位、标准修改步骤、危险边界和验证命令；README 新增直接入口。
 - 通过实际文件清单与手册路径机器比对：207 个实际文件全部有对应说明，无漏项、无额外虚构路径。
+
+### 水印、拼图、导航与浏览体验补齐（0.3.2-alpha.13）
+
+- 批量水印自动密度最高档改为允许 12% 轻微重叠；预览与导出共用密度间距映射。单签名预览改为按照片实际 `Uniform` 显示区域连续拖动，并以归一化中心定位，调整大小时中心坐标不变。
+- 拼图新增可选“用当前位置图片的虚化玻璃背景填充留白”；默认关闭，启用时按每张图片所在槽位生成裁切、虚化、柔化背景，再居中叠加清晰原图。
+- 一级导航选中态移除图标外围嵌套框，仅保留 4px 动画指示条；全部当前页面宿主统一使用设计系统时长、缓动和 `SnapshotAndReplace` 可中断切换动画。
+- 新增 250 张单日期展开回归，确认日期分组和展开照片墙不受旧 `VisiblePageSize` 限制；当前源码已完整，旧发布应用的 100 张截断通过本次重新发布覆盖。
+- 导入页“高级选项”与“开始分析与导入”增加 12px 间距；右侧轮播提示卡固定 72px 高度，切换只对文字做淡出、轻位移和淡入，容器不再随文案跳动。
+- Release `/warnaserror` 构建 0 警告、0 错误；Core 159、Infrastructure 55、App 417、InstallerShell 12，共 643 项测试全部通过。
+- 正式发布 `artifacts/0.3.2-alpha.13/HanabePhotoManager-Setup-x64.exe`，SHA-256：`1a73091d7a559becd751c5a474df24b7d072fc8e6b2d949c6e51f6565b51ea2c`；安装验证 dry-run 通过。由于已安装版本进程正在运行，发布包截图冒烟无法取得独立单实例，未关闭用户正在使用的应用。
+## 2026-08-26 — Gallery navigation and content cleanup
+
+- Moved the primary-navigation selection indicator to the outer rail edge so it no longer overlaps the selected item surface.
+- Kept `.lrf` available to the import/grouping pipeline as a camera sidecar, while excluding it from gallery preview and date-snapshot content.
+- Made the main gallery vertical scrollbar consistently visible and removed the floating `+` import button.
+- Added regression coverage for the LRF exclusion and the gallery/sidebar XAML contracts; full solution tests: 643 passed.
+- Follow-up: removed the navigation rail indicator entirely while retaining the existing item hover surface, and raised the main-window minimum size to `1440 × 900` so the three-column workspace cannot collapse into overlapping controls.
+- Follow-up: corrected the shared scrollbar visual hierarchy so the neutral track remains visible while the primary-colored proportional thumb communicates scroll position and viewport progress.
+- Follow-up: bound the native window chrome and inner workspace containers to the same `Radius.Container` token, keeping all four outer and inner corners visually consistent.
+- Release hygiene: added individual user-facing entries for `0.3.2-alpha.13` through `0.3.2-alpha.17` to both `CHANGELOG.md` and the in-app release-notes catalog, with regression coverage preventing another missing published version.
+- `0.3.2-alpha.18`: changed the gallery multi-select mode control to a true switch while standardizing selectable items—including duplicate review—to the shared dark checkmark selection treatment; added matching public and in-app release notes.
+- `0.3.2-alpha.19`: bottom-aligned the multi-select switch and advanced-filter disclosure as one right-aligned 36px action group with consistent spacing; added matching release notes.
+- `0.3.2-alpha.20`: moved category, retouch, rating, and multi-select into one common-filter row, with the advanced-filter disclosure on its own left-aligned second row; added matching release notes.
+- `0.3.2-alpha.20` video follow-up: moved LibVLC initialization off the UI thread, reused one MediaPlayer per viewer window, and enabled hardware decoding plus local-file buffering/late-frame policies; added regression coverage.

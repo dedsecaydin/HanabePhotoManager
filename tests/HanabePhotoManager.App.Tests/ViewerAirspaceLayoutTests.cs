@@ -74,4 +74,18 @@ public class ViewerAirspaceLayoutTests
         xaml.Should().Contain("HorizontalAlignment=\"Stretch\"");
         xaml.Should().Contain("VerticalAlignment=\"Stretch\"");
     }
+
+    [Fact]
+    public void VideoPlayback_WarmsEngineOffUiThreadAndReusesHardwareAcceleratedPlayer()
+    {
+        var code = ReadViewerCode();
+
+        code.Should().Contain("Task.Run(CreateVideoEngine)");
+        code.Should().Contain("--avcodec-hw=any");
+        code.Should().Contain("--file-caching=1000");
+        code.Should().Contain("--drop-late-frames");
+        code.Should().Contain("--skip-frames");
+        code.Should().Contain("_mediaPlayer ??= CreateMediaPlayer(_libVlc)");
+        code.Should().NotContain("_mediaPlayer = new MediaPlayer(_libVlc);");
+    }
 }

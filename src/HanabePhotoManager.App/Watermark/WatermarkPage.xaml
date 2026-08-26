@@ -53,7 +53,7 @@
                     <ColumnDefinition />
                     <ColumnDefinition Width="Auto" />
                   </Grid.ColumnDefinitions>
-                  <CheckBox IsChecked="{Binding IsSelected}" />
+                  <CheckBox Style="{DynamicResource Selection.CheckBox}" IsChecked="{Binding IsSelected}" />
                   <TextBlock Grid.Column="1" Text="{Binding Name}" Margin="8,0" TextTrimming="CharacterEllipsis" />
                   <TextBlock Grid.Column="2" Text="{Binding Status}" Foreground="{DynamicResource Brush.Status.Success}" />
                 </Grid>
@@ -102,10 +102,12 @@
             <RowDefinition />
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
-          <Border x:Name="PreviewSurface" Background="{DynamicResource Brush.Viewer.Canvas}" CornerRadius="{DynamicResource Radius.Card}" ClipToBounds="True" MouseLeftButtonDown="Preview_MouseLeftButtonDown" MouseMove="Preview_MouseMove" MouseLeftButtonUp="Preview_MouseLeftButtonUp">
+          <Border x:Name="PreviewSurface" Background="{DynamicResource Brush.Viewer.Canvas}" CornerRadius="{DynamicResource Radius.Card}" ClipToBounds="True" MouseLeftButtonDown="Preview_MouseLeftButtonDown" MouseMove="Preview_MouseMove" MouseLeftButtonUp="Preview_MouseLeftButtonUp" SizeChanged="PreviewSurface_SizeChanged">
             <Grid>
               <Image Source="{Binding PreviewImage}" Stretch="Uniform" />
-              <Image Source="{Binding WatermarkPreviewImage}" Stretch="Uniform" Width="{Binding PreviewWatermarkWidth}" Opacity="{Binding PreviewOpacity}" HorizontalAlignment="{Binding PreviewHorizontalAlignment}" VerticalAlignment="{Binding PreviewVerticalAlignment}" Margin="20" IsHitTestVisible="False" Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}" />
+              <Canvas IsHitTestVisible="False" ClipToBounds="True">
+                <Image x:Name="SignaturePreview" Source="{Binding WatermarkPreviewImage}" Stretch="Uniform" Opacity="{Binding PreviewOpacity}" Visibility="{Binding ShowSignatureSettings, Converter={StaticResource BoolToVis}}" />
+              </Canvas>
               <Rectangle Opacity="{Binding PreviewOpacity}" IsHitTestVisible="False" Visibility="{Binding ShowTileSettings, Converter={StaticResource BoolToVis}}">
                 <Rectangle.Fill>
                   <ImageBrush ImageSource="{Binding WatermarkPreviewImage}" TileMode="Tile" Viewport="{Binding PreviewTileViewport}" ViewportUnits="RelativeToBoundingBox" Stretch="Uniform">

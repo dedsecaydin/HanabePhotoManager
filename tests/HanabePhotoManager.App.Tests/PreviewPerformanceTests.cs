@@ -311,6 +311,36 @@ public sealed class PreviewPerformanceTests
     }
 
     [Fact]
+    public void PreviewWall_ExpandedDateIncludesEveryItemBeyondLegacyPageLimit()
+    {
+        var viewModel = new MainWindowViewModel();
+        for (var index = 0; index < 250; index++)
+        {
+            var path = Path.GetFullPath($@"C:\photos\8月\08.23\JPG生图\photo-{index:D3}.jpg");
+            viewModel.PreviewFiles.Add(new PreviewFileViewModel(
+                $"photo-{index:D3}.jpg", "JPG生图", path, "1 KB", ".jpg", null));
+        }
+
+        viewModel.CurrentPreviewCategory = "JPG生图";
+
+        viewModel.VisiblePreviewSections.Should().ContainSingle();
+        viewModel.VisiblePreviewSections[0].Items.Should().HaveCount(250);
+        viewModel.PreviewWallItems.Should().HaveCount(251);
+    }
+
+    [Fact]
+    public void PreviewGrouping_DoesNotApplyLegacyVisiblePageLimit()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var start = source.IndexOf("private void RebuildVisiblePreviewSections()", StringComparison.Ordinal);
+        var end = source.IndexOf("private static bool IsVideoPosterJpeg", start, StringComparison.Ordinal);
+        var method = source[start..end];
+
+        method.Should().NotContain("VisiblePageSize").And.NotContain(".Take(").And.NotContain(".Skip(");
+    }
+
+    [Fact]
     public void CompactBrowseLayout_KeepsThePhotoWallVisible()
     {
         var viewModel = new MainWindowViewModel { IsBrowseConditionsExpanded = true };

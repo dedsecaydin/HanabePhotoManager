@@ -35,7 +35,7 @@
             <SolidColorBrush x:Key="GlassControlBorder" Color="{DynamicResource Color.Accent.Default}" />
             <SolidColorBrush x:Key="GlassControlFocus" Color="{DynamicResource Color.Accent.Default}" />
             <SolidColorBrush x:Key="GlassControlThumb" Color="{DynamicResource Color.Accent.Default}" />
-            <SolidColorBrush x:Key="GlassScrollTrack" Color="{DynamicResource Color.Accent.Default}" />
+            <SolidColorBrush x:Key="GlassScrollTrack" Color="{DynamicResource Color.OutlineVariant}" />
             <LinearGradientBrush x:Key="GlassControlAccent" StartPoint="0,0" EndPoint="1,0">
                 <GradientStop Color="{DynamicResource Color.Accent.Default}" Offset="0" />
                 <GradientStop Color="{DynamicResource Color.Accent.Default}" Offset="1" />
@@ -124,7 +124,7 @@
                 <Setter Property="FontFamily"  Value="{StaticResource FontPrimary}" />
                 <Setter Property="FontSize"    Value="{StaticResource Typography.Body}" />
                 <Setter Property="FontWeight"  Value="Medium" />
-                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+                <Setter Property="Background" Value="{DynamicResource Brush.Primary}" />
                 <Setter Property="BorderBrush" Value="{StaticResource BorderStrong}" />
                 <Setter Property="Padding"     Value="12,8" />
                 <Setter Property="CaretBrush"  Value="{StaticResource TextPrimary}" />
@@ -411,8 +411,8 @@
                         <ControlTemplate TargetType="Thumb">
                             <Border x:Name="ThumbSurface" CornerRadius="4" Background="{TemplateBinding Background}" />
                             <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /></Trigger>
-                                <Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" /></Trigger>
+                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Accent.Hover}" /></Trigger>
+                                <Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Accent.Pressed}" /></Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
                     </Setter.Value>

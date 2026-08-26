@@ -123,7 +123,7 @@ public sealed partial class WatermarkViewModel : ObservableObject
             var size = Math.Clamp(SelectedItem?.UseIndividualSettings == true ? SelectedItem.SizeRatio : SizeRatio, .03, .6);
             var width = IsManualTile
                 ? Math.Clamp(size + (HorizontalGap * .35), .05, .85)
-                : Math.Clamp(size * (1.45 - (Density * .9)), .045, .7);
+                : Math.Clamp(size * (1 + WatermarkLayoutCalculator.CalculateAutomaticGapRatio(Density)), .035, .7);
             var height = IsManualTile
                 ? Math.Clamp(size + (VerticalGap * .35), .05, .85)
                 : width;

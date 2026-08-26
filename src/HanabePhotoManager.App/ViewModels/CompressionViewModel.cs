@@ -17,6 +17,7 @@ public sealed class CompressionViewModel : ObservableObject
     private ImageToolMode _selectedToolMode = ImageToolMode.Compression;
     private CollageOrientation _collageOrientation = CollageOrientation.Vertical;
     private bool _collageLimitOutputSize;
+    private bool _collageUseBlurredBackground;
     private string _outputDirectory = string.Empty;
     private string _targetValue = "2";
     private string _targetUnit = "MB";
@@ -104,6 +105,12 @@ public sealed class CompressionViewModel : ObservableObject
         {
             if (SetProperty(ref _collageLimitOutputSize, value)) NotifyAvailability();
         }
+    }
+
+    public bool CollageUseBlurredBackground
+    {
+        get => _collageUseBlurredBackground;
+        set => SetProperty(ref _collageUseBlurredBackground, value);
     }
 
     public string OutputDirectory
@@ -244,7 +251,8 @@ public sealed class CompressionViewModel : ObservableObject
                 var result = await _collageService.ComposeAsync(
                     Items.Select(item => item.Path).ToArray(),
                     new CollageOptions(OutputDirectory, CollageOrientation,
-                        CollageLimitOutputSize ? TargetBytes : null),
+                        CollageLimitOutputSize ? TargetBytes : null,
+                        UseBlurredBackground: CollageUseBlurredBackground),
                     progress,
                     _cancellation.Token).ConfigureAwait(true);
                 Results.Add(new CompressionItemResult(

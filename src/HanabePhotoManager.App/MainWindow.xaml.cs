@@ -386,9 +386,44 @@ public partial class MainWindow : Window
         }
 
         _importTipShowingSecond = !_importTipShowingSecond;
-        ImportTipText.Text = _importTipShowingSecond
+        AnimateImportTipText(_importTipShowingSecond
             ? "💡 无法判断归属时会停下来让你确认，不会乱放。确认目标文件夹后再导入。"
-            : "💡 遇到不认识的 RAW / 视频格式？到 设置 → 照片库与导入 → 自定义导入格式 里添加后缀（如 R3D、BRAW），保存后会自动记住。";
+            : "💡 遇到不认识的 RAW / 视频格式？到 设置 → 照片库与导入 → 自定义导入格式 里添加后缀（如 R3D、BRAW），保存后会自动记住。");
+    }
+
+    private void AnimateImportTipText(string nextText)
+    {
+        var duration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
+            ? motionDuration.TimeSpan
+            : TimeSpan.FromMilliseconds(180);
+        var halfDuration = TimeSpan.FromMilliseconds(Math.Max(60, duration.TotalMilliseconds / 2));
+        var easing = FindResource("Motion.Easing.Standard") as IEasingFunction;
+        ImportTipText.BeginAnimation(UIElement.OpacityProperty, null);
+        ImportTipTextTransform.BeginAnimation(TranslateTransform.YProperty, null);
+
+        var fadeOut = new DoubleAnimation(1, 0, halfDuration) { EasingFunction = easing };
+        fadeOut.Completed += (_, _) =>
+        {
+            ImportTipText.Text = nextText;
+            ImportTipText.Opacity = 0;
+            ImportTipTextTransform.Y = 3;
+            ImportTipText.BeginAnimation(
+                UIElement.OpacityProperty,
+                new DoubleAnimation(0, 1, halfDuration) { EasingFunction = easing },
+                HandoffBehavior.SnapshotAndReplace);
+            ImportTipTextTransform.BeginAnimation(
+                TranslateTransform.YProperty,
+                new DoubleAnimation(3, 0, halfDuration) { EasingFunction = easing },
+                HandoffBehavior.SnapshotAndReplace);
+        };
+        ImportTipText.BeginAnimation(
+            UIElement.OpacityProperty,
+            fadeOut,
+            HandoffBehavior.SnapshotAndReplace);
+        ImportTipTextTransform.BeginAnimation(
+            TranslateTransform.YProperty,
+            new DoubleAnimation(0, -3, halfDuration) { EasingFunction = easing },
+            HandoffBehavior.SnapshotAndReplace);
     }
 
     private void ApplyTitleBarTheme()
@@ -479,7 +514,6 @@ public partial class MainWindow : Window
             _viewModel.IsAdvancedFiltersExpanded = true;
         }
         AnimateVisiblePage();
-        _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
         if (_viewModel.IsPreviewPage)
         {
             _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
@@ -590,7 +624,6 @@ public partial class MainWindow : Window
         if (e.PropertyName == nameof(MainWindowViewModel.CurrentPage))
         {
             Dispatcher.BeginInvoke(AnimateVisiblePage);
-            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
             if (_viewModel.IsPreviewPage)
             {
                 Dispatcher.BeginInvoke(DispatcherPriority.Loaded, ResetGalleryScrollToFirstDate);
@@ -679,15 +712,20 @@ public partial class MainWindow : Window
         page.Opacity = 0;
         translate.Y = 6;
 
-        var duration = TimeSpan.FromMilliseconds(180);
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        var duration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
+            ? motionDuration.TimeSpan
+            : TimeSpan.FromMilliseconds(180);
+        var ease = FindResource("Motion.Easing.Standard") as IEasingFunction
+            ?? new CubicEase { EasingMode = EasingMode.EaseOut };
 
         page.BeginAnimation(
             UIElement.OpacityProperty,
-            new DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+            new DoubleAnimation(0, 1, duration) { EasingFunction = ease },
+            HandoffBehavior.SnapshotAndReplace);
         translate.BeginAnimation(
             TranslateTransform.YProperty,
-            new DoubleAnimation(6, 0, duration) { EasingFunction = ease });
+            new DoubleAnimation(6, 0, duration) { EasingFunction = ease },
+            HandoffBehavior.SnapshotAndReplace);
     }
 
     private FrameworkElement? ResolveCurrentPage() => _viewModel.CurrentPage switch
@@ -812,51 +850,6 @@ public partial class MainWindow : Window
 
         ApplyGalleryZoom(tileSize.Value, e.GetPosition(PreviewPhotoScrollViewer));
         e.Handled = true;
-    }
-
-    private void PrimaryNavigationHost_SizeChanged(object sender, SizeChangedEventArgs e) =>
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, UpdatePrimaryNavigationIndicator);
-
-    private void UpdatePrimaryNavigationIndicator()
-    {
-        if (PrimaryNavigationHost is null || PrimaryNavigationSelectionIndicator is null ||
-            PrimaryNavigationSelectionTransform is null)
-        {
-            return;
-        }
-
-        var selectedButton = FindVisualDescendants<System.Windows.Controls.Button>(PrimaryNavigationList)
-            .FirstOrDefault(button => button.DataContext is NavigationItemViewModel item &&
-                                      string.Equals(item.Key, _viewModel.CurrentPage, StringComparison.Ordinal));
-        if (selectedButton is null || selectedButton.ActualHeight <= 0)
-        {
-            PrimaryNavigationSelectionIndicator.BeginAnimation(UIElement.OpacityProperty, null);
-            PrimaryNavigationSelectionIndicator.Opacity = 0;
-            return;
-        }
-
-        var target = selectedButton.TranslatePoint(new System.Windows.Point(0, 0), PrimaryNavigationHost);
-        PrimaryNavigationSelectionIndicator.Height = selectedButton.ActualHeight;
-        var duration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
-            ? motionDuration.TimeSpan
-            : TimeSpan.FromMilliseconds(180);
-        var easing = FindResource("Motion.Easing.Standard") as IEasingFunction;
-
-        if (PrimaryNavigationSelectionIndicator.Opacity < 0.01)
-        {
-            PrimaryNavigationSelectionTransform.BeginAnimation(TranslateTransform.YProperty, null);
-            PrimaryNavigationSelectionTransform.Y = target.Y;
-            PrimaryNavigationSelectionIndicator.BeginAnimation(
-                UIElement.OpacityProperty,
-                new DoubleAnimation(0, 1, duration) { EasingFunction = easing });
-            return;
-        }
-
-        var slide = new DoubleAnimation(PrimaryNavigationSelectionTransform.Y, target.Y, duration)
-        {
-            EasingFunction = easing
-        };
-        PrimaryNavigationSelectionTransform.BeginAnimation(TranslateTransform.YProperty, slide, HandoffBehavior.SnapshotAndReplace);
     }
 
     private void GalleryZoomOut_Click(object sender, RoutedEventArgs e) =>

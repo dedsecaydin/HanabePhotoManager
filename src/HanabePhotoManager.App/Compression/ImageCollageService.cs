@@ -21,7 +21,8 @@ public sealed record CollageOptions(
     string OutputDirectory,
     CollageOrientation Orientation,
     long? TargetBytes,
-    int MinimumQuality = 20);
+    int MinimumQuality = 20,
+    bool UseBlurredBackground = false);
 
 /// <summary>拼图解码与合成进度。</summary>
 public sealed record CollageProgress(int Processed, int Total, string CurrentFile);
@@ -80,6 +81,27 @@ public sealed class ImageCollageService
             foreach (var image in images)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var slot = options.Orientation == CollageOrientation.Vertical
+                    ? new SixLabors.ImageSharp.Rectangle(0, offset, width, image.Height)
+                    : new SixLabors.ImageSharp.Rectangle(offset, 0, image.Width, height);
+                var hasCrossAxisLetterbox = options.Orientation == CollageOrientation.Vertical
+                    ? image.Width < width
+                    : image.Height < height;
+                if (options.UseBlurredBackground && hasCrossAxisLetterbox)
+                {
+                    using var background = image.Clone(context => context
+                        .Resize(new ResizeOptions
+                        {
+                            Size = slot.Size,
+                            Mode = ResizeMode.Crop,
+                            Position = AnchorPositionMode.Center,
+                            Sampler = KnownResamplers.Bicubic,
+                        })
+                        .GaussianBlur(Math.Max(4, Math.Min(slot.Width, slot.Height) * 0.025f))
+                        .Brightness(0.72f)
+                        .Saturate(0.82f));
+                    canvas.Mutate(context => context.DrawImage(background, slot.Location, 1f));
+                }
                 var point = options.Orientation == CollageOrientation.Vertical
                     ? new SharpPoint((width - image.Width) / 2, offset)
                     : new SharpPoint(offset, (height - image.Height) / 2);

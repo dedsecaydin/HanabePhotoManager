@@ -160,6 +160,39 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
+    public void DateFolderManagementPage_UsesBatchEditingContractsAndImportEntry()
+    {
+        var root = FindSourceRoot();
+        var pagePath = Path.Combine(root, "src", "HanabePhotoManager.App", "DateFolders", "DateFolderManagementPage.xaml");
+        var pageXaml = File.Exists(pagePath) ? File.ReadAllText(pagePath) : string.Empty;
+        var mainXaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        pageXaml.Should().NotBeEmpty("the shell must host a dedicated batch-management page");
+        mainXaml.Should().Contain("DateFolderManagementPageHost");
+        pageXaml.Should().Contain("AutomationProperties.Name=\"保存全部备注更改\"");
+        pageXaml.Should().Contain("Command=\"{Binding SaveAllCommand}\"");
+        pageXaml.Should().Contain("Command=\"{Binding RefreshCommand}\"");
+        pageXaml.Should().Contain("ItemsSource=\"{Binding Items}\"");
+        pageXaml.Should().Contain("Text=\"{Binding EditedRemark, Mode=TwoWay");
+        pageXaml.Should().Contain("Text=\"{Binding FullPath, Mode=OneWay}");
+        pageXaml.Should().NotContain("Text=\"{Binding FullPath, Mode=TwoWay");
+    }
+
+    [Fact]
+    public void ImportCompletion_OffersDateFolderEntryWithoutSequentialRemarkDialogs()
+    {
+        var root = FindSourceRoot();
+        var viewModelSource = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var mainXaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        viewModelSource.Should().NotContain("AskForDateRemarksAsync")
+            .And.NotContain("new RemarkPromptWindow");
+        mainXaml.Should().Contain("Command=\"{Binding ShowDateFoldersCommand}\"");
+        mainXaml.Should().Contain("AutomationProperties.Name=\"管理日期文件夹备注\"");
+    }
+
+    [Fact]
     public void SidebarFooter_UsesAccessibleIconActionsAndArtworkOnlyBranding()
     {
         var mainXaml = File.ReadAllText(Path.Combine(

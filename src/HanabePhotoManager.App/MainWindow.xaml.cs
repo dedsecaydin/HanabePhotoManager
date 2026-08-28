@@ -738,6 +738,7 @@ public partial class MainWindow : Window
         "MapPhotos" => MapPageHost,
         "Compression" => CompressionPageHost,
         "Watermark" => WatermarkPageHost,
+        "DateFolders" => DateFolderManagementPageHost,
         "Settings" => SettingsCenterPageHost,
         _ => HomePage
     };

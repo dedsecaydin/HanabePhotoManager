@@ -22,4 +22,12 @@ public sealed record ImportNamingPreset(ImportNamingPresetKind Kind, string Disp
     public static ImportNamingPreset Resolve(string? template) =>
         All.FirstOrDefault(item => string.Equals(item.Template, template, StringComparison.OrdinalIgnoreCase))
         ?? new(ImportNamingPresetKind.Custom, "自定义", template ?? ImportNamingFormatter.DefaultTemplate);
+
+    public static IReadOnlyList<ImportNamingPreset> GetSelectablePresets(string? template)
+    {
+        var selected = Resolve(template);
+        return selected.Kind == ImportNamingPresetKind.Custom
+            ? [.. All, selected]
+            : All;
+    }
 }

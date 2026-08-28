@@ -27,6 +27,9 @@ public sealed class DateFolderManagementViewModelTests
         viewModel.Items[1].IsDirty.Should().BeTrue();
         viewModel.Items[1].StatusText.Should().Contain("目标文件夹已存在");
         service.RenameCalls.Should().HaveCount(2);
+
+        viewModel.Items[1].EditedRemark = "新婚礼";
+        viewModel.Items[1].StatusText.Should().Be("待保存。");
     }
 
     [Fact]
@@ -61,6 +64,24 @@ public sealed class DateFolderManagementViewModelTests
         viewModel.Summary.Should().Be("保存完成：成功 0，跳过 1，失败 0");
         viewModel.Items[0].IsDirty.Should().BeFalse();
         viewModel.Items[0].StatusText.Should().Contain("无需保存");
+    }
+
+    [Fact]
+    public async Task SaveAllAsync_UsesTheServiceNormalizedRemarkAsTheNewBaseline()
+    {
+        var service = new RecordingDateFolderService(
+            results: [Result(DateFolderRenameStatus.Success, @"D:\\Library\\08月\\08.01_旅行", "旅行")]);
+        var viewModel = CreateViewModel(service,
+        [
+            new DateFolderEntry(8, 1, "", @"D:\\Library\\08月\\08.01")
+        ]);
+        viewModel.Items[0].EditedRemark = " _ 旅行 - ";
+
+        await viewModel.SaveAllAsync();
+
+        viewModel.Items[0].OriginalRemark.Should().Be("旅行");
+        viewModel.Items[0].EditedRemark.Should().Be("旅行");
+        viewModel.Items[0].IsDirty.Should().BeFalse();
     }
 
     [Fact]
@@ -115,6 +136,21 @@ public sealed class DateFolderManagementViewModelTests
         viewModel.Summary.Should().Be("已加载 2 个日期文件夹。");
     }
 
+    [Fact]
+    public async Task RefreshAsync_WhenServiceThrowsAnyException_ReportsAReadableSummary()
+    {
+        var viewModel = new DateFolderManagementViewModel(
+            new RecordingDateFolderService(scanException: new InvalidOperationException("模拟扫描失败")))
+        {
+            LibraryRoot = @"D:\\Library"
+        };
+
+        await viewModel.RefreshAsync();
+
+        viewModel.Items.Should().BeEmpty();
+        viewModel.Summary.Should().Be("刷新失败：模拟扫描失败");
+    }
+
     private static DateFolderManagementViewModel CreateViewModel(
         RecordingDateFolderService service,
         IReadOnlyList<DateFolderEntry> entries)
@@ -141,25 +177,31 @@ public sealed class DateFolderManagementViewModelTests
         new DateFolderEntry(8, 2, "旧婚礼", @"D:\\Library\\08月\\08.02_旧婚礼")
     ];
 
-    private static DateFolderRenameResult Result(DateFolderRenameStatus status, string effectivePath) =>
-        new(status, effectivePath, effectivePath);
+    private static DateFolderRenameResult Result(
+        DateFolderRenameStatus status,
+        string effectivePath,
+        string effectiveRemark = "") =>
+        new(status, effectivePath, effectivePath, EffectiveRemark: effectiveRemark);
 
     private sealed class RecordingDateFolderService : IDateFolderService
     {
         private readonly Queue<DateFolderRenameResult> _results;
         private readonly int? _exceptionOnCall;
         private readonly Exception _exception;
+        private readonly Exception? _scanException;
 
         public RecordingDateFolderService(
             IReadOnlyList<DateFolderEntry>? scanEntries = null,
             IReadOnlyList<DateFolderRenameResult>? results = null,
             int? exceptionOnCall = null,
-            Exception? exception = null)
+            Exception? exception = null,
+            Exception? scanException = null)
         {
             ScanEntries = scanEntries ?? [];
             _results = new Queue<DateFolderRenameResult>(results ?? []);
             _exceptionOnCall = exceptionOnCall;
             _exception = exception ?? new IOException("simulated failure");
+            _scanException = scanException;
         }
 
         public int ScanCalls { get; private set; }
@@ -167,11 +209,16 @@ public sealed class DateFolderManagementViewModelTests
         public List<(string SourcePath, string Remark)> RenameCalls { get; } = [];
         public IReadOnlyList<DateFolderEntry> ScanEntries { get; }
 
-        public IReadOnlyList<DateFolderEntry> Scan(string libraryRoot)
+        public DateFolderScanResult Scan(string libraryRoot)
         {
             ScanCalls++;
             ScannedRoots.Add(libraryRoot);
-            return ScanEntries;
+            if (_scanException is not null)
+            {
+                throw _scanException;
+            }
+
+            return DateFolderScanResult.Success(ScanEntries);
         }
 
         public DateFolderRenameResult RenameRemark(string sourcePath, string remark)

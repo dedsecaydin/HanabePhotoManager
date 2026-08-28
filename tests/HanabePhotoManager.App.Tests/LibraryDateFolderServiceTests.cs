@@ -120,6 +120,7 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
 
         result.Status.Should().Be(DateFolderRenameStatus.Success);
         Path.GetFileName(result.EffectivePath).Should().Be("08.28");
+        result.EffectiveRemark.Should().BeEmpty();
     }
 
     [Fact]
@@ -131,6 +132,7 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
 
         result.Status.Should().Be(DateFolderRenameStatus.NoChange);
         result.EffectivePath.Should().Be(source);
+        result.EffectiveRemark.Should().Be("婚礼");
         Directory.Exists(source).Should().BeTrue();
     }
 
@@ -159,6 +161,7 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
 
         result.Status.Should().Be(DateFolderRenameStatus.Success);
         Path.GetFileName(result.EffectivePath).Should().Be("08.28_婚礼晚宴");
+        result.EffectiveRemark.Should().Be("婚礼晚宴");
     }
 
     [Fact]
@@ -171,6 +174,7 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
 
         result.Status.Should().Be(DateFolderRenameStatus.Success);
         result.EffectivePath.Should().Be(Path.Combine(month, "08.28_婚礼"));
+        result.EffectiveRemark.Should().Be("婚礼");
         Directory.GetDirectories(month).Should().ContainSingle().Which.Should().Be(result.EffectivePath);
     }
 

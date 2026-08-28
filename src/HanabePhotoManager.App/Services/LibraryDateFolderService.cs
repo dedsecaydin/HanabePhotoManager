@@ -26,7 +26,8 @@ public sealed record DateFolderRenameResult(
     DateFolderRenameStatus Status,
     string SourcePath,
     string EffectivePath,
-    string? ErrorMessage = null);
+    string? ErrorMessage = null,
+    string EffectiveRemark = "");
 
 /// <summary>用于日期目录批量页展示的只读目录条目。</summary>
 public sealed record DateFolderEntry(int Month, int Day, string Remark, string FullPath);
@@ -262,6 +263,8 @@ public static class LibraryDateFolderService
                 "The source directory name is not a valid date folder name.");
         }
 
+        var currentRemark = NormalizeRemark(parsed.Suffix);
+
         var parent = Path.GetDirectoryName(sourceFullPath);
         if (string.IsNullOrWhiteSpace(parent))
         {
@@ -273,12 +276,13 @@ public static class LibraryDateFolderService
         }
 
         var normalizedRemark = NormalizeRemark(remark);
-        if (string.Equals(normalizedRemark, NormalizeRemark(parsed.Suffix), StringComparison.Ordinal))
+        if (string.Equals(normalizedRemark, currentRemark, StringComparison.Ordinal))
         {
             return new DateFolderRenameResult(
                 DateFolderRenameStatus.NoChange,
                 sourceFullPath,
-                sourceFullPath);
+                sourceFullPath,
+                EffectiveRemark: currentRemark);
         }
 
         var targetName = $"{parsed.Month:00}.{parsed.Day:00}";
@@ -293,7 +297,8 @@ public static class LibraryDateFolderService
             return new DateFolderRenameResult(
                 DateFolderRenameStatus.NoChange,
                 sourceFullPath,
-                sourceFullPath);
+                sourceFullPath,
+                EffectiveRemark: normalizedRemark);
         }
 
         if (Directory.Exists(targetPath) || File.Exists(targetPath))
@@ -310,7 +315,8 @@ public static class LibraryDateFolderService
             return new DateFolderRenameResult(
                 DateFolderRenameStatus.Success,
                 sourceFullPath,
-                targetPath);
+                targetPath,
+                EffectiveRemark: normalizedRemark);
         }
         catch (IOException exception)
         {

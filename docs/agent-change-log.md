@@ -981,3 +981,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 新增可编辑日期目录行与批量管理 ViewModel；扫描和重命名通过可替换服务边界调用既有 `LibraryDateFolderService`，不改变现有文件系统服务。
 - 批量保存逐行继续执行：成功/无需保存更新基线和有效路径，失败行保留用户编辑并给出状态；空根目录不会触发扫描。
 - 新增 6 项内存假服务回归覆盖；Release `/warnaserror` 构建 0 警告、0 错误，Core 160、Infrastructure 55、App 447、InstallerShell 12 测试全部通过。
+
+### 审查修复
+
+- 扫描契约改为应用层 `DateFolderScanResult`；适配器把任意扫描异常转换为可展示消息，ViewModel 不再引用文件系统异常类型。
+- 重命名结果新增 `EffectiveRemark`，成功/无需保存时以服务实际规范化备注同时更新编辑值和保存基线；重新编辑失败行会显示“待保存”。
+- 新增服务规范化备注、扫描异常摘要、失败行再次编辑三项回归覆盖；日期服务 18 项、批量 ViewModel 8 项通过，Release 构建 0 警告、0 错误。

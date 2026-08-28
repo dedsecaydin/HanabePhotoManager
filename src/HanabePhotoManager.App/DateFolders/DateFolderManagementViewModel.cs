@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Services;
@@ -74,16 +73,22 @@ public sealed class DateFolderManagementViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var entries = await Task.Run(() => _dateFolderService.Scan(LibraryRoot));
+            var scanResult = await Task.Run(() => _dateFolderService.Scan(LibraryRoot));
+            if (!scanResult.IsSuccess)
+            {
+                Summary = scanResult.ErrorMessage ?? "刷新失败：无法扫描日期文件夹。";
+                return;
+            }
+
             Items.Clear();
-            foreach (var entry in entries)
+            foreach (var entry in scanResult.Entries)
             {
                 Items.Add(new DateFolderItemViewModel(entry));
             }
 
             Summary = $"已加载 {Items.Count} 个日期文件夹。";
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception)
         {
             Summary = $"刷新失败：{exception.Message}";
         }
@@ -163,13 +168,35 @@ public sealed class DateFolderManagementViewModel : ObservableObject
 /// <summary>将日期目录文件系统服务隔离在 ViewModel 外，便于在不访问真实图库时测试批量逻辑。</summary>
 public interface IDateFolderService
 {
-    IReadOnlyList<DateFolderEntry> Scan(string libraryRoot);
+    DateFolderScanResult Scan(string libraryRoot);
     DateFolderRenameResult RenameRemark(string sourcePath, string remark);
+}
+
+/// <summary>日期目录扫描的应用层结果，避免 ViewModel 依赖文件系统异常类型。</summary>
+public sealed record DateFolderScanResult(IReadOnlyList<DateFolderEntry> Entries, string? ErrorMessage = null)
+{
+    public bool IsSuccess => string.IsNullOrWhiteSpace(ErrorMessage);
+
+    public static DateFolderScanResult Success(IReadOnlyList<DateFolderEntry> entries) =>
+        new(entries, null);
+
+    public static DateFolderScanResult Failure(string message) =>
+        new([], message);
 }
 
 internal sealed class LibraryDateFolderServiceAdapter : IDateFolderService
 {
-    public IReadOnlyList<DateFolderEntry> Scan(string libraryRoot) => LibraryDateFolderService.Scan(libraryRoot);
+    public DateFolderScanResult Scan(string libraryRoot)
+    {
+        try
+        {
+            return DateFolderScanResult.Success(LibraryDateFolderService.Scan(libraryRoot));
+        }
+        catch (Exception exception)
+        {
+            return DateFolderScanResult.Failure($"刷新失败：{exception.Message}");
+        }
+    }
 
     public DateFolderRenameResult RenameRemark(string sourcePath, string remark) =>
         LibraryDateFolderService.RenameRemark(sourcePath, remark);

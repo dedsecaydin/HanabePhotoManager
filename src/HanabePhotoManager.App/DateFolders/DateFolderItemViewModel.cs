@@ -38,6 +38,7 @@ public sealed class DateFolderItemViewModel : ObservableObject
             if (SetProperty(ref _editedRemark, value ?? string.Empty))
             {
                 OnPropertyChanged(nameof(IsDirty));
+                StatusText = "待保存。";
             }
         }
     }
@@ -52,20 +53,24 @@ public sealed class DateFolderItemViewModel : ObservableObject
 
     internal void MarkSaved(DateFolderRenameResult result)
     {
-        FullPath = result.EffectivePath;
-        _originalRemark = EditedRemark;
-        OnPropertyChanged(nameof(OriginalRemark));
-        OnPropertyChanged(nameof(IsDirty));
+        ApplyPersistedState(result);
         StatusText = "已保存。";
     }
 
     internal void MarkSkipped(DateFolderRenameResult result)
     {
-        FullPath = result.EffectivePath;
-        _originalRemark = EditedRemark;
-        OnPropertyChanged(nameof(OriginalRemark));
-        OnPropertyChanged(nameof(IsDirty));
+        ApplyPersistedState(result);
         StatusText = "无需保存。";
+    }
+
+    private void ApplyPersistedState(DateFolderRenameResult result)
+    {
+        FullPath = result.EffectivePath;
+        _originalRemark = result.EffectiveRemark;
+        _editedRemark = result.EffectiveRemark;
+        OnPropertyChanged(nameof(OriginalRemark));
+        OnPropertyChanged(nameof(EditedRemark));
+        OnPropertyChanged(nameof(IsDirty));
     }
 
     internal void MarkUnchanged()

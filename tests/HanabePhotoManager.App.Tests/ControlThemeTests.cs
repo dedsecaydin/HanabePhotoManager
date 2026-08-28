@@ -82,12 +82,14 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
-    public void PrimaryButton_ForcesOnPrimaryForegroundThroughItsContentPresenter()
+    public void PrimaryButton_PreservesItsForegroundForStringContentAndOverridesDisabledContent()
     {
         var buttons = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
 
-        buttons.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.OnPrimary}\"")
+        buttons.Should().Contain("Foreground=\"{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}\"")
+            .And.Contain("TargetName=\"PrimaryContent\"")
+            .And.Contain("Brush.OnPrimary")
             .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"")
             .And.Contain("x:Key=\"Button.PrimaryTextTemplate\"")
             .And.Contain("ContentTemplate=\"{StaticResource Button.PrimaryTextTemplate}\"");

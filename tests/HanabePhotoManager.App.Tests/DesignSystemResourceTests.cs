@@ -11,7 +11,8 @@ public sealed class DesignSystemResourceTests
     [
         "Brush.Background.Canvas", "Brush.Surface.Default", "Brush.Surface.Subtle",
         "Brush.Border.Default", "Brush.Border.Focus", "Brush.Text.Primary",
-        "Brush.Text.Secondary", "Brush.Accent.Default", "Brush.Status.Danger"
+        "Brush.Text.Secondary", "Brush.Text.Tertiary", "Brush.Accent.Default", "Brush.Status.Danger",
+        "Brush.Primary", "Brush.OnPrimary"
     ];
 
     [Fact]

@@ -997,3 +997,10 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 独立只读审查后，入口改为仅在正常或恢复导入完成时显示，避免导入前或进行中跳转并触发额外目录扫描。
 - 后续主控审查将完成态从 `ProgressLabel` 文案中解耦：以当前库根目录和导入批次版本确认，换库、开始分析/导入、取消或异常都会使入口失效；仅正常和恢复导入成功后显式确认。
 - 日期管理页的所有 Margin、Padding 与 BorderThickness 改为全局复合间距/分隔线 token；日期行仍只显示月日，不臆造不存在的年份，完整路径保留唯一辨识信息。
+
+## 2026-08-28 — 导入命名与日期文件夹批量流程最终验证
+
+- 扩展主按钮文本模板回归契约：字符串内容绑定 Button 前景、`PrimaryContent` 命名元素可被禁用态覆盖，且正常态使用 `Brush.OnPrimary`；现有共享模板已满足契约，未改动 `Buttons.xaml`。
+- 主题资源契约补齐 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`，确保 Light/Dark 共享语义键覆盖主按钮正常与禁用文本所需资源。
+- 聚焦 App 主题/资源测试 50/50 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 453、InstallerShell 12，共 680 项通过。
+- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源、`JK0001（DSC_1234）` 命名预览，以及 Release 应用启动/关闭均通过；随后已删除两处临时验证目录。无可用的交互式 UI 自动化会话，未验证逐一主题切换后的 Normal/Hover/Pressed/Focus/Disabled 可读性和键盘遍历。

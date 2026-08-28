@@ -84,16 +84,50 @@ public sealed class ControlThemeTests
     [Fact]
     public void PrimaryButton_PreservesItsForegroundForStringContentAndOverridesDisabledContent()
     {
-        var buttons = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
-
-        buttons.Should().Contain("Foreground=\"{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}\"")
-            .And.Contain("TargetName=\"PrimaryContent\"")
-            .And.Contain("Brush.OnPrimary")
-            .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"")
-            .And.Contain("x:Key=\"Button.PrimaryTextTemplate\"")
-            .And.Contain("ContentTemplate=\"{StaticResource Button.PrimaryTextTemplate}\"");
+        AssertPrimaryButtonContract(ReadButtonsXaml());
     }
+
+    [Fact]
+    public void PrimaryButtonContract_RejectsAnIsolatedMissingDisabledContentOverride()
+    {
+        const string disabledContentOverride =
+            "<Setter TargetName=\"PrimaryContent\" Property=\"TextElement.Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"/>";
+        var buttons = ReadButtonsXaml();
+        var brokenButtons = buttons.Replace(disabledContentOverride, string.Empty, StringComparison.Ordinal);
+
+        brokenButtons.Should().NotBe(buttons, "the isolated copy must remove the disabled content override");
+        var verifyBrokenCopy = () => AssertPrimaryButtonContract(brokenButtons);
+
+        verifyBrokenCopy.Should().Throw<Xunit.Sdk.XunitException>();
+    }
+
+    private static void AssertPrimaryButtonContract(string buttons)
+    {
+        var primaryContentTemplate = ExtractFragment(buttons, "<DataTemplate x:Key=\"Button.PrimaryTextTemplate\">", "</DataTemplate>");
+        var primaryStyle = ExtractFragment(buttons, "<Style x:Key=\"Button.Primary\"", "</Style>");
+        var primaryTemplate = ExtractFragment(primaryStyle, "<ControlTemplate TargetType=\"Button\">", "</ControlTemplate>");
+        var disabledTrigger = ExtractFragment(primaryTemplate, "<Trigger Property=\"IsEnabled\" Value=\"False\">", "</Trigger>");
+
+        primaryStyle.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.OnPrimary}\"");
+        primaryContentTemplate.Should().Contain("Foreground=\"{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}\"");
+        primaryTemplate.Should().Contain("TargetName=\"PrimaryContent\"")
+            .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"");
+        disabledTrigger.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"")
+            .And.Contain("<Setter TargetName=\"PrimaryContent\" Property=\"TextElement.Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"/>");
+    }
+
+    private static string ExtractFragment(string xaml, string startMarker, string endMarker)
+    {
+        var start = xaml.IndexOf(startMarker, StringComparison.Ordinal);
+        start.Should().BeGreaterOrEqualTo(0, $"the XAML must contain {startMarker}");
+
+        var end = xaml.IndexOf(endMarker, start, StringComparison.Ordinal);
+        end.Should().BeGreaterOrEqualTo(0, $"the XAML fragment starting with {startMarker} must close with {endMarker}");
+        return xaml[start..(end + endMarker.Length)];
+    }
+
+    private static string ReadButtonsXaml() => File.ReadAllText(Path.Combine(
+        FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
 
     [Fact]
     public void ApplicationButtonTemplates_DoNotFadeDisabledContentBelowReadableContrast()

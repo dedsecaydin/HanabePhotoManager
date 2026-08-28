@@ -1000,7 +1000,7 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 
 ## 2026-08-28 — 导入命名与日期文件夹批量流程最终验证
 
-- 扩展主按钮文本模板回归契约：字符串内容绑定 Button 前景、`PrimaryContent` 命名元素可被禁用态覆盖，且正常态使用 `Brush.OnPrimary`；现有共享模板已满足契约，未改动 `Buttons.xaml`。
-- 主题资源契约补齐 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`，确保 Light/Dark 共享语义键覆盖主按钮正常与禁用文本所需资源。
-- 聚焦 App 主题/资源测试 50/50 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 453、InstallerShell 12，共 680 项通过。
-- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源、`JK0001（DSC_1234）` 命名预览，以及 Release 应用启动/关闭均通过；随后已删除两处临时验证目录。无可用的交互式 UI 自动化会话，未验证逐一主题切换后的 Normal/Hover/Pressed/Focus/Disabled 可读性和键盘遍历。
+- 将主按钮回归断言收紧到 `Button.PrimaryTextTemplate`、`Button.Primary` 和其 `ControlTemplate` 的片段：正常态绑定 `Brush.OnPrimary`、`PrimaryContent`，禁用触发器中 `PrimaryContent → Brush.Text.Tertiary` 的关联均被锁定；隔离副本删除该禁用覆盖时测试明确失败。现有共享模板已满足契约，未改动 `Buttons.xaml`。
+- 主题资源契约覆盖 Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个颜色词典，逐一确认 `Color.Primary`、`Color.OnPrimary`、`Color.Text.Tertiary` 与 `Color.Surface.Disabled`；共享 Light/Dark Brush 仍要求 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`。
+- 聚焦 App 主题/资源测试 51/51 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 454、InstallerShell 12，共 681 项通过。
+- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源，Release `ImportPlanBuilder.BuildRenamedFileName` 实测最终文件名 `JK0001（DSC_1234）.ARW`，以及 Release 应用启动/关闭均通过；随后已删除三处临时验证目录。状态：自动化验证完成，交互验收待完成（主题各状态可读性与键盘遍历）。

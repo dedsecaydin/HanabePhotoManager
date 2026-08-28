@@ -46,7 +46,7 @@ public sealed class DesignSystemResourceTests
     }
 
     [Fact]
-    public void AllSixThemes_ExposeTheSameColorAndBrushKeys()
+    public void AllEightThemes_ExposePrimaryButtonNormalAndDisabledColorContracts()
     {
         var schemes = new[] { "Dynamic", "Forest", "Violet", "Classic" };
         var modes = new[] { "Light", "Dark" };
@@ -56,6 +56,9 @@ public sealed class DesignSystemResourceTests
         foreach (var colorFile in colorFiles)
         {
             colorFile.Should().Contain("x:Key=\"Color.Primary\"");
+            colorFile.Should().Contain("x:Key=\"Color.OnPrimary\"");
+            colorFile.Should().Contain("x:Key=\"Color.Text.Tertiary\"");
+            colorFile.Should().Contain("x:Key=\"Color.Surface.Disabled\"");
             colorFile.Should().Contain("x:Key=\"Color.Surface.ContainerLow\"");
             colorFile.Should().Contain("x:Key=\"Color.OnSurface\"");
         }

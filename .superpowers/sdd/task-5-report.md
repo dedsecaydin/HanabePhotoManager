@@ -2,14 +2,16 @@
 
 ## Status
 
-Completed with automated verification and a disposable D: non-interactive smoke test. `Buttons.xaml` was inspected but not changed: the required shared-template contract was already present before the test was added.
+自动化验证完成，交互验收待完成。`Buttons.xaml` 已检查但未改动：所需共享模板契约在加强测试前已经存在。
 
 ## Diff
 
 - `tests/HanabePhotoManager.App.Tests/ControlThemeTests.cs`
-  - Strengthened the primary-button contract to require the string-content foreground binding, the `PrimaryContent` target, and `Brush.OnPrimary`.
+  - Limits the primary-button assertions to `Button.PrimaryTextTemplate`, `Button.Primary`, and its `ControlTemplate`; verifies the normal foreground binding / `Brush.OnPrimary`, `PrimaryContent`, and the disabled-trigger `PrimaryContent → Brush.Text.Tertiary` relationship.
+  - Proves the assertion rejects an isolated copy with the disabled `PrimaryContent` foreground override removed.
 - `tests/HanabePhotoManager.App.Tests/DesignSystemResourceTests.cs`
-  - Added `Brush.Text.Tertiary`, `Brush.Primary`, and `Brush.OnPrimary` to the Light/Dark shared semantic-brush contract.
+  - Checks `Color.Primary`, `Color.OnPrimary`, `Color.Text.Tertiary`, and `Color.Surface.Disabled` in all eight current color dictionaries: Dynamic/Forest/Violet/Classic × Light/Dark.
+  - Retains the Light/Dark shared semantic-brush contract for `Brush.Text.Tertiary`, `Brush.Primary`, and `Brush.OnPrimary`.
 - `docs/agent-change-log.md`
   - Recorded implementation evidence, exact totals, smoke coverage, and omitted interactive checks.
 - `src/HanabePhotoManager.App/Themes/Controls/Buttons.xaml`
@@ -17,15 +19,15 @@ Completed with automated verification and a disposable D: non-interactive smoke 
 
 ## TDD / Contract Evidence
 
-The required test was added before any production-template change. It passed immediately because the current template already contained the three required strings. Per the task brief, no evidence justified changing `Buttons.xaml`; therefore a RED production-code cycle did not apply.
+The strengthened contract was applied before any production-template change. Its isolated-copy test removes the disabled `PrimaryContent` foreground override and proves that the contract fails; the unchanged real template then passes. No evidence justified changing `Buttons.xaml`.
 
 ## Automated Verification
 
 | Command | Result |
 |---|---|
-| `dotnet test tests/HanabePhotoManager.App.Tests/HanabePhotoManager.App.Tests.csproj -c Release --filter "FullyQualifiedName~ControlThemeTests|FullyQualifiedName~DesignSystemResourceTests"` | 50 passed, 0 failed, 0 skipped |
+| `dotnet test tests/HanabePhotoManager.App.Tests/HanabePhotoManager.App.Tests.csproj -c Release --filter "FullyQualifiedName~ControlThemeTests|FullyQualifiedName~DesignSystemResourceTests"` | 51 passed, 0 failed, 0 skipped |
 | `dotnet build HanabePhotoManager.sln -c Release /warnaserror` | Exit 0; 0 warnings, 0 errors |
-| `dotnet test HanabePhotoManager.sln -c Release --no-build` | Core 160, Infrastructure 55, App 453, InstallerShell 12; 680 passed, 0 failed, 0 skipped |
+| `dotnet test HanabePhotoManager.sln -c Release --no-build` | Core 160, Infrastructure 55, App 454, InstallerShell 12; 681 passed, 0 failed, 0 skipped |
 
 ## Executed Smoke Test
 
@@ -34,9 +36,9 @@ Using only disposable folders under `D:\HanabePhoto-Task5-Smoke-01a046df-02` and
 - Scanned three supported date folders.
 - Renamed a remark and then cleared it back to `MM.DD`.
 - Verified target-conflict and missing-source results without a false success.
-- Verified the combined naming output: `JK0001（DSC_1234）`.
+- Verified the actual final filename from Release `ImportPlanBuilder.BuildRenamedFileName`: `JK0001（DSC_1234）.ARW`.
 - Started the Release WPF application with isolated `APPDATA` and `LOCALAPPDATA`, then closed it normally (exit code 0).
-- Deleted both test-owned D: smoke directories after the check.
+- Deleted all three test-owned D: smoke directories after the checks.
 
 ## Not Executed / Unverified
 
@@ -45,7 +47,9 @@ Using only disposable folders under `D:\HanabePhoto-Task5-Smoke-01a046df-02` and
 
 ## Commit
 
-`b47552d test: verify import naming and folder batch workflow`
+Initial verification: `b47552d test: verify import naming and folder batch workflow`.
+
+Review remediation: `0796f97 test: strengthen primary button theme contracts`.
 
 ## Concerns
 

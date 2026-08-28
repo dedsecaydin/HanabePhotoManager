@@ -7,18 +7,22 @@ using Xunit;
 
 namespace HanabePhotoManager.App.Tests;
 
+[Collection(nameof(ProcessEnvironmentCollection))]
 public sealed class ImportNamingPresetTests
 {
     [Fact]
-    public void ImportNamingTemplate_CustomTemplate_IncludesTheCurrentPresetInTheSelector()
+    public void ImportNamingTemplate_CustomTemplate_RefreshesSelectorBeforeSelectedPreset()
     {
         const string template = "{date}_{orig}";
         var viewModel = new MainWindowViewModel();
+        var notifications = new List<string?>();
+        viewModel.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
 
         viewModel.ImportNamingTemplate = template;
 
         viewModel.ImportNamingPresets.Should().Contain(viewModel.SelectedImportNamingPreset);
         viewModel.SelectedImportNamingPreset.Kind.Should().Be(ImportNamingPresetKind.Custom);
+        AssertNamingNotificationOrder(notifications);
     }
 
     [Fact]
@@ -44,6 +48,7 @@ public sealed class ImportNamingPresetTests
             notifications.Should().Contain(nameof(MainWindowViewModel.ImportNamingTemplate));
             notifications.Should().Contain(nameof(MainWindowViewModel.SelectedImportNamingPreset));
             notifications.Should().Contain(nameof(MainWindowViewModel.ImportNamingPresets));
+            AssertNamingNotificationOrder(notifications);
         }
         finally
         {
@@ -60,5 +65,13 @@ public sealed class ImportNamingPresetTests
     public void Resolve_MapsKnownTemplatesAndPreservesCustom(string template, ImportNamingPresetKind expected)
     {
         ImportNamingPreset.Resolve(template).Kind.Should().Be(expected);
+    }
+
+    private static void AssertNamingNotificationOrder(List<string?> notifications)
+    {
+        notifications.IndexOf(nameof(MainWindowViewModel.ImportNamingTemplate))
+            .Should().BeLessThan(notifications.IndexOf(nameof(MainWindowViewModel.ImportNamingPresets)));
+        notifications.IndexOf(nameof(MainWindowViewModel.ImportNamingPresets))
+            .Should().BeLessThan(notifications.IndexOf(nameof(MainWindowViewModel.SelectedImportNamingPreset)));
     }
 }

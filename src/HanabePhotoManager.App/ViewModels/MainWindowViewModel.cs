@@ -2290,8 +2290,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : settings.ImportNamingTemplate;
         _selectedImportNamingPreset = ImportNamingPreset.Resolve(_importNamingTemplate);
         OnPropertyChanged(nameof(ImportNamingTemplate));
-        OnPropertyChanged(nameof(SelectedImportNamingPreset));
         OnPropertyChanged(nameof(ImportNamingPresets));
+        OnPropertyChanged(nameof(SelectedImportNamingPreset));
         _customAlbumsDirectory = settings.CustomAlbumsDirectory;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
@@ -6860,8 +6860,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _selectedImportNamingPreset = ImportNamingPreset.Resolve(normalized);
             _ = SaveSettingsAsync();
             OnPropertyChanged(nameof(ImportNamingTemplate));
-            OnPropertyChanged(nameof(SelectedImportNamingPreset));
             OnPropertyChanged(nameof(ImportNamingPresets));
+            OnPropertyChanged(nameof(SelectedImportNamingPreset));
         }
     }
 

@@ -24,6 +24,8 @@ were missing.
   import page and point to the command rather than navigating automatically.
 - Removed `AskForDateRemarksAsync`, its sequential `RemarkPromptWindow` calls, and
   its now-unused rename/sanitization helpers from the import workflow.
+- Independent read-only review found no Critical or Important issues. Its minor
+  import-result-entry concern was addressed with a completion-state visibility binding.
 
 ## Verification
 

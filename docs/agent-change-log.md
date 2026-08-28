@@ -994,3 +994,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Shell 新增 `DateFolders` 导航项、页面宿主和可中断页面切换映射；进入页面时刷新既有 `DateFolderManagementViewModel`，不改变导入后的当前页面。
 - 导入完成报告提供“管理日期文件夹备注”非阻塞入口；移除按日期顺序弹出 `RemarkPromptWindow` 的调用链。
 - 继承的导航/XAML RED 测试先确认失败，再完成实现后通过 49 项聚焦 App 测试；Release `/warnaserror` 构建 0 警告、0 错误。
+- 独立只读审查后，入口改为仅在正常或恢复导入完成时显示，避免导入前或进行中跳转并触发额外目录扫描。

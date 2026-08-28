@@ -188,8 +188,10 @@ public sealed class ControlThemeTests
 
         viewModelSource.Should().NotContain("AskForDateRemarksAsync")
             .And.NotContain("new RemarkPromptWindow");
+        viewModelSource.Should().Contain("public bool HasCompletedImport => ProgressLabel == \"导入完成\"");
         mainXaml.Should().Contain("Command=\"{Binding ShowDateFoldersCommand}\"");
         mainXaml.Should().Contain("AutomationProperties.Name=\"管理日期文件夹备注\"");
+        mainXaml.Should().Contain("Visibility=\"{Binding HasCompletedImport, Converter={StaticResource BoolToVis}}\"");
     }
 
     [Fact]

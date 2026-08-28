@@ -1487,7 +1487,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string ProgressLabel
     {
         get => _progressLabel;
-        set => SetProperty(ref _progressLabel, value);
+        set
+        {
+            if (SetProperty(ref _progressLabel, value))
+            {
+                OnPropertyChanged(nameof(HasCompletedImport));
+            }
+        }
     }
 
     public double ProgressValue
@@ -4568,6 +4574,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsWatermarkPage => CurrentPage == "Watermark";
 
     public bool IsDateFoldersPage => CurrentPage == "DateFolders";
+
+    public bool HasCompletedImport => ProgressLabel == "导入完成";
 
     public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
 

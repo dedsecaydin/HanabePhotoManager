@@ -1032,7 +1032,7 @@
                       <TextBlock TextWrapping="Wrap" FontFamily="Consolas" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" Text="{Binding ImportReport}" />
                     </ScrollViewer>
                     <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource Brush.Primary}" Margin="0,6,0,0" Text="{Binding ImportActionHint}" />
-                    <Button Content="管理日期文件夹备注" Style="{StaticResource Button.Secondary}" Command="{Binding ShowDateFoldersCommand}" AutomationProperties.Name="管理日期文件夹备注" HorizontalAlignment="Left" Margin="0,10,0,0" />
+                    <Button Content="管理日期文件夹备注" Style="{StaticResource Button.Secondary}" Command="{Binding ShowDateFoldersCommand}" AutomationProperties.Name="管理日期文件夹备注" Visibility="{Binding HasCompletedImport, Converter={StaticResource BoolToVis}}" HorizontalAlignment="Left" Margin="0,10,0,0" />
                     <Border Margin="0,10,0,0" Padding="12" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}">
                       <DockPanel>
                         <StackPanel>

@@ -22,7 +22,7 @@
 ## Tokens
 
 - Color：Background（Canvas/Subtle/Chrome）、Surface（Default/Subtle/Elevated/Interactive/Selected/Disabled/Overlay）、Border、Text、Accent、Status（含 Subtle）与 Viewer 语义族；Overlay Scrim 独立表达遮罩层。
-- Spacing：0、2、4、6、8、12、16、20、24、32、40、48；页面 32，卡片 20，gutter 16/24。复合 Thickness 必须由共享 Spacing Token 提供。
+- Spacing：0、2、4、6、8、12、16、20、24、32、40、48；页面 32，卡片 20，gutter 16/24。复合 Thickness 必须由共享 Spacing Token 提供；堆叠、行、字段间距和分隔线使用 `Spacing.Stack.*`、`Spacing.Row.*`、`Spacing.Field.*` 与 `BorderThickness.Divider.*`。
 - Radius：Small 8、Control 12、Card 12、Dialog 16、Container 28、Full 999（M3：容器 28 / 卡片 12-16 / chip 8-12 / pill 999）。
 - Typography：`Segoe UI Variable, Microsoft YaHei UI`；Caption 11/16、BodySmall 12/18、Body 13/20、Label 13/18、TitleSmall 16/22、Title 20/28、Display 28/36（字号/行高）；字重仅使用 Regular、Medium、SemiBold、Bold Token。
 - Sizing：控件 36/40，Navigation Rail 88，内容最大宽度 1440，阅读区 960，图标 12/16/18/20/24。

@@ -27,17 +27,39 @@ were missing.
 - Independent read-only review found no Critical or Important issues. Its minor
   import-result-entry concern was addressed with a completion-state visibility binding.
 
+## Follow-up review fix
+
+- RED added after the main review: the entry no longer accepts `ProgressLabel` as
+  proof of completion; it covers changing library roots, starting a new batch,
+  cancellation, and failure-state clearing. The original page test also rejects
+  direct numeric Margin, Padding, and BorderThickness values.
+- GREEN uses an explicit completion batch version and the completed library-root
+  identity. Starting analysis, normal import, or resumed import invalidates the
+  prior result; cancellation and all relevant failure paths clear it; only normal
+  or resumed import success marks it complete.
+- The page now uses centralized composite spacing and divider tokens. The date row
+  intentionally remains month/day only because its model has no year; its read-only
+  full path is the authoritative disambiguator, so no year is inferred.
+
 ## Verification
 
 - RED: `dotnet test tests/HanabePhotoManager.App.Tests/HanabePhotoManager.App.Tests.csproj -c Release --filter "FullyQualifiedName~NavigationOrderPolicyTests|FullyQualifiedName~NavigationMotionTests|FullyQualifiedName~ControlThemeTests"` — 4 expected failures.
 - GREEN: same focused area plus `DateFolderManagementViewModelTests` — 49 passed, 0 failed, 0 skipped.
 - `dotnet build HanabePhotoManager.sln -c Release /warnaserror` — 0 warnings, 0 errors.
+- Follow-up GREEN: focused Task 4 + `ControlThemeTests` +
+  `DesignSystemResourceTests` — 70 passed, 0 failed, 0 skipped; Release build
+  again completed with 0 warnings and 0 errors.
 
 ## Commit
 
 `4988e558b824eed13773fb8513646fcb95814d77` — `feat: add date folder batch management page`
 
+Follow-up commit: `fix: decouple date-folder entry from progress text`.
+
 ## Concerns / follow-up
 
 - Automated coverage verifies bindings and navigation contracts. Manual WPF smoke/Light-Dark visual QA was not run because no disposable library and interactive app session were used.
 - Full solution tests were not run; Task 4 required the focused App selection and Release build.
+- Static self-review confirmed that the only completion markers are the normal and
+  resumed-import success paths, and that the page has no direct numeric Margin,
+  Padding, or BorderThickness values.

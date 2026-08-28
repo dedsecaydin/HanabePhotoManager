@@ -176,6 +176,7 @@ public sealed class ControlThemeTests
         pageXaml.Should().Contain("Text=\"{Binding EditedRemark, Mode=TwoWay");
         pageXaml.Should().Contain("Text=\"{Binding FullPath, Mode=OneWay}");
         pageXaml.Should().NotContain("Text=\"{Binding FullPath, Mode=TwoWay");
+        pageXaml.Should().NotMatchRegex("(?:Margin|Padding|BorderThickness)=\"[0-9]");
     }
 
     [Fact]
@@ -188,10 +189,48 @@ public sealed class ControlThemeTests
 
         viewModelSource.Should().NotContain("AskForDateRemarksAsync")
             .And.NotContain("new RemarkPromptWindow");
-        viewModelSource.Should().Contain("public bool HasCompletedImport => ProgressLabel == \"导入完成\"");
+        viewModelSource.Should().NotContain("ProgressLabel == \"导入完成\"");
         mainXaml.Should().Contain("Command=\"{Binding ShowDateFoldersCommand}\"");
         mainXaml.Should().Contain("AutomationProperties.Name=\"管理日期文件夹备注\"");
         mainXaml.Should().Contain("Visibility=\"{Binding HasCompletedImport, Converter={StaticResource BoolToVis}}\"");
+    }
+
+    [Fact]
+    public void ImportCompletionEntry_TracksTheCurrentLibraryAndBatchInsteadOfProgressText()
+    {
+        var viewModel = new MainWindowViewModel { ProgressLabel = "导入完成" };
+
+        viewModel.HasCompletedImport.Should().BeFalse("a progress caption is not a completed import result");
+
+        viewModel.LibraryRoot = @"D:\\Library-A";
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        viewModel.HasCompletedImport.Should().BeTrue();
+
+        viewModel.LibraryRoot = @"D:\\Library-B";
+        viewModel.HasCompletedImport.Should().BeFalse("a completion result belongs to its original library");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        viewModel.HasCompletedImport.Should().BeTrue();
+        InvokeImportCompletionMethod(viewModel, "BeginImportCompletionBatch");
+        viewModel.HasCompletedImport.Should().BeFalse("starting a new analysis or import invalidates the previous result");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        InvokeImportCompletionMethod(viewModel, "CancelCurrentTask");
+        viewModel.HasCompletedImport.Should().BeFalse("cancellation invalidates the result entry");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        InvokeImportCompletionMethod(viewModel, "ClearImportCompletionState");
+        viewModel.HasCompletedImport.Should().BeFalse("failed import paths clear the result entry");
+    }
+
+    private static void InvokeImportCompletionMethod(MainWindowViewModel viewModel, string methodName)
+    {
+        var method = typeof(MainWindowViewModel).GetMethod(
+            methodName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        method.Should().NotBeNull($"the import completion state must support {methodName}");
+        method!.Invoke(viewModel, null);
     }
 
     [Fact]

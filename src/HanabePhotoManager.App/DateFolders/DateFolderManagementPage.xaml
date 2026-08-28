@@ -9,22 +9,22 @@
         <RowDefinition Height="*" />
       </Grid.RowDefinitions>
 
-      <DockPanel Margin="0,0,0,16">
+      <DockPanel Margin="{StaticResource Spacing.Stack.16}">
         <StackPanel>
           <TextBlock Text="日期文件夹" Style="{StaticResource Layout.PageTitle}" />
           <TextBlock Text="编辑备注后统一保存；日期与文件夹路径始终只读。"
                      Foreground="{DynamicResource Brush.Text.Secondary}"
                      FontSize="{StaticResource Typography.BodySmall}"
-                     Margin="0,4,0,0" />
+                     Margin="{StaticResource Spacing.Stack.4}" />
           <TextBlock Text="{Binding Summary, Mode=OneWay}"
                      Foreground="{DynamicResource Brush.Text.Secondary}"
                      FontSize="{StaticResource Typography.Caption}"
-                     Margin="0,8,0,0" />
+                     Margin="{StaticResource Spacing.Stack.8}" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
           <Button Content="刷新" Style="{StaticResource Button.Secondary}"
                   Command="{Binding RefreshCommand}" AutomationProperties.Name="刷新日期文件夹" />
-          <Button Content="保存全部" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"
+          <Button Content="保存全部" Style="{StaticResource Button.Primary}" Margin="{StaticResource Spacing.Inline.8}"
                   Command="{Binding SaveAllCommand}" AutomationProperties.Name="保存全部备注更改" />
         </StackPanel>
       </DockPanel>
@@ -34,7 +34,7 @@
           <RowDefinition Height="Auto" />
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Grid Grid.Row="0" Margin="0,0,0,8">
+        <Grid Grid.Row="0" Margin="{StaticResource Spacing.Stack.8}">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="96" />
             <ColumnDefinition Width="2*" />
@@ -51,7 +51,7 @@
                  ScrollViewer.CanContentScroll="True" AutomationProperties.Name="日期文件夹备注列表">
           <ListBox.ItemTemplate>
             <DataTemplate DataType="{x:Type datefolders:DateFolderItemViewModel}">
-              <Border Padding="0,8" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="0,0,0,1">
+              <Border Padding="{StaticResource Spacing.Row.Vertical.8}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="{StaticResource BorderThickness.Divider.Bottom}">
                 <Grid>
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="96" />
@@ -66,10 +66,10 @@
                     <TextBlock Text="{Binding Day, StringFormat={}{0:00}}"
                                FontWeight="{StaticResource Typography.FontWeight.SemiBold}" />
                   </StackPanel>
-                  <TextBox Grid.Column="1" Margin="0,0,12,0" Style="{StaticResource Input.TextBox}"
+                  <TextBox Grid.Column="1" Margin="{StaticResource Spacing.Field.Gap}" Style="{StaticResource Input.TextBox}"
                            Text="{Binding FullPath, Mode=OneWay}" IsReadOnly="True"
                            AutomationProperties.Name="日期文件夹路径" />
-                  <TextBox Grid.Column="2" Margin="0,0,12,0" Style="{StaticResource Input.TextBox}"
+                  <TextBox Grid.Column="2" Margin="{StaticResource Spacing.Field.Gap}" Style="{StaticResource Input.TextBox}"
                            Text="{Binding EditedRemark, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                            AutomationProperties.Name="日期文件夹备注" />
                   <TextBlock Grid.Column="3" Text="{Binding StatusText, Mode=OneWay}"

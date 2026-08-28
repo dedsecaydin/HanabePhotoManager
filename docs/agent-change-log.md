@@ -995,3 +995,5 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 导入完成报告提供“管理日期文件夹备注”非阻塞入口；移除按日期顺序弹出 `RemarkPromptWindow` 的调用链。
 - 继承的导航/XAML RED 测试先确认失败，再完成实现后通过 49 项聚焦 App 测试；Release `/warnaserror` 构建 0 警告、0 错误。
 - 独立只读审查后，入口改为仅在正常或恢复导入完成时显示，避免导入前或进行中跳转并触发额外目录扫描。
+- 后续主控审查将完成态从 `ProgressLabel` 文案中解耦：以当前库根目录和导入批次版本确认，换库、开始分析/导入、取消或异常都会使入口失效；仅正常和恢复导入成功后显式确认。
+- 日期管理页的所有 Margin、Padding 与 BorderThickness 改为全局复合间距/分隔线 token；日期行仍只显示月日，不臆造不存在的年份，完整路径保留唯一辨识信息。

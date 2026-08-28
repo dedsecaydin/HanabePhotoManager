@@ -175,6 +175,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _selectedDeviceSummary = "点击设备组中的磁盘、相机或照片库后，这里会显示文件夹和媒体文件概览。";
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
+    private int _importCompletionBatch;
+    private int _completedImportBatch = -1;
+    private string _completedImportLibraryRoot = string.Empty;
     private readonly IImportSourcePicker _importSourcePicker = new WindowsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
@@ -1391,6 +1394,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _libraryRoot, value))
             {
+                ClearImportCompletionState();
                 DateFolders.LibraryRoot = _libraryRoot;
                 OnPropertyChanged(nameof(HasLibraryRoot));
                 OnPropertyChanged(nameof(LibraryHealthText));
@@ -1487,13 +1491,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string ProgressLabel
     {
         get => _progressLabel;
-        set
-        {
-            if (SetProperty(ref _progressLabel, value))
-            {
-                OnPropertyChanged(nameof(HasCompletedImport));
-            }
-        }
+        set => SetProperty(ref _progressLabel, value);
     }
 
     public double ProgressValue
@@ -3008,6 +3006,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void CancelCurrentTask()
     {
         CancelPreviewThumbnailLoading();
+        ClearImportCompletionState();
         if (_activeTaskCancellation is null || _activeTaskCancellation.IsCancellationRequested)
         {
             return;
@@ -3025,6 +3024,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : "已请求停止。后台读取正在退出，完成后可立即重新选择来源。";
         StatusMessage = "已请求停止当前任务，会在当前文件安全点停止。";
 
+    }
+
+    private void BeginImportCompletionBatch() => ClearImportCompletionState();
+
+    private void MarkImportCompletionForCurrentBatch()
+    {
+        if (!HasLibraryRoot)
+        {
+            ClearImportCompletionState();
+            return;
+        }
+
+        _completedImportLibraryRoot = LibraryRoot;
+        _completedImportBatch = _importCompletionBatch;
+        OnPropertyChanged(nameof(HasCompletedImport));
+    }
+
+    private void ClearImportCompletionState()
+    {
+        _importCompletionBatch++;
+        _completedImportBatch = -1;
+        _completedImportLibraryRoot = string.Empty;
+        OnPropertyChanged(nameof(HasCompletedImport));
     }
 
     /// <summary>把外部调用提供的散文件按指定类别加入一次导入流程。</summary>
@@ -3183,6 +3205,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
     {
+        BeginImportCompletionBatch();
         CancelImportThumbnailLoading();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Analysis);
         var cancellationToken = cancellation.Token;
@@ -3305,6 +3328,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             ImportItems.Clear();
             ImportSections.Clear();
             SetImportSummary(0, 0, 0);
@@ -3317,6 +3341,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "分析失败：" + ex.Message;
             StatusMessage = "分析来源时遇到问题。";
             return [];
@@ -3388,6 +3413,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task RunImportAsync(IReadOnlyList<ImportPreviewItemViewModel> items, bool deleteSourcesAfterVerify)
     {
+        BeginImportCompletionBatch();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
         var cancellationToken = cancellation.Token;
         IsBusy = true;
@@ -3501,6 +3527,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
@@ -3527,6 +3554,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             stopped = true;
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
@@ -3536,6 +3564,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "导入中断：" + ex.Message;
             StatusMessage = "导入中断，已保留可见报告。";
         }
@@ -3562,6 +3591,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        BeginImportCompletionBatch();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
         var cancellationToken = cancellation.Token;
         IsBusy = true;
@@ -3653,6 +3683,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
@@ -3660,12 +3691,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
             StatusMessage = "恢复导入已停止，可稍后再次继续。";
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "恢复导入中断：" + ex.Message;
             StatusMessage = "恢复导入中断，可稍后再次继续。";
         }
@@ -4575,7 +4608,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsDateFoldersPage => CurrentPage == "DateFolders";
 
-    public bool HasCompletedImport => ProgressLabel == "导入完成";
+    public bool HasCompletedImport =>
+        _completedImportBatch == _importCompletionBatch &&
+        !string.IsNullOrWhiteSpace(_completedImportLibraryRoot) &&
+        string.Equals(_completedImportLibraryRoot, LibraryRoot, StringComparison.OrdinalIgnoreCase);
 
     public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
 

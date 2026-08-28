@@ -966,6 +966,18 @@
 
                         <Border Padding="4,10" Background="Transparent" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="0,0,0,1">
                           <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="150" /></Grid.ColumnDefinitions>
+                            <StackPanel VerticalAlignment="Center"><TextBlock Text="命名方式" FontWeight="SemiBold" /><TextBlock Text="导入文件的名称格式" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" /></StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      ItemsSource="{Binding ImportNamingPresets}"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedItem="{Binding SelectedImportNamingPreset}"
+                                      AutomationProperties.Name="导入文件命名方式" />
+                          </Grid>
+                        </Border>
+
+                        <Border Padding="4,10" Background="Transparent" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="0,0,0,1">
+                          <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                               <TextBlock Text="本地 AI 人物识别" FontWeight="SemiBold" />

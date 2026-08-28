@@ -163,7 +163,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _currentPreviewCategory = "全部";
     private List<string> _customRawExtensions = [];
     private List<string> _customVideoExtensions = [];
-    private string _importNamingTemplate = "JK{seq}";
+    private string _importNamingTemplate = ImportNamingFormatter.DefaultTemplate;
+    private ImportNamingPreset _selectedImportNamingPreset = ImportNamingPreset.Resolve(ImportNamingFormatter.DefaultTemplate);
     private string? _customAlbumsDirectory;
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
@@ -2284,7 +2285,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
         _customRawExtensions = settings.CustomRawExtensions ?? [];
         _customVideoExtensions = settings.CustomVideoExtensions ?? [];
-        _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate) ? "JK{seq}" : settings.ImportNamingTemplate;
+        _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate)
+            ? ImportNamingFormatter.DefaultTemplate
+            : settings.ImportNamingTemplate;
+        _selectedImportNamingPreset = ImportNamingPreset.Resolve(_importNamingTemplate);
         _customAlbumsDirectory = settings.CustomAlbumsDirectory;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
@@ -6843,15 +6847,31 @@ public sealed partial class MainWindowViewModel : ObservableObject
         get => _importNamingTemplate;
         set
         {
-            var normalized = string.IsNullOrWhiteSpace(value) ? "JK{seq}" : value.Trim();
+            var normalized = string.IsNullOrWhiteSpace(value) ? ImportNamingFormatter.DefaultTemplate : value.Trim();
             if (string.Equals(normalized, _importNamingTemplate, StringComparison.Ordinal))
             {
                 return;
             }
 
             _importNamingTemplate = normalized;
+            _selectedImportNamingPreset = ImportNamingPreset.Resolve(normalized);
             _ = SaveSettingsAsync();
             OnPropertyChanged(nameof(ImportNamingTemplate));
+            OnPropertyChanged(nameof(SelectedImportNamingPreset));
+        }
+    }
+
+    public IReadOnlyList<ImportNamingPreset> ImportNamingPresets => ImportNamingPreset.All;
+
+    public ImportNamingPreset SelectedImportNamingPreset
+    {
+        get => _selectedImportNamingPreset;
+        set
+        {
+            if (value is not null)
+            {
+                ImportNamingTemplate = value.Template;
+            }
         }
     }
 

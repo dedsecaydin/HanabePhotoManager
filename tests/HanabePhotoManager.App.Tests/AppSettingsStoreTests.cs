@@ -1,6 +1,7 @@
 using FluentAssertions;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.Services;
+using HanabePhotoManager.Core.Imports;
 using System.IO;
 using Xunit;
 
@@ -8,6 +9,29 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class AppSettingsStoreTests
 {
+    [Fact]
+    public async Task ImportNamingTemplate_SequenceAndOriginalPreset_SurvivesRestart()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "hanabe-import-naming-" + Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "settings.json");
+        try
+        {
+            var store = new AppSettingsStore(path);
+            await store.SaveAsync(new AppSettings
+            {
+                ImportNamingTemplate = ImportNamingFormatter.SequenceAndOriginalTemplate
+            });
+
+            var loaded = await new AppSettingsStore(path).LoadAsync();
+
+            loaded.ImportNamingTemplate.Should().Be(ImportNamingFormatter.SequenceAndOriginalTemplate);
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task GalleryGroupTitleMode_DefaultsToParsedDateAndPersists()
     {

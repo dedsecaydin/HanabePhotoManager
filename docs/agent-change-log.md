@@ -975,3 +975,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - `0.3.2-alpha.20`: moved category, retouch, rating, and multi-select into one common-filter row, with the advanced-filter disclosure on its own left-aligned second row; added matching release notes.
 - `0.3.2-alpha.20` video follow-up: moved LibVLC initialization off the UI thread, reused one MediaPlayer per viewer window, and enabled hardware decoding plus local-file buffering/late-frame policies; added regression coverage.
 - GitHub presentation: refreshed English, Simplified Chinese, and Japanese READMEs to `0.3.2-alpha.20` / 647 tests, documented the current gallery, watermark, collage, and video improvements, and removed obsolete cloud-drive claims.
+
+## 2026-08-28 — 批量日期文件夹编辑 ViewModel
+
+- 新增可编辑日期目录行与批量管理 ViewModel；扫描和重命名通过可替换服务边界调用既有 `LibraryDateFolderService`，不改变现有文件系统服务。
+- 批量保存逐行继续执行：成功/无需保存更新基线和有效路径，失败行保留用户编辑并给出状态；空根目录不会触发扫描。
+- 新增 6 项内存假服务回归覆盖；Release `/warnaserror` 构建 0 警告、0 错误，Core 160、Infrastructure 55、App 447、InstallerShell 12 测试全部通过。

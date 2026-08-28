@@ -204,9 +204,47 @@ public static class LibraryDateFolderService
     }
 
     /// <summary>重命名日期目录的备注部分，并将文件系统结果显式返回给调用方。</summary>
-    public static DateFolderRenameResult RenameRemark(string sourcePath, string remark)
+    public static DateFolderRenameResult RenameRemark(string? sourcePath, string? remark)
     {
-        var sourceFullPath = Path.GetFullPath(sourcePath);
+        if (string.IsNullOrWhiteSpace(sourcePath))
+        {
+            return new DateFolderRenameResult(
+                DateFolderRenameStatus.Failed,
+                sourcePath ?? string.Empty,
+                sourcePath ?? string.Empty,
+                "The source directory path is required.");
+        }
+
+        string sourceFullPath;
+        try
+        {
+            sourceFullPath = Path.GetFullPath(sourcePath);
+        }
+        catch (ArgumentException exception)
+        {
+            return new DateFolderRenameResult(
+                DateFolderRenameStatus.Failed,
+                sourcePath,
+                sourcePath,
+                exception.Message);
+        }
+        catch (NotSupportedException exception)
+        {
+            return new DateFolderRenameResult(
+                DateFolderRenameStatus.Failed,
+                sourcePath,
+                sourcePath,
+                exception.Message);
+        }
+        catch (PathTooLongException exception)
+        {
+            return new DateFolderRenameResult(
+                DateFolderRenameStatus.Failed,
+                sourcePath,
+                sourcePath,
+                exception.Message);
+        }
+
         if (!Directory.Exists(sourceFullPath))
         {
             return new DateFolderRenameResult(
@@ -235,6 +273,14 @@ public static class LibraryDateFolderService
         }
 
         var normalizedRemark = NormalizeRemark(remark);
+        if (string.Equals(normalizedRemark, NormalizeRemark(parsed.Suffix), StringComparison.Ordinal))
+        {
+            return new DateFolderRenameResult(
+                DateFolderRenameStatus.NoChange,
+                sourceFullPath,
+                sourceFullPath);
+        }
+
         var targetName = $"{parsed.Month:00}.{parsed.Day:00}";
         if (!string.IsNullOrEmpty(normalizedRemark))
         {
@@ -325,7 +371,7 @@ public static class LibraryDateFolderService
 
         var invalidCharacters = Path.GetInvalidFileNameChars();
         var sanitized = new string(remark.Where(character => !invalidCharacters.Contains(character)).ToArray());
-        return sanitized.Trim(' ', '\t', '_', '-');
+        return sanitized.Trim(' ', '\t', '\r', '\n', '_', '-', '.');
     }
 
     private static bool TryParseNumber(string value, out int number) =>

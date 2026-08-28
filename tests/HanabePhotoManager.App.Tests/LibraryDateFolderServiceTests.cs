@@ -134,6 +134,22 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
         Directory.Exists(source).Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("7.4-活动")]
+    [InlineData("7月4日 夜景")]
+    public void RenameRemark_ReturnsNoChangeWhenSavingTheUnchangedRemarkFromScan(string folderName)
+    {
+        var month = Directory.CreateDirectory(Path.Combine(_root, "07月")).FullName;
+        var source = Directory.CreateDirectory(Path.Combine(month, folderName)).FullName;
+        var entry = LibraryDateFolderService.Scan(_root).Should().ContainSingle().Which;
+
+        var result = LibraryDateFolderService.RenameRemark(entry.FullPath, entry.Remark);
+
+        result.Status.Should().Be(DateFolderRenameStatus.NoChange);
+        result.EffectivePath.Should().Be(source);
+        Directory.Exists(source).Should().BeTrue();
+    }
+
     [Fact]
     public void RenameRemark_SanitizesTheRemarkBeforeMoving()
     {
@@ -143,6 +159,38 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
 
         result.Status.Should().Be(DateFolderRenameStatus.Success);
         Path.GetFileName(result.EffectivePath).Should().Be("08.28_婚礼晚宴");
+    }
+
+    [Fact]
+    public void RenameRemark_TrimsWindowsDiscardedTrailingCharactersAndReturnsTheActualDirectory()
+    {
+        var month = Directory.CreateDirectory(Path.Combine(_root, "08月")).FullName;
+        var source = Directory.CreateDirectory(Path.Combine(month, "08.28")).FullName;
+
+        var result = LibraryDateFolderService.RenameRemark(source, "婚礼. \t");
+
+        result.Status.Should().Be(DateFolderRenameStatus.Success);
+        result.EffectivePath.Should().Be(Path.Combine(month, "08.28_婚礼"));
+        Directory.GetDirectories(month).Should().ContainSingle().Which.Should().Be(result.EffectivePath);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("\0")]
+    public void RenameRemark_RejectsBlankOrInvalidSourcePathsWithoutFilesystemActions(string sourcePath)
+    {
+        var source = Directory.CreateDirectory(Path.Combine(_root, "08月", "08.28")).FullName;
+
+        DateFolderRenameResult? result = null;
+        var action = () => result = LibraryDateFolderService.RenameRemark(sourcePath, "婚礼");
+
+        action.Should().NotThrow();
+        result.Should().NotBeNull();
+        result!.Status.Should().Be(DateFolderRenameStatus.Failed);
+        result.SourcePath.Should().Be(sourcePath);
+        result.EffectivePath.Should().Be(sourcePath);
+        Directory.Exists(source).Should().BeTrue();
     }
 
     public void Dispose()

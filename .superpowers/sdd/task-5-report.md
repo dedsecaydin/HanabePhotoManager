@@ -2,7 +2,7 @@
 
 ## Status
 
-自动化验证完成，交互验收待完成。`Buttons.xaml` 已检查但未改动：所需共享模板契约在加强测试前已经存在。
+自动化验证与可达的交互验收已完成。`Buttons.xaml` 已检查但未改动：所需共享模板契约在加强测试前已经存在。
 
 ## Diff
 
@@ -40,10 +40,16 @@ Using only disposable folders under `D:\HanabePhoto-Task5-Smoke-01a046df-02` and
 - Started the Release WPF application with isolated `APPDATA` and `LOCALAPPDATA`, then closed it normally (exit code 0).
 - Deleted all three test-owned D: smoke directories after the checks.
 
+## Interactive WPF Verification
+
+The Release app was launched with isolated settings under the worktree and an empty test library. Windows UI Automation verified that the date-folder page exposes Refresh and Save All with automation names, and that Tab moves from Refresh to `保存全部备注更改`.
+
+Save All normal-state text was visually checked and remained readable in all eight selectable themes: Dynamic/Forest/Violet/Classic × Light/Dark. Focused-state text was also checked in Light and Classic Dark. The app was closed normally after the checks.
+
 ## Not Executed / Unverified
 
-- No interactive UI automation session was available. The following remain unverified in this task: switching each selectable theme and visually checking Save All in Normal/Hover/Pressed/Focus/Disabled; keyboard traversal through the selector, row editors, Refresh, and Save All; actual UI import-preset switching and restart restoration; UI confirmation that import completion never opens remark dialogs.
-- The corresponding behavior has automated regression coverage in the solution tests, but that does not replace the omitted interactive checks.
+- Hover and Pressed are transient states and Disabled requires an in-flight batch; those three states were not captured interactively. Their foreground relationships are covered by the strengthened shared-template contract tests across all eight theme color dictionaries.
+- The empty isolated library had no editable date row, so row-editor Tab traversal was not exercised interactively. UI-level import-preset restart and a real completed import without remark dialogs were also not executed; their state and source contracts remain covered by automated tests.
 
 ## Commit
 
@@ -53,4 +59,4 @@ Review remediation: `0796f97 test: strengthen primary button theme contracts`.
 
 ## Concerns
 
-The unverified items above are interactive-runtime acceptance checks, not automated test failures. No production button-template change was warranted by current source or the new contract test.
+No production button-template change was warranted by current source, automated contract evidence, or the completed normal/focus visual checks.

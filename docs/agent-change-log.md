@@ -1003,4 +1003,5 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 将主按钮回归断言收紧到 `Button.PrimaryTextTemplate`、`Button.Primary` 和其 `ControlTemplate` 的片段：正常态绑定 `Brush.OnPrimary`、`PrimaryContent`，禁用触发器中 `PrimaryContent → Brush.Text.Tertiary` 的关联均被锁定；隔离副本删除该禁用覆盖时测试明确失败。现有共享模板已满足契约，未改动 `Buttons.xaml`。
 - 主题资源契约覆盖 Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个颜色词典，逐一确认 `Color.Primary`、`Color.OnPrimary`、`Color.Text.Tertiary` 与 `Color.Surface.Disabled`；共享 Light/Dark Brush 仍要求 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`。
 - 聚焦 App 主题/资源测试 51/51 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 454、InstallerShell 12，共 681 项通过。
-- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源，Release `ImportPlanBuilder.BuildRenamedFileName` 实测最终文件名 `JK0001（DSC_1234）.ARW`，以及 Release 应用启动/关闭均通过；随后已删除三处临时验证目录。状态：自动化验证完成，交互验收待完成（主题各状态可读性与键盘遍历）。
+- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源，Release `ImportPlanBuilder.BuildRenamedFileName` 实测最终文件名 `JK0001（DSC_1234）.ARW`，以及 Release 应用启动/关闭均通过；随后已删除三处临时验证目录。
+- 使用隔离设置与空测试图库完成 WPF 交互验收：Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个主题下，“保存全部”正常态文字均清晰；Light 与 Classic Dark 的焦点态文字清晰；键盘 Tab 可从“刷新”到达“保存全部备注更改”。Hover/Pressed/Disabled、空图库中不存在的行编辑器遍历、UI 级导入重启与真实完成导入仍未交互执行，对应共享模板、主题资源和状态流由自动化测试覆盖。

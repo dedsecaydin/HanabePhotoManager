@@ -987,3 +987,10 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 扫描契约改为应用层 `DateFolderScanResult`；适配器把任意扫描异常转换为可展示消息，ViewModel 不再引用文件系统异常类型。
 - 重命名结果新增 `EffectiveRemark`，成功/无需保存时以服务实际规范化备注同时更新编辑值和保存基线；重新编辑失败行会显示“待保存”。
 - 新增服务规范化备注、扫描异常摘要、失败行再次编辑三项回归覆盖；日期服务 18 项、批量 ViewModel 8 项通过，Release 构建 0 警告、0 错误。
+
+## 2026-08-28 — 日期文件夹批量管理页面
+
+- 新增 `DateFolderManagementPage`，以现有 token、输入框、按钮和虚拟化列表呈现只读日期/路径、可编辑备注及逐行保存状态。
+- Shell 新增 `DateFolders` 导航项、页面宿主和可中断页面切换映射；进入页面时刷新既有 `DateFolderManagementViewModel`，不改变导入后的当前页面。
+- 导入完成报告提供“管理日期文件夹备注”非阻塞入口；移除按日期顺序弹出 `RemarkPromptWindow` 的调用链。
+- 继承的导航/XAML RED 测试先确认失败，再完成实现后通过 49 项聚焦 App 测试；Release `/warnaserror` 构建 0 警告、0 错误。

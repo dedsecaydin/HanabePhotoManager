@@ -15,9 +15,11 @@
 
 ## Resource Architecture
 
-`App.xaml` 默认加载 `Themes/Themes/Dynamic.Light.xaml`（默认：动态色彩 · 浅色）。主题入口依次合并 Colors、Brushes、Tokens、Typography、Motion 和 Controls。6 套主题 = 3 配色（Dynamic 动态色彩 / Forest 森林绿 / Violet 紫罗兰）× 2 明暗（Light/Dark），入口为 `Themes/Themes/{Scheme}.{Mode}.xaml`，组件不判断主题。
+`App.xaml` 默认加载 `Themes/Themes/Violet.Light.xaml`（默认：紫罗兰 · 浅色）。主题入口依次合并 Colors、Brushes、Tokens、Typography、Motion 和 Controls。10 套主题 = 5 配色（Dynamic 动态色彩 / Forest 森林绿 / Violet 紫罗兰 / Classic 经典中性 / Hanabe 绯夜蔷薇）× 2 明暗（Light/Dark），入口为 `Themes/Themes/{Scheme}.{Mode}.xaml`，组件不判断主题。
 
-原始颜色只能出现在 `Themes/Colors/Colors.<Scheme>.<Mode>.xaml`（6 套 M3 tonal 色值）。语义 Brush 位于 `Brushes.Light/Dark.xaml`（含 M3 语义 Brush：`Brush.Primary` / `Brush.Surface.Container*` / `Brush.OnSurfaceVariant` 等）。`ThemeManager` 即时切换主题并在本机保存偏好（`ui-theme.txt` 存 `"{Scheme}.{Mode}"`）。
+原始颜色只能出现在 `Themes/Colors/Colors.<Scheme>.<Mode>.xaml`（10 套 M3 tonal 色值）。语义 Brush 位于 `Brushes.Light/Dark.xaml`（含 M3 语义 Brush：`Brush.Primary` / `Brush.Surface.Container*` / `Brush.OnSurfaceVariant` 等）。`ThemeManager` 即时切换主题并在本机保存偏好（`ui-theme.txt` 存 `"{Scheme}.{Mode}"`）。
+
+Hanabe 角色助手属于可选表现层：只读展示现有任务名称、百分比与预计剩余时间；用户关闭角色后，原有状态栏、进度和任务控制必须继续工作。
 
 ## Tokens
 

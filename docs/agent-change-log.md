@@ -1,5 +1,13 @@
 # Agent Change Log
 
+## 2026-08-29 — 绯夜蔷薇 · Hanabe 主题与任务助手
+
+- 新增 `Hanabe.Light` / `Hanabe.Dark` 颜色与主题入口，主题总数更新为 10。
+- `ThemeManager`、设置主题色卡和主题名称接入 Hanabe 配色。
+- 新增可持久化 `ShowHanabeAssistant`，主窗口右下角助手只读复用 `ProgressLabel`、`ProgressValue` 与 `EstimatedTimeRemaining`。
+- 新增本地打包 Hanabe 角色裁切资源；内置生成服务超时后使用本地确定性裁切，未依赖临时目录运行。
+- 验证：Release build `/warnaserror` 0 警告/0 错误；全量测试 Core 162 + Infrastructure 55 + App 476 + Installer 12 = 705 通过。
+
 ## 2026-08-16 — 像素画尺寸自定义 + 按键对比度修复
 
 ### Task

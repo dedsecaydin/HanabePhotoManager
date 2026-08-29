@@ -1,5 +1,11 @@
 # Current Status — Feature-by-Feature Implementation State
 
+## 2026-08-29 绯夜蔷薇 · Hanabe 主题
+
+- Hanabe 浅色/深色主题已实现并接入设置页即时切换。
+- 可选 Hanabe 任务助手已实现，显示现有任务名称、百分比和预计剩余时间。
+- `ShowHanabeAssistant` 默认开启并持久化；关闭不影响原有任务进度与控制。
+
 > **Purpose:** Real-time overview of what's done, what's partial, and what's planned.
 > **Last Updated:** 2026-08-16
 > **Current Version:** `0.3.2-alpha.12`（圆角安装进度与可选桌面快捷方式）

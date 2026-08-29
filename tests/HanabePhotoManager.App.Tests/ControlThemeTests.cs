@@ -10,6 +10,16 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class ControlThemeTests
 {
     [Fact]
+    public void MainWindow_ProvidesOptionalHanabeProgressAssistant()
+    {
+        var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var settings = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        xaml.Should().Contain("AutomationProperties.Name=\"Hanabe 任务助手\"")
+            .And.Contain("Text=\"{Binding ProgressLabel}\"")
+            .And.Contain("Value=\"{Binding ProgressValue}\"");
+        settings.Should().Contain("IsChecked=\"{Binding ShowHanabeAssistant, Mode=TwoWay}\"");
+    }
+    [Fact]
     public void SettingsChoiceComboBoxes_RenderLabelsInsteadOfRecordText()
     {
         var mainXaml = File.ReadAllText(Path.Combine(

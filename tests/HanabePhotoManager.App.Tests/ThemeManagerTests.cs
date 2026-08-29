@@ -10,6 +10,7 @@ public sealed class ThemeManagerTests
     [InlineData("classic", AppColorScheme.Classic)]
     [InlineData("forest", AppColorScheme.Forest)]
     [InlineData("violet", AppColorScheme.Violet)]
+    [InlineData("hanabe", AppColorScheme.Hanabe)]
     public void ParseSchemePreferenceRecognizesAvailableSchemes(string value, AppColorScheme expected)
     {
         ThemeManager.ParseSchemePreference(value).Should().Be(expected);
@@ -41,6 +42,7 @@ public sealed class ThemeManagerTests
     [InlineData("forest", AppColorScheme.Forest)]
     [InlineData("FOREST", AppColorScheme.Forest)]
     [InlineData("violet", AppColorScheme.Violet)]
+    [InlineData("hanabe", AppColorScheme.Hanabe)]
     public void ParseSchemePreference_UsesVioletAsSafeDefault(string? value, AppColorScheme expected)
     {
         ThemeManager.ParseSchemePreference(value).Should().Be(expected);

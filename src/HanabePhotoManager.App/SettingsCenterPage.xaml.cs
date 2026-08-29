@@ -47,6 +47,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
             "Forest" => AppColorScheme.Forest,
             "Violet" => AppColorScheme.Violet,
             "Classic" => AppColorScheme.Classic,
+            "Hanabe" => AppColorScheme.Hanabe,
             _ => AppColorScheme.Dynamic,
         };
         var theme = parts.Length > 1 && parts[1] == "Dark" ? AppTheme.Dark : AppTheme.Light;
@@ -89,6 +90,8 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         ApplyThemeCard(ThemeCardVioletDark, ThemeCheckVioletDark, primary, outlineVariant);
         ApplyThemeCard(ThemeCardClassicLight, ThemeCheckClassicLight, primary, outlineVariant);
         ApplyThemeCard(ThemeCardClassicDark, ThemeCheckClassicDark, primary, outlineVariant);
+        ApplyThemeCard(ThemeCardHanabeLight, ThemeCheckHanabeLight, primary, outlineVariant);
+        ApplyThemeCard(ThemeCardHanabeDark, ThemeCheckHanabeDark, primary, outlineVariant);
     }
 
     private void ApplyThemeCard(System.Windows.Controls.Button card, FrameworkElement check, System.Windows.Media.Brush primary, System.Windows.Media.Brush outlineVariant)
@@ -105,6 +108,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         AppColorScheme.Forest => "森林绿",
         AppColorScheme.Violet => "紫罗兰",
         AppColorScheme.Classic => "经典",
+        AppColorScheme.Hanabe => "绯夜蔷薇 · Hanabe",
         _ => "动态色彩",
     };
 

@@ -206,6 +206,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private int _defaultPreviewSort = 9;
     private double _glassIntensity = 0.62;
     private bool _isAcrylicEnabled = true;
+    private bool _showHanabeAssistant = true;
     private double _windowWidth = 1600;
     private double _windowHeight = 980;
     private bool _isBusy;
@@ -1677,6 +1678,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    public bool ShowHanabeAssistant
+    {
+        get => _showHanabeAssistant;
+        set
+        {
+            if (SetProperty(ref _showHanabeAssistant, value))
+            {
+                _ = SaveSettingsAsync();
+            }
+        }
+    }
+
     public string EffectiveBackgroundPath => BackgroundMode switch
     {
         "自定义图片" when File.Exists(CustomBackgroundPath) => CustomBackgroundPath,
@@ -2323,6 +2336,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         RebuildGridBreadcrumbs();
         GlassIntensity = settings.GlassIntensity;
         IsAcrylicEnabled = settings.IsAcrylicEnabled;
+        ShowHanabeAssistant = settings.ShowHanabeAssistant;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
         PhotoAnalysis.SelectedEngine = string.IsNullOrWhiteSpace(settings.ClassificationEngine)
@@ -6052,6 +6066,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.TreemapZoom = TreemapZoom;
             settings.GlassIntensity = GlassIntensity;
             settings.IsAcrylicEnabled = IsAcrylicEnabled;
+            settings.ShowHanabeAssistant = ShowHanabeAssistant;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
             settings.ClassificationEngine = PhotoAnalysis.SelectedEngine;

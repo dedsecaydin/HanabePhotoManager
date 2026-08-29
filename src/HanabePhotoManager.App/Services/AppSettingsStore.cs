@@ -189,6 +189,8 @@ public sealed class AppSettings
 {
     public bool HasCompletedOnboarding { get; set; }
 
+    public bool ShowHanabeAssistant { get; set; } = true;
+
     public List<string> NavigationOrder { get; set; } = [];
 
     public NavigationDisplayMode NavigationDisplayMode { get; set; } = NavigationDisplayMode.IconAndText;

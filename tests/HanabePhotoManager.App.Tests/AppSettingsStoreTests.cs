@@ -10,6 +10,11 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class AppSettingsStoreTests
 {
     [Fact]
+    public void HanabeAssistant_IsVisibleByDefault()
+    {
+        new AppSettings().ShowHanabeAssistant.Should().BeTrue();
+    }
+    [Fact]
     public async Task ImportNamingTemplate_SequenceAndOriginalPreset_SurvivesRestart()
     {
         var directory = Path.Combine(Path.GetTempPath(), "hanabe-import-naming-" + Guid.NewGuid().ToString("N"));

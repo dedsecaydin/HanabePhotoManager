@@ -7,9 +7,9 @@ namespace HanabePhotoManager.App.Services;
 public enum AppTheme { Light, Dark }
 
 /// <summary>
-/// 四套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰 / 经典中性）。与 <see cref="AppTheme"/> 明暗维度组合成 8 套主题。
+/// 五套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰 / 经典中性 / 绯夜蔷薇）。与 <see cref="AppTheme"/> 明暗维度组合成 10 套主题。
 /// </summary>
-public enum AppColorScheme { Dynamic, Forest, Violet, Classic }
+public enum AppColorScheme { Dynamic, Forest, Violet, Classic, Hanabe }
 
 /// <summary>切换成对主题资源字典，并维护当前主题和配色方案。</summary>
 public static class ThemeManager
@@ -25,6 +25,7 @@ public static class ThemeManager
         "forest" => AppColorScheme.Forest,
         "violet" => AppColorScheme.Violet,
         "classic" => AppColorScheme.Classic,
+        "hanabe" => AppColorScheme.Hanabe,
         _ => AppColorScheme.Violet,
     };
 

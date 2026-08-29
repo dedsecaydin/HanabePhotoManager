@@ -1005,7 +1005,7 @@
                       </StackPanel>
                     </Border>
 
-                    <Button Content="开始分析与导入" Style="{StaticResource Button.Primary}" Margin="0,12,0,0" Command="{Binding AnalyzeAndImportCommand}" />
+                    <Button Content="开始分析与导入" Style="{StaticResource Button.Primary}" Margin="0,12,0,0" Command="{Binding AnalyzeAndImportCommand}" Visibility="{Binding IsImportQueueVisible, Converter={StaticResource BoolToVis}}" />
                     <Button Content="取消导入" Style="{StaticResource Button.Secondary}" Margin="0,10,0,0" Command="{Binding CancelCurrentTaskCommand}" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}" />
                   </StackPanel>
                 </ScrollViewer>

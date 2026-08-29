@@ -1,0 +1,27 @@
+<Window x:Class="HanabePhotoManager.App.Duplicates.DuplicateMergeScopeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="选择重复合并范围" Width="620" Height="410" WindowStartupLocation="CenterOwner"
+        Style="{DynamicResource Dialog.Window}">
+  <Border Margin="16" Style="{DynamicResource Dialog.Surface}">
+    <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <StackPanel Margin="0,0,0,16">
+        <TextBlock Text="这次按什么标准合并重复照片？" Style="{DynamicResource Dialog.Title}"/>
+        <TextBlock Text="这里只决定进入复查页面的候选组；不会自动删除、覆盖或移动文件。" Style="{DynamicResource Dialog.Body}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+      </StackPanel>
+      <StackPanel Grid.Row="1">
+        <RadioButton x:Name="ExactOnlyOption" Content="1. 仅合并 SHA-256 值相同的" Margin="0,0,0,6"/>
+        <TextBlock Text="逐字节完全一致，最严格；适合确认真正的文件副本。" Style="{DynamicResource Dialog.Body}" Margin="24,0,0,14"/>
+        <RadioButton x:Name="VisualOnlyOption" Content="2. 仅合并视觉相似的" Margin="0,0,0,6"/>
+        <TextBlock Text="画面相近但可能经过改尺寸、重压缩；必须人工复查。" Style="{DynamicResource Dialog.Body}" Margin="24,0,0,14"/>
+        <RadioButton x:Name="BothOption" Content="3. 两者都合并" IsChecked="True" Margin="0,0,0,6"/>
+        <TextBlock Text="先列出完全相同，再列出未重复展示的视觉相似组。" Style="{DynamicResource Dialog.Body}" Margin="24,0,0,0"/>
+      </StackPanel>
+      <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+        <Button Content="取消" Width="88" Margin="0,0,8,0" Style="{DynamicResource Button.Secondary}" Click="Cancel_Click"/>
+        <Button Content="开始扫描" Width="108" Style="{DynamicResource Button.Primary}" Click="Start_Click"/>
+      </StackPanel>
+    </Grid>
+  </Border>
+</Window>

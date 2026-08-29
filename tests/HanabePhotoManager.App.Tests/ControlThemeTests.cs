@@ -362,6 +362,21 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
+    public void DuplicateMergeScopeDialog_OffersThreeSafeScanChoices()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Duplicates", "DuplicateMergeScopeWindow.xaml"));
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        xaml.Should().Contain("仅合并 SHA-256 值相同的");
+        xaml.Should().Contain("仅合并视觉相似的");
+        xaml.Should().Contain("两者都合并").And.Contain("IsChecked=\"True\"");
+        xaml.Should().Contain("不会自动删除");
+        code.Should().Contain("DuplicateMergeScopePolicy.IncludesExact(scope)");
+        code.Should().Contain("DuplicateMergeScopePolicy.IncludesVisual(scope)");
+    }
+
+    [Fact]
     public void ReadOnlyAnalysisProgress_IsExplicitlyBoundOneWay()
     {
         var mainXaml = File.ReadAllText(Path.Combine(

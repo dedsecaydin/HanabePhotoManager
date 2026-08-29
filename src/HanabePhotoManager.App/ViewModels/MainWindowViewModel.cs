@@ -3843,6 +3843,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        var scopeWindow = new DuplicateMergeScopeWindow
+        {
+            Owner = System.Windows.Application.Current?.MainWindow,
+        };
+        if (scopeWindow.ShowDialog() != true)
+        {
+            StatusMessage = "已取消重复内容扫描。";
+            return;
+        }
+        var scope = scopeWindow.Scope;
+
         IsBusy = true;
         IsProgressIndeterminate = false;
         IsDuplicateScanRunning = true;
@@ -3850,20 +3861,28 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ProgressLabel = "正在扫描重复内容…";
         StatusMessage = "正在比对文件哈希与视觉指纹，请稍候…";
 
-        List<List<string>> exactGroups;
-        List<List<string>> visualGroups;
+        List<List<string>> exactGroups = [];
+        List<List<string>> visualGroups = [];
         try
         {
-            var exactProgress = new Progress<double>(value => ProgressValue = Math.Clamp(value * 0.8, 0, 80));
-            var visualProgress = new Progress<double>(value => ProgressValue = Math.Clamp(80 + value * 0.2, 80, 100));
-            exactGroups = await _contentScanner.FindAllDuplicatesAsync(
-                LibraryRoot, ContentScanExtensions, cancellationToken, exactProgress).ConfigureAwait(true);
+            var runExact = DuplicateMergeScopePolicy.IncludesExact(scope);
+            var runVisual = DuplicateMergeScopePolicy.IncludesVisual(scope);
+            var exactProgress = new Progress<double>(value => ProgressValue = Math.Clamp(value * (runVisual ? 0.8 : 1), 0, runVisual ? 80 : 100));
+            var visualProgress = new Progress<double>(value => ProgressValue = Math.Clamp((runExact ? 80 : 0) + value * (runExact ? 0.2 : 1), 0, 100));
+            if (runExact)
+            {
+                exactGroups = await _contentScanner.FindAllDuplicatesAsync(
+                    LibraryRoot, ContentScanExtensions, cancellationToken, exactProgress).ConfigureAwait(true);
+            }
 
             var covered = exactGroups
                 .SelectMany(group => group)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
-                LibraryRoot, ContentScanExtensions, covered, cancellationToken, visualProgress).ConfigureAwait(true);
+            if (runVisual)
+            {
+                visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
+                    LibraryRoot, ContentScanExtensions, covered, cancellationToken, visualProgress).ConfigureAwait(true);
+            }
         }
         catch (OperationCanceledException) { return; }
         catch (Exception ex)

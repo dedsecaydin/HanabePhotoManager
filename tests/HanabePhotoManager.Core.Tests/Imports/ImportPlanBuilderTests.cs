@@ -20,6 +20,17 @@ public sealed class ImportPlanBuilderTests
             .Be(Path.Combine(explicitDirectory, "JPG生图", "JK0001.JPG"));
     }
 
+    [Fact]
+    public async Task BuildAsync_RejectsExplicitDateDirectoryOutsideLibraryRoot()
+    {
+        var group = new MediaGroup("photo", MediaCategory.Jpeg, CreateSource(@"D:\camera\photo.JPG"), []);
+        var action = () => new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(@"E:\library", new LibraryDate(2026, 8, 19), TransferMode.CopyKeepSource,
+                [group], CancellationToken.None, explicitDateDirectory: @"E:\other\08.19");
+
+        await action.Should().ThrowAsync<ArgumentException>();
+    }
+
     [Theory]
     [InlineData(MediaCategory.Raw, "RAW生图")]
     [InlineData(MediaCategory.Jpeg, "JPG生图")]

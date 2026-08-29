@@ -55,6 +55,13 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         {
             throw new ArgumentException("明确指定的日期目录必须是绝对路径。", nameof(explicitDateDirectory));
         }
+        var relativeDateDirectory = Path.GetRelativePath(Path.GetFullPath(normalizedRoot), dateDirectory);
+        if (Path.IsPathFullyQualified(relativeDateDirectory) ||
+            relativeDateDirectory.Equals("..", StringComparison.Ordinal) ||
+            relativeDateDirectory.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new ArgumentException("明确指定的日期目录必须位于照片库内。", nameof(explicitDateDirectory));
+        }
 
         var sequenceByGroup = BuildSequenceMap(dateDirectory, inputGroups);
         var items = new List<ImportPlanItem>();

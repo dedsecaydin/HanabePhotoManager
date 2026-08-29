@@ -35,6 +35,7 @@ public sealed class ImportDateFolderDecision : ObservableObject
         _strategy = existingFolders.Count == 0
             ? ImportDateFolderStrategy.CreateSeparate
             : ImportDateFolderStrategy.Unselected;
+        _selectedExistingFolder = existingFolders.Count == 1 ? existingFolders[0] : null;
     }
 
     public static IReadOnlyList<ImportDateFolderStrategyOption> StrategyOptions { get; } =
@@ -43,6 +44,8 @@ public sealed class ImportDateFolderDecision : ObservableObject
         new(ImportDateFolderStrategy.RenameExisting, "2. 修改原文件夹备注并导入"),
         new(ImportDateFolderStrategy.UseExisting, "3. 使用原文件夹名，不更改"),
     ];
+
+    public IReadOnlyList<ImportDateFolderStrategyOption> AvailableStrategies => StrategyOptions;
 
     public LibraryDate Date { get; }
     public int MediaCount { get; }
@@ -64,7 +67,16 @@ public sealed class ImportDateFolderDecision : ObservableObject
         get => _strategy;
         set
         {
-            if (SetProperty(ref _strategy, value)) _refresh(this);
+            if (SetProperty(ref _strategy, value))
+            {
+                if (value == ImportDateFolderStrategy.RenameExisting &&
+                    _selectedExistingFolder is not null && string.IsNullOrWhiteSpace(_remark))
+                {
+                    _remark = _selectedExistingFolder.Remark;
+                    OnPropertyChanged(nameof(Remark));
+                }
+                _refresh(this);
+            }
         }
     }
 
@@ -73,7 +85,16 @@ public sealed class ImportDateFolderDecision : ObservableObject
         get => _selectedExistingFolder;
         set
         {
-            if (SetProperty(ref _selectedExistingFolder, value)) _refresh(this);
+            if (SetProperty(ref _selectedExistingFolder, value))
+            {
+                if (_strategy == ImportDateFolderStrategy.RenameExisting &&
+                    value is not null && string.IsNullOrWhiteSpace(_remark))
+                {
+                    _remark = value.Remark;
+                    OnPropertyChanged(nameof(Remark));
+                }
+                _refresh(this);
+            }
         }
     }
 

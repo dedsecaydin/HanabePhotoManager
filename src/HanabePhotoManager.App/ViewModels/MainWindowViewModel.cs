@@ -332,6 +332,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         AnalyzeSourceCommand = new AsyncRelayCommand(AnalyzeSourceAsync, CanAnalyzeSource);
         ImportSelectedCommand = new AsyncRelayCommand(ImportSelectedAsync, CanImportSelected);
         AnalyzeAndImportCommand = new AsyncRelayCommand(AnalyzeAndImportAsync, CanAnalyzeAndImport);
+        ConfirmImportDateFoldersCommand = new AsyncRelayCommand(ConfirmImportDateFoldersAsync, CanConfirmImportDateFolders);
+        BackFromImportDateFoldersCommand = new RelayCommand(BackFromImportDateFolders, () => !IsBusy);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
         ScanLibraryDuplicatesCommand = new AsyncRelayCommand(ScanLibraryDuplicatesAsync, CanRunCommand);
         OpenSelectedDateCommand = new RelayCommand(OpenSelectedDate, () => Directory.Exists(SelectedDatePath));
@@ -661,6 +663,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ImportCategorySectionViewModel> ImportSections { get; } = [];
 
+    public ObservableCollection<ImportDateFolderDecision> ImportDateFolderDecisions { get; } = [];
+
     public ObservableCollection<ConnectedDeviceViewModel> ConnectedDevices { get; } = [];
 
     public ObservableCollection<DeviceGroupViewModel> DeviceGroups { get; } = [];
@@ -880,6 +884,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand ImportSelectedCommand { get; }
 
     public IAsyncRelayCommand AnalyzeAndImportCommand { get; }
+
+    public IAsyncRelayCommand ConfirmImportDateFoldersCommand { get; }
+
+    public IRelayCommand BackFromImportDateFoldersCommand { get; }
 
     public IAsyncRelayCommand RefreshLibraryCommand { get; }
 
@@ -3073,7 +3081,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var items = groups
             .Select((group, index) => new ImportPreviewItemViewModel(group, category, CategoryChoices, false, date, TryLoadThumbnail(group.Primary.FullPath), string.Empty, index + 1))
             .ToArray();
-        await RunImportAsync(items, deleteSourcesAfterVerify: false).ConfigureAwait(true);
+        await RunImportAsync(
+            items,
+            deleteSourcesAfterVerify: false,
+            new Dictionary<LibraryDate, string> { [date] = Path.Combine(LibraryRoot, date.RelativePath) }).ConfigureAwait(true);
     }
 
     /// <summary>验证拖入的一个或多个文件夹，完成分析后进入用户可确认的导入队列。</summary>
@@ -3205,6 +3216,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
     {
+        ClearImportDateFolderPreflight();
         BeginImportCompletionBatch();
         CancelImportThumbnailLoading();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Analysis);
@@ -3394,24 +3406,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var deleteSources = SelectedTransferMode == TransferMode.MoveAfterVerify;
-        if (deleteSources)
-        {
-            var answer = System.Windows.MessageBox.Show(
-                "移动模式会在哈希校验成功后删除来源文件。确认继续吗？",
-                "Hanabe 安全确认",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            if (answer != MessageBoxResult.Yes)
-            {
-                return;
-            }
-        }
-
-        await RunImportAsync(selectedItems, deleteSources).ConfigureAwait(true);
+        PrepareImportDateFolderPreflight(selectedItems);
     }
 
-    private async Task RunImportAsync(IReadOnlyList<ImportPreviewItemViewModel> items, bool deleteSourcesAfterVerify)
+    private async Task RunImportAsync(
+        IReadOnlyList<ImportPreviewItemViewModel> items,
+        bool deleteSourcesAfterVerify,
+        IReadOnlyDictionary<LibraryDate, string> dateDirectories)
     {
         BeginImportCompletionBatch();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
@@ -3453,7 +3454,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     if (!dateSizeMapCache.TryGetValue(date, out var sizeMap))
                     {
                         sizeMap = await _contentScanner.BuildSizeMapAsync(
-                            Path.Combine(LibraryRoot, date.RelativePath),
+                            dateDirectories[date],
                             ContentScanExtensions,
                             token).ConfigureAwait(true);
                         dateSizeMapCache[date] = sizeMap;
@@ -3495,7 +3496,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 DeleteSourcesAfterVerify = deleteSourcesAfterVerify,
                 Entries = dateGroups
-                    .SelectMany(group => group.Select(item => BuildResumeEntry(item, group.Key)))
+                    .SelectMany(group => group.Select(item => BuildResumeEntry(item, group.Key, dateDirectories[group.Key])))
                     .ToList(),
             };
             _importResumeStore.Save(resumeState);
@@ -3507,6 +3508,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 var result = await RunImportDateAsync(
                     dateGroup.Select(item => item.ToMediaGroup()).ToArray(),
                     dateGroup.Key,
+                    dateDirectories[dateGroup.Key],
                     deleteSourcesAfterVerify,
                     duplicateMatches,
                     duplicateDecision,
@@ -3607,10 +3609,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            var pendingGroups = new List<(LibraryDate Date, List<MediaGroup> Groups)>();
-            foreach (var dateGroup in state.Entries.GroupBy(entry => new LibraryDate(entry.Year, entry.Month, entry.Day)))
+            var pendingGroups = new List<(LibraryDate Date, string TargetDirectory, List<MediaGroup> Groups)>();
+            foreach (var dateGroup in state.Entries.GroupBy(entry => new { Date = new LibraryDate(entry.Year, entry.Month, entry.Day), entry.TargetDateDirectory }))
             {
-                var date = dateGroup.Key;
+                var date = dateGroup.Key.Date;
+                var targetDirectory = dateGroup.Key.TargetDateDirectory;
+                if (string.IsNullOrWhiteSpace(targetDirectory) || !Directory.Exists(targetDirectory))
+                {
+                    ImportReport = $"无法恢复导入：{date.Month:00}.{date.Day:00} 的已确认目标文件夹不存在，请重新分析并确认。";
+                    StatusMessage = "恢复已停止，等待重新确认日期文件夹。";
+                    return;
+                }
                 var groups = new List<MediaGroup>();
                 foreach (var entry in dateGroup)
                 {
@@ -3635,7 +3644,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
                 if (groups.Count > 0)
                 {
-                    pendingGroups.Add((date, groups));
+                    pendingGroups.Add((date, targetDirectory, groups));
                 }
             }
 
@@ -3659,12 +3668,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ProgressLabel = $"正在导入 {current}/{progress.TotalUnits}（{progress.Percentage:0}%）：{item.Group.GroupKey}";
             }
 
-            foreach (var (date, groups) in pendingGroups)
+            foreach (var (date, targetDirectory, groups) in pendingGroups)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var result = await RunImportDateAsync(
                     groups,
                     date,
+                    targetDirectory,
                     state.DeleteSourcesAfterVerify,
                     new Dictionary<string, ImportDuplicateMatch>(StringComparer.OrdinalIgnoreCase),
                     ImportDuplicateBatchDecision.ImportAll,
@@ -3710,7 +3720,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    private static ImportResumeEntry BuildResumeEntry(ImportPreviewItemViewModel item, LibraryDate date)
+    private static ImportResumeEntry BuildResumeEntry(ImportPreviewItemViewModel item, LibraryDate date, string targetDateDirectory)
     {
         var group = item.ToMediaGroup();
         return new ImportResumeEntry
@@ -3722,6 +3732,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Year = date.Year,
             Month = date.Month,
             Day = date.Day,
+            TargetDateDirectory = targetDateDirectory,
         };
     }
 
@@ -3746,6 +3757,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private async Task<ImportRunResult> RunImportDateAsync(
         IReadOnlyList<MediaGroup> groups,
         LibraryDate date,
+        string targetDateDirectory,
         bool deleteSourcesAfterVerify,
         IReadOnlyDictionary<string, ImportDuplicateMatch> duplicateMatches,
         ImportDuplicateBatchDecision duplicateBatchDecision,
@@ -3757,14 +3769,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var skipped = 0;
         var lines = new List<string>();
 
-        _directoryInitializer.EnsureDateTree(LibraryRoot, date);
+        Directory.CreateDirectory(targetDateDirectory);
         var plan = await _planBuilder.BuildAsync(
             LibraryRoot,
             date,
             deleteSourcesAfterVerify ? TransferMode.MoveAfterVerify : TransferMode.CopyKeepSource,
             groups,
             cancellationToken,
-            _importNamingTemplate).ConfigureAwait(true);
+            _importNamingTemplate,
+            targetDateDirectory).ConfigureAwait(true);
 
         for (var index = 0; index < plan.Items.Count; index++)
         {

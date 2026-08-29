@@ -37,8 +37,10 @@ public sealed class ImportDateFolderPreflightServiceTests : IDisposable
         decision.IsValid.Should().BeFalse();
         decision.ValidationMessage.Should().Contain("处理方式");
 
+        decision.SelectedExistingFolder.Should().Be(decision.ExistingFolders.Single());
+        decision.Strategy = ImportDateFolderStrategy.RenameExisting;
+        decision.Remark.Should().Be("旧备注");
         decision.Strategy = ImportDateFolderStrategy.UseExisting;
-        decision.SelectedExistingFolder = decision.ExistingFolders.Single();
 
         decision.IsValid.Should().BeTrue();
         decision.FinalDirectoryName.Should().Be("08.19_旧备注");

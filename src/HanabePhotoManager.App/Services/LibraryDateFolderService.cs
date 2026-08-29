@@ -375,8 +375,17 @@ public static class LibraryDateFolderService
             return string.Empty;
         }
 
+        var candidate = remark.Trim();
+        while (TryParseDateFolderName(candidate, out var parsed) &&
+               parsed.Suffix.Length < candidate.Length)
+        {
+            candidate = parsed.Suffix.TrimStart(' ', '\t', '\r', '\n', '_', '-', '.');
+        }
+
         var invalidCharacters = Path.GetInvalidFileNameChars();
-        var sanitized = new string(remark.Where(character => !invalidCharacters.Contains(character)).ToArray());
+        var sanitized = new string(candidate
+            .Select(character => invalidCharacters.Contains(character) ? '_' : character)
+            .ToArray());
         return sanitized.Trim(' ', '\t', '\r', '\n', '_', '-', '.');
     }
 

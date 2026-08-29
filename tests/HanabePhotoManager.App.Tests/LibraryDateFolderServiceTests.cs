@@ -160,8 +160,22 @@ public sealed class LibraryDateFolderServiceTests : IDisposable
         var result = LibraryDateFolderService.RenameRemark(source, " _ 婚礼:晚宴 - ");
 
         result.Status.Should().Be(DateFolderRenameStatus.Success);
-        Path.GetFileName(result.EffectivePath).Should().Be("08.28_婚礼晚宴");
-        result.EffectiveRemark.Should().Be("婚礼晚宴");
+        Path.GetFileName(result.EffectivePath).Should().Be("08.28_婚礼_晚宴");
+        result.EffectiveRemark.Should().Be("婚礼_晚宴");
+    }
+
+    [Theory]
+    [InlineData("08.28_婚礼", "婚礼")]
+    [InlineData("8月28日-婚礼", "婚礼")]
+    public void RenameRemark_RemovesARepeatedDatePrefix(string remark, string expectedRemark)
+    {
+        var source = Directory.CreateDirectory(Path.Combine(_root, "08月", "08.28")).FullName;
+
+        var result = LibraryDateFolderService.RenameRemark(source, remark);
+
+        result.Status.Should().Be(DateFolderRenameStatus.Success);
+        Path.GetFileName(result.EffectivePath).Should().Be($"08.28_{expectedRemark}");
+        result.EffectiveRemark.Should().Be(expectedRemark);
     }
 
     [Fact]

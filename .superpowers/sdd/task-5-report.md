@@ -50,6 +50,8 @@ Save All normal-state text was visually checked and remained readable in all eig
 
 - Hover and Pressed are transient states and Disabled requires an in-flight batch; those three states were not captured interactively. Their foreground relationships are covered by the strengthened shared-template contract tests across all eight theme color dictionaries.
 - The empty isolated library had no editable date row, so row-editor Tab traversal was not exercised interactively. UI-level import-preset restart and a real completed import without remark dialogs were also not executed; their state and source contracts remain covered by automated tests.
+- Import-page switching through all three naming presets was **not executed interactively**. The three preset values, selection-to-template mapping, custom-template preservation, and persisted restart behavior are covered by focused automated tests.
+- Editing several date-folder remarks and invoking one Save All was **not executed interactively** because the isolated library contained no editable date-folder rows. Multi-row continuation, per-row success/failure, normalized remarks, and one-command batch save are covered by focused automated tests.
 
 ## Commit
 

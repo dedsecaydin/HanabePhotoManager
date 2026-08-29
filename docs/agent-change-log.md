@@ -1004,4 +1004,4 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 主题资源契约覆盖 Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个颜色词典，逐一确认 `Color.Primary`、`Color.OnPrimary`、`Color.Text.Tertiary` 与 `Color.Surface.Disabled`；共享 Light/Dark Brush 仍要求 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`。
 - 聚焦 App 主题/资源测试 51/51 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 454、InstallerShell 12，共 681 项通过。
 - 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源，Release `ImportPlanBuilder.BuildRenamedFileName` 实测最终文件名 `JK0001（DSC_1234）.ARW`，以及 Release 应用启动/关闭均通过；随后已删除三处临时验证目录。
-- 使用隔离设置与空测试图库完成 WPF 交互验收：Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个主题下，“保存全部”正常态文字均清晰；Light 与 Classic Dark 的焦点态文字清晰；键盘 Tab 可从“刷新”到达“保存全部备注更改”。Hover/Pressed/Disabled、空图库中不存在的行编辑器遍历、UI 级导入重启与真实完成导入仍未交互执行，对应共享模板、主题资源和状态流由自动化测试覆盖。
+- 使用隔离设置与空测试图库完成 WPF 交互验收：Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个主题下，“保存全部”正常态文字均清晰；Light 与 Classic Dark 的焦点态文字清晰；键盘 Tab 可从“刷新”到达“保存全部备注更改”。Hover/Pressed/Disabled、空图库中不存在的行编辑器遍历、UI 级导入重启与真实完成导入仍未交互执行，对应共享模板、主题资源和状态流由自动化测试覆盖。另明确登记：导入页三种命名预设的逐项 UI 切换未交互执行；多条日期文件夹备注编辑后一次“保存全部”未交互执行（隔离图库无可编辑行）；两项均已有聚焦自动化测试覆盖。

@@ -46,9 +46,9 @@ public sealed class DesignSystemResourceTests
     }
 
     [Fact]
-    public void AllEightThemes_ExposePrimaryButtonNormalAndDisabledColorContracts()
+    public void AllTenThemes_ExposePrimaryButtonNormalAndDisabledColorContracts()
     {
-        var schemes = new[] { "Dynamic", "Forest", "Violet", "Classic" };
+        var schemes = new[] { "Dynamic", "Forest", "Violet", "Classic", "Hanabe" };
         var modes = new[] { "Light", "Dark" };
         var colorFiles = schemes.SelectMany(s => modes.Select(m => (s, m)))
             .Select(p => Read("Themes", "Colors", $"Colors.{p.s}.{p.m}.xaml")).ToArray();

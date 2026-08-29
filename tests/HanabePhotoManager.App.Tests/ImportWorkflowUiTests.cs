@@ -27,6 +27,37 @@ public sealed class ImportWorkflowUiTests
         code.Should().Contain("HandoffBehavior.SnapshotAndReplace");
     }
 
+    [Fact]
+    public void ImportDateFolderPreflight_ProvidesScrollableBatchEditingAndExplicitActions()
+    {
+        var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        xaml.Should().Contain("Text=\"确认日期文件夹\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding ImportDateFolderDecisions}\"");
+        xaml.Should().Contain("Text=\"{Binding DateText}\"");
+        xaml.Should().Contain("Text=\"{Binding Remark, UpdateSourceTrigger=PropertyChanged}\"");
+        xaml.Should().Contain("SelectedValue=\"{Binding Strategy}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding ExistingFolders}\"");
+        xaml.Should().Contain("Text=\"{Binding FinalDirectoryName}\"");
+        xaml.Should().Contain("Command=\"{Binding BackFromImportDateFoldersCommand}\"");
+        xaml.Should().Contain("Command=\"{Binding ConfirmImportDateFoldersCommand}\"");
+        xaml.Should().Contain("AutomationProperties.Name=\"确认并开始导入\"");
+    }
+
+    [Fact]
+    public void ImportWorkflow_FreezesConfirmedDirectoryForDuplicateScanPlanAndResume()
+    {
+        var root = FindSourceRoot();
+        var mainCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var preflightCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.ImportDatePreflight.cs"));
+
+        preflightCode.Should().Contain("ApplyRequiredRenames");
+        preflightCode.Should().Contain("ToDictionary(decision => decision.Date, decision => decision.FinalDirectoryPath)");
+        mainCode.Should().Contain("dateDirectories[date]");
+        mainCode.Should().Contain("BuildResumeEntry(item, group.Key, dateDirectories[group.Key])");
+        mainCode.Should().Contain("targetDateDirectory).ConfigureAwait(true)");
+    }
+
     private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

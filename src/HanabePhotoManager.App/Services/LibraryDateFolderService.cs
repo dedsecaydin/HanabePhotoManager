@@ -389,6 +389,8 @@ public static class LibraryDateFolderService
         return sanitized.Trim(' ', '\t', '\r', '\n', '_', '-', '.');
     }
 
+    public static string NormalizeRemarkForFolderName(string? remark) => NormalizeRemark(remark);
+
     private static bool TryParseNumber(string value, out int number) =>
         int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out number);
 }

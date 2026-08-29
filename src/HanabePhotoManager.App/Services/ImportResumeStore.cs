@@ -15,6 +15,7 @@ public sealed class ImportResumeEntry
     public int Year { get; set; }
     public int Month { get; set; }
     public int Day { get; set; }
+    public string TargetDateDirectory { get; set; } = "";
 }
 
 /// <summary>导入续传状态：中断后重启据此提示继续，配合边传边验边删幂等重放。</summary>

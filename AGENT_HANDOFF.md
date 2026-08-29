@@ -260,6 +260,18 @@
 
 ---
 
+## 2026-08-29 Import Date Folder Preflight
+
+- Branch work implemented from `docs/superpowers/specs/2026-08-29-import-date-folder-preflight-design.md`.
+- Source analysis now pauses before transfer and presents one scrollable batch confirmation surface for every target date.
+- Existing same-date folders require an explicit per-row choice: create a differently remarked folder, rename one selected existing folder, or use one selected existing folder unchanged.
+- The confirmed absolute target directory is frozen for duplicate scanning, sequence planning, transfer, and resume persistence.
+- Preserve the independent post-import Date Folders page; it remains the tool for later maintenance.
+- Verification at implementation HEAD: Release `/warnaserror` build 0 warnings/0 errors; 693/693 tests passed (Core 162, Infrastructure 55, App 464, InstallerShell 12).
+- Remaining runtime check: launch the freshly published `D:\hanabe-publish-v2` payload and visually inspect the preflight with disposable D-drive media; do not use the real library.
+
+---
+
 ## Known Issues (Not Yet Resolved)
 
 | ID | Issue | Status |

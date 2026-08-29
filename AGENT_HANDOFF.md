@@ -312,6 +312,12 @@ For details see [`docs/known-issues.md`](docs/known-issues.md).
 
 ## Key Code Files
 
+## 2026-08-29 — 中断导入续传恢复
+
+- 启动续传提示已改为主题化三选项窗口：“继续传输 / 放弃记录 / 稍后处理”。
+- “继续传输”先导航到导入页并显示恢复进度；旧快照目标仅在同日期目录唯一时迁移，失败会保留记录并给出可见原因。
+- 大型记录按目标目录分组解析，核对阶段每 100 项刷新 UI；全量 701 项测试通过。
+
 | File | Role |
 |------|------|
 | `src/HanabePhotoManager.App/Browsing/Treemap/PhotoTreemapControl.cs` | Main treemap rendering (OnRender, DrawRoot, DrawTile, DrawSubtreeWithJustifiedLayout) |

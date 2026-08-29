@@ -58,6 +58,23 @@ public sealed class ImportWorkflowUiTests
         mainCode.Should().Contain("targetDateDirectory).ConfigureAwait(true)");
     }
 
+    [Fact]
+    public void ImportResumePrompt_UsesThemedExplicitActionsAndNavigatesBeforeContinuing()
+    {
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Imports", "ImportResumePromptWindow.xaml"));
+        var mainCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml.cs"));
+
+        xaml.Should().Contain("Style=\"{DynamicResource Dialog.Window}\"");
+        xaml.Should().Contain("Content=\"继续传输\"");
+        xaml.Should().Contain("Content=\"放弃记录\"");
+        xaml.Should().Contain("Content=\"稍后处理\"");
+        xaml.Should().Contain("不会删除已导入文件或源文件");
+        mainCode.Should().NotContain("检测到上次未完成的导入。是否继续？");
+        mainCode.Should().Contain("_viewModel.ShowImportCommand.Execute(null)");
+        mainCode.Should().Contain("await _viewModel.ResumePendingImportAsync()");
+    }
+
     private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

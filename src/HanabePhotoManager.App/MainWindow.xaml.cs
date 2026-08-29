@@ -539,20 +539,22 @@ public partial class MainWindow : Window
 
     private async void PromptResumePendingImport()
     {
-        var result = System.Windows.MessageBox.Show(
-            this,
-            "检测到上次未完成的导入。是否继续？\n\n选择「是」继续导入剩余文件；选择「否」放弃上次的导入进度。",
-            "继续导入",
-            MessageBoxButton.YesNo,
-            MessageBoxImage.Question);
-
-        if (result == MessageBoxResult.Yes)
+        var prompt = new Imports.ImportResumePromptWindow(_viewModel.PendingImportResumeSummary)
         {
+            Owner = this,
+        };
+        prompt.ShowDialog();
+
+        if (prompt.Action == Imports.ImportResumePromptAction.Continue)
+        {
+            _viewModel.ShowImportCommand.Execute(null);
+            await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
             await _viewModel.ResumePendingImportAsync();
         }
-        else
+        else if (prompt.Action == Imports.ImportResumePromptAction.Discard)
         {
             _viewModel.DiscardPendingImportResume();
+            _viewModel.StatusMessage = "已放弃上次传输记录；现有文件未被删除。";
         }
     }
 

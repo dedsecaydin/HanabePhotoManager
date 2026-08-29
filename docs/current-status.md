@@ -424,4 +424,4 @@ P1 门槛：发现并修复 1 个 P1——增量全库/日期扫描路径（`App
 | Retouched output write protection | Stable | `<root>\<month>\<date>\修后` files remain scan-visible but are disabled in review, filtered before delete, and skipped by resequencing |
 | Cloud provider pages | Stable |
 | Face recognition | Stable |
-| Import flow | Stable |
+| Import flow | Stable | 中断记录使用主题化三选项恢复窗口；继续时先导航到导入页并显示核对/传输进度，兼容可唯一判定目标目录的旧快照。 |

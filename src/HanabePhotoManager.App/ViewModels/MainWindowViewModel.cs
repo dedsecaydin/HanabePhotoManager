@@ -3582,7 +3582,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    /// <summary>继续上次未完成的导入（幂等：已完成文件由目标存在性/边传边删自动跳过）。</summary>
     /// <summary>从磁盘恢复点继续尚未完成的导入计划。</summary>
     public async Task ResumePendingImportAsync()
     {
@@ -3601,6 +3600,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ProgressValue = 0;
         ProgressLabel = "正在恢复上次导入…";
         StatusMessage = "正在继续上次未完成的导入。";
+        await Task.Yield();
 
         var success = 0;
         var failed = 0;
@@ -3609,7 +3609,33 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
+            foreach (var resumeTargetGroup in state.Entries.GroupBy(entry => new
+                     {
+                         entry.Year,
+                         entry.Month,
+                         entry.Day,
+                         entry.TargetDateDirectory,
+                     }))
+            {
+                var resolution = ImportResumeTargetResolver.Resolve(LibraryRoot, resumeTargetGroup.First());
+                if (!resolution.Success)
+                {
+                    ImportReport = "无法继续上次传输：" + resolution.ErrorMessage;
+                    ImportActionHint = "续传记录已保留。请重新分析来源并确认日期文件夹，或下次启动时选择放弃记录。";
+                    StatusMessage = "上次传输需要重新确认目标文件夹。";
+                    ProgressLabel = "恢复失败";
+                    return;
+                }
+
+                foreach (var entry in resumeTargetGroup)
+                {
+                    entry.TargetDateDirectory = resolution.TargetDirectory;
+                }
+            }
+            _importResumeStore.Save(state);
+
             var pendingGroups = new List<(LibraryDate Date, string TargetDirectory, List<MediaGroup> Groups)>();
+            var checkedEntries = 0;
             foreach (var dateGroup in state.Entries.GroupBy(entry => new { Date = new LibraryDate(entry.Year, entry.Month, entry.Day), entry.TargetDateDirectory }))
             {
                 var date = dateGroup.Key.Date;
@@ -3623,6 +3649,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 var groups = new List<MediaGroup>();
                 foreach (var entry in dateGroup)
                 {
+                    checkedEntries++;
+                    if (checkedEntries == 1 || checkedEntries % 100 == 0)
+                    {
+                        ProgressLabel = $"正在核对续传文件 {checkedEntries}/{state.Entries.Count}…";
+                        ProgressValue = state.Entries.Count == 0 ? 0 : checkedEntries * 10d / state.Entries.Count;
+                        await Task.Yield();
+                    }
+
                     if (!Enum.TryParse<MediaCategory>(entry.Category, out var category))
                     {
                         continue;
@@ -6873,6 +6907,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     /// <summary>是否有上次未完成的导入可续传。</summary>
     public bool HasPendingImportResume => _importResumeStore.HasPending;
+
+    public string PendingImportResumeSummary
+    {
+        get
+        {
+            var state = _importResumeStore.Load();
+            if (state is null) return "检测到一条未完成的传输记录。";
+            var dateCount = state.Entries.Select(entry => (entry.Year, entry.Month, entry.Day)).Distinct().Count();
+            var mode = state.DeleteSourcesAfterVerify ? "移动（校验后删除来源）" : "复制（保留来源）";
+            return $"待继续 {state.Entries.Count:N0} 组媒体，涉及 {dateCount:N0} 个日期。传输方式：{mode}。";
+        }
+    }
 
     /// <summary>放弃上次未完成的导入进度。</summary>
     public void DiscardPendingImportResume() => _importResumeStore.Delete();

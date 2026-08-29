@@ -10,7 +10,7 @@ public sealed class NavigationMotionTests
     private static readonly string[] AllPages =
     [
         "Home", "Import", "Preview", "CustomAlbums", "FaceSearch", "MapPhotos",
-        "Compression", "Watermark", "Settings"
+        "Compression", "Watermark", "DateFolders", "Settings"
     ];
 
     [Fact]
@@ -28,6 +28,7 @@ public sealed class NavigationMotionTests
         code.Should().Contain("\"Settings\" => SettingsCenterPageHost");
         code.Should().Contain("\"CustomAlbums\" => CustomAlbumsPageHost");
         code.Should().Contain("\"Watermark\" => WatermarkPageHost");
+        code.Should().Contain("\"DateFolders\" => DateFolderManagementPageHost");
 
         // The deprecated collapsed ScrollViewer must no longer be the animation target.
         code.Should().NotContain("\"Settings\" => SettingsPage");
@@ -127,6 +128,7 @@ public sealed class NavigationMotionTests
         "MapPhotos" => viewModel.IsMapPhotosPage,
         "Compression" => viewModel.IsCompressionPage,
         "Watermark" => viewModel.IsWatermarkPage,
+        "DateFolders" => viewModel.CurrentPage == "DateFolders",
         "Settings" => viewModel.IsSettingsPage,
         _ => false
     };

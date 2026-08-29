@@ -1,4 +1,5 @@
 using FluentAssertions;
+using CommunityToolkit.Mvvm.Input;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ViewModels;
 using Xunit;
@@ -13,6 +14,23 @@ public sealed class NavigationOrderPolicyTests
         var viewModel = new MainWindowViewModel();
 
         viewModel.NavigationItems.Select(item => item.Key).Should().NotContain("SemanticSearch");
+    }
+
+    [Fact]
+    public void DateFoldersNavigation_ActivatesTheBatchManagementPage()
+    {
+        var viewModel = new MainWindowViewModel();
+        var commandProperty = typeof(MainWindowViewModel).GetProperty("ShowDateFoldersCommand");
+        commandProperty.Should().NotBeNull();
+
+        var command = commandProperty!.GetValue(viewModel).Should().BeAssignableTo<IRelayCommand>().Subject;
+        command.Execute(null);
+
+        typeof(MainWindowViewModel).GetProperty("IsDateFoldersPage")
+            .Should().NotBeNull()
+            .And.Subject!.GetValue(viewModel)
+            .Should().Be(true);
+        viewModel.NavigationItems.Select(item => item.Key).Should().Contain("DateFolders");
     }
 
     [Fact]

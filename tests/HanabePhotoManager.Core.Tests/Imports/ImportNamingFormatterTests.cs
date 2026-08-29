@@ -6,6 +6,17 @@ namespace HanabePhotoManager.Core.Tests.Imports;
 
 public sealed class ImportNamingFormatterTests
 {
+    [Fact]
+    public void Format_SequenceAndOriginalPreset_UsesFullWidthParentheses()
+    {
+        ImportNamingFormatter.Format(
+                ImportNamingFormatter.SequenceAndOriginalTemplate,
+                1,
+                "DSC_1234",
+                new LibraryDate(2026, 8, 28))
+            .Should().Be("JK0001（DSC_1234）");
+    }
+
     [Theory]
     [InlineData("JK{seq}", 1, "JK0001")]
     [InlineData("JK{seq}", 122, "JK0122")]

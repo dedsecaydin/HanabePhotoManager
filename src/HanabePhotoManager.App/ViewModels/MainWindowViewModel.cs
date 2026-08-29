@@ -18,6 +18,7 @@ using HanabePhotoManager.Core.Albums;
 using HanabePhotoManager.App.Collections;
 using HanabePhotoManager.App.Controls;
 using HanabePhotoManager.App.Duplicates;
+using HanabePhotoManager.App.DateFolders;
 using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
@@ -98,7 +99,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "CustomAlbums",
         "FaceSearch",
         "MapPhotos",
-        "Compression"
+        "Compression",
+        "DateFolders"
     ];
 
     private static readonly HashSet<string> WpfImageExtensions = new(
@@ -163,7 +165,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _currentPreviewCategory = "全部";
     private List<string> _customRawExtensions = [];
     private List<string> _customVideoExtensions = [];
-    private string _importNamingTemplate = "JK{seq}";
+    private string _importNamingTemplate = ImportNamingFormatter.DefaultTemplate;
+    private ImportNamingPreset _selectedImportNamingPreset = ImportNamingPreset.Resolve(ImportNamingFormatter.DefaultTemplate);
     private string? _customAlbumsDirectory;
     private string _customBackgroundPath = string.Empty;
     private string _windowsWallpaperPath = string.Empty;
@@ -172,9 +175,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _selectedDeviceSummary = "点击设备组中的磁盘、相机或照片库后，这里会显示文件夹和媒体文件概览。";
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
-    // 本次会话已弹过「添加备注」窗口的日期：同批日期只提示一次，避免拖入分析后
-    // 再点“开始分析与导入”重复弹窗。
-    private readonly HashSet<LibraryDate> _dateRemarksPromptedFor = [];
+    private int _importCompletionBatch;
+    private int _completedImportBatch = -1;
+    private string _completedImportLibraryRoot = string.Empty;
     private readonly IImportSourcePicker _importSourcePicker = new WindowsImportSourcePicker();
     private LibraryDate? _targetDate;
     private LibraryDateNode? _selectedDate;
@@ -268,6 +271,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             () => PreviewFiles.Select(file => file.FullPath));
         Compression = new CompressionViewModel();
         Watermark = new WatermarkViewModel();
+        DateFolders = new DateFolderManagementViewModel();
         PixelArt = new PixelArtViewModel();
         CustomAlbums = new CustomAlbumsViewModel(
             CreateCustomAlbumStore(),
@@ -346,6 +350,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
+        ShowDateFoldersCommand = new RelayCommand(ShowDateFolders);
         ShowWatermarkCommand = new RelayCommand(() =>
         {
             Compression.SelectedToolMode = ImageToolMode.Watermark;
@@ -406,6 +411,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public CompressionViewModel Compression { get; }
 
     public WatermarkViewModel Watermark { get; }
+
+    public DateFolderManagementViewModel DateFolders { get; }
 
     public PixelArtViewModel PixelArt { get; }
 
@@ -931,6 +938,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public IRelayCommand ShowCompressionCommand { get; }
 
+    public IRelayCommand ShowDateFoldersCommand { get; }
+
     public IRelayCommand ShowWatermarkCommand { get; }
 
     public IRelayCommand DeleteSelectedFilesCommand { get; }
@@ -1385,6 +1394,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             if (SetProperty(ref _libraryRoot, value))
             {
+                ClearImportCompletionState();
+                DateFolders.LibraryRoot = _libraryRoot;
                 OnPropertyChanged(nameof(HasLibraryRoot));
                 OnPropertyChanged(nameof(LibraryHealthText));
                 FaceSearch.NotifyLibraryRootChanged();
@@ -2284,7 +2295,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
         _customRawExtensions = settings.CustomRawExtensions ?? [];
         _customVideoExtensions = settings.CustomVideoExtensions ?? [];
-        _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate) ? "JK{seq}" : settings.ImportNamingTemplate;
+        _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate)
+            ? ImportNamingFormatter.DefaultTemplate
+            : settings.ImportNamingTemplate;
+        _selectedImportNamingPreset = ImportNamingPreset.Resolve(_importNamingTemplate);
+        OnPropertyChanged(nameof(ImportNamingTemplate));
+        OnPropertyChanged(nameof(ImportNamingPresets));
+        OnPropertyChanged(nameof(SelectedImportNamingPreset));
         _customAlbumsDirectory = settings.CustomAlbumsDirectory;
         _defaultThumbnailSize = Math.Clamp(settings.DefaultThumbnailSize, 96, 260);
         _thumbnailSize = _defaultThumbnailSize;
@@ -2989,6 +3006,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void CancelCurrentTask()
     {
         CancelPreviewThumbnailLoading();
+        ClearImportCompletionState();
         if (_activeTaskCancellation is null || _activeTaskCancellation.IsCancellationRequested)
         {
             return;
@@ -3006,6 +3024,29 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : "已请求停止。后台读取正在退出，完成后可立即重新选择来源。";
         StatusMessage = "已请求停止当前任务，会在当前文件安全点停止。";
 
+    }
+
+    private void BeginImportCompletionBatch() => ClearImportCompletionState();
+
+    private void MarkImportCompletionForCurrentBatch()
+    {
+        if (!HasLibraryRoot)
+        {
+            ClearImportCompletionState();
+            return;
+        }
+
+        _completedImportLibraryRoot = LibraryRoot;
+        _completedImportBatch = _importCompletionBatch;
+        OnPropertyChanged(nameof(HasCompletedImport));
+    }
+
+    private void ClearImportCompletionState()
+    {
+        _importCompletionBatch++;
+        _completedImportBatch = -1;
+        _completedImportLibraryRoot = string.Empty;
+        OnPropertyChanged(nameof(HasCompletedImport));
     }
 
     /// <summary>把外部调用提供的散文件按指定类别加入一次导入流程。</summary>
@@ -3164,6 +3205,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
     {
+        BeginImportCompletionBatch();
         CancelImportThumbnailLoading();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Analysis);
         var cancellationToken = cancellation.Token;
@@ -3282,34 +3324,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ImportActionHint = HasLibraryRoot ? "可以开始导入；复制/校验时进度条会实时显示。" : "导入按钮不可用：请先选择照片库根目录。";
             NotifyCommandStates();
 
-            // Prompt for date remarks right after analysis, before the import copies any files.
-            // 同批日期只弹一次：本次会话已提示过的日期不再重复弹窗（拖入分析弹过后，
-            // 再点“开始分析与导入”不会重复弹）。
-            if (HasLibraryRoot && dateCount > 0)
-            {
-                var detectedDates = ImportItems
-                    .Select(item => item.TargetDate)
-                    .Where(date => date is not null)
-                    .Select(date => date!.Value)
-                    .Distinct()
-                    .ToArray();
-                var pendingDates = detectedDates
-                    .Where(date => !_dateRemarksPromptedFor.Contains(date))
-                    .ToArray();
-                if (pendingDates.Length > 0)
-                {
-                    await AskForDateRemarksAsync(pendingDates).ConfigureAwait(true);
-                    foreach (var promptedDate in pendingDates)
-                    {
-                        _dateRemarksPromptedFor.Add(promptedDate);
-                    }
-                }
-            }
-
             return sourceFiles;
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             ImportItems.Clear();
             ImportSections.Clear();
             SetImportSummary(0, 0, 0);
@@ -3322,6 +3341,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "分析失败：" + ex.Message;
             StatusMessage = "分析来源时遇到问题。";
             return [];
@@ -3393,6 +3413,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task RunImportAsync(IReadOnlyList<ImportPreviewItemViewModel> items, bool deleteSourcesAfterVerify)
     {
+        BeginImportCompletionBatch();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
         var cancellationToken = cancellation.Token;
         IsBusy = true;
@@ -3506,8 +3527,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
+            ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
             StatusMessage = "导入流程结束。";
             EndCancelableTask(cancellation);
             IsProgressIndeterminate = false;
@@ -3531,6 +3554,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             stopped = true;
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
@@ -3540,6 +3564,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "导入中断：" + ex.Message;
             StatusMessage = "导入中断，已保留可见报告。";
         }
@@ -3566,6 +3591,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        BeginImportCompletionBatch();
         using var cancellation = BeginCancelableTask(ActiveTaskKind.Import);
         var cancellationToken = cancellation.Token;
         IsBusy = true;
@@ -3657,18 +3683,22 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
+            ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
             StatusMessage = "上次未完成的导入已继续完成。";
         }
         catch (OperationCanceledException)
         {
+            ClearImportCompletionState();
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
             StatusMessage = "恢复导入已停止，可稍后再次继续。";
         }
         catch (Exception ex)
         {
+            ClearImportCompletionState();
             ImportReport = "恢复导入中断：" + ex.Message;
             StatusMessage = "恢复导入中断，可稍后再次继续。";
         }
@@ -3907,89 +3937,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             EndCancelableTask(cancellation);
         }
-    }
-
-    private async Task AskForDateRemarksAsync(IReadOnlyList<LibraryDate> dates)
-    {
-        foreach (var date in dates.Distinct().OrderBy(date => date.Year).ThenBy(date => date.Month).ThenBy(date => date.Day))
-        {
-            var window = new RemarkPromptWindow($"{date.Month:00}.{date.Day:00}")
-            {
-                Owner = System.Windows.Application.Current.MainWindow
-            };
-
-            if (window.ShowDialog() != true)
-            {
-                continue;
-            }
-
-            var remark = SanitizeRemark(window.Remark, date);
-            if (string.IsNullOrWhiteSpace(remark))
-            {
-                continue;
-            }
-
-            try
-            {
-                RenameDateFolderWithRemark(date, remark);
-                StatusMessage = $"已给 {date.Month:00}.{date.Day:00} 添加备注：{remark}";
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"备注保存失败：{ex.Message}", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-
-            await Task.Yield();
-        }
-    }
-
-    private void RenameDateFolderWithRemark(LibraryDate date, string remark)
-    {
-        var monthDirectory = Path.Combine(LibraryRoot, $"{date.Month}月");
-        if (!Directory.Exists(monthDirectory))
-        {
-            return;
-        }
-
-        var prefix = $"{date.Month:00}.{date.Day:00}";
-        var current = Directory.EnumerateDirectories(monthDirectory, prefix + "*", SearchOption.TopDirectoryOnly)
-            .OrderBy(path => Path.GetFileName(path).Equals(prefix, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
-            .FirstOrDefault();
-
-        if (current is null)
-        {
-            return;
-        }
-
-        var target = Path.Combine(monthDirectory, $"{prefix}_{remark}");
-        if (string.Equals(Path.GetFullPath(current), Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
-        {
-            return;
-        }
-
-        if (Directory.Exists(target))
-        {
-            throw new IOException($"目标文件夹已存在：{target}");
-        }
-
-        Directory.Move(current, target);
-    }
-
-    private static string SanitizeRemark(string input, LibraryDate date)
-    {
-        var remark = input.Trim();
-        var prefix = $"{date.Month:00}.{date.Day:00}";
-        if (remark.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-            remark = remark[prefix.Length..].TrimStart('_', '-', ' ', '\\', '/');
-        }
-
-        foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
-            remark = remark.Replace(invalid, '_');
-        }
-
-        return remark.Trim().Trim('_');
     }
 
     private void RebuildImportSections()
@@ -4617,6 +4564,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
                 OnPropertyChanged(nameof(IsWatermarkPage));
+                OnPropertyChanged(nameof(IsDateFoldersPage));
                 OnPropertyChanged(nameof(IsSettingsPage));
                 OnPropertyChanged(nameof(PageTitle));
                 OnPropertyChanged(nameof(PageSubtitle));
@@ -4657,6 +4605,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsCompressionPage => CurrentPage == "Compression";
 
     public bool IsWatermarkPage => CurrentPage == "Watermark";
+
+    public bool IsDateFoldersPage => CurrentPage == "DateFolders";
+
+    public bool HasCompletedImport =>
+        _completedImportBatch == _importCompletionBatch &&
+        !string.IsNullOrWhiteSpace(_completedImportLibraryRoot) &&
+        string.Equals(_completedImportLibraryRoot, LibraryRoot, StringComparison.OrdinalIgnoreCase);
 
     public bool HasSelectedFiles => PreviewFiles.Any(f => f.IsSelected);
 
@@ -4737,6 +4692,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
         "Watermark" => "批量水印",
+        "DateFolders" => "日期文件夹",
         "Settings" => "设置",
         _ => "主界面"
     };
@@ -4750,6 +4706,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
+        "DateFolders" => "集中查看日期目录，并一次保存所有备注更改。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
         _ => "设备连接、照片库状态和常用入口。"
     };
@@ -6117,8 +6074,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => new(key, "人物查找", "Icon.People", ShowFaceSearchCommand, order),
         "MapPhotos" => new(key, "地图照片", "Icon.Map", ShowMapPhotosCommand, order),
         "Compression" => new(key, "图片小工具", "Icon.Compression", ShowCompressionCommand, order),
+        "DateFolders" => new(key, "日期文件夹", "Icon.Folder", ShowDateFoldersCommand, order),
         _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown navigation destination.")
     };
+
+    private void ShowDateFolders()
+    {
+        CurrentPage = "DateFolders";
+        if (DateFolders.RefreshCommand.CanExecute(null))
+        {
+            DateFolders.RefreshCommand.Execute(null);
+        }
+    }
 
     private int FindNavigationItemIndex(string key)
     {
@@ -6843,15 +6810,32 @@ public sealed partial class MainWindowViewModel : ObservableObject
         get => _importNamingTemplate;
         set
         {
-            var normalized = string.IsNullOrWhiteSpace(value) ? "JK{seq}" : value.Trim();
+            var normalized = string.IsNullOrWhiteSpace(value) ? ImportNamingFormatter.DefaultTemplate : value.Trim();
             if (string.Equals(normalized, _importNamingTemplate, StringComparison.Ordinal))
             {
                 return;
             }
 
             _importNamingTemplate = normalized;
+            _selectedImportNamingPreset = ImportNamingPreset.Resolve(normalized);
             _ = SaveSettingsAsync();
             OnPropertyChanged(nameof(ImportNamingTemplate));
+            OnPropertyChanged(nameof(ImportNamingPresets));
+            OnPropertyChanged(nameof(SelectedImportNamingPreset));
+        }
+    }
+
+    public IReadOnlyList<ImportNamingPreset> ImportNamingPresets => ImportNamingPreset.GetSelectablePresets(_importNamingTemplate);
+
+    public ImportNamingPreset SelectedImportNamingPreset
+    {
+        get => _selectedImportNamingPreset;
+        set
+        {
+            if (value is not null)
+            {
+                ImportNamingTemplate = value.Template;
+            }
         }
     }
 

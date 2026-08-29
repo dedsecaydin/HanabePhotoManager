@@ -82,16 +82,52 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
-    public void PrimaryButton_ForcesOnPrimaryForegroundThroughItsContentPresenter()
+    public void PrimaryButton_PreservesItsForegroundForStringContentAndOverridesDisabledContent()
     {
-        var buttons = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
-
-        buttons.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.OnPrimary}\"")
-            .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"")
-            .And.Contain("x:Key=\"Button.PrimaryTextTemplate\"")
-            .And.Contain("ContentTemplate=\"{StaticResource Button.PrimaryTextTemplate}\"");
+        AssertPrimaryButtonContract(ReadButtonsXaml());
     }
+
+    [Fact]
+    public void PrimaryButtonContract_RejectsAnIsolatedMissingDisabledContentOverride()
+    {
+        const string disabledContentOverride =
+            "<Setter TargetName=\"PrimaryContent\" Property=\"TextElement.Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"/>";
+        var buttons = ReadButtonsXaml();
+        var brokenButtons = buttons.Replace(disabledContentOverride, string.Empty, StringComparison.Ordinal);
+
+        brokenButtons.Should().NotBe(buttons, "the isolated copy must remove the disabled content override");
+        var verifyBrokenCopy = () => AssertPrimaryButtonContract(brokenButtons);
+
+        verifyBrokenCopy.Should().Throw<Xunit.Sdk.XunitException>();
+    }
+
+    private static void AssertPrimaryButtonContract(string buttons)
+    {
+        var primaryContentTemplate = ExtractFragment(buttons, "<DataTemplate x:Key=\"Button.PrimaryTextTemplate\">", "</DataTemplate>");
+        var primaryStyle = ExtractFragment(buttons, "<Style x:Key=\"Button.Primary\"", "</Style>");
+        var primaryTemplate = ExtractFragment(primaryStyle, "<ControlTemplate TargetType=\"Button\">", "</ControlTemplate>");
+        var disabledTrigger = ExtractFragment(primaryTemplate, "<Trigger Property=\"IsEnabled\" Value=\"False\">", "</Trigger>");
+
+        primaryStyle.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.OnPrimary}\"");
+        primaryContentTemplate.Should().Contain("Foreground=\"{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}\"");
+        primaryTemplate.Should().Contain("TargetName=\"PrimaryContent\"")
+            .And.Contain("TextElement.Foreground=\"{DynamicResource Brush.OnPrimary}\"");
+        disabledTrigger.Should().Contain("<Setter Property=\"Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"")
+            .And.Contain("<Setter TargetName=\"PrimaryContent\" Property=\"TextElement.Foreground\" Value=\"{DynamicResource Brush.Text.Tertiary}\"/>");
+    }
+
+    private static string ExtractFragment(string xaml, string startMarker, string endMarker)
+    {
+        var start = xaml.IndexOf(startMarker, StringComparison.Ordinal);
+        start.Should().BeGreaterOrEqualTo(0, $"the XAML must contain {startMarker}");
+
+        var end = xaml.IndexOf(endMarker, start, StringComparison.Ordinal);
+        end.Should().BeGreaterOrEqualTo(0, $"the XAML fragment starting with {startMarker} must close with {endMarker}");
+        return xaml[start..(end + endMarker.Length)];
+    }
+
+    private static string ReadButtonsXaml() => File.ReadAllText(Path.Combine(
+        FindSourceRoot(), "src", "HanabePhotoManager.App", "Themes", "Controls", "Buttons.xaml"));
 
     [Fact]
     public void ApplicationButtonTemplates_DoNotFadeDisabledContentBelowReadableContrast()
@@ -157,6 +193,80 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("PrimaryNavigationItem_PreviewMouseMove");
         mainXaml.Should().Contain("x:Name=\"ThemeToggleButton\"");
         mainXaml.Should().NotContain("Win11NavButton");
+    }
+
+    [Fact]
+    public void DateFolderManagementPage_UsesBatchEditingContractsAndImportEntry()
+    {
+        var root = FindSourceRoot();
+        var pagePath = Path.Combine(root, "src", "HanabePhotoManager.App", "DateFolders", "DateFolderManagementPage.xaml");
+        var pageXaml = File.Exists(pagePath) ? File.ReadAllText(pagePath) : string.Empty;
+        var mainXaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        pageXaml.Should().NotBeEmpty("the shell must host a dedicated batch-management page");
+        mainXaml.Should().Contain("DateFolderManagementPageHost");
+        pageXaml.Should().Contain("AutomationProperties.Name=\"保存全部备注更改\"");
+        pageXaml.Should().Contain("Command=\"{Binding SaveAllCommand}\"");
+        pageXaml.Should().Contain("Command=\"{Binding RefreshCommand}\"");
+        pageXaml.Should().Contain("ItemsSource=\"{Binding Items}\"");
+        pageXaml.Should().Contain("Text=\"{Binding EditedRemark, Mode=TwoWay");
+        pageXaml.Should().Contain("Text=\"{Binding FullPath, Mode=OneWay}");
+        pageXaml.Should().NotContain("Text=\"{Binding FullPath, Mode=TwoWay");
+        pageXaml.Should().NotMatchRegex("(?:Margin|Padding|BorderThickness)=\"[0-9]");
+    }
+
+    [Fact]
+    public void ImportCompletion_OffersDateFolderEntryWithoutSequentialRemarkDialogs()
+    {
+        var root = FindSourceRoot();
+        var viewModelSource = File.ReadAllText(Path.Combine(
+            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var mainXaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+
+        viewModelSource.Should().NotContain("AskForDateRemarksAsync")
+            .And.NotContain("new RemarkPromptWindow");
+        viewModelSource.Should().NotContain("ProgressLabel == \"导入完成\"");
+        mainXaml.Should().Contain("Command=\"{Binding ShowDateFoldersCommand}\"");
+        mainXaml.Should().Contain("AutomationProperties.Name=\"管理日期文件夹备注\"");
+        mainXaml.Should().Contain("Visibility=\"{Binding HasCompletedImport, Converter={StaticResource BoolToVis}}\"");
+    }
+
+    [Fact]
+    public void ImportCompletionEntry_TracksTheCurrentLibraryAndBatchInsteadOfProgressText()
+    {
+        var viewModel = new MainWindowViewModel { ProgressLabel = "导入完成" };
+
+        viewModel.HasCompletedImport.Should().BeFalse("a progress caption is not a completed import result");
+
+        viewModel.LibraryRoot = @"D:\\Library-A";
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        viewModel.HasCompletedImport.Should().BeTrue();
+
+        viewModel.LibraryRoot = @"D:\\Library-B";
+        viewModel.HasCompletedImport.Should().BeFalse("a completion result belongs to its original library");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        viewModel.HasCompletedImport.Should().BeTrue();
+        InvokeImportCompletionMethod(viewModel, "BeginImportCompletionBatch");
+        viewModel.HasCompletedImport.Should().BeFalse("starting a new analysis or import invalidates the previous result");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        InvokeImportCompletionMethod(viewModel, "CancelCurrentTask");
+        viewModel.HasCompletedImport.Should().BeFalse("cancellation invalidates the result entry");
+
+        InvokeImportCompletionMethod(viewModel, "MarkImportCompletionForCurrentBatch");
+        InvokeImportCompletionMethod(viewModel, "ClearImportCompletionState");
+        viewModel.HasCompletedImport.Should().BeFalse("failed import paths clear the result entry");
+    }
+
+    private static void InvokeImportCompletionMethod(MainWindowViewModel viewModel, string methodName)
+    {
+        var method = typeof(MainWindowViewModel).GetMethod(
+            methodName,
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
+        method.Should().NotBeNull($"the import completion state must support {methodName}");
+        method!.Invoke(viewModel, null);
     }
 
     [Fact]

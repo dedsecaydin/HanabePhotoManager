@@ -9,8 +9,12 @@ namespace HanabePhotoManager.Core.Imports;
 /// </summary>
 public static class ImportNamingFormatter
 {
+    public const string SequenceTemplate = "JK{seq}";
+    public const string OriginalTemplate = "{orig}";
+    public const string SequenceAndOriginalTemplate = "JK{seq}（{orig}）";
+
     /// <summary>未配置模板时使用的兼容命名格式。</summary>
-    public const string DefaultTemplate = "JK{seq}";
+    public const string DefaultTemplate = SequenceTemplate;
 
     private static readonly Regex SequencePattern = new(
         @"\{seq(?::(\d+))?\}",

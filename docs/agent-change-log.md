@@ -975,3 +975,34 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - `0.3.2-alpha.20`: moved category, retouch, rating, and multi-select into one common-filter row, with the advanced-filter disclosure on its own left-aligned second row; added matching release notes.
 - `0.3.2-alpha.20` video follow-up: moved LibVLC initialization off the UI thread, reused one MediaPlayer per viewer window, and enabled hardware decoding plus local-file buffering/late-frame policies; added regression coverage.
 - GitHub presentation: refreshed English, Simplified Chinese, and Japanese READMEs to `0.3.2-alpha.20` / 647 tests, documented the current gallery, watermark, collage, and video improvements, and removed obsolete cloud-drive claims.
+
+## 2026-08-28 — 批量日期文件夹编辑 ViewModel
+
+- 新增可编辑日期目录行与批量管理 ViewModel；扫描和重命名通过可替换服务边界调用既有 `LibraryDateFolderService`，不改变现有文件系统服务。
+- 批量保存逐行继续执行：成功/无需保存更新基线和有效路径，失败行保留用户编辑并给出状态；空根目录不会触发扫描。
+- 新增 6 项内存假服务回归覆盖；Release `/warnaserror` 构建 0 警告、0 错误，Core 160、Infrastructure 55、App 447、InstallerShell 12 测试全部通过。
+
+### 审查修复
+
+- 扫描契约改为应用层 `DateFolderScanResult`；适配器把任意扫描异常转换为可展示消息，ViewModel 不再引用文件系统异常类型。
+- 重命名结果新增 `EffectiveRemark`，成功/无需保存时以服务实际规范化备注同时更新编辑值和保存基线；重新编辑失败行会显示“待保存”。
+- 新增服务规范化备注、扫描异常摘要、失败行再次编辑三项回归覆盖；日期服务 18 项、批量 ViewModel 8 项通过，Release 构建 0 警告、0 错误。
+
+## 2026-08-28 — 日期文件夹批量管理页面
+
+- 新增 `DateFolderManagementPage`，以现有 token、输入框、按钮和虚拟化列表呈现只读日期/路径、可编辑备注及逐行保存状态。
+- Shell 新增 `DateFolders` 导航项、页面宿主和可中断页面切换映射；进入页面时刷新既有 `DateFolderManagementViewModel`，不改变导入后的当前页面。
+- 导入完成报告提供“管理日期文件夹备注”非阻塞入口；移除按日期顺序弹出 `RemarkPromptWindow` 的调用链。
+- 继承的导航/XAML RED 测试先确认失败，再完成实现后通过 49 项聚焦 App 测试；Release `/warnaserror` 构建 0 警告、0 错误。
+- 独立只读审查后，入口改为仅在正常或恢复导入完成时显示，避免导入前或进行中跳转并触发额外目录扫描。
+- 后续主控审查将完成态从 `ProgressLabel` 文案中解耦：以当前库根目录和导入批次版本确认，换库、开始分析/导入、取消或异常都会使入口失效；仅正常和恢复导入成功后显式确认。
+- 日期管理页的所有 Margin、Padding 与 BorderThickness 改为全局复合间距/分隔线 token；日期行仍只显示月日，不臆造不存在的年份，完整路径保留唯一辨识信息。
+
+## 2026-08-28 — 导入命名与日期文件夹批量流程最终验证
+
+- 将主按钮回归断言收紧到 `Button.PrimaryTextTemplate`、`Button.Primary` 和其 `ControlTemplate` 的片段：正常态绑定 `Brush.OnPrimary`、`PrimaryContent`，禁用触发器中 `PrimaryContent → Brush.Text.Tertiary` 的关联均被锁定；隔离副本删除该禁用覆盖时测试明确失败。现有共享模板已满足契约，未改动 `Buttons.xaml`。
+- 主题资源契约覆盖 Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个颜色词典，逐一确认 `Color.Primary`、`Color.OnPrimary`、`Color.Text.Tertiary` 与 `Color.Surface.Disabled`；共享 Light/Dark Brush 仍要求 `Brush.Text.Tertiary`、`Brush.Primary` 和 `Brush.OnPrimary`。
+- 聚焦 App 主题/资源测试 51/51 通过；Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 160、Infrastructure 55、App 454、InstallerShell 12，共 681 项通过。
+- 使用仅属于验证的 D: 临时目录完成非交互冒烟：扫描 3 个日期目录、重命名和清空备注、目标冲突、外部缺失源，Release `ImportPlanBuilder.BuildRenamedFileName` 实测最终文件名 `JK0001（DSC_1234）.ARW`，以及 Release 应用启动/关闭均通过；随后已删除三处临时验证目录。
+- 使用隔离设置与空测试图库完成 WPF 交互验收：Dynamic/Forest/Violet/Classic × Light/Dark 共 8 个主题下，“保存全部”正常态文字均清晰；Light 与 Classic Dark 的焦点态文字清晰；键盘 Tab 可从“刷新”到达“保存全部备注更改”。Hover/Pressed/Disabled、空图库中不存在的行编辑器遍历、UI 级导入重启与真实完成导入仍未交互执行，对应共享模板、主题资源和状态流由自动化测试覆盖。另明确登记：导入页三种命名预设的逐项 UI 切换未交互执行；多条日期文件夹备注编辑后一次“保存全部”未交互执行（隔离图库无可编辑行）；两项均已有聚焦自动化测试覆盖。
+- 最终整分支审查后修正日期文件夹备注清理：保存时会剥离重复的点分隔或中文日期前缀，Windows 文件名非法字符改为下划线而非直接删除；新增回归测试覆盖 `08.28_婚礼`、`8月28日-婚礼` 与 `婚礼:晚宴`。

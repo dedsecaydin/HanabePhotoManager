@@ -270,6 +270,13 @@
 - Verification at implementation HEAD: Release `/warnaserror` build 0 warnings/0 errors; 693/693 tests passed (Core 162, Infrastructure 55, App 464, InstallerShell 12).
 - Remaining runtime check: launch the freshly published `D:\hanabe-publish-v2` payload and visually inspect the preflight with disposable D-drive media; do not use the real library.
 
+## 2026-08-29 Duplicate Merge Scope
+
+- `ScanLibraryDuplicatesCommand` now opens `DuplicateMergeScopeWindow` before any full-library scan.
+- The choices are exact SHA-256 only, visual dHash only, or both; both is the default and exact paths are excluded from the visual candidate pass.
+- Scope selection never deletes files. Existing `DuplicateReviewWindow` remains the only place where the user selects files for deletion/merge cleanup.
+- Verification: Release `/warnaserror` build 0 warnings/0 errors; 697/697 tests passed.
+
 ---
 
 ## Known Issues (Not Yet Resolved)

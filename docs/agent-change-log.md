@@ -1015,3 +1015,10 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - `ImportPlanBuilder` 支持照片库内的明确日期目录，并拒绝逃出照片库的路径；查重、序号计算、导入计划和复制均使用冻结映射。
 - 续传快照新增 `TargetDateDirectory`，恢复时不再重新猜测目录；已确认目标缺失时停止并要求重新分析确认。
 - 新增 Core/App 回归测试；Release `/warnaserror` 构建 0 警告、0 错误，全量测试 Core 162、Infrastructure 55、App 464、InstallerShell 12，共 693 项通过。
+
+## 2026-08-29 — 重复合并检测范围选择
+
+- 全库重复扫描启动前新增三选项窗口：仅 SHA-256、仅视觉相似、两者都包含；取消不会启动扫描。
+- SHA-256 路径保持“大小分桶 + 流式 SHA-256”完全一致判定；视觉相似保持 64 位 dHash、汉明距离 ≤ 8，并只处理可解码栅格图片。
+- “两者都包含”先加入精确组，再从视觉扫描中排除已覆盖路径；选择范围只控制复查候选，实际删除仍必须在原复查窗口中人工勾选。
+- Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 162、Infrastructure 55、App 468、InstallerShell 12，共 697 项通过。

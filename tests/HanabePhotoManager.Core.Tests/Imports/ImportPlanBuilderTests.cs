@@ -5,6 +5,21 @@ namespace HanabePhotoManager.Core.Tests.Imports;
 
 public sealed class ImportPlanBuilderTests
 {
+    [Fact]
+    public async Task BuildAsync_UsesExplicitDateDirectoryForDestinations()
+    {
+        var source = CreateSource(@"D:\camera\DSC_1234.JPG");
+        var group = new MediaGroup("DSC_1234", MediaCategory.Jpeg, source, []);
+        var explicitDirectory = @"E:\library\8月\08.19_客户寿司";
+
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(@"E:\library", new LibraryDate(2026, 8, 19), TransferMode.CopyKeepSource,
+                [group], CancellationToken.None, explicitDateDirectory: explicitDirectory);
+
+        plan.Items.Single().Files.Single().DestinationPath.Should()
+            .Be(Path.Combine(explicitDirectory, "JPG生图", "JK0001.JPG"));
+    }
+
     [Theory]
     [InlineData(MediaCategory.Raw, "RAW生图")]
     [InlineData(MediaCategory.Jpeg, "JPG生图")]

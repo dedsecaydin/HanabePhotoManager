@@ -27,7 +27,8 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         TransferMode mode,
         IEnumerable<MediaGroup> groups,
         CancellationToken cancellationToken,
-        string? namingTemplate = null)
+        string? namingTemplate = null,
+        string? explicitDateDirectory = null)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(groups);
@@ -47,8 +48,15 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         // "\\Hanabe\拍照"，补双反斜杠后若可访问则按 UNC 保留（绝不 GetFullPath 成 C:\ 盘路径）；
         // 已完全限定的 UNC/盘符路径原样保留；仅当 UNC 候选不可访问时才回退 GetFullPath。
         var normalizedRoot = LibraryRootNormalizer.Normalize(root) ?? root;
+        var dateDirectory = string.IsNullOrWhiteSpace(explicitDateDirectory)
+            ? Path.Combine(normalizedRoot, date.RelativePath)
+            : Path.GetFullPath(explicitDateDirectory);
+        if (!Path.IsPathFullyQualified(dateDirectory))
+        {
+            throw new ArgumentException("明确指定的日期目录必须是绝对路径。", nameof(explicitDateDirectory));
+        }
 
-        var sequenceByGroup = BuildSequenceMap(normalizedRoot, date, inputGroups);
+        var sequenceByGroup = BuildSequenceMap(dateDirectory, inputGroups);
         var items = new List<ImportPlanItem>();
         var plannedDestinations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var group in inputGroups)
@@ -62,7 +70,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
             foreach (var source in EnumerateGroupFiles(group))
             {
                 var destinationFileName = BuildRenamedFileName(namingTemplate, sequence, source.FullPath, date, extensionCounts);
-                var destination = Path.Combine(normalizedRoot, date.RelativePath, categoryFolder, destinationFileName);
+                var destination = Path.Combine(dateDirectory, categoryFolder, destinationFileName);
                 var normalizedDestination = NormalizeDestinationIdentity(destination);
                 var conflict = plannedDestinations.Add(normalizedDestination)
                     ? await _destinationProbe.CheckAsync(source, destination, cancellationToken).ConfigureAwait(false)
@@ -104,13 +112,13 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         }
     }
 
-    private static Dictionary<MediaGroup, int> BuildSequenceMap(string root, LibraryDate date, IReadOnlyList<MediaGroup> groups)
+    private static Dictionary<MediaGroup, int> BuildSequenceMap(string dateDirectory, IReadOnlyList<MediaGroup> groups)
     {
         var result = new Dictionary<MediaGroup, int>();
         foreach (var categoryGroup in groups.GroupBy(group => group.Category))
         {
             var categoryFolder = CategoryFolders[categoryGroup.Key];
-            var next = FindNextSequence(Path.Combine(root, date.RelativePath, categoryFolder));
+            var next = FindNextSequence(Path.Combine(dateDirectory, categoryFolder));
             foreach (var group in categoryGroup
                          .OrderBy(group => Path.GetFileNameWithoutExtension(group.Primary.FullPath), NaturalStringComparer.OrdinalIgnoreCase)
                          .ThenBy(group => group.Primary.FullPath, StringComparer.OrdinalIgnoreCase))

@@ -25,6 +25,23 @@ public sealed class ControlThemeTests
             .And.Contain("FocusVisualStyle=\"{x:Null}\"");
         settings.Should().Contain("IsChecked=\"{Binding ShowHanabeAssistant, Mode=TwoWay}\"");
     }
+
+    [Fact]
+    public void HanabeAssistantWindow_IsAProgressBoundDraggableToolWindow()
+    {
+        var root = FindSourceRoot();
+        var xamlPath = Path.Combine(root, "src", "HanabePhotoManager.App", "HanabeAssistantWindow.xaml");
+        File.Exists(xamlPath).Should().BeTrue();
+        var xaml = File.ReadAllText(xamlPath);
+
+        xaml.Should().Contain("Topmost=\"True\"")
+            .And.Contain("ShowInTaskbar=\"False\"")
+            .And.Contain("Text=\"{Binding ProgressLabel}\"")
+            .And.Contain("Value=\"{Binding ProgressValue}\"")
+            .And.Contain("Text=\"{Binding EstimatedTimeRemaining}\"")
+            .And.Contain("Assets/Hanabe/hanabe-assistant.png")
+            .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
+    }
     [Fact]
     public void SettingsChoiceComboBoxes_RenderLabelsInsteadOfRecordText()
     {

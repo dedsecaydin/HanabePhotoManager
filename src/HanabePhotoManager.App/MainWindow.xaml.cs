@@ -32,6 +32,7 @@ public partial class MainWindow : Window
     private readonly EdgeAutoScrollPolicy _edgeAutoScrollPolicy = new();
     private readonly DispatcherTimer _rubberBandAutoScrollTimer;
     private readonly DispatcherTimer _windowStateSaveTimer;
+    private HanabeAssistantWindow? _hanabeAssistantWindow;
 
     // Single-click vs double-click disambiguation: a plain single click only
     // previews in the Inspector, but it must not fire before a double click is
@@ -355,8 +356,7 @@ public partial class MainWindow : Window
         Activated += (_, _) => _viewModel.RefreshWindowsWallpaper();
         Deactivated += (_, _) => EndRubberBandSelection();
         LocationChanged += (_, _) => ScheduleWindowStateSave();
-        StateChanged += (_, _) => ScheduleWindowStateSave();
-        StateChanged += (_, _) => UpdateWindowCaptionGlyphs();
+        StateChanged += MainWindow_StateChanged;
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
         _viewModel.OpenIndependentViewerRequested += OpenIndependentViewer;
         _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
@@ -655,6 +655,32 @@ public partial class MainWindow : Window
         {
             AnimateImportCount(ImportFailedScale);
         }
+        else if (e.PropertyName == nameof(MainWindowViewModel.ShowHanabeAssistant))
+        {
+            UpdateHanabeAssistantWindow();
+        }
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        ScheduleWindowStateSave();
+        UpdateWindowCaptionGlyphs();
+        UpdateHanabeAssistantWindow();
+    }
+
+    private void UpdateHanabeAssistantWindow()
+    {
+        if (!HanabeAssistantWindowPolicy.ShouldShow(WindowState, _viewModel.ShowHanabeAssistant))
+        {
+            _hanabeAssistantWindow?.Hide();
+            return;
+        }
+
+        _hanabeAssistantWindow ??= new HanabeAssistantWindow { DataContext = _viewModel };
+        if (!_hanabeAssistantWindow.IsVisible)
+        {
+            _hanabeAssistantWindow.Show();
+        }
     }
 
     // 导入摘要数字变化：弹性放大回弹动画（导成功一张数字就跳一下）
@@ -753,6 +779,7 @@ public partial class MainWindow : Window
     {
         _windowStateSaveTimer.Stop();
         PersistWindowState();
+        _hanabeAssistantWindow?.Close();
         _viewModel.PropertyChanged -= MainWindowViewModel_PropertyChanged;
         _viewModel.FaceSearch.Cancel();
         MapPageHost.Dispose();

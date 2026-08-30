@@ -2561,14 +2561,15 @@
           </Grid>
         </DockPanel>
       </Border>
-      <Border Grid.Column="1" Panel.ZIndex="80" Width="330" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,56" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Elevated}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" AutomationProperties.Name="Hanabe 任务助手">
+      <Border x:Name="HanabeAssistantSurface" Grid.Column="1" Panel.ZIndex="80" Width="330" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,24,56" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Elevated}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True" Cursor="SizeAll" Focusable="False" FocusVisualStyle="{x:Null}" PreviewMouseLeftButtonDown="HanabeAssistant_PreviewMouseLeftButtonDown" PreviewMouseMove="HanabeAssistant_PreviewMouseMove" PreviewMouseLeftButtonUp="HanabeAssistant_PreviewMouseLeftButtonUp" LostMouseCapture="HanabeAssistant_LostMouseCapture" AutomationProperties.Name="Hanabe 任务助手">
+        <Border.RenderTransform><TranslateTransform x:Name="HanabeAssistantTransform" /></Border.RenderTransform>
         <Border.Style>
           <Style TargetType="Border">
             <Setter Property="Visibility" Value="Visible" />
             <Style.Triggers><DataTrigger Binding="{Binding ShowHanabeAssistant}" Value="False"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers>
           </Style>
         </Border.Style>
-        <Grid>
+        <Grid ShowGridLines="False" Background="{DynamicResource Brush.Surface.Elevated}" Focusable="False">
           <Grid.ColumnDefinitions><ColumnDefinition Width="72" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
           <Border Width="64" Height="64" CornerRadius="32" ClipToBounds="True" Background="{DynamicResource Brush.PrimaryContainer}">
             <Image Source="Assets/Hanabe/hanabe-assistant.png" Stretch="UniformToFill" />
@@ -2576,7 +2577,7 @@
           <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
             <TextBlock Text="Hanabe" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" />
             <TextBlock Text="{Binding ProgressLabel}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,6" />
-            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="5" />
+            <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="5" Focusable="False" FocusVisualStyle="{x:Null}" />
             <DockPanel Margin="0,5,0,0"><TextBlock DockPanel.Dock="Right" Text="{Binding EstimatedTimeRemaining}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" /><TextBlock Text="{Binding ProgressValue, StringFormat={}{0:0}%}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Primary}" /></DockPanel>
           </StackPanel>
         </Grid>

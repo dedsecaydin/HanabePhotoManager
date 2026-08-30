@@ -16,7 +16,13 @@ public sealed class ControlThemeTests
         var settings = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
         xaml.Should().Contain("AutomationProperties.Name=\"Hanabe 任务助手\"")
             .And.Contain("Text=\"{Binding ProgressLabel}\"")
-            .And.Contain("Value=\"{Binding ProgressValue}\"");
+            .And.Contain("Value=\"{Binding ProgressValue}\"")
+            .And.Contain("x:Name=\"HanabeAssistantSurface\"")
+            .And.Contain("PreviewMouseLeftButtonDown=\"HanabeAssistant_PreviewMouseLeftButtonDown\"")
+            .And.Contain("PreviewMouseMove=\"HanabeAssistant_PreviewMouseMove\"")
+            .And.Contain("PreviewMouseLeftButtonUp=\"HanabeAssistant_PreviewMouseLeftButtonUp\"")
+            .And.Contain("ShowGridLines=\"False\"")
+            .And.Contain("FocusVisualStyle=\"{x:Null}\"");
         settings.Should().Contain("IsChecked=\"{Binding ShowHanabeAssistant, Mode=TwoWay}\"");
     }
     [Fact]

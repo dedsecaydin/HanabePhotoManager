@@ -98,6 +98,7 @@
     <Border Grid.Column="0" Style="{StaticResource Inspector.Panel}">
       <ListBox x:Name="SectionNavList" Style="{StaticResource List.Default}" ItemContainerStyle="{StaticResource Settings.SectionNavItem}" SelectionChanged="SectionNav_SelectionChanged">
         <ListBoxItem Tag="appearance"><TextBlock Text="外观" FontWeight="SemiBold" /></ListBoxItem>
+        <ListBoxItem Tag="sound"><TextBlock Text="音效" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="general"><TextBlock Text="常规" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="library"><TextBlock Text="照片库与导入" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="browse"><TextBlock Text="浏览与 AI" FontWeight="SemiBold" /></ListBoxItem>
@@ -257,40 +258,6 @@
             </UniformGrid>
           </Border>
 
-          <Border Style="{StaticResource Settings.Group}" Margin="0,12,0,0">
-            <StackPanel>
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-                <StackPanel Margin="0,0,16,0">
-                  <TextBlock Text="Hanabe 状态音效" Style="{StaticResource Settings.RowTitle}" />
-                  <TextBlock Text="扫描、校验、导入、完成和错误使用短提示音；不会按文件逐个播放。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" TextWrapping="Wrap" />
-                </StackPanel>
-                <CheckBox Grid.Column="1" Content="启用音效" IsChecked="{Binding HanabeSoundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
-              </Grid>
-              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-                <TextBlock Text="声音风格" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" />
-                <ComboBox Grid.Column="1" ItemsSource="{Binding HanabeSoundStyleChoices}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding HanabeSoundStyle, Mode=TwoWay}" Style="{StaticResource Input.ComboBox}" />
-              </Grid>
-              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-              <Grid>
-                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-                <TextBlock Text="音量" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" />
-                <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding HanabeSoundVolume, Mode=TwoWay}" Style="{StaticResource Input.Slider}" />
-              </Grid>
-              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-              <CheckBox Content="安静模式（仅完成和错误时播放）" IsChecked="{Binding HanabeSoundQuietMode, Mode=TwoWay}" />
-              <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                <Button Content="试听 A" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Camera" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" />
-                <Button Content="试听 B" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Cute" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" />
-                <Button Content="试听混合" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Mixed" Style="{StaticResource Button.Secondary}" />
-              </StackPanel>
-              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-              <CheckBox Content="重复检测完成且需要处理时唤回主窗口" IsChecked="{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}" />
-            </StackPanel>
-          </Border>
-
           <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Hanabe 角色助手" Style="{StaticResource Settings.GroupHeader}" />
@@ -410,6 +377,33 @@
                 <Button Content="清除图标" Style="{StaticResource Button.Secondary}" Command="{Binding ClearAppIconCommand}" />
               </StackPanel>
             </Grid>
+          </Border>
+        </StackPanel>
+
+        <!-- ─────── 音效 ─────── -->
+        <StackPanel x:Name="SoundSection" Visibility="Collapsed">
+          <TextBlock Text="音效" Style="{StaticResource Layout.PageTitle}" />
+          <TextBlock Text="选择 Hanabe 在任务状态变化时使用的声音；设置会立即保存。" Style="{StaticResource Layout.SettingsHint}" />
+          <Grid Margin="0,12,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Text="任务提示音" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0"><TextBlock Text="启用 Hanabe 音效" Style="{StaticResource Settings.RowTitle}" /><TextBlock Text="扫描、校验、导入、完成和错误时播放；空闲和逐文件进度不播放。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" /></StackPanel>
+                <CheckBox Grid.Column="1" Content="启用" IsChecked="{Binding HanabeSoundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><TextBlock Text="声音风格" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" ItemsSource="{Binding HanabeSoundStyleChoices}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding HanabeSoundStyle, Mode=TwoWay}" Style="{StaticResource Input.ComboBox}" /></Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions><TextBlock Text="提示音量" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" /><Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding HanabeSoundVolume, Mode=TwoWay}" Style="{StaticResource Input.Slider}" /></Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <CheckBox Content="安静模式（仅完成和错误时播放）" IsChecked="{Binding HanabeSoundQuietMode, Mode=TwoWay}" />
+              <StackPanel Orientation="Horizontal" Margin="0,14,0,0"><Button Content="试听 A · 相机机械" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Camera" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" /><Button Content="试听 B · Q 版" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Cute" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" /><Button Content="试听 C · 混合" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Mixed" Style="{StaticResource Button.Secondary}" /></StackPanel>
+            </StackPanel>
           </Border>
         </StackPanel>
 
@@ -550,6 +544,12 @@
                 <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding CheckDuplicatesOnImport, Mode=TwoWay}"
                           ToolTip="开启后对每个文件只查其目标日期文件夹（LibraryRoot\日期目录）里已有的照片，做 SHA-256 哈希比对，发现重复时弹窗让你决定跳过还是保留；不扫描整个图库。"
                           AutomationProperties.Name="导入时检查重复开关" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0"><TextBlock Text="重复检测完成后唤回窗口" Style="{StaticResource Settings.RowTitle}" /><TextBlock Text="主窗口最小化时，检测到需要处理的重复项会自动恢复并显示确认窗口。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" /></StackPanel>
+                <CheckBox Grid.Column="1" IsChecked="{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}" VerticalAlignment="Center" AutomationProperties.Name="重复检测完成后唤回主窗口" />
               </Grid>
             </StackPanel>
           </Border>

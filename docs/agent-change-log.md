@@ -1,5 +1,13 @@
 # Agent Change Log
 
+## 2026-08-31 — alpha.21 独立音效设置与安全确认 UI 统一
+
+- 设置左侧新增独立“音效”分区，集中呈现开关、A/B/C 风格、音量、安静模式与试听；音效不再藏在外观页。
+- “重复检测完成后唤回窗口”移动到“照片库与导入”，保持设置语义归属清晰。
+- 移动模式导入前的原生 `MessageBox` 替换为 `ImportMoveSafetyConfirmationWindow`，复用 Dialog/Surface/Button/Typography 资源，并默认聚焦安全的“返回检查”。
+- 版本更新至 `0.3.2-alpha.21`，同步内置发行说明、CHANGELOG、current-status 与 handoff。
+- 新增回归测试，覆盖独立音效入口与安全确认窗口替换。
+
 ## 2026-08-31 — Hanabe 状态音效与重复清理结果弹窗
 
 - 新增 `HanabeSoundPolicy` / `HanabeSoundService` 和 15 个 44.1 kHz PCM WAV：Camera、Cute、Mixed 各覆盖 scanning/checking/importing/completed/error。

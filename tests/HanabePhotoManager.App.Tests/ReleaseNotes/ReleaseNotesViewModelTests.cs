@@ -8,10 +8,11 @@ namespace HanabePhotoManager.App.Tests.ReleaseNotes;
 public sealed class ReleaseNotesViewModelTests
 {
     [Fact]
-    public void Catalog_ContainsEveryPublishedAlphaThirteenThroughTwenty()
+    public void Catalog_ContainsEveryPublishedAlphaThirteenThroughTwentyOne()
     {
-        ReleaseNotesCatalog.Versions.Take(8).Select(item => item.Version)
+        ReleaseNotesCatalog.Versions.Take(9).Select(item => item.Version)
             .Should().Equal(
+                "0.3.2-alpha.21",
                 "0.3.2-alpha.20",
                 "0.3.2-alpha.19",
                 "0.3.2-alpha.18",
@@ -20,7 +21,7 @@ public sealed class ReleaseNotesViewModelTests
                 "0.3.2-alpha.15",
                 "0.3.2-alpha.14",
                 "0.3.2-alpha.13");
-        ReleaseNotesCatalog.Versions.Take(8)
+        ReleaseNotesCatalog.Versions.Take(9)
             .Should().OnlyContain(item => item.Notes.Count > 0);
     }
 

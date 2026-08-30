@@ -10,7 +10,7 @@
 
 > **Purpose:** First-read document for any agent taking over this project.  
 > **Last Updated:** 2026-08-14  
-> **Current Version:** `0.3.0-alpha`（2026-08-14 开源发布完成）  
+> **Current Version:** `0.3.2-alpha.21`（2026-08-31）
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
 

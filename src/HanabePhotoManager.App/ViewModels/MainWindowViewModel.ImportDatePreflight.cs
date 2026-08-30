@@ -67,12 +67,11 @@ public sealed partial class MainWindowViewModel
         var deleteSources = SelectedTransferMode == TransferMode.MoveAfterVerify;
         if (deleteSources)
         {
-            var answer = System.Windows.MessageBox.Show(
-                "移动模式会在哈希校验成功后删除来源文件。确认继续吗？",
-                "Hanabe 安全确认",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            if (answer != MessageBoxResult.Yes) return;
+            var confirmation = new ImportMoveSafetyConfirmationWindow
+            {
+                Owner = System.Windows.Application.Current?.MainWindow
+            };
+            if (confirmation.ShowDialog() != true) return;
         }
 
         IsImportDateFolderPreflightVisible = false;

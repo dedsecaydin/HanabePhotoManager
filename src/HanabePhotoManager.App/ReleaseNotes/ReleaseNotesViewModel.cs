@@ -112,6 +112,14 @@ public static class ReleaseNotesCatalog
     public static IReadOnlyList<ReleaseVersionInfo> Versions { get; } =
     [
         new(
+            "0.3.2-alpha.21",
+            new DateOnly(2026, 8, 31),
+            [
+                "Hanabe 增加相机机械、Q 版与混合三套任务状态音效，并提供独立音效设置分区。",
+                "重复检测可在需要处理时唤回主窗口，重复清理完成后显示独立结果报告。",
+                "移动导入安全确认改为与应用主题一致的 Hanabe 模态窗口。"
+            ]),
+        new(
             "0.3.2-alpha.20",
             new DateOnly(2026, 8, 26),
             [

@@ -1,5 +1,7 @@
 # Current Status — Feature-by-Feature Implementation State
 
+> **Current Version:** `0.3.2-alpha.21`（独立音效设置与统一安全确认）
+
 ## 2026-08-31 Hanabe 状态音效与重复清理报告
 
 - Hanabe 增加 A 相机机械、B Q 版提示、C 混合三套原创状态音效，覆盖扫描、校验、导入、完成和错误；空闲与逐文件进度不播放。

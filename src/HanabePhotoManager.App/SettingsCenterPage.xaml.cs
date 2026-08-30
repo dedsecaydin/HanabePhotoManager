@@ -69,6 +69,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
             return;
 
         AppearanceSection.Visibility = key == "appearance" ? Visibility.Visible : Visibility.Collapsed;
+        SoundSection.Visibility = key == "sound" ? Visibility.Visible : Visibility.Collapsed;
         GeneralSection.Visibility = key == "general" ? Visibility.Visible : Visibility.Collapsed;
         LibrarySection.Visibility = key == "library" ? Visibility.Visible : Visibility.Collapsed;
         BrowseSection.Visibility = key == "browse" ? Visibility.Visible : Visibility.Collapsed;

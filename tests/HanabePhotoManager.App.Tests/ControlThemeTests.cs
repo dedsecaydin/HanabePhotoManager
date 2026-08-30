@@ -10,6 +10,22 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class ControlThemeTests
 {
     [Fact]
+    public void Settings_ExposeDedicatedSoundSection_AndMoveImportUsesThemedSafetyDialog()
+    {
+        var root = FindSourceRoot();
+        var settings = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
+        var preflight = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.ImportDatePreflight.cs"));
+        var dialog = Path.Combine(root, "src", "HanabePhotoManager.App", "Imports", "ImportMoveSafetyConfirmationWindow.xaml");
+
+        settings.Should().Contain("Tag=\"sound\"")
+            .And.Contain("x:Name=\"SoundSection\"")
+            .And.Contain("Text=\"音效\" Style=\"{StaticResource Layout.PageTitle}\"");
+        preflight.Should().Contain("ImportMoveSafetyConfirmationWindow")
+            .And.NotContain("MessageBox.Show");
+        File.Exists(dialog).Should().BeTrue();
+    }
+
+    [Fact]
     public void MainWindow_ReservesHanabeAssistantForTheMinimizedToolWindow()
     {
         var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));

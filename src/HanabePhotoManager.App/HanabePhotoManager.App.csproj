@@ -76,6 +76,7 @@
     <Resource Include="Assets\HanabeAppLogo.png" />
     <Resource Include="Assets\HanabeAppLogo.Light.png" />
     <Resource Include="Assets\wechat-sponsor-qr.jpg" />
+    <Resource Include="Assets\Hanabe\hanabe-assistant.png" />
   </ItemGroup>
 
 </Project>

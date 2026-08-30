@@ -10,19 +10,12 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class ControlThemeTests
 {
     [Fact]
-    public void MainWindow_ProvidesOptionalHanabeProgressAssistant()
+    public void MainWindow_ReservesHanabeAssistantForTheMinimizedToolWindow()
     {
         var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
         var settings = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
-        xaml.Should().Contain("AutomationProperties.Name=\"Hanabe 任务助手\"")
-            .And.Contain("Text=\"{Binding ProgressLabel}\"")
-            .And.Contain("Value=\"{Binding ProgressValue}\"")
-            .And.Contain("x:Name=\"HanabeAssistantSurface\"")
-            .And.Contain("PreviewMouseLeftButtonDown=\"HanabeAssistant_PreviewMouseLeftButtonDown\"")
-            .And.Contain("PreviewMouseMove=\"HanabeAssistant_PreviewMouseMove\"")
-            .And.Contain("PreviewMouseLeftButtonUp=\"HanabeAssistant_PreviewMouseLeftButtonUp\"")
-            .And.Contain("ShowGridLines=\"False\"")
-            .And.Contain("FocusVisualStyle=\"{x:Null}\"");
+        xaml.Should().NotContain("x:Name=\"HanabeAssistantSurface\"")
+            .And.NotContain("AutomationProperties.Name=\"Hanabe 任务助手\"");
         settings.Should().Contain("IsChecked=\"{Binding ShowHanabeAssistant, Mode=TwoWay}\"");
     }
 
@@ -31,16 +24,19 @@ public sealed class ControlThemeTests
     {
         var root = FindSourceRoot();
         var xamlPath = Path.Combine(root, "src", "HanabePhotoManager.App", "HanabeAssistantWindow.xaml");
+        var project = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "HanabePhotoManager.App.csproj"));
         File.Exists(xamlPath).Should().BeTrue();
         var xaml = File.ReadAllText(xamlPath);
 
-        xaml.Should().Contain("Topmost=\"True\"")
+        xaml.Should().Contain("Title=\"Hanabe 任务助手\"")
+            .And.Contain("Topmost=\"True\"")
             .And.Contain("ShowInTaskbar=\"False\"")
             .And.Contain("Text=\"{Binding ProgressLabel}\"")
             .And.Contain("Value=\"{Binding ProgressValue}\"")
             .And.Contain("Text=\"{Binding EstimatedTimeRemaining}\"")
             .And.Contain("Assets/Hanabe/hanabe-assistant.png")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
+        project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
     }
 
     [Fact]

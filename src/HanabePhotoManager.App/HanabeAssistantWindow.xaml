@@ -1,7 +1,7 @@
 <Window x:Class="HanabePhotoManager.App.HanabeAssistantWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="350" Height="112" SizeToContent="Manual"
+        Title="Hanabe 任务助手" Width="350" Height="112" SizeToContent="Manual"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
         WindowStartupLocation="Manual" AutomationProperties.Name="Hanabe 桌面任务助手">

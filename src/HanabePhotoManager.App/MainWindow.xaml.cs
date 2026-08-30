@@ -55,10 +55,6 @@ public partial class MainWindow : Window
     private System.Windows.Point _spacePanStartPoint;
     private double _spacePanStartVerticalOffset;
     private double _spacePanStartHorizontalOffset;
-    private bool _isDraggingHanabeAssistant;
-    private System.Windows.Point _hanabeAssistantDragStart;
-    private double _hanabeAssistantStartX;
-    private double _hanabeAssistantStartY;
 
     private const double TreemapZoomMin = 0.02;
     private const double TreemapZoomMax = 8.0;
@@ -1311,64 +1307,7 @@ public partial class MainWindow : Window
     private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         _viewModel.UpdateResponsiveBrowseLayout(e.NewSize.Width, e.NewSize.Height);
-        ClampHanabeAssistantPosition();
         ScheduleWindowStateSave();
-    }
-
-    private void HanabeAssistant_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        _isDraggingHanabeAssistant = true;
-        _hanabeAssistantDragStart = e.GetPosition(this);
-        _hanabeAssistantStartX = HanabeAssistantTransform.X;
-        _hanabeAssistantStartY = HanabeAssistantTransform.Y;
-        HanabeAssistantSurface.CaptureMouse();
-        e.Handled = true;
-    }
-
-    private void HanabeAssistant_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
-    {
-        if (!_isDraggingHanabeAssistant || e.LeftButton != MouseButtonState.Pressed)
-        {
-            return;
-        }
-
-        var current = e.GetPosition(this);
-        HanabeAssistantTransform.X = _hanabeAssistantStartX + current.X - _hanabeAssistantDragStart.X;
-        HanabeAssistantTransform.Y = _hanabeAssistantStartY + current.Y - _hanabeAssistantDragStart.Y;
-        ClampHanabeAssistantPosition();
-        e.Handled = true;
-    }
-
-    private void HanabeAssistant_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-        EndHanabeAssistantDrag();
-        e.Handled = true;
-    }
-
-    private void HanabeAssistant_LostMouseCapture(object sender, System.Windows.Input.MouseEventArgs e) => _isDraggingHanabeAssistant = false;
-
-    private void EndHanabeAssistantDrag()
-    {
-        _isDraggingHanabeAssistant = false;
-        if (HanabeAssistantSurface.IsMouseCaptured)
-        {
-            HanabeAssistantSurface.ReleaseMouseCapture();
-        }
-    }
-
-    private void ClampHanabeAssistantPosition()
-    {
-        if (!IsLoaded || HanabeAssistantSurface.Parent is not FrameworkElement host)
-        {
-            return;
-        }
-
-        const double leftSafetyMargin = 24;
-        const double topSafetyMargin = 24;
-        var maxLeftTravel = Math.Max(0, host.ActualWidth - HanabeAssistantSurface.ActualWidth - leftSafetyMargin - HanabeAssistantSurface.Margin.Right);
-        var maxUpTravel = Math.Max(0, host.ActualHeight - HanabeAssistantSurface.ActualHeight - topSafetyMargin - HanabeAssistantSurface.Margin.Bottom);
-        HanabeAssistantTransform.X = Math.Clamp(HanabeAssistantTransform.X, -maxLeftTravel, 0);
-        HanabeAssistantTransform.Y = Math.Clamp(HanabeAssistantTransform.Y, -maxUpTravel, 0);
     }
 
     private void ScheduleWindowStateSave()

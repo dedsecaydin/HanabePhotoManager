@@ -1,5 +1,13 @@
 # Agent Handoff — Current Project State
 
+## 2026-08-31 Hanabe sound and duplicate-report update
+
+- Hanabe assistant now has selectable Camera / Cute / Mixed state sound packs, persisted enable/volume/quiet settings, and preview controls.
+- Actionable duplicate detection can restore a minimized main window when enabled in Settings.
+- Duplicate cleanup now opens a dedicated summary dialog with deleted/skipped/failed counts and released bytes.
+- Preserve: state sounds must not play for Idle or per-file progress and must not alter LibVLC video volume.
+- Verification at handoff: Release build clean; 743 tests passed.
+
 > **Purpose:** First-read document for any agent taking over this project.  
 > **Last Updated:** 2026-08-14  
 > **Current Version:** `0.3.0-alpha`（2026-08-14 开源发布完成）  

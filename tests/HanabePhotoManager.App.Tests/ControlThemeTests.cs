@@ -17,7 +17,10 @@ public sealed class ControlThemeTests
         xaml.Should().NotContain("x:Name=\"HanabeAssistantSurface\"")
             .And.NotContain("AutomationProperties.Name=\"Hanabe 任务助手\"");
         settings.Should().Contain("AutomationProperties.Name=\"Hanabe 动态形象\"")
-            .And.Contain("SelectedValue=\"{Binding AssistantVisualStyle, Mode=TwoWay}\"");
+            .And.Contain("SelectedValue=\"{Binding AssistantVisualStyle, Mode=TwoWay}\"")
+            .And.Contain("SelectedValue=\"{Binding HanabeSoundStyle, Mode=TwoWay}\"")
+            .And.Contain("Value=\"{Binding HanabeSoundVolume, Mode=TwoWay}\"")
+            .And.Contain("IsChecked=\"{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}\"");
     }
 
     [Fact]

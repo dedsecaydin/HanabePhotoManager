@@ -257,6 +257,40 @@
             </UniformGrid>
           </Border>
 
+          <Border Style="{StaticResource Settings.Group}" Margin="0,12,0,0">
+            <StackPanel>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,16,0">
+                  <TextBlock Text="Hanabe 状态音效" Style="{StaticResource Settings.RowTitle}" />
+                  <TextBlock Text="扫描、校验、导入、完成和错误使用短提示音；不会按文件逐个播放。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" Content="启用音效" IsChecked="{Binding HanabeSoundEnabled, Mode=TwoWay}" VerticalAlignment="Center" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                <TextBlock Text="声音风格" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" />
+                <ComboBox Grid.Column="1" ItemsSource="{Binding HanabeSoundStyleChoices}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding HanabeSoundStyle, Mode=TwoWay}" Style="{StaticResource Input.ComboBox}" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
+                <TextBlock Text="音量" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Center" />
+                <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding HanabeSoundVolume, Mode=TwoWay}" Style="{StaticResource Input.Slider}" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <CheckBox Content="安静模式（仅完成和错误时播放）" IsChecked="{Binding HanabeSoundQuietMode, Mode=TwoWay}" />
+              <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                <Button Content="试听 A" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Camera" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" />
+                <Button Content="试听 B" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Cute" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" />
+                <Button Content="试听混合" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Mixed" Style="{StaticResource Button.Secondary}" />
+              </StackPanel>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <CheckBox Content="重复检测完成且需要处理时唤回主窗口" IsChecked="{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}" />
+            </StackPanel>
+          </Border>
+
           <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="Hanabe 角色助手" Style="{StaticResource Settings.GroupHeader}" />

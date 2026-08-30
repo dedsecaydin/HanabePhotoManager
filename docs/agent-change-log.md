@@ -1,5 +1,14 @@
 # Agent Change Log
 
+## 2026-08-31 — Hanabe 状态音效与重复清理结果弹窗
+
+- 新增 `HanabeSoundPolicy` / `HanabeSoundService` 和 15 个 44.1 kHz PCM WAV：Camera、Cute、Mixed 各覆盖 scanning/checking/importing/completed/error。
+- 状态变更统一触发短音，支持总开关、0–100 音量、安静模式、试听与一秒同状态防抖；Idle/百分比更新无声。
+- `AppSettings` 持久化音效配置及重复检测完成唤回设置；设置中心加入对应控件。
+- 导入重复批次与图库重复审查出现可处理结果时通知主窗口；按设置从最小化恢复并置前。
+- 新增 `DuplicateCleanupReportWindow`，清理后报告选择数、已清理、跳过、失败及释放空间。
+- 验证：Release 构建 0 警告/0 错误；完整测试 743 通过（Core 162、Infrastructure 55、App 514、Installer 12）。
+
 ## 2026-08-29 — 绯夜蔷薇 · Hanabe 主题与任务助手
 
 - 新增 `Hanabe.Light` / `Hanabe.Dark` 颜色与主题入口，主题总数更新为 10。

@@ -12,7 +12,13 @@ public sealed class AppSettingsStoreTests
     [Fact]
     public void HanabeAssistant_IsVisibleByDefault()
     {
-        new AppSettings().ShowHanabeAssistant.Should().BeTrue();
+        var settings = new AppSettings();
+        settings.ShowHanabeAssistant.Should().BeTrue();
+        settings.HanabeSoundEnabled.Should().BeTrue();
+        settings.HanabeSoundStyle.Should().Be("Mixed");
+        settings.HanabeSoundVolume.Should().Be(35);
+        settings.HanabeSoundQuietMode.Should().BeFalse();
+        settings.RestoreWindowAfterDuplicateDetection.Should().BeTrue();
     }
     [Fact]
     public async Task ImportNamingTemplate_SequenceAndOriginalPreset_SurvivesRestart()

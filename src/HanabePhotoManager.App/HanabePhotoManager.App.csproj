@@ -78,6 +78,10 @@
     <Resource Include="Assets\wechat-sponsor-qr.jpg" />
     <Resource Include="Assets\Hanabe\hanabe-assistant.png" />
     <Resource Include="Assets\Hanabe\Animated\**\*.gif" />
+    <Content Include="Assets\Hanabe\Sounds\**\*.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

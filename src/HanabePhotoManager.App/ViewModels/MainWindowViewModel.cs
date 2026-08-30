@@ -53,6 +53,7 @@ public enum BrowseDisplayMode
 /// </remarks>
 public sealed partial class MainWindowViewModel : ObservableObject
 {
+    public event EventHandler<int>? DuplicateActionRequired;
     private static readonly string[] CategoryFolderNames =
     [
         "RAW生图",
@@ -147,6 +148,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly IWindowsWallpaperService _wallpaperService;
     private readonly PersistentAssetStore _assetStore = new(Path.Combine(AppDataPaths.Root, "Assets"));
     private readonly ImportResumeStore _importResumeStore = new();
+    private readonly HanabeSoundService _hanabeSoundService = new();
 
     private string _libraryRoot = string.Empty;
     private string _sourceFolder = string.Empty;
@@ -211,6 +213,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _showHanabeAssistant = true;
     private HanabeAssistantVisualStyle _assistantVisualStyle = HanabeAssistantVisualStyle.ChibiAnimated;
     private HanabeAssistantState _assistantState = HanabeAssistantState.Idle;
+    private bool _hanabeSoundEnabled = true;
+    private HanabeSoundStyle _hanabeSoundStyle = HanabeSoundStyle.Mixed;
+    private double _hanabeSoundVolume = 35;
+    private bool _hanabeSoundQuietMode;
+    private bool _restoreWindowAfterDuplicateDetection = true;
     private CancellationTokenSource? _assistantTerminalStateCancellation;
     private double _windowWidth = 1600;
     private double _windowHeight = 980;
@@ -343,6 +350,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         BackFromImportDateFoldersCommand = new RelayCommand(BackFromImportDateFolders, () => !IsBusy);
         RefreshLibraryCommand = new AsyncRelayCommand(RefreshLibraryAsync, CanRunCommand);
         ScanLibraryDuplicatesCommand = new AsyncRelayCommand(ScanLibraryDuplicatesAsync, CanRunCommand);
+        PreviewHanabeSoundCommand = new RelayCommand<string>(PreviewHanabeSound);
         OpenSelectedDateCommand = new RelayCommand(OpenSelectedDate, () => Directory.Exists(SelectedDatePath));
         RefreshDevicesCommand = new RelayCommand(RefreshConnectedDevices);
         InspectDeviceCommand = new RelayCommand<ConnectedDeviceViewModel>(InspectDevice);
@@ -987,6 +995,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IAsyncRelayCommand ResetBrowseConditionsCommand { get; }
 
     public IAsyncRelayCommand ScanLibraryDuplicatesCommand { get; }
+    public IRelayCommand<string> PreviewHanabeSoundCommand { get; }
 
     public IRelayCommand ToggleAdvancedFiltersCommand { get; }
 
@@ -1729,12 +1738,34 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string AssistantAnimationSource => HanabeAssistantAnimationResolver.Resolve(AssistantVisualStyle, AssistantState);
     public bool IsPixelAssistantStyle => AssistantVisualStyle == HanabeAssistantVisualStyle.PixelAnimated;
 
+    public IReadOnlyList<HanabeSoundStyleChoice> HanabeSoundStyleChoices { get; } =
+    [
+        new(HanabeSoundStyle.Camera, "A · 相机机械"),
+        new(HanabeSoundStyle.Cute, "B · Q 版提示"),
+        new(HanabeSoundStyle.Mixed, "C · 混合")
+    ];
+
+    public bool HanabeSoundEnabled { get => _hanabeSoundEnabled; set { if (SetProperty(ref _hanabeSoundEnabled, value)) _ = SaveSettingsAsync(); } }
+    public HanabeSoundStyle HanabeSoundStyle { get => _hanabeSoundStyle; set { if (SetProperty(ref _hanabeSoundStyle, value)) _ = SaveSettingsAsync(); } }
+    public double HanabeSoundVolume { get => _hanabeSoundVolume; set { if (SetProperty(ref _hanabeSoundVolume, Math.Clamp(value, 0, 100))) _ = SaveSettingsAsync(); } }
+    public bool HanabeSoundQuietMode { get => _hanabeSoundQuietMode; set { if (SetProperty(ref _hanabeSoundQuietMode, value)) _ = SaveSettingsAsync(); } }
+    public bool RestoreWindowAfterDuplicateDetection { get => _restoreWindowAfterDuplicateDetection; set { if (SetProperty(ref _restoreWindowAfterDuplicateDetection, value)) _ = SaveSettingsAsync(); } }
+
+    private HanabeSoundSettings CurrentHanabeSoundSettings => new(HanabeSoundEnabled, HanabeSoundStyle, HanabeSoundVolume, HanabeSoundQuietMode);
+
+    private void PreviewHanabeSound(string? styleName)
+    {
+        if (Enum.TryParse<HanabeSoundStyle>(styleName, true, out var style)) _hanabeSoundService.Preview(style, HanabeSoundVolume);
+    }
+
     private void SetAssistantState(HanabeAssistantState state, bool returnToIdle = false)
     {
         _assistantTerminalStateCancellation?.Cancel();
         _assistantTerminalStateCancellation?.Dispose();
         _assistantTerminalStateCancellation = null;
+        var changed = AssistantState != state;
         AssistantState = state;
+        if (changed) _hanabeSoundService.PlayState(state, CurrentHanabeSoundSettings);
         if (!returnToIdle) return;
         var cancellation = _assistantTerminalStateCancellation = new CancellationTokenSource();
         _ = ReturnAssistantToIdleAsync(cancellation);
@@ -2402,6 +2433,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : Enum.TryParse<HanabeAssistantVisualStyle>(settings.HanabeAssistantVisualStyle, true, out var assistantStyle)
                 ? assistantStyle
                 : HanabeAssistantVisualStyle.ChibiAnimated;
+        HanabeSoundEnabled = settings.HanabeSoundEnabled;
+        HanabeSoundStyle = Enum.TryParse<HanabeSoundStyle>(settings.HanabeSoundStyle, true, out var soundStyle) ? soundStyle : HanabeSoundStyle.Mixed;
+        HanabeSoundVolume = settings.HanabeSoundVolume;
+        HanabeSoundQuietMode = settings.HanabeSoundQuietMode;
+        RestoreWindowAfterDuplicateDetection = settings.RestoreWindowAfterDuplicateDetection;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
         PhotoAnalysis.SelectedEngine = string.IsNullOrWhiteSpace(settings.ClassificationEngine)
@@ -4059,19 +4095,35 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
+        DuplicateActionRequired?.Invoke(this, candidates.Sum(group => Math.Max(0, group.Paths.Count - 1)));
+
         var filesToDelete = ShowDuplicateReviewDialog(candidates);
         if (filesToDelete is null || filesToDelete.Count == 0)
             return;
 
+        var selectedCount = filesToDelete.Count;
         var deletedCount = 0;
+        var skippedCount = 0;
+        var failedCount = 0;
+        long freedBytes = 0;
         foreach (var path in filesToDelete)
         {
             if (RetouchedDirectoryPolicy.IsReadOnlyRetouchedPath(LibraryRoot, path))
+            {
+                skippedCount++;
                 continue;
+            }
 
-            try { if (File.Exists(path)) File.Delete(path); deletedCount++; }
-            catch (IOException) { }
-            catch (UnauthorizedAccessException) { }
+            try
+            {
+                if (!File.Exists(path)) { skippedCount++; continue; }
+                var length = new FileInfo(path).Length;
+                File.Delete(path);
+                deletedCount++;
+                freedBytes += length;
+            }
+            catch (IOException) { failedCount++; }
+            catch (UnauthorizedAccessException) { failedCount++; }
         }
 
         if (deletedCount > 0)
@@ -4081,6 +4133,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 await RefreshLibraryAsync().ConfigureAwait(true);
             StatusMessage = $"已清理 {deletedCount} 个重复文件，序列已重新排列。";
         }
+
+        DuplicateActionRequired?.Invoke(this, selectedCount);
+        new DuplicateCleanupReportWindow(selectedCount, deletedCount, skippedCount, failedCount, freedBytes)
+        {
+            Owner = System.Windows.Application.Current?.MainWindow
+        }.ShowDialog();
     }
 
     private HashSet<string>? ShowDuplicateReviewDialog(List<DuplicateCandidateGroup> candidates)
@@ -6166,6 +6224,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.IsAcrylicEnabled = IsAcrylicEnabled;
             settings.ShowHanabeAssistant = ShowHanabeAssistant;
             settings.HanabeAssistantVisualStyle = AssistantVisualStyle.ToString();
+            settings.HanabeSoundEnabled = HanabeSoundEnabled;
+            settings.HanabeSoundStyle = HanabeSoundStyle.ToString();
+            settings.HanabeSoundVolume = HanabeSoundVolume;
+            settings.HanabeSoundQuietMode = HanabeSoundQuietMode;
+            settings.RestoreWindowAfterDuplicateDetection = RestoreWindowAfterDuplicateDetection;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
             settings.ClassificationEngine = PhotoAnalysis.SelectedEngine;
@@ -7465,6 +7528,11 @@ public sealed record TransferModeChoice(TransferMode Mode, string Display)
 }
 
 public sealed record HanabeAssistantStyleChoice(HanabeAssistantVisualStyle Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+public sealed record HanabeSoundStyleChoice(HanabeSoundStyle Value, string Label)
 {
     public override string ToString() => Label;
 }

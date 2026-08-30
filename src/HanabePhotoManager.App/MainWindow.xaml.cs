@@ -355,6 +355,7 @@ public partial class MainWindow : Window
         StateChanged += MainWindow_StateChanged;
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
         _viewModel.OpenIndependentViewerRequested += OpenIndependentViewer;
+        _viewModel.DuplicateActionRequired += OnDuplicateActionRequired;
         _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(PeopleAlbumViewModel.SelectedAlbum))
@@ -679,6 +680,17 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnDuplicateActionRequired(object? sender, int actionableCount)
+    {
+        if (!DuplicateDetectionWindowPolicy.ShouldRestore(_viewModel.RestoreWindowAfterDuplicateDetection, WindowState, actionableCount)) return;
+        Show();
+        WindowState = WindowState.Normal;
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
     // 导入摘要数字变化：弹性放大回弹动画（导成功一张数字就跳一下）
     private void AnimateImportCount(ScaleTransform scale)
     {
@@ -777,6 +789,7 @@ public partial class MainWindow : Window
         PersistWindowState();
         _hanabeAssistantWindow?.Close();
         _viewModel.PropertyChanged -= MainWindowViewModel_PropertyChanged;
+        _viewModel.DuplicateActionRequired -= OnDuplicateActionRequired;
         _viewModel.FaceSearch.Cancel();
         MapPageHost.Dispose();
         base.OnClosed(e);

@@ -116,6 +116,8 @@ public sealed partial class MainWindowViewModel
             return (matches, ImportDuplicateBatchDecision.ImportAll);
         }
 
+        DuplicateActionRequired?.Invoke(this, matches.Count);
+
         var window = new ImportDuplicateBatchDecisionWindow(matches.Values.ToArray())
         {
             Owner = System.Windows.Application.Current.MainWindow

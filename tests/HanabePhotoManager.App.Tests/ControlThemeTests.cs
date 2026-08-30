@@ -19,7 +19,9 @@ public sealed class ControlThemeTests
 
         settings.Should().Contain("Tag=\"sound\"")
             .And.Contain("x:Name=\"SoundSection\"")
-            .And.Contain("Text=\"音效\" Style=\"{StaticResource Layout.PageTitle}\"");
+            .And.Contain("Text=\"音效\" Style=\"{StaticResource Layout.PageTitle}\"")
+            .And.Contain("Style=\"{StaticResource Selection.Slider}\"")
+            .And.NotContain("Input.Slider");
         preflight.Should().Contain("ImportMoveSafetyConfirmationWindow")
             .And.NotContain("MessageBox.Show");
         File.Exists(dialog).Should().BeTrue();

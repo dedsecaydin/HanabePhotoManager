@@ -1,5 +1,11 @@
 # Agent Change Log
 
+## 2026-08-31 — Hanabe 音效无声热修复
+
+- 根因：当前 Windows 环境下 WPF `MediaPlayer` 未触发媒体打开/播放事件，而同一 WAV 由 `System.Media.SoundPlayer` 可正常加载播放。
+- `HanabeSoundService` 改用后台线程上的原生 WAV 播放，避免阻塞 UI；新增 `PcmWavVolumeScaler` 在内存中缩放 16-bit PCM，保留 0–100 音量控制。
+- 新增 PCM 头部保留与正负样本缩放回归测试；音效策略与音量测试共 13 项通过。
+
 ## 2026-08-31 — alpha.21 独立音效设置与安全确认 UI 统一
 
 - 设置左侧新增独立“音效”分区，集中呈现开关、A/B/C 风格、音量、安静模式与试听；音效不再藏在外观页。

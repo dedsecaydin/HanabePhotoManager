@@ -69,7 +69,10 @@ public sealed partial class MainWindowViewModel
                     continue;
                 }
 
-                var existingPath = await _contentScanner.FindContentDuplicateAsync(sourcePath, dateSizeMap, cancellationToken)
+                var dateCandidates = dateSizeMap.Values.SelectMany(paths => paths);
+                var existingPath = await _originDuplicateMatcher.FindMatchAsync(sourcePath, dateCandidates, cancellationToken)
+                    .ConfigureAwait(true);
+                existingPath ??= await _contentScanner.FindContentDuplicateAsync(sourcePath, dateSizeMap, cancellationToken)
                     .ConfigureAwait(true);
                 if (existingPath is not null)
                 {

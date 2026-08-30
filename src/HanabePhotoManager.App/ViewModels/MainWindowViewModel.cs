@@ -136,6 +136,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly LibraryDirectoryInitializer _directoryInitializer = new();
     private readonly VerifiedFileTransfer _transfer;
     private readonly LibraryContentScanner _contentScanner;
+    private readonly IFileOriginMetadataStore _originMetadataStore = new WindowsFileOriginMetadataStore();
+    private readonly OriginMetadataDuplicateMatcher _originDuplicateMatcher;
     private readonly LocalPersonClusterer _personClusterer = new();
     private readonly LibraryMaintenanceService _libraryMaintenanceService = new();
     private readonly RetouchedMediaIndex _retouchedMediaIndex = new();
@@ -253,6 +255,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _groupBuilder = new MediaGroupBuilder(new MediaClassifier(BuildRawExtensions(), BuildVideoExtensions()));
         _transfer = new VerifiedFileTransfer(_fileHasher);
         _contentScanner = new LibraryContentScanner(_fileHasher);
+        _originDuplicateMatcher = new OriginMetadataDuplicateMatcher(_originMetadataStore, _fileHasher);
         _startupRegistrationService = startupRegistrationService ?? new WindowsStartupRegistrationService();
         _wallpaperService = wallpaperService ?? new WindowsWallpaperService();
         _mediaMetadataStore = mediaMetadataStore ?? new MediaMetadataStore();
@@ -3850,6 +3853,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     continue;
                 }
 
+                var primaryFile = item.Files.First(file =>
+                    string.Equals(file.Source.FullPath, item.Group.Primary.FullPath, StringComparison.OrdinalIgnoreCase));
+                var originalHash = await _fileHasher.ComputeSha256Async(primaryFile.Source.FullPath, cancellationToken).ConfigureAwait(true);
+                var originMetadata = new FileOriginMetadata(
+                    Path.GetFileName(primaryFile.Source.FullPath),
+                    primaryFile.Source.Length,
+                    originalHash);
                 var result = await _transfer.TransferGroupAsync(item, deleteSourcesAfterVerify, cancellationToken).ConfigureAwait(true);
                 if (result.Success)
                 {
@@ -3862,6 +3872,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     {
                         success++;
                         lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
+                        var metadataResult = await _originMetadataStore.WriteAndVerifyAsync(
+                            primaryFile.DestinationPath,
+                            originMetadata,
+                            cancellationToken).ConfigureAwait(true);
+                        if (!metadataResult.Success)
+                        {
+                            lines.Add($"备注写入失败：{Path.GetFileName(primaryFile.DestinationPath)} - {metadataResult.Error}；后续仍会使用旧式 SHA-256 查重。");
+                        }
                     }
                 }
                 else

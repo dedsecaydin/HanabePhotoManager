@@ -42,6 +42,20 @@ public sealed class ControlThemeTests
             .And.Contain("Assets/Hanabe/hanabe-assistant.png")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
     }
+
+    [Fact]
+    public void ImportFlow_UsesOriginCommentsBeforeLegacyHashFallbackAndWritesVerifiedMetadata()
+    {
+        var root = FindSourceRoot();
+        var importCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.Import.cs"));
+        var mainCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+
+        importCode.Should().Contain("_originDuplicateMatcher.FindMatchAsync")
+            .And.Contain("_contentScanner.FindContentDuplicateAsync");
+        mainCode.Should().Contain("WriteAndVerifyAsync")
+            .And.Contain("new FileOriginMetadata(")
+            .And.Contain("备注写入失败");
+    }
     [Fact]
     public void SettingsChoiceComboBoxes_RenderLabelsInsteadOfRecordText()
     {

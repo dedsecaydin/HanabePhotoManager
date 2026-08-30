@@ -16,7 +16,8 @@ public sealed class ControlThemeTests
         var settings = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
         xaml.Should().NotContain("x:Name=\"HanabeAssistantSurface\"")
             .And.NotContain("AutomationProperties.Name=\"Hanabe 任务助手\"");
-        settings.Should().Contain("IsChecked=\"{Binding ShowHanabeAssistant, Mode=TwoWay}\"");
+        settings.Should().Contain("AutomationProperties.Name=\"Hanabe 动态形象\"")
+            .And.Contain("SelectedValue=\"{Binding AssistantVisualStyle, Mode=TwoWay}\"");
     }
 
     [Fact]
@@ -35,6 +36,8 @@ public sealed class ControlThemeTests
             .And.Contain("Value=\"{Binding ProgressValue}\"")
             .And.Contain("Text=\"{Binding EstimatedTimeRemaining}\"")
             .And.Contain("Assets/Hanabe/hanabe-assistant.png")
+            .And.Contain("AnimatedGifImage")
+            .And.Contain("AnimationSource=\"{Binding AssistantAnimationSource}\"")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
         project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
     }

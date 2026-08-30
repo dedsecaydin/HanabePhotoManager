@@ -190,6 +190,7 @@ public sealed class AppSettings
     public bool HasCompletedOnboarding { get; set; }
 
     public bool ShowHanabeAssistant { get; set; } = true;
+    public string HanabeAssistantVisualStyle { get; set; } = "ChibiAnimated";
 
     public List<string> NavigationOrder { get; set; } = [];
 

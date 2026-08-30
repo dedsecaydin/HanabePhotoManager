@@ -209,6 +209,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private double _glassIntensity = 0.62;
     private bool _isAcrylicEnabled = true;
     private bool _showHanabeAssistant = true;
+    private HanabeAssistantVisualStyle _assistantVisualStyle = HanabeAssistantVisualStyle.ChibiAnimated;
+    private HanabeAssistantState _assistantState = HanabeAssistantState.Idle;
+    private CancellationTokenSource? _assistantTerminalStateCancellation;
     private double _windowWidth = 1600;
     private double _windowHeight = 980;
     private bool _isBusy;
@@ -1693,6 +1696,60 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
+    public IReadOnlyList<HanabeAssistantStyleChoice> HanabeAssistantStyleChoices { get; } =
+    [
+        new(HanabeAssistantVisualStyle.ChibiAnimated, "Q 版动态"),
+        new(HanabeAssistantVisualStyle.PixelAnimated, "8-bit 像素动态"),
+        new(HanabeAssistantVisualStyle.Static, "静态形象"),
+        new(HanabeAssistantVisualStyle.Off, "关闭助手")
+    ];
+
+    public HanabeAssistantVisualStyle AssistantVisualStyle
+    {
+        get => _assistantVisualStyle;
+        set
+        {
+            if (!SetProperty(ref _assistantVisualStyle, value)) return;
+            ShowHanabeAssistant = value != HanabeAssistantVisualStyle.Off;
+            OnPropertyChanged(nameof(AssistantAnimationSource));
+            OnPropertyChanged(nameof(IsPixelAssistantStyle));
+            _ = SaveSettingsAsync();
+        }
+    }
+
+    public HanabeAssistantState AssistantState
+    {
+        get => _assistantState;
+        private set
+        {
+            if (SetProperty(ref _assistantState, value)) OnPropertyChanged(nameof(AssistantAnimationSource));
+        }
+    }
+
+    public string AssistantAnimationSource => HanabeAssistantAnimationResolver.Resolve(AssistantVisualStyle, AssistantState);
+    public bool IsPixelAssistantStyle => AssistantVisualStyle == HanabeAssistantVisualStyle.PixelAnimated;
+
+    private void SetAssistantState(HanabeAssistantState state, bool returnToIdle = false)
+    {
+        _assistantTerminalStateCancellation?.Cancel();
+        _assistantTerminalStateCancellation?.Dispose();
+        _assistantTerminalStateCancellation = null;
+        AssistantState = state;
+        if (!returnToIdle) return;
+        var cancellation = _assistantTerminalStateCancellation = new CancellationTokenSource();
+        _ = ReturnAssistantToIdleAsync(cancellation);
+    }
+
+    private async Task ReturnAssistantToIdleAsync(CancellationTokenSource cancellation)
+    {
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(3), cancellation.Token).ConfigureAwait(true);
+            if (ReferenceEquals(_assistantTerminalStateCancellation, cancellation)) AssistantState = HanabeAssistantState.Idle;
+        }
+        catch (OperationCanceledException) { }
+    }
+
     public string EffectiveBackgroundPath => BackgroundMode switch
     {
         "自定义图片" when File.Exists(CustomBackgroundPath) => CustomBackgroundPath,
@@ -2340,6 +2397,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         GlassIntensity = settings.GlassIntensity;
         IsAcrylicEnabled = settings.IsAcrylicEnabled;
         ShowHanabeAssistant = settings.ShowHanabeAssistant;
+        AssistantVisualStyle = !settings.ShowHanabeAssistant
+            ? HanabeAssistantVisualStyle.Off
+            : Enum.TryParse<HanabeAssistantVisualStyle>(settings.HanabeAssistantVisualStyle, true, out var assistantStyle)
+                ? assistantStyle
+                : HanabeAssistantVisualStyle.ChibiAnimated;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
         PhotoAnalysis.SelectedEngine = string.IsNullOrWhiteSpace(settings.ClassificationEngine)
@@ -3010,6 +3072,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _activeTaskCancellation?.Dispose();
         _activeTaskCancellation = new CancellationTokenSource();
         _activeTaskKind = taskKind;
+        SetAssistantState(taskKind == ActiveTaskKind.Import
+            ? HanabeAssistantState.Importing
+            : taskKind is ActiveTaskKind.Analysis or ActiveTaskKind.Preview
+                ? HanabeAssistantState.Scanning
+                : HanabeAssistantState.Idle);
         OnPropertyChanged(nameof(IsImportRunning));
         _operationStartedAt = DateTimeOffset.UtcNow;
         CancelCurrentTaskCommand.NotifyCanExecuteChanged();
@@ -3020,6 +3087,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         if (ReferenceEquals(_activeTaskCancellation, cancellation))
         {
+            if (AssistantState == HanabeAssistantState.Scanning)
+            {
+                SetAssistantState(HanabeAssistantState.Completed, returnToIdle: true);
+            }
             _activeTaskCancellation.Dispose();
             _activeTaskCancellation = null;
             _activeTaskKind = ActiveTaskKind.None;
@@ -3043,6 +3114,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IsProgressIndeterminate = false;
         ProgressValue = 0;
         ProgressLabel = "已请求停止";
+        SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
         ImportReport = "正在停止当前任务…如果刚好在读取系统目录，可能需要几秒释放。";
         ImportActionHint = _activeTaskKind == ActiveTaskKind.Import
             ? "已请求停止。传输会在当前文件的安全点停止，避免留下损坏文件。"
@@ -3357,6 +3429,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException)
         {
+            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
             ClearImportCompletionState();
             ImportItems.Clear();
             ImportSections.Clear();
@@ -3370,6 +3443,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
             ClearImportCompletionState();
             ImportReport = "分析失败：" + ex.Message;
             StatusMessage = "分析来源时遇到问题。";
@@ -3383,6 +3457,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (ProgressLabel != "已停止")
             {
                 ProgressLabel = "分析完成";
+                SetAssistantState(HanabeAssistantState.Completed, returnToIdle: true);
             }
             IsBusy = false;
         }
@@ -3456,6 +3531,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var duplicateDecision = ImportDuplicateBatchDecision.ImportAll;
             if (CheckDuplicatesOnImport)
             {
+                SetAssistantState(HanabeAssistantState.Checking);
                 ProgressLabel = "正在检查目标日期文件夹重复…";
                 var dateSizeMapCache = new Dictionary<LibraryDate, IReadOnlyDictionary<long, List<string>>>();
                 async Task<IReadOnlyDictionary<long, List<string>>?> ResolveDateSizeMapAsync(
@@ -3486,6 +3562,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     cancellationToken).ConfigureAwait(true);
                 duplicateMatches = duplicateBatch.Matches;
                 duplicateDecision = duplicateBatch.Decision;
+                SetAssistantState(HanabeAssistantState.Importing);
             }
             var progress = ImportProgress.Create(items.Sum(item => 1 + item.ToMediaGroup().Sidecars.Count));
             void UpdateProgress(ImportPlanItem item, bool completed)
@@ -3546,6 +3623,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            SetAssistantState(HanabeAssistantState.Completed, returnToIdle: true);
             MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
@@ -3575,6 +3653,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             ClearImportCompletionState();
             stopped = true;
+            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
@@ -3584,6 +3663,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             ClearImportCompletionState();
+            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
             ImportReport = "导入中断：" + ex.Message;
             StatusMessage = "导入中断，已保留可见报告。";
         }
@@ -6085,6 +6165,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.GlassIntensity = GlassIntensity;
             settings.IsAcrylicEnabled = IsAcrylicEnabled;
             settings.ShowHanabeAssistant = ShowHanabeAssistant;
+            settings.HanabeAssistantVisualStyle = AssistantVisualStyle.ToString();
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;
             settings.ClassificationEngine = PhotoAnalysis.SelectedEngine;
@@ -7381,6 +7462,11 @@ public sealed record CategoryChoice(MediaCategory Category, string Display)
 public sealed record TransferModeChoice(TransferMode Mode, string Display)
 {
     public override string ToString() => Display;
+}
+
+public sealed record HanabeAssistantStyleChoice(HanabeAssistantVisualStyle Value, string Label)
+{
+    public override string ToString() => Label;
 }
 
 /// <summary>状态栏和取消按钮当前跟踪的后台任务类别。</summary>

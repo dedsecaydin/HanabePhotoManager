@@ -51,6 +51,7 @@ public sealed class ControlThemeTests
         var xaml = File.ReadAllText(xamlPath);
 
         xaml.Should().Contain("Title=\"Hanabe 任务助手\"")
+            .And.Contain("BooleanToVisibilityConverter x:Key=\"BoolToVis\"")
             .And.Contain("Topmost=\"True\"")
             .And.Contain("ShowInTaskbar=\"False\"")
             .And.Contain("Text=\"{Binding AssistantSnapshot.Detail}\"")

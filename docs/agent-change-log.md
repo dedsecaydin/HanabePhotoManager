@@ -1105,3 +1105,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 新增 `.img/.raw` 只读扫描、exFAT 识别、MP4 边界保护、直恢门禁、raw candidate、SHA-256 与双格式报告。
 - “图片小工具”增加恢复入口；导入日期文件夹处理默认改为第三项。
 - PhysicalDrive 镜像器继续隔离，尚未暴露不完整的高权限能力。
+
+## 2026-08-31 — 修复恢复页启动异常与悬浮窗资源异常
+
+- 恢复页只读 `ProgressValue` 绑定显式改为 `Mode=OneWay`，避免 WPF 尝试 TwoWay 写回导致窗口启动异常。
+- HanabeAssistantWindow 增加局部 `BoolToVis` converter，避免最小化创建悬浮窗时缺少资源。
+- 增加 XAML 回归断言；Release 全量 758 项通过，并完成发布版启动、最小化和恢复运行回归。

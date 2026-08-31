@@ -1083,3 +1083,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 新增无第三方依赖的 `AnimatedGifImage`：读取 GIF 帧延迟、可见性暂停、Source 切换、Windows 动画设置和静态资源回退；像素画启用最近邻渲染。
 - `Analysis/Preview`、重复校验、导入、完成与错误状态结构化驱动角色动画；完成/错误保持 3 秒后回待机，新任务会打断旧终态。
 - Release `/warnaserror` 构建 0 警告、0 错误；全量测试 Core 162、Infrastructure 55、App 498、InstallerShell 12，共 727 项通过。自包含产物已覆盖本地安装并启动；最小化窗口句柄验证通过。由于透明分层窗口无法被 `CopyFromScreen` 正确捕获，本轮未把自动截图作为视觉通过证据。
+
+## 2026-08-31 — HANABE-FLOATING-STATUS-V2
+
+- 扩展 `HanabeAssistantState`，新增安全停止、取消、可恢复中断、恢复、带问题完成和失败语义。
+- 新增 `HanabeAssistantSnapshot` / `HanabeAssistantPresentationPolicy`，由 ViewModel 统一提供悬浮窗标题、详情、摘要、进度策略、动作和可访问名称。
+- 重构悬浮窗为 400px 自适应浮层，增加状态徽标、结果提示及上下文操作；排除按钮区域的拖动命中。
+- 修正导入取消与异常映射，并为新状态复用现有动画资源与静态回退。
+- 新增状态策略测试并更新悬浮窗结构测试。音效未改动。

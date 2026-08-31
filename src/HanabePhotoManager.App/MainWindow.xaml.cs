@@ -557,6 +557,10 @@ public partial class MainWindow : Window
             _viewModel.DiscardPendingImportResume();
             _viewModel.StatusMessage = "已放弃上次传输记录；现有文件未被删除。";
         }
+        else
+        {
+            _viewModel.MarkPendingImportResumeAvailable();
+        }
     }
 
     private void OpenViewerForScreenshotOrInspect(string viewerFile)

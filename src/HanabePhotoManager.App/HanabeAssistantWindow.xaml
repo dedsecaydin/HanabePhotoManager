@@ -1,34 +1,20 @@
-<Window x:Class="HanabePhotoManager.App.HanabeAssistantWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:controls="clr-namespace:HanabePhotoManager.App.Controls"
-        Title="Hanabe 任务助手" Width="350" Height="112" SizeToContent="Manual"
-        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
-        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False"
-        WindowStartupLocation="Manual" AutomationProperties.Name="Hanabe 桌面任务助手">
-  <Border Margin="8" Padding="12" CornerRadius="{StaticResource Radius.Dialog}"
-          Background="{DynamicResource Brush.Surface.Elevated}"
-          BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1"
-          PreviewMouseLeftButtonDown="Surface_PreviewMouseLeftButtonDown">
+<Window x:Class="HanabePhotoManager.App.HanabeAssistantWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:controls="clr-namespace:HanabePhotoManager.App.Controls" Title="Hanabe 任务助手" Width="400" SizeToContent="Height" MinHeight="144" MaxHeight="360" WindowStyle="None" AllowsTransparency="True" Background="Transparent" ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False" ShowActivated="False" WindowStartupLocation="Manual" AutomationProperties.Name="{Binding AssistantSnapshot.AccessibleName}">
+  <Border Margin="8" Padding="16" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Elevated}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" PreviewMouseLeftButtonDown="Surface_PreviewMouseLeftButtonDown">
     <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="64"/><ColumnDefinition Width="*"/><ColumnDefinition Width="28"/></Grid.ColumnDefinitions>
-      <Border Width="72" Height="72" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent">
-        <controls:AnimatedGifImage AnimationSource="{Binding AssistantAnimationSource}"
-                                   FallbackSource="Assets/Hanabe/hanabe-assistant.png"
-                                   UseNearestNeighbor="{Binding IsPixelAssistantStyle}"
-                                   Stretch="Uniform" />
-      </Border>
-      <StackPanel Grid.Column="1" Margin="10,0,8,0" VerticalAlignment="Center">
-        <TextBlock Text="Hanabe" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}"/>
-        <TextBlock Text="{Binding ProgressLabel}" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,5"/>
-        <ProgressBar Minimum="0" Maximum="100" Value="{Binding ProgressValue}" Height="5" Focusable="False" FocusVisualStyle="{x:Null}"/>
-        <DockPanel Margin="0,4,0,0">
-          <TextBlock DockPanel.Dock="Right" Text="{Binding EstimatedTimeRemaining}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
-          <TextBlock Text="{Binding ProgressValue, StringFormat={}{0:0}%}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Primary}"/>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="72"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border Width="64" Height="64" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent" VerticalAlignment="Top"><controls:AnimatedGifImage AnimationSource="{Binding AssistantAnimationSource}" FallbackSource="Assets/Hanabe/hanabe-assistant.png" UseNearestNeighbor="{Binding IsPixelAssistantStyle}" Stretch="Uniform"/></Border>
+      <StackPanel Grid.Column="1" Margin="12,0,0,0">
+        <DockPanel LastChildFill="True">
+          <Button DockPanel.Dock="Right" Width="28" Height="28" Content="×" ToolTip="隐藏本次悬浮窗" AutomationProperties.Name="隐藏本次悬浮窗" Style="{StaticResource Button.Ghost}" Click="HideButton_Click"/>
+          <Border DockPanel.Dock="Right" Margin="8,0" Padding="8,3" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Status.InfoSubtle}"><TextBlock Text="{Binding AssistantSnapshot.StatusLabel}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Status.Info}"/></Border>
+          <TextBlock Text="Hanabe" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"/>
         </DockPanel>
+        <Button Style="{StaticResource Button.Ghost}" HorizontalContentAlignment="Left" Padding="0" Margin="0,8,0,0" Click="OpenHanabe_Click"><StackPanel><TextBlock Text="{Binding AssistantSnapshot.TaskTitle}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" TextWrapping="Wrap"/><TextBlock Text="{Binding AssistantSnapshot.Detail}" Margin="0,3,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextTrimming="CharacterEllipsis"/></StackPanel></Button>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding AssistantSnapshot.IsProgressVisible, Converter={StaticResource BoolToVis}}"><ProgressBar Minimum="0" Maximum="100" Value="{Binding AssistantSnapshot.ProgressValue}" IsIndeterminate="{Binding AssistantSnapshot.IsProgressIndeterminate}" Height="5" Focusable="False"/><DockPanel Margin="0,4,0,0"><TextBlock DockPanel.Dock="Right" Text="{Binding EstimatedTimeRemaining}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/><TextBlock Text="{Binding AssistantSnapshot.ProgressValue, StringFormat={}{0:0}%}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Primary}"/></DockPanel></StackPanel>
+        <TextBlock Text="{Binding AssistantSnapshot.Summary}" Margin="0,7,0,0" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+        <TextBlock Text="{Binding AssistantSnapshot.ResultHint}" Margin="0,5,0,0" TextWrapping="Wrap" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0"><Button Content="停止任务" Style="{StaticResource Button.Secondary}" Command="{Binding CancelCurrentTaskCommand}" Visibility="{Binding AssistantSnapshot.CanStop, Converter={StaticResource BoolToVis}}"/><Button Content="稍后继续" Margin="8,0,0,0" Style="{StaticResource Button.Secondary}" Click="Resume_Click" Visibility="{Binding AssistantSnapshot.CanResume, Converter={StaticResource BoolToVis}}"/><Button Content="查看报告" Margin="8,0,0,0" Style="{StaticResource Button.Secondary}" Click="OpenHanabe_Click" Visibility="{Binding AssistantSnapshot.CanViewReport, Converter={StaticResource BoolToVis}}"/><Button Content="打开 Hanabe" Margin="8,0,0,0" Style="{StaticResource Button.Ghost}" Click="OpenHanabe_Click"/></StackPanel>
       </StackPanel>
-      <Button Grid.Column="2" Width="24" Height="24" Content="×" ToolTip="隐藏本次悬浮窗"
-              Style="{StaticResource Button.Ghost}" Click="HideButton_Click" VerticalAlignment="Top"/>
     </Grid>
   </Border>
 </Window>

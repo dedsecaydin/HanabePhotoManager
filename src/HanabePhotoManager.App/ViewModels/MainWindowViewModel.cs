@@ -1515,7 +1515,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string ProgressLabel
     {
         get => _progressLabel;
-        set => SetProperty(ref _progressLabel, value);
+        set { if (SetProperty(ref _progressLabel, value)) OnPropertyChanged(nameof(AssistantSnapshot)); }
     }
 
     public double ProgressValue
@@ -1526,6 +1526,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (SetProperty(ref _progressValue, value))
             {
                 OnPropertyChanged(nameof(EstimatedTimeRemaining));
+                OnPropertyChanged(nameof(AssistantSnapshot));
             }
         }
     }
@@ -1559,7 +1560,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsProgressIndeterminate
     {
         get => _isProgressIndeterminate;
-        set => SetProperty(ref _isProgressIndeterminate, value);
+        set { if (SetProperty(ref _isProgressIndeterminate, value)) OnPropertyChanged(nameof(AssistantSnapshot)); }
     }
 
     public bool IsDuplicateScanRunning
@@ -1731,12 +1732,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         get => _assistantState;
         private set
         {
-            if (SetProperty(ref _assistantState, value)) OnPropertyChanged(nameof(AssistantAnimationSource));
+            if (SetProperty(ref _assistantState, value)) { OnPropertyChanged(nameof(AssistantAnimationSource)); OnPropertyChanged(nameof(AssistantSnapshot)); }
         }
     }
 
     public string AssistantAnimationSource => HanabeAssistantAnimationResolver.Resolve(AssistantVisualStyle, AssistantState);
     public bool IsPixelAssistantStyle => AssistantVisualStyle == HanabeAssistantVisualStyle.PixelAnimated;
+    public HanabeAssistantSnapshot AssistantSnapshot => HanabeAssistantPresentationPolicy.Create(
+        AssistantState, ProgressLabel, ProgressValue, IsProgressIndeterminate,
+        ImportSuccessCount, ImportSkippedCount, ImportFailedCount,
+        AssistantState is HanabeAssistantState.Canceled or HanabeAssistantState.Recoverable or HanabeAssistantState.Resuming or HanabeAssistantState.Interrupted);
 
     public IReadOnlyList<HanabeSoundStyleChoice> HanabeSoundStyleChoices { get; } =
     [
@@ -3150,7 +3155,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IsProgressIndeterminate = false;
         ProgressValue = 0;
         ProgressLabel = "已请求停止";
-        SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
+        SetAssistantState(HanabeAssistantState.StopRequested);
         ImportReport = "正在停止当前任务…如果刚好在读取系统目录，可能需要几秒释放。";
         ImportActionHint = _activeTaskKind == ActiveTaskKind.Import
             ? "已请求停止。传输会在当前文件的安全点停止，避免留下损坏文件。"
@@ -3659,7 +3664,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
-            SetAssistantState(HanabeAssistantState.Completed, returnToIdle: true);
+            SetAssistantState(failed > 0 ? HanabeAssistantState.CompletedWithIssues : HanabeAssistantState.Completed, returnToIdle: failed == 0);
             MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
@@ -3689,7 +3694,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             ClearImportCompletionState();
             stopped = true;
-            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
+            SetAssistantState(HanabeAssistantState.Canceled);
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
@@ -3699,7 +3704,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             ClearImportCompletionState();
-            SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
+            SetAssistantState(HanabeAssistantState.Interrupted);
             ImportReport = "导入中断：" + ex.Message;
             StatusMessage = "导入中断，已保留可见报告。";
         }
@@ -3731,6 +3736,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         IsBusy = true;
         IsProgressIndeterminate = false;
         ProgressValue = 0;
+        SetAssistantState(HanabeAssistantState.Resuming);
         ProgressLabel = "正在恢复上次导入…";
         StatusMessage = "正在继续上次未完成的导入。";
         await Task.Yield();
@@ -3860,6 +3866,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Delete();
             ProgressValue = 100;
             ProgressLabel = "导入完成";
+            SetAssistantState(failed > 0 ? HanabeAssistantState.CompletedWithIssues : HanabeAssistantState.Completed, returnToIdle: failed == 0);
             MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
             ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
@@ -3869,6 +3876,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             ClearImportCompletionState();
+            SetAssistantState(HanabeAssistantState.Canceled);
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
             StatusMessage = "恢复导入已停止，可稍后再次继续。";
@@ -3876,6 +3884,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             ClearImportCompletionState();
+            SetAssistantState(HanabeAssistantState.Interrupted);
             ImportReport = "恢复导入中断：" + ex.Message;
             StatusMessage = "恢复导入中断，可稍后再次继续。";
         }
@@ -7085,6 +7094,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     /// <summary>是否有上次未完成的导入可续传。</summary>
     public bool HasPendingImportResume => _importResumeStore.HasPending;
 
+    public void MarkPendingImportResumeAvailable()
+    {
+        if (!_importResumeStore.HasPending) return;
+        ProgressLabel = PendingImportResumeSummary;
+        SetAssistantState(HanabeAssistantState.Recoverable);
+    }
+
     public string PendingImportResumeSummary
     {
         get
@@ -7098,7 +7114,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>放弃上次未完成的导入进度。</summary>
-    public void DiscardPendingImportResume() => _importResumeStore.Delete();
+    public void DiscardPendingImportResume()
+    {
+        _importResumeStore.Delete();
+        SetAssistantState(HanabeAssistantState.Idle);
+    }
 
     private static List<string> ParseExtensionList(string text)
     {

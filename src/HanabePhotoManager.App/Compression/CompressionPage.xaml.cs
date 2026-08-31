@@ -43,6 +43,9 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
             case "Collage": ShowTool(ImageToolMode.Collage); break;
             case "Watermark": ShowTool(ImageToolMode.Watermark); break;
             case "PixelArt": ShowTool(ImageToolMode.PixelArt); break;
+            case "Recovery":
+                if (System.Windows.Window.GetWindow(this)?.DataContext is MainWindowViewModel main) main.ShowRecoveryCommand.Execute(null);
+                break;
         }
     }
 

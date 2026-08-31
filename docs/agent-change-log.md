@@ -1097,3 +1097,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 根据运行截图移除悬浮窗外层主题描边，避免 Hanabe 深色主题下出现暗红轮廓。
 - 悬浮窗缩至 360px，精简状态徽标、结果说明、统计文字和常驻打开按钮；上下文动作缩短为“停止 / 继续 / 查看”。
 - 保留状态机、进度、安全停止、恢复入口、拖动和静态角色回退。
+
+## 2026-08-31 — 相机视频安全恢复助手 Phase 1–3
+
+- 审计 `D:\CameraRecovery`，未直接复制 CLI、硬编码案例、PhysicalDrive 或实验 carving 入口。
+- 新增 Core 恢复候选模型与安全策略，以及独立 RecoveryPage / RecoveryViewModel / RecoveryImageService。
+- 新增 `.img/.raw` 只读扫描、exFAT 识别、MP4 边界保护、直恢门禁、raw candidate、SHA-256 与双格式报告。
+- “图片小工具”增加恢复入口；导入日期文件夹处理默认改为第三项。
+- PhysicalDrive 镜像器继续隔离，尚未暴露不完整的高权限能力。

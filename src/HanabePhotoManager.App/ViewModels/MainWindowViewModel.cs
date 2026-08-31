@@ -23,6 +23,7 @@ using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Models;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.ReleaseNotes;
+using HanabePhotoManager.App.Recovery;
 using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.Search;
 using HanabePhotoManager.Core.Browsing.Treemap;
@@ -284,6 +285,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _mediaMetadataStore,
             () => PreviewFiles.Select(file => file.FullPath));
         Compression = new CompressionViewModel();
+        Recovery = new RecoveryViewModel();
         Watermark = new WatermarkViewModel();
         DateFolders = new DateFolderManagementViewModel();
         PixelArt = new PixelArtViewModel();
@@ -367,6 +369,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ShowFaceSearchCommand = new RelayCommand(() => CurrentPage = "FaceSearch");
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
+        ShowRecoveryCommand = new RelayCommand(() => CurrentPage = "Recovery");
         ShowDateFoldersCommand = new RelayCommand(ShowDateFolders);
         ShowWatermarkCommand = new RelayCommand(() =>
         {
@@ -426,6 +429,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MapPhotosViewModel MapPhotos { get; }
 
     public CompressionViewModel Compression { get; }
+
+    public RecoveryViewModel Recovery { get; }
 
     public WatermarkViewModel Watermark { get; }
 
@@ -960,6 +965,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IRelayCommand ShowMapPhotosCommand { get; }
 
     public IRelayCommand ShowCompressionCommand { get; }
+
+    public IRelayCommand ShowRecoveryCommand { get; }
 
     public IRelayCommand ShowDateFoldersCommand { get; }
 
@@ -4808,6 +4815,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsFaceSearchPage));
                 OnPropertyChanged(nameof(IsMapPhotosPage));
                 OnPropertyChanged(nameof(IsCompressionPage));
+                OnPropertyChanged(nameof(IsRecoveryPage));
                 OnPropertyChanged(nameof(IsWatermarkPage));
                 OnPropertyChanged(nameof(IsDateFoldersPage));
                 OnPropertyChanged(nameof(IsSettingsPage));
@@ -4848,6 +4856,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsMapPhotosPage => CurrentPage == "MapPhotos";
 
     public bool IsCompressionPage => CurrentPage == "Compression";
+
+    public bool IsRecoveryPage => CurrentPage == "Recovery";
 
     public bool IsWatermarkPage => CurrentPage == "Watermark";
 
@@ -4936,6 +4946,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "人物查找",
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
+        "Recovery" => "相机视频安全恢复",
         "Watermark" => "批量水印",
         "DateFolders" => "日期文件夹",
         "Settings" => "设置",
@@ -4950,6 +4961,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
+        "Recovery" => "从只读相机卡镜像中分析并安全恢复 Sony XAVC MP4。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
         "DateFolders" => "集中查看日期目录，并一次保存所有备注更改。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",

@@ -96,6 +96,7 @@ Views consume semantic resources and shared component styles; they do not depend
 | `src/HanabePhotoManager.App/Services` | App-composed, UI-facing, imaging, ML, metadata, and Windows services |
 | `src/HanabePhotoManager.App/Cloud` | Cloud page and cloud presentation orchestration |
 | `src/HanabePhotoManager.App/Compression` | Compression page, ViewModel-facing workflow, discovery, planning, and execution |
+| src/HanabePhotoManager.App/Recovery | Read-only camera image scanning, bounded MP4 evidence analysis, safe direct export, and recovery UI orchestration |
 | `src/HanabePhotoManager.App/Watermark` | Watermark page, layout policy, input discovery, and export |
 | `src/HanabePhotoManager.App/Map` | Map page, WebView2 bridge, and bundled Leaflet assets |
 | `src/HanabePhotoManager.App/Contest` | Contest pages, picker window, and contest ViewModel |
@@ -138,3 +139,4 @@ The user selection reaches `ThemeManager`, which swaps the composed theme dictio
 ## Architecture Change Rules
 
 An architecture change is any new project dependency, cross-layer contract, persistent data format, provider boundary, composition mechanism, or resource-loading order. Analyze and document it before implementation, update this file when accepted, and add tests at the owning layer. UI appearance changes do not update this document; they follow [`design-system.md`](design-system.md).
+

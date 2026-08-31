@@ -34,8 +34,8 @@ public sealed class ImportDateFolderDecision : ObservableObject
         _refresh = refresh;
         _strategy = existingFolders.Count == 0
             ? ImportDateFolderStrategy.CreateSeparate
-            : ImportDateFolderStrategy.Unselected;
-        _selectedExistingFolder = existingFolders.Count == 1 ? existingFolders[0] : null;
+            : ImportDateFolderStrategy.UseExisting;
+        _selectedExistingFolder = existingFolders.FirstOrDefault();
     }
 
     public static IReadOnlyList<ImportDateFolderStrategyOption> StrategyOptions { get; } =

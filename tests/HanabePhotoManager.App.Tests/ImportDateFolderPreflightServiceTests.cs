@@ -27,15 +27,15 @@ public sealed class ImportDateFolderPreflightServiceTests : IDisposable
     }
 
     [Fact]
-    public void ExistingFolder_RequiresAnExplicitStrategyAndCandidate()
+    public void ExistingFolder_DefaultsToThirdStrategyAndFirstCandidate()
     {
         Directory.CreateDirectory(Path.Combine(_root, "8月", "08.19_旧备注"));
         var decision = new ImportDateFolderPreflightService().CreateDecisions(
             _root, [(new LibraryDate(2026, 8, 19), 3)]).Single();
 
         decision.HasExistingFolders.Should().BeTrue();
-        decision.IsValid.Should().BeFalse();
-        decision.ValidationMessage.Should().Contain("处理方式");
+        decision.Strategy.Should().Be(ImportDateFolderStrategy.UseExisting);
+        decision.IsValid.Should().BeTrue();
 
         decision.SelectedExistingFolder.Should().Be(decision.ExistingFolders.Single());
         decision.Strategy = ImportDateFolderStrategy.RenameExisting;

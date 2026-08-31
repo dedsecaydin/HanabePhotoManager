@@ -781,6 +781,7 @@ public partial class MainWindow : Window
         "FaceSearch" => FaceSearchPage,
         "MapPhotos" => MapPageHost,
         "Compression" => CompressionPageHost,
+        "Recovery" => RecoveryPageHost,
         "Watermark" => WatermarkPageHost,
         "DateFolders" => DateFolderManagementPageHost,
         "Settings" => SettingsCenterPageHost,

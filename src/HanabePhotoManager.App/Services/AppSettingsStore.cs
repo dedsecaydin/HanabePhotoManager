@@ -191,6 +191,7 @@ public sealed class AppSettings
 
     public bool ShowHanabeAssistant { get; set; } = true;
     public string HanabeAssistantVisualStyle { get; set; } = "ChibiAnimated";
+    public double HanabeAssistantSize { get; set; } = 96;
     public bool HanabeSoundEnabled { get; set; } = true;
     public string HanabeSoundStyle { get; set; } = "Mixed";
     public double HanabeSoundVolume { get; set; } = 35;

@@ -266,16 +266,26 @@
           <Border Style="{StaticResource Settings.Group}">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="220" /></Grid.ColumnDefinitions>
-              <StackPanel Grid.Column="0" Margin="0,0,16,0">
+              <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+              <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,16,0">
                 <TextBlock Text="绯夜蔷薇 · Hanabe" Style="{StaticResource Settings.RowTitle}" />
                 <TextBlock Text="摄影整理助手；可切换动画皮肤，任务执行时显示名称、进度和预计剩余时间。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" TextWrapping="Wrap" />
               </StackPanel>
-              <ComboBox Grid.Column="1" VerticalAlignment="Center"
+              <ComboBox Grid.Row="0" Grid.Column="1" VerticalAlignment="Center"
                         ItemsSource="{Binding HanabeAssistantStyleChoices}"
                         SelectedValuePath="Value" DisplayMemberPath="Label"
                         SelectedValue="{Binding AssistantVisualStyle, Mode=TwoWay}"
                         Style="{StaticResource Input.ComboBox}"
                         AutomationProperties.Name="Hanabe 动态形象" />
+              <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,18,16,0">
+                <TextBlock Text="悬浮角色大小" Style="{StaticResource Settings.RowTitle}" />
+                <TextBlock Text="自由调整小人在悬浮窗中的显示尺寸；拖动人物可移动悬浮窗。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" />
+              </StackPanel>
+              <Grid Grid.Row="1" Grid.Column="1" Margin="0,18,0,0" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="44" /></Grid.ColumnDefinitions>
+                <Slider Grid.Column="0" Minimum="64" Maximum="160" TickFrequency="8" IsSnapToTickEnabled="True" Value="{Binding AssistantAvatarSize, Mode=TwoWay}" Style="{StaticResource Selection.Slider}" AutomationProperties.Name="悬浮角色大小" />
+                <TextBlock Grid.Column="1" Text="{Binding AssistantAvatarSize, StringFormat={}{0:0}}" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+              </Grid>
             </Grid>
           </Border>
 

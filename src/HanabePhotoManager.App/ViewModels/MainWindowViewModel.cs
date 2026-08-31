@@ -213,6 +213,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _isAcrylicEnabled = true;
     private bool _showHanabeAssistant = true;
     private HanabeAssistantVisualStyle _assistantVisualStyle = HanabeAssistantVisualStyle.ChibiAnimated;
+    private double _assistantAvatarSize = 96;
     private HanabeAssistantState _assistantState = HanabeAssistantState.Idle;
     private bool _hanabeSoundEnabled = true;
     private HanabeSoundStyle _hanabeSoundStyle = HanabeSoundStyle.Mixed;
@@ -1753,6 +1754,15 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public string AssistantAnimationSource => HanabeAssistantAnimationResolver.Resolve(AssistantVisualStyle, AssistantState);
     public bool IsPixelAssistantStyle => AssistantVisualStyle == HanabeAssistantVisualStyle.PixelAnimated;
+    public double AssistantAvatarSize
+    {
+        get => _assistantAvatarSize;
+        set
+        {
+            var size = Math.Clamp(Math.Round(value / 8) * 8, 64, 160);
+            if (SetProperty(ref _assistantAvatarSize, size)) _ = SaveSettingsAsync();
+        }
+    }
     public HanabeAssistantSnapshot AssistantSnapshot => HanabeAssistantPresentationPolicy.Create(
         AssistantState, ProgressLabel, ProgressValue, IsProgressIndeterminate,
         ImportSuccessCount, ImportSkippedCount, ImportFailedCount,
@@ -2453,6 +2463,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             : Enum.TryParse<HanabeAssistantVisualStyle>(settings.HanabeAssistantVisualStyle, true, out var assistantStyle)
                 ? assistantStyle
                 : HanabeAssistantVisualStyle.ChibiAnimated;
+        AssistantAvatarSize = settings.HanabeAssistantSize;
         HanabeSoundEnabled = settings.HanabeSoundEnabled;
         HanabeSoundStyle = Enum.TryParse<HanabeSoundStyle>(settings.HanabeSoundStyle, true, out var soundStyle) ? soundStyle : HanabeSoundStyle.Mixed;
         HanabeSoundVolume = settings.HanabeSoundVolume;
@@ -6313,6 +6324,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.IsAcrylicEnabled = IsAcrylicEnabled;
             settings.ShowHanabeAssistant = ShowHanabeAssistant;
             settings.HanabeAssistantVisualStyle = AssistantVisualStyle.ToString();
+            settings.HanabeAssistantSize = AssistantAvatarSize;
             settings.HanabeSoundEnabled = HanabeSoundEnabled;
             settings.HanabeSoundStyle = HanabeSoundStyle.ToString();
             settings.HanabeSoundVolume = HanabeSoundVolume;

@@ -19,6 +19,23 @@ public sealed class AppSettingsStoreTests
         settings.HanabeSoundVolume.Should().Be(35);
         settings.HanabeSoundQuietMode.Should().BeFalse();
         settings.RestoreWindowAfterDuplicateDetection.Should().BeTrue();
+        settings.HanabeAssistantSize.Should().Be(96);
+    }
+
+    [Fact]
+    public async Task HanabeAssistantSize_SurvivesRestart()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hanabe-assistant-size-{Guid.NewGuid():N}.json");
+        try
+        {
+            var store = new AppSettingsStore(path);
+            await store.SaveAsync(new AppSettings { HanabeAssistantSize = 144 });
+            (await store.LoadAsync()).HanabeAssistantSize.Should().Be(144);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
     }
     [Fact]
     public async Task ImportNamingTemplate_SequenceAndOriginalPreset_SurvivesRestart()

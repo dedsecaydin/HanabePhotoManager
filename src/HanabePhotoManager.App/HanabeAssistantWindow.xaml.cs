@@ -16,6 +16,8 @@ public partial class HanabeAssistantWindow : Window
     private readonly Random _random = new();
     private MainWindowViewModel? _viewModel;
     private int _idleActionIndex;
+    private System.Windows.Point _avatarPointerStart;
+    private bool _avatarDragCandidate;
 
     public HanabeAssistantWindow()
     {
@@ -61,14 +63,19 @@ public partial class HanabeAssistantWindow : Window
         if (_viewModel is null) return;
         var active = _viewModel.AssistantSnapshot.IsProgressVisible || _viewModel.Recovery.IsBusy ||
                      _viewModel.Compression.IsRunning || _viewModel.Compression.IsScanning;
+        var avatarWidth = _viewModel.AssistantAvatarSize;
+        var avatarHeight = avatarWidth * 7 / 6;
+        AssistantAvatar.Width = avatarWidth;
+        AssistantAvatar.Height = avatarHeight;
+        AvatarColumn.Width = new GridLength(avatarWidth + 4);
         ActiveTaskPanel.Visibility = active ? Visibility.Visible : Visibility.Collapsed;
         IdleSpeechBubble.Visibility = active ? Visibility.Collapsed : Visibility.Visible;
         ShellBorder.Background = active
             ? (System.Windows.Media.Brush)FindResource("Brush.Surface.Elevated")
             : System.Windows.Media.Brushes.Transparent;
         ShellBorder.Padding = active ? new Thickness(12) : new Thickness(0);
-        Width = active ? 420 : 250;
-        MinHeight = active ? 136 : 128;
+        Width = active ? Math.Max(420, avatarWidth + 324) : avatarWidth + 154;
+        MinHeight = active ? Math.Max(136, avatarHeight + 24) : avatarHeight + 16;
         if (active) ResetAvatarMotion(); else PlayIdleAction(_idleActionIndex);
         PositionAtWorkAreaEdge();
     }
@@ -147,18 +154,44 @@ public partial class HanabeAssistantWindow : Window
         AvatarScale.ScaleY = 1;
     }
 
-    private void AssistantAvatar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void AssistantAvatar_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true;
         if (e.ClickCount >= 2)
         {
             _singleClickTimer.Stop();
+            _avatarDragCandidate = false;
             RestoreMainWindow();
             return;
         }
 
+        _avatarPointerStart = e.GetPosition(this);
+        _avatarDragCandidate = true;
+        AssistantAvatar.CaptureMouse();
+    }
+
+    private void AssistantAvatar_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (!_avatarDragCandidate || e.LeftButton != MouseButtonState.Pressed) return;
+        var current = e.GetPosition(this);
+        if (Math.Abs(current.X - _avatarPointerStart.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(current.Y - _avatarPointerStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+        _avatarDragCandidate = false;
+        AssistantAvatar.ReleaseMouseCapture();
+        try { DragMove(); }
+        catch (InvalidOperationException) { }
+        e.Handled = true;
+    }
+
+    private void AssistantAvatar_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        AssistantAvatar.ReleaseMouseCapture();
+        if (!_avatarDragCandidate) return;
+        _avatarDragCandidate = false;
         _singleClickTimer.Stop();
         _singleClickTimer.Start();
+        e.Handled = true;
     }
 
     private void PositionAtWorkAreaEdge()

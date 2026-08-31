@@ -35,10 +35,14 @@ public sealed class ControlThemeTests
         xaml.Should().NotContain("x:Name=\"HanabeAssistantSurface\"")
             .And.NotContain("AutomationProperties.Name=\"Hanabe 任务助手\"");
         settings.Should().Contain("AutomationProperties.Name=\"Hanabe 动态形象\"")
+            .And.Contain("Value=\"{Binding AssistantAvatarSize, Mode=TwoWay}\"")
             .And.Contain("SelectedValue=\"{Binding AssistantVisualStyle, Mode=TwoWay}\"")
             .And.Contain("SelectedValue=\"{Binding HanabeSoundStyle, Mode=TwoWay}\"")
             .And.Contain("Value=\"{Binding HanabeSoundVolume, Mode=TwoWay}\"")
             .And.Contain("IsChecked=\"{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}\"");
+        xaml.Should().Contain("Content=\"扫描重复内容\"")
+            .And.Contain("Command=\"{Binding ScanLibraryDuplicatesCommand}\"")
+            .And.Contain("AutomationProperties.Name=\"扫描图库重复内容\"");
     }
 
     [Fact]
@@ -70,8 +74,10 @@ public sealed class ControlThemeTests
             .And.Contain("x:Name=\"ActiveTaskPanel\"")
             .And.Contain("x:Name=\"AvatarTranslation\"")
             .And.Contain("Width=\"96\" Height=\"112\"")
-            .And.Contain("MouseLeftButtonDown=\"AssistantAvatar_MouseLeftButtonDown\"")
-            .And.Contain("单击切换动作，双击打开 Hanabe")
+            .And.Contain("PreviewMouseLeftButtonDown=\"AssistantAvatar_PreviewMouseLeftButtonDown\"")
+            .And.Contain("PreviewMouseMove=\"AssistantAvatar_PreviewMouseMove\"")
+            .And.Contain("PreviewMouseLeftButtonUp=\"AssistantAvatar_PreviewMouseLeftButtonUp\"")
+            .And.Contain("单击切换动作，双击打开 Hanabe；拖动可移动悬浮窗")
             .And.Contain("Text=\"{Binding ImportSuccessCount, Mode=OneWay}\"")
             .And.Contain("Text=\"{Binding ImportFailedCount, Mode=OneWay}\"")
             .And.Contain("Text=\"{Binding ImportSkippedCount, Mode=OneWay}\"")

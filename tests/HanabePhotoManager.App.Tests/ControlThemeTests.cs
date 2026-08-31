@@ -66,6 +66,9 @@ public sealed class ControlThemeTests
             .And.Contain("Assets/Hanabe/hanabe-assistant.png")
             .And.Contain("AnimatedGifImage")
             .And.Contain("AnimationSource=\"{Binding AssistantAnimationSource}\"")
+            .And.Contain("x:Name=\"IdleSpeechBubble\"")
+            .And.Contain("x:Name=\"ActiveTaskPanel\"")
+            .And.Contain("x:Name=\"AvatarTranslation\"")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
         project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
     }

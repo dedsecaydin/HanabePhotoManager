@@ -23,12 +23,15 @@ public sealed class HanabeAnimationAssetTests
     {
         var root = FindRoot();
         var project = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "HanabePhotoManager.App.csproj"));
-        foreach (var style in new[] { "Chibi", "Pixel" })
+        foreach (var style in new[] { "Chibi", "Pixel", "OldMoney", "Rainy", "Winter" })
         foreach (var state in new[] { "idle", "scanning", "checking", "importing", "completed", "error" })
         {
             var path = Path.Combine(root, "src", "HanabePhotoManager.App", "Assets", "Hanabe", "Animated", style, state + ".gif");
             File.Exists(path).Should().BeTrue(path);
-            File.ReadAllBytes(path).Take(6).Should().Equal("GIF89a".Select(c => (byte)c));
+            var bytes = File.ReadAllBytes(path);
+            bytes.Take(6).Should().Equal("GIF89a".Select(c => (byte)c));
+            if (style is "OldMoney" or "Rainy" or "Winter")
+                bytes.Should().ContainInOrder((byte)0x21, (byte)0xF9, (byte)0x04, (byte)0x09);
         }
         project.Should().Contain("Assets\\Hanabe\\Animated\\**\\*.gif");
     }

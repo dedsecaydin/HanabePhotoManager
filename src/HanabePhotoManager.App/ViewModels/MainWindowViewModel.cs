@@ -370,6 +370,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ShowMapPhotosCommand = new RelayCommand(() => CurrentPage = "MapPhotos");
         ShowCompressionCommand = new RelayCommand(() => CurrentPage = "Compression");
         ShowRecoveryCommand = new RelayCommand(() => CurrentPage = "Recovery");
+        OpenHomeRecentFolderCommand = new AsyncRelayCommand<HomeRecentFolderViewModel>(OpenHomeRecentFolderAsync);
         ShowDateFoldersCommand = new RelayCommand(ShowDateFolders);
         ShowWatermarkCommand = new RelayCommand(() =>
         {
@@ -415,6 +416,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<LibraryDateNode> LibraryDates { get; } = [];
+
+    public ObservableCollection<HomeRecentFolderViewModel> HomeRecentFolders { get; } = [];
+
+    public IAsyncRelayCommand<HomeRecentFolderViewModel> OpenHomeRecentFolderCommand { get; }
 
     public FaceSearchViewModel FaceSearch { get; }
 
@@ -4731,17 +4736,47 @@ public sealed partial class MainWindowViewModel : ObservableObject
         TreemapBrowser.Complete(treemapGeneration, isPartial: false);
         RebuildCategorySummaries(root, categoryStats);
         RefreshFilteredCache(resetPage: true);
-        // 主页「最近照片」按拍摄时间从新到旧排序（B23）。
-        var recentHome = PreviewFiles
-            .OrderByDescending(preview => preview.CapturedAt)
-            .Take(PreviewLoadingPolicy.HomeRecentItemLimit)
-            .ToArray();
+        // 主页按最近拍摄时间汇总日期文件夹，并仅加载每个文件夹的少量封面。
+        RebuildHomeRecentFolders(PreviewFiles);
         HomePreviewFiles.Clear();
-        foreach (var item in recentHome)
-        {
+        foreach (var item in HomeRecentFolders.SelectMany(folder => folder.Covers).Distinct().Take(18))
             HomePreviewFiles.Add(item);
-        }
         NotifyPreviewCountsChanged();
+    }
+
+    private void RebuildHomeRecentFolders(IReadOnlyList<PreviewFileViewModel> recentItems)
+    {
+        var dateNodes = FlattenDateNodes(LibraryDates).Where(node => node.Date is not null).ToArray();
+        var groups = recentItems
+            .Select(item => (Item: item, Node: dateNodes.FirstOrDefault(node =>
+                item.FullPath.StartsWith(node.FullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase))))
+            .Where(pair => pair.Node is not null)
+            .GroupBy(pair => pair.Node!)
+            .OrderByDescending(group => group.Max(pair => pair.Item.CapturedAt))
+            .Take(6)
+            .Select(group =>
+            {
+                var items = group.Select(pair => pair.Item).OrderByDescending(item => item.CapturedAt).ToArray();
+                var videoCount = items.Count(item => item.Extension is "MP4" or "MOV");
+                return new HomeRecentFolderViewModel(
+                    group.Key,
+                    items.Length - videoCount,
+                    videoCount,
+                    FormatBytes(items.Sum(item => item.Length)),
+                    items.Take(3).ToArray());
+            })
+            .ToArray();
+
+        HomeRecentFolders.Clear();
+        foreach (var group in groups) HomeRecentFolders.Add(group);
+    }
+
+    private async Task OpenHomeRecentFolderAsync(HomeRecentFolderViewModel? folder)
+    {
+        if (folder is null || !Directory.Exists(folder.Node.FullPath)) return;
+        CurrentPage = "Preview";
+        await SelectDateAsync(folder.Node).ConfigureAwait(true);
     }
 
     private void AddPreviewMetadataBatch(
@@ -7619,6 +7654,20 @@ public sealed record DeviceGroupViewModel(string Name, string Icon, string Subti
 
 /// <summary>主页快速操作的键、标题和命令。</summary>
 public sealed record QuickActionItemViewModel(string Key, string Title, IRelayCommand Command);
+
+public sealed record HomeRecentFolderViewModel(
+    LibraryDateNode Node,
+    int PhotoCount,
+    int VideoCount,
+    string SizeText,
+    IReadOnlyList<PreviewFileViewModel> Covers)
+{
+    public string Title => Node.Title;
+    public string Subtitle => $"{PhotoCount:N0} 张照片 · {VideoCount:N0} 个视频 · {SizeText}";
+    public PreviewFileViewModel? Cover1 => Covers.ElementAtOrDefault(0);
+    public PreviewFileViewModel? Cover2 => Covers.ElementAtOrDefault(1);
+    public PreviewFileViewModel? Cover3 => Covers.ElementAtOrDefault(2);
+}
 
 /// <summary>外接磁盘、相机或照片库连接项。</summary>
 public sealed record ConnectedDeviceViewModel(string Name, string Kind, string Detail, bool IsConnected, string Icon, string Brand, string BadgeText, string Path)

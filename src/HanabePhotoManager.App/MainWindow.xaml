@@ -686,49 +686,39 @@
                 <Border Style="{StaticResource Layout.HomeSection}">
                   <DockPanel>
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                      <TextBlock Text="最近照片" FontSize="{StaticResource Typography.Title}" FontWeight="SemiBold" />
-                      <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" Text="{Binding HomePreviewFiles.Count, StringFormat={}{0} 张}" />
+                      <TextBlock Text="最近文件夹" FontSize="{StaticResource Typography.Title}" FontWeight="SemiBold" />
+                      <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" Text="{Binding HomeRecentFolders.Count, StringFormat={}{0} 个日期}" />
                     </DockPanel>
-                    <ItemsControl ItemContainerStyle="{StaticResource PreviewItemContainer}" ItemsSource="{Binding HomePreviewFiles}">
+                    <ItemsControl ItemContainerStyle="{StaticResource PreviewItemContainer}" ItemsSource="{Binding HomeRecentFolders}">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                           <WrapPanel />
                         </ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:PreviewFileViewModel}">
-                          <Border Width="140" Height="134" Margin="0,0,12,12" Padding="6" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
-                            <StackPanel>
-                              <Border Width="128" Height="96" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Subtle}" ClipToBounds="True">
+                        <DataTemplate DataType="{x:Type vm:HomeRecentFolderViewModel}">
+                          <Button Width="270" Height="154" Margin="0,0,14,14" Padding="0" HorizontalContentAlignment="Stretch"
+                                  Style="{StaticResource Button.Ghost}" Command="{Binding DataContext.OpenHomeRecentFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
+                            <Grid Margin="4,8,4,4">
+                              <Grid.RowDefinitions><RowDefinition Height="22"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                              <Border Width="92" Height="24" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.PrimaryContainer}"/>
+                              <Border Grid.Row="1" Margin="0,-3,0,0" Padding="12" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
                                 <Grid>
-                                  <TextBlock FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Tertiary}" HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding Extension}" />
-                                  <Rectangle>
-                                    <Shape.Fill>
-                                      <ImageBrush Stretch="UniformToFill" ImageSource="{Binding Thumbnail}" />
-                                    </Shape.Fill>
-                                  </Rectangle>
-                                  <Grid>
-                                    <Grid.Style>
-                                      <Style TargetType="Grid">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                          <DataTrigger Binding="{Binding Extension}" Value="MP4"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                                          <DataTrigger Binding="{Binding Extension}" Value="MOV"><Setter Property="Visibility" Value="Visible" /></DataTrigger>
-                                        </Style.Triggers>
-                                      </Style>
-                                    </Grid.Style>
-                                    <Border Width="32" Height="32" CornerRadius="16" Background="{DynamicResource Brush.Overlay.Scrim}" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
-                                      <Path Data="{StaticResource Icon.Play}" Fill="{DynamicResource Brush.Viewer.Text}" Width="14" Height="14" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="2,0,0,0" />
-                                    </Border>
-                                    <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4" Padding="5,2" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Overlay.Scrim}" IsHitTestVisible="False">
-                                      <TextBlock FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Viewer.Text}" Text="{Binding Extension}" />
-                                    </Border>
+                                  <Grid.ColumnDefinitions><ColumnDefinition Width="104"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                  <Grid Width="98" Height="76" VerticalAlignment="Center">
+                                    <Border Width="62" Height="62" Margin="0,8,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" ClipToBounds="True"><Image Source="{Binding Cover3.Thumbnail}" Stretch="UniformToFill"/></Border>
+                                    <Border Width="62" Height="62" Margin="18,4,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True"><Image Source="{Binding Cover2.Thumbnail}" Stretch="UniformToFill"/></Border>
+                                    <Border Width="62" Height="62" Margin="36,0,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.Border.Strong}" BorderThickness="1" ClipToBounds="True"><Image Source="{Binding Cover1.Thumbnail}" Stretch="UniformToFill"/></Border>
                                   </Grid>
+                                  <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <DockPanel><Path DockPanel.Dock="Left" Data="{StaticResource Icon.Folder}" Width="17" Height="17" Stretch="Uniform" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.7" Margin="0,0,7,0"/><TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/></DockPanel>
+                                    <TextBlock Text="{Binding Subtitle}" Margin="0,7,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="打开日期文件夹  →" Margin="0,9,0,0" Foreground="{DynamicResource Brush.Primary}" FontSize="{StaticResource Typography.Caption}"/>
+                                  </StackPanel>
                                 </Grid>
                               </Border>
-                              <TextBlock FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,6,0,0" Text="{Binding Name}" />
-                            </StackPanel>
-                          </Border>
+                            </Grid>
+                          </Button>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>
                     </ItemsControl>

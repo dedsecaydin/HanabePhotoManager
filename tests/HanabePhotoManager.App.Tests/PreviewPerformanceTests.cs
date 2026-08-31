@@ -119,7 +119,7 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("ItemsSource=\"{Binding HomePreviewFiles}\"");
+        xaml.Should().Contain("ItemsSource=\"{Binding HomeRecentFolders}\"");
         xaml.Should().Contain("ItemsSource=\"{Binding PreviewWallItems}\"");
         xaml.Should().Contain("controls:VirtualizingWrapPanel");
         xaml.Should().Contain("x:Name=\"PreviewWallItemsControl\"");

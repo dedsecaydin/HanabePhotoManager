@@ -13,20 +13,18 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class HomeP1FixTests
 {
     [Fact]
-    public void Home_ThumbnailsAreImageFirstAdaptiveAndVideoBadged()
+    public void Home_RecentMediaUsesAdaptiveDateFolderCards()
     {
         var xaml = Read("MainWindow.xaml");
 
         // P1-2: adaptive wrap, no fixed column count; image-first main visual.
         xaml.Should().Contain("<WrapPanel");
-        xaml.Should().Contain("最近照片");
+        xaml.Should().Contain("最近文件夹");
         xaml.Should().NotContain("实时扫描缩略图");
-        xaml.Should().Contain("ImageSource=\"{Binding Thumbnail}\"");
-
-        // P1-3: video play indicator + type badge keyed off the extension.
-        xaml.Should().Contain("Icon.Play");
-        xaml.Should().Contain("Value=\"MP4\"");
-        xaml.Should().Contain("Value=\"MOV\"");
+        xaml.Should().Contain("HomeRecentFolders");
+        xaml.Should().Contain("Cover1.Thumbnail");
+        xaml.Should().Contain("Icon.Folder");
+        xaml.Should().Contain("打开日期文件夹");
     }
 
     [Fact]

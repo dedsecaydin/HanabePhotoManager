@@ -11,6 +11,11 @@
           <Button DockPanel.Dock="Right" Width="28" Height="28" ToolTip="隐藏本次悬浮窗" AutomationProperties.Name="隐藏本次悬浮窗" Style="{StaticResource Button.Ghost}" Click="HideButton_Click">
             <Path Data="{StaticResource Icon.X}" Width="12" Height="12" Stretch="Uniform" Stroke="{DynamicResource Brush.Text.Secondary}" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round"/>
           </Button>
+          <TextBlock DockPanel.Dock="Right" Margin="8,0,4,0" VerticalAlignment="Center" FontSize="{StaticResource Typography.Caption}">
+            <Run Text="成功 "/><Run Text="{Binding ImportSuccessCount}" Foreground="{DynamicResource Brush.Status.Success}" FontWeight="SemiBold"/>
+            <Run Text=" 失败 "/><Run Text="{Binding ImportFailedCount}" Foreground="{DynamicResource Brush.Status.Danger}" FontWeight="SemiBold"/>
+            <Run Text=" 跳过 "/><Run Text="{Binding ImportSkippedCount}" Foreground="{DynamicResource Brush.Status.Warning}" FontWeight="SemiBold"/>
+          </TextBlock>
           <TextBlock Text="Hanabe" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" VerticalAlignment="Center"/>
         </DockPanel>
         <StackPanel Margin="0,2,0,0">

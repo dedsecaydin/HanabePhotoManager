@@ -1116,6 +1116,7 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 导入统计严格区分“跳过”和“失败”：同名冲突与内容重复归入跳过，只有传输、校验或运行异常计入失败。
 - 整批导入结束后仅弹出一次失败汇总，并完整列出本批全部实际错误原因；跳过原因继续保留在简要导入报告中。
 - Hanabe 悬浮助手改为紧凑对齐布局，使用明确关闭图标，并在恢复扫描、图片处理与主任务并行时按横行分别显示。
+- 悬浮助手标题栏实时显示导入成功、失败、跳过数量。
 - 一级导航取消重复悬浮提示，重新设计图片工具图标。
 - 相机视频恢复候选在分析过程中逐条追加，原生白色 DataGrid 替换为符合应用主题的候选卡片列表。
 - 验证：`dotnet build HanabePhotoManager.sln -c Release /warnaserror` 通过（0 警告、0 错误）；`dotnet test HanabePhotoManager.sln -c Release --no-build` 通过（758/758）。按用户要求未发布、未覆盖运行版本。

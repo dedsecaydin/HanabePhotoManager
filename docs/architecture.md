@@ -139,4 +139,3 @@ The user selection reaches `ThemeManager`, which swaps the composed theme dictio
 ## Architecture Change Rules
 
 An architecture change is any new project dependency, cross-layer contract, persistent data format, provider boundary, composition mechanism, or resource-loading order. Analyze and document it before implementation, update this file when accepted, and add tests at the owning layer. UI appearance changes do not update this document; they follow [`design-system.md`](design-system.md).
-

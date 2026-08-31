@@ -4050,10 +4050,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static void ShowImportFailureDetails(IReadOnlyList<string> failures)
     {
         if (failures.Count == 0) return;
-        var shown = failures.Take(30).ToList();
-        var remainder = failures.Count - shown.Count;
-        var message = string.Join(Environment.NewLine, shown.Select((line, index) => $"{index + 1}. {line}"));
-        if (remainder > 0) message += $"{Environment.NewLine}…另有 {remainder:N0} 项，请在导入报告中查看。";
+        var message = string.Join(Environment.NewLine, failures.Select((line, index) => $"{index + 1}. {line}"));
         System.Windows.MessageBox.Show(message, $"导入失败原因（{failures.Count:N0}）", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 

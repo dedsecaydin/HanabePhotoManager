@@ -133,66 +133,45 @@ public sealed class LibraryContentScanner
         var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken, progress, detailProgress)
             .ConfigureAwait(false);
 
-        var duplicateGroups = new List<List<string>>();
-        var processed = new HashSet<string>(OperatingSystem.IsWindows()
-            ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-
         var hashTasks = sizeMap
             .Where(pair => pair.Value.Count >= 2)
-            .SelectMany(pair => pair.Value)
-            .Distinct(OperatingSystem.IsWindows()
+            .SelectMany(pair => pair.Value.Select(path => (Size: pair.Key, Path: path)))
+            .DistinctBy(item => item.Path, OperatingSystem.IsWindows()
                 ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
             .ToArray();
-        var hashedIndex = 0;
         var totalCandidates = Math.Max(1, hashTasks.Length);
-
-        foreach (var (size, candidates) in sizeMap)
+        var hashedIndex = 0;
+        var hashedFiles = new ConcurrentBag<(long Size, string Path, string Hash)>();
+        var parallelOptions = new ParallelOptions
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (candidates.Count < 2)
-                continue;
-
-            // 同大小候选再按哈希分组，避免把只碰巧大小相同的文件误判为重复。
-            var byHash = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
-            foreach (var candidate in candidates)
+            CancellationToken = cancellationToken,
+            // 少量并行可显著利用 SSD 和 SHA 硬件加速，同时避免大量并发读拖慢机械盘。
+            MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4)
+        };
+        await Parallel.ForEachAsync(hashTasks, parallelOptions, async (item, token) =>
+        {
+            try
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (processed.Contains(candidate))
-                    continue;
-
-                string hash;
-                try
-                {
-                    hash = await _fileHasher.ComputeSha256Async(candidate, cancellationToken)
-                        .ConfigureAwait(false);
-                }
-                catch (FileNotFoundException) { continue; }
-                catch (IOException) { continue; }
-
-                hashedIndex++;
-                // 哈希比对阶段：40% → 100%
-                progress?.Report(40d + hashedIndex * 60d / totalCandidates);
-
-                if (!byHash.TryGetValue(hash, out var group))
-                {
-                    group = new List<string>();
-                    byHash[hash] = group;
-                }
-                group.Add(candidate);
-                detailProgress?.Report(new("SHA-256 精确比对", hashedIndex, totalCandidates, candidate, duplicateGroups.Count));
+                var hash = await _fileHasher.ComputeSha256Async(item.Path, token).ConfigureAwait(false);
+                hashedFiles.Add((item.Size, item.Path, hash));
             }
-
-            foreach (var group in byHash.Values)
+            catch (FileNotFoundException) { }
+            catch (IOException) { }
+            finally
             {
-                if (group.Count >= 2)
-                {
-                    duplicateGroups.Add(group);
-                    foreach (var path in group)
-                        processed.Add(path);
-                    detailProgress?.Report(new("SHA-256 精确比对", hashedIndex, totalCandidates, group[0], duplicateGroups.Count));
-                }
+                var completed = Interlocked.Increment(ref hashedIndex);
+                progress?.Report(40d + completed * 60d / totalCandidates);
+                detailProgress?.Report(new("SHA-256 并行比对", completed, totalCandidates, item.Path, 0));
             }
-        }
+        }).ConfigureAwait(false);
+
+        var duplicateGroups = hashedFiles
+            .GroupBy(item => (item.Size, item.Hash))
+            .Where(group => group.Count() >= 2)
+            .Select(group => group.Select(item => item.Path).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList())
+            .ToList();
+        if (duplicateGroups.Count > 0)
+            detailProgress?.Report(new("SHA-256 并行比对", hashedIndex, totalCandidates, duplicateGroups[^1][0], duplicateGroups.Count));
 
         progress?.Report(100d);
         return duplicateGroups;

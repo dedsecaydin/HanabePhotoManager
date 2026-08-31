@@ -145,7 +145,7 @@ public sealed class LibraryContentScannerTests : IDisposable
             detailProgress: new InlineProgress<DuplicateScanProgress>(reports.Add));
 
         reports.Should().Contain(report => report.Stage == "建立文件清单" && report.Total == 2);
-        reports.Should().Contain(report => report.Stage == "SHA-256 精确比对"
+        reports.Should().Contain(report => report.Stage == "SHA-256 并行比对"
             && report.Processed == 2
             && report.GroupsFound == 1
             && !string.IsNullOrWhiteSpace(report.CurrentPath));

@@ -69,6 +69,9 @@ public sealed class ControlThemeTests
             .And.Contain("x:Name=\"IdleSpeechBubble\"")
             .And.Contain("x:Name=\"ActiveTaskPanel\"")
             .And.Contain("x:Name=\"AvatarTranslation\"")
+            .And.Contain("Text=\"{Binding ImportSuccessCount, Mode=OneWay}\"")
+            .And.Contain("Text=\"{Binding ImportFailedCount, Mode=OneWay}\"")
+            .And.Contain("Text=\"{Binding ImportSkippedCount, Mode=OneWay}\"")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
         project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
     }

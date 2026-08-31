@@ -11,19 +11,27 @@ namespace HanabePhotoManager.App;
 public partial class HanabeAssistantWindow : Window
 {
     private readonly DispatcherTimer _idleActionTimer;
+    private readonly DispatcherTimer _singleClickTimer;
     private readonly string[] _idleMessages = ["Zzz…", "我在这里。", "照片整理好了吗？", "需要我时叫我～", "休息一下吧。"];
     private readonly Random _random = new();
     private MainWindowViewModel? _viewModel;
+    private int _idleActionIndex;
 
     public HanabeAssistantWindow()
     {
         InitializeComponent();
         _idleActionTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(14) };
         _idleActionTimer.Tick += IdleActionTimer_Tick;
+        _singleClickTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(280) };
+        _singleClickTimer.Tick += (_, _) =>
+        {
+            _singleClickTimer.Stop();
+            if (ActiveTaskPanel.Visibility != Visibility.Visible) PlayNextIdleAction();
+        };
         Loaded += (_, _) => { AttachViewModel(); UpdatePresentation(); _idleActionTimer.Start(); };
         DataContextChanged += (_, _) => { AttachViewModel(); UpdatePresentation(); };
         SizeChanged += (_, _) => PositionAtWorkAreaEdge();
-        Closed += (_, _) => { _idleActionTimer.Stop(); DetachViewModel(); };
+        Closed += (_, _) => { _idleActionTimer.Stop(); _singleClickTimer.Stop(); DetachViewModel(); };
         PositionAtWorkAreaEdge();
     }
 
@@ -59,36 +67,98 @@ public partial class HanabeAssistantWindow : Window
             ? (System.Windows.Media.Brush)FindResource("Brush.Surface.Elevated")
             : System.Windows.Media.Brushes.Transparent;
         ShellBorder.Padding = active ? new Thickness(12) : new Thickness(0);
-        Width = active ? 380 : 190;
-        MinHeight = active ? 104 : 88;
-        if (!active) PlayIdleMotion();
+        Width = active ? 420 : 250;
+        MinHeight = active ? 136 : 128;
+        if (active) ResetAvatarMotion(); else PlayIdleAction(_idleActionIndex);
         PositionAtWorkAreaEdge();
     }
 
     private void IdleActionTimer_Tick(object? sender, EventArgs e)
     {
         if (ActiveTaskPanel.Visibility == Visibility.Visible) return;
-        IdleSpeechText.Text = _idleMessages[_random.Next(_idleMessages.Length)];
         _idleActionTimer.Interval = TimeSpan.FromSeconds(_random.Next(11, 23));
-        PlayIdleMotion();
+        _idleActionIndex = _random.Next(4);
+        PlayIdleAction(_idleActionIndex);
     }
 
-    private void PlayIdleMotion()
+    private void PlayNextIdleAction()
     {
-        AvatarTranslation.BeginAnimation(TranslateTransform.YProperty,
-            new DoubleAnimationUsingKeyFrames
+        _idleActionIndex = (_idleActionIndex + 1) % 4;
+        PlayIdleAction(_idleActionIndex);
+    }
+
+    private void PlayIdleAction(int action)
+    {
+        ResetAvatarMotion();
+        IdleSpeechText.Text = action switch
+        {
+            1 => "蹦一下～",
+            2 => "嗯？",
+            3 => "Zzz…",
+            _ => _idleMessages[_random.Next(_idleMessages.Length)]
+        };
+
+        if (action == 1)
+        {
+            AvatarTranslation.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimationUsingKeyFrames
             {
-                Duration = TimeSpan.FromSeconds(2.4),
+                Duration = TimeSpan.FromSeconds(.85),
                 RepeatBehavior = RepeatBehavior.Forever,
                 KeyFrames =
                 {
                     new EasingDoubleKeyFrame(0, KeyTime.FromPercent(0)),
-                    new EasingDoubleKeyFrame(-3, KeyTime.FromPercent(.5)),
+                    new EasingDoubleKeyFrame(-12, KeyTime.FromPercent(.38)),
                     new EasingDoubleKeyFrame(0, KeyTime.FromPercent(1))
                 }
             });
+            return;
+        }
+
+        if (action == 2)
+        {
+            AvatarRotation.BeginAnimation(RotateTransform.AngleProperty,
+                new DoubleAnimation(-5, 5, TimeSpan.FromSeconds(1.15)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+            return;
+        }
+
+        if (action == 3)
+        {
+            AvatarRotation.Angle = 4;
+            AvatarTranslation.Y = 4;
+            AvatarScale.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(.94, 1, TimeSpan.FromSeconds(1.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+            return;
+        }
+
+        AvatarTranslation.BeginAnimation(TranslateTransform.YProperty,
+            new DoubleAnimation(-3, 1, TimeSpan.FromSeconds(1.8)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
         AvatarRotation.BeginAnimation(RotateTransform.AngleProperty,
             new DoubleAnimation(-1.5, 1.5, TimeSpan.FromSeconds(3.2)) { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever });
+    }
+
+    private void ResetAvatarMotion()
+    {
+        AvatarTranslation.BeginAnimation(TranslateTransform.YProperty, null);
+        AvatarRotation.BeginAnimation(RotateTransform.AngleProperty, null);
+        AvatarScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        AvatarTranslation.Y = 0;
+        AvatarRotation.Angle = 0;
+        AvatarScale.ScaleX = 1;
+        AvatarScale.ScaleY = 1;
+    }
+
+    private void AssistantAvatar_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (e.ClickCount >= 2)
+        {
+            _singleClickTimer.Stop();
+            RestoreMainWindow();
+            return;
+        }
+
+        _singleClickTimer.Stop();
+        _singleClickTimer.Start();
     }
 
     private void PositionAtWorkAreaEdge()
@@ -105,7 +175,9 @@ public partial class HanabeAssistantWindow : Window
             return;
         }
 
-        if (e.OriginalSource is DependencyObject source && FindParent<System.Windows.Controls.Primitives.ButtonBase>(source) is not null)
+        if (e.OriginalSource is DependencyObject source &&
+            (FindParent<System.Windows.Controls.Primitives.ButtonBase>(source) is not null ||
+             ReferenceEquals(FindParent<System.Windows.Controls.Border>(source), AssistantAvatar)))
         {
             return;
         }

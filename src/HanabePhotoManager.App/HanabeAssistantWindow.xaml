@@ -2,12 +2,12 @@
   <Window.Resources><BooleanToVisibilityConverter x:Key="BoolToVis"/></Window.Resources>
   <Border x:Name="ShellBorder" Margin="8" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Elevated}" BorderThickness="0" PreviewMouseLeftButtonDown="Surface_PreviewMouseLeftButtonDown">
     <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="68"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border x:Name="AssistantAvatar" Width="64" Height="72" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent" VerticalAlignment="Top" RenderTransformOrigin="0.5,1">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border x:Name="AssistantAvatar" Width="96" Height="112" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent" VerticalAlignment="Top" RenderTransformOrigin="0.5,1" Cursor="Hand" ToolTip="单击切换动作，双击打开 Hanabe" AutomationProperties.Name="Hanabe 角色；单击切换动作，双击打开应用" MouseLeftButtonDown="AssistantAvatar_MouseLeftButtonDown">
         <Border.RenderTransform><TransformGroup><ScaleTransform x:Name="AvatarScale"/><RotateTransform x:Name="AvatarRotation"/><TranslateTransform x:Name="AvatarTranslation"/></TransformGroup></Border.RenderTransform>
         <controls:AnimatedGifImage AnimationSource="{Binding AssistantAnimationSource}" FallbackSource="Assets/Hanabe/hanabe-assistant.png" UseNearestNeighbor="{Binding IsPixelAssistantStyle}" Stretch="Uniform"/>
       </Border>
-      <Border x:Name="IdleSpeechBubble" Grid.Column="1" MaxWidth="96" Margin="6,4,0,0" Padding="10,7" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="12,12,12,3" Background="{DynamicResource Brush.Surface.Elevated}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
+      <Border x:Name="IdleSpeechBubble" Grid.Column="1" MaxWidth="120" Margin="8,12,0,0" Padding="10,7" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="12,12,12,3" Background="{DynamicResource Brush.Surface.Elevated}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="1">
         <TextBlock x:Name="IdleSpeechText" Text="Zzz…" TextWrapping="Wrap" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
       </Border>
       <StackPanel x:Name="ActiveTaskPanel" Grid.Column="1" Margin="10,0,0,0">

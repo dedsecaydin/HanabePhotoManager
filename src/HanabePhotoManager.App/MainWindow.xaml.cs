@@ -231,13 +231,14 @@ public partial class MainWindow : Window
         {
             // WindowStyle=None 最大化时会盖住任务栏：把最大化尺寸/位置钳制到当前监视器工作区
             var mmi = (MinMaxInfo)System.Runtime.InteropServices.Marshal.PtrToStructure(lParam, typeof(MinMaxInfo))!;
-            var area = System.Windows.Forms.Screen.FromHandle(hwnd).WorkingArea;
-            mmi.MaxPosition.X = area.Left;
-            mmi.MaxPosition.Y = area.Top;
-            mmi.MaxSize.X = area.Width;
-            mmi.MaxSize.Y = area.Height;
-            mmi.MaxTrackSize.X = area.Width;
-            mmi.MaxTrackSize.Y = area.Height;
+            var screen = System.Windows.Forms.Screen.FromHandle(hwnd);
+            var target = Services.WindowMaximizeBoundsPolicy.Calculate(screen.Bounds, screen.WorkingArea);
+            mmi.MaxPosition.X = target.Left;
+            mmi.MaxPosition.Y = target.Top;
+            mmi.MaxSize.X = target.Width;
+            mmi.MaxSize.Y = target.Height;
+            mmi.MaxTrackSize.X = target.Width;
+            mmi.MaxTrackSize.Y = target.Height;
             System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
             handled = true;
         }

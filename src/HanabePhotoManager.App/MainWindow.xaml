@@ -858,19 +858,10 @@
             <Grid Name="ImportPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsImportPage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
                 <DockPanel LastChildFill="True">
-                  <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                      <StackPanel Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center" Visibility="{Binding IsDuplicateScanRunning, Converter={StaticResource BoolToVis}}">
-                        <ProgressBar Width="96" Height="4" IsIndeterminate="True" />
-                        <TextBlock Text="正在扫描重复内容" Margin="8,0,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" />
-                      </StackPanel>
-                      <Button Content="扫描重复内容" Style="{StaticResource Button.Secondary}" Command="{Binding ScanLibraryDuplicatesCommand}" AutomationProperties.Name="扫描图库重复内容" />
-                    </StackPanel>
-                    <StackPanel>
-                      <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />
-                      <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="{Binding PageSubtitle}" />
-                    </StackPanel>
-                  </DockPanel>
+                  <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+                    <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />
+                    <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="{Binding PageSubtitle}" />
+                  </StackPanel>
                 <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="320" />
@@ -1290,10 +1281,19 @@
             <Grid Name="PreviewPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
                 <DockPanel LastChildFill="True">
-                  <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
-                    <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />
-                    <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="{Binding PageSubtitle}" />
-                  </StackPanel>
+                  <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="True">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Margin="0,0,10,0" VerticalAlignment="Center" Visibility="{Binding IsDuplicateScanRunning, Converter={StaticResource BoolToVis}}">
+                        <ProgressBar Width="96" Height="4" IsIndeterminate="True" />
+                        <TextBlock Text="正在扫描重复内容" Margin="8,0,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" />
+                      </StackPanel>
+                      <Button Content="扫描重复内容" Style="{StaticResource Button.Secondary}" Command="{Binding ScanLibraryDuplicatesCommand}" AutomationProperties.Name="扫描图库重复内容" />
+                    </StackPanel>
+                    <StackPanel>
+                      <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />
+                      <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="{Binding PageSubtitle}" />
+                    </StackPanel>
+                  </DockPanel>
                 <Grid>
               <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />

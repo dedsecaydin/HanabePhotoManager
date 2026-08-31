@@ -3568,6 +3568,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var skipped = 0;
         var stopped = false;
         var lines = new List<string>();
+        var failureLines = new List<string>();
 
         try
         {
@@ -3661,6 +3662,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 skipped += result.Skipped;
                 failed += result.Failed;
                 lines.AddRange(result.Lines);
+                failureLines.AddRange(result.FailureLines);
                 completedDateGroups++;
 
                 // 每完成一个日期组就从续传快照移除，已完成的文件不重复传输。
@@ -3677,6 +3679,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
             StatusMessage = "导入流程结束。";
+            ShowImportFailureDetails(failureLines);
             EndCancelableTask(cancellation);
             IsProgressIndeterminate = false;
             IsBusy = false;
@@ -3752,6 +3755,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var failed = 0;
         var skipped = 0;
         var lines = new List<string>();
+        var failureLines = new List<string>();
 
         try
         {
@@ -3865,6 +3869,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 skipped += result.Skipped;
                 failed += result.Failed;
                 lines.AddRange(result.Lines);
+                failureLines.AddRange(result.FailureLines);
 
                 state.Entries.RemoveAll(entry => entry.Year == date.Year && entry.Month == date.Month && entry.Day == date.Day);
                 _importResumeStore.Save(state);
@@ -3879,6 +3884,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
             ImportActionHint = "导入完成。可在不离开本页的情况下，使用“管理日期文件夹备注”统一编辑备注。";
             StatusMessage = "上次未完成的导入已继续完成。";
+            ShowImportFailureDetails(failureLines);
         }
         catch (OperationCanceledException)
         {
@@ -3951,6 +3957,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var failed = 0;
         var skipped = 0;
         var lines = new List<string>();
+        var failureLines = new List<string>();
 
         Directory.CreateDirectory(targetDateDirectory);
         var plan = await _planBuilder.BuildAsync(
@@ -3972,8 +3979,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 if (item.Conflict == ConflictKind.SameNameDifferentContent)
                 {
-                    failed++;
-                    lines.Add($"冲突：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件，已跳过。");
+                    skipped++;
+                    lines.Add($"跳过：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件。");
                     continue;
                 }
 
@@ -4017,8 +4024,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 else
                 {
                     failed++;
-                    lines.Add($"失败：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} - {result.Error}");
+                    var failure = $"{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}：{result.Error ?? "未知传输错误"}";
+                    failureLines.Add(failure);
+                    lines.Add("失败：" + failure);
                 }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                failed++;
+                var failure = $"{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}：{ex.Message}";
+                failureLines.Add(failure);
+                lines.Add("失败：" + failure);
             }
             finally
             {
@@ -4028,7 +4044,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
         }
 
-        return new ImportRunResult(success, skipped, failed, lines);
+        return new ImportRunResult(success, skipped, failed, lines, failureLines);
+    }
+
+    private static void ShowImportFailureDetails(IReadOnlyList<string> failures)
+    {
+        if (failures.Count == 0) return;
+        var shown = failures.Take(30).ToList();
+        var remainder = failures.Count - shown.Count;
+        var message = string.Join(Environment.NewLine, shown.Select((line, index) => $"{index + 1}. {line}"));
+        if (remainder > 0) message += $"{Environment.NewLine}…另有 {remainder:N0} 项，请在导入报告中查看。";
+        System.Windows.MessageBox.Show(message, $"导入失败原因（{failures.Count:N0}）", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
     private async Task AuditLibraryDuplicatesAsync(CancellationToken cancellationToken, bool reportOutcome = false)
@@ -7659,7 +7685,7 @@ public sealed class ImportCategorySectionViewModel : ObservableObject
 }
 
 /// <summary>一次导入运行的成功、跳过、失败和日志摘要。</summary>
-public sealed record ImportRunResult(int Success, int Skipped, int Failed, IReadOnlyList<string> Lines);
+public sealed record ImportRunResult(int Success, int Skipped, int Failed, IReadOnlyList<string> Lines, IReadOnlyList<string> FailureLines);
 
 /// <summary>图库日期分组的稳定键和标题。</summary>
 public sealed record PreviewDateSectionInfo(string Key, string Title);

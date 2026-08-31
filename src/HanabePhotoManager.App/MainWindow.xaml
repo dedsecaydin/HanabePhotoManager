@@ -568,7 +568,6 @@
                   <Button Tag="{Binding Key}"
                           Style="{StaticResource Navigation.RailItem}"
                           Command="{Binding Command}"
-                          ToolTip="{Binding Label}"
                           AutomationProperties.Name="{Binding Label}"
                           PreviewMouseLeftButtonDown="PrimaryNavigationItem_PreviewMouseLeftButtonDown"
                           PreviewMouseMove="PrimaryNavigationItem_PreviewMouseMove">

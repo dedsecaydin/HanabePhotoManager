@@ -1111,3 +1111,11 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 恢复页只读 `ProgressValue` 绑定显式改为 `Mode=OneWay`，避免 WPF 尝试 TwoWay 写回导致窗口启动异常。
 - HanabeAssistantWindow 增加局部 `BoolToVis` converter，避免最小化创建悬浮窗时缺少资源。
 - 增加 XAML 回归断言；Release 全量 758 项通过，并完成发布版启动、最小化和恢复运行回归。
+# 2026-08-31 — 导入状态、悬浮任务与恢复候选 UI 修正
+
+- 导入统计严格区分“跳过”和“失败”：同名冲突与内容重复归入跳过，只有传输、校验或运行异常计入失败。
+- 导入失败时弹窗列出实际错误原因；跳过原因继续保留在简要导入报告中。
+- Hanabe 悬浮助手改为紧凑对齐布局，使用明确关闭图标，并在恢复扫描、图片处理与主任务并行时按横行分别显示。
+- 一级导航取消重复悬浮提示，重新设计图片工具图标。
+- 相机视频恢复候选在分析过程中逐条追加，原生白色 DataGrid 替换为符合应用主题的候选卡片列表。
+- 验证：`dotnet build HanabePhotoManager.sln -c Release /warnaserror` 通过（0 警告、0 错误）；`dotnet test HanabePhotoManager.sln -c Release --no-build` 通过（758/758）。按用户要求未发布、未覆盖运行版本。

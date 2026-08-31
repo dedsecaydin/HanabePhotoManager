@@ -55,8 +55,14 @@ public sealed class RecoveryViewModel : ObservableObject
         try
         {
             StatusText = "正在只读扫描 exFAT 与 MP4 结构…";
-            _scan = await _service.ScanAsync(ImagePath, new Progress<double>(value => ProgressValue = value), _cancellation.Token);
-            foreach (var candidate in _scan.Candidates) Candidates.Add(candidate);
+            var discovered = new Progress<RecoveryCandidate>(candidate =>
+            {
+                Candidates.Add(candidate);
+                SelectedCandidate ??= candidate;
+                OnPropertyChanged(nameof(HasCandidates));
+                StatusText = $"正在分析候选，已发现 {Candidates.Count:N0} 个…";
+            });
+            _scan = await _service.ScanAsync(ImagePath, new Progress<double>(value => ProgressValue = value), _cancellation.Token, discovered);
             SelectedCandidate = Candidates.FirstOrDefault();
             OnPropertyChanged(nameof(HasCandidates)); OnPropertyChanged(nameof(IsExFat)); OnPropertyChanged(nameof(FileSystemSummary));
             StatusText = Candidates.Count == 0 ? "扫描完成，没有找到可识别的 MP4 候选。" : $"扫描完成：{Candidates.Count:N0} 个候选；仅完整结构可直接恢复。";

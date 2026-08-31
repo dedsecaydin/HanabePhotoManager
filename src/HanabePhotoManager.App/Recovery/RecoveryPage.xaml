@@ -14,9 +14,38 @@
         <Border Style="{StaticResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
           <DockPanel><TextBlock Text="恢复候选" Style="{StaticResource Layout.SectionTitle}"/><Button DockPanel.Dock="Right" Content="取消" Command="{Binding CancelCommand}" Style="{StaticResource Button.Ghost}"/></DockPanel>
           <StackPanel Grid.Row="1" Margin="0,10,0,12"><ProgressBar Height="6" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/><TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"/></StackPanel>
-          <DataGrid Grid.Row="2" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column" GridLinesVisibility="Horizontal">
-            <DataGrid.Columns><DataGridTextColumn Header="推测文件名" Binding="{Binding ExpectedFileName}" Width="*"/><DataGridCheckBoxColumn Header="ftyp" Binding="{Binding HasFtyp}"/><DataGridCheckBoxColumn Header="mdat" Binding="{Binding HasMdat}"/><DataGridCheckBoxColumn Header="moov" Binding="{Binding HasMoov}"/><DataGridCheckBoxColumn Header="样本表" Binding="{Binding HasSampleTables}"/><DataGridTextColumn Header="置信度" Binding="{Binding Confidence}"/><DataGridTextColumn Header="状态" Binding="{Binding Status}"/></DataGrid.Columns>
-          </DataGrid>
+          <ListBox Grid.Row="2" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
+                   Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Padding" Value="0"/><Setter Property="Margin" Value="0,0,0,8"/>
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                <Setter Property="Background" Value="Transparent"/>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="{x:Type recovery:RecoveryCandidate}">
+                <Border Style="{StaticResource Card.Subtle}" Padding="12">
+                  <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <StackPanel>
+                      <TextBlock Text="{Binding ExpectedFileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}">
+                        <Run Text="偏移 "/><Run Text="{Binding StartOffset}"/><Run Text=" · "/><Run Text="{Binding Confidence}"/>
+                      </TextBlock>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Right"/>
+                      <TextBlock Margin="16,5,0,0" Foreground="{DynamicResource Brush.Text.Secondary}">
+                        <Run Text="ftyp "/><Run Text="{Binding HasFtyp}"/><Run Text=" · mdat "/><Run Text="{Binding HasMdat}"/>
+                        <Run Text=" · moov "/><Run Text="{Binding HasMoov}"/><Run Text=" · 样本表 "/><Run Text="{Binding HasSampleTables}"/>
+                      </TextBlock>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid></Border>
         <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><StackPanel><TextBlock Text="证据" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold"/><TextBlock Text="只允许 ftyp、mdat、moov 与 sample tables 完整且非碎片候选直接恢复。其他候选标记为 EXPERIMENTAL，仅展示证据。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="安全恢复所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/></StackPanel></Border>
       </Grid>

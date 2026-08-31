@@ -12,7 +12,8 @@ public sealed class RecoveryImageService
     private const long MaximumBoxSize = 16L * 1024 * 1024 * 1024;
     private const int SearchBlockSize = 4 * 1024 * 1024;
 
-    public async Task<RecoveryScanResult> ScanAsync(string imagePath, IProgress<double>? progress, CancellationToken cancellationToken)
+    public async Task<RecoveryScanResult> ScanAsync(string imagePath, IProgress<double>? progress, CancellationToken cancellationToken,
+        IProgress<RecoveryCandidate>? candidateProgress = null)
     {
         if (!RecoverySafetyPolicy.IsSupportedImage(imagePath)) throw new NotSupportedException("仅支持 .img 和 .raw 镜像。");
         await using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, SearchBlockSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
@@ -29,7 +30,11 @@ public sealed class RecoveryImageService
         {
             cancellationToken.ThrowIfCancellationRequested();
             var candidate = ReadCandidate(stream, start);
-            if (candidate is not null && candidates.All(item => Math.Abs(item.StartOffset - candidate.StartOffset) > 16)) candidates.Add(candidate);
+            if (candidate is not null && candidates.All(item => Math.Abs(item.StartOffset - candidate.StartOffset) > 16))
+            {
+                candidates.Add(candidate);
+                candidateProgress?.Report(candidate);
+            }
         }
         progress?.Report(100);
         return new(imagePath, stream.Length, isExFat, sectorSize, clusterSize, candidates, DateTimeOffset.UtcNow);

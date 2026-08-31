@@ -10,6 +10,9 @@ public sealed class HanabeAnimationAssetTests
     [Theory]
     [InlineData(HanabeAssistantVisualStyle.ChibiAnimated, HanabeAssistantState.Importing, "Assets/Hanabe/Animated/Chibi/importing.gif")]
     [InlineData(HanabeAssistantVisualStyle.PixelAnimated, HanabeAssistantState.Checking, "Assets/Hanabe/Animated/Pixel/checking.gif")]
+    [InlineData(HanabeAssistantVisualStyle.OldMoneyAnimated, HanabeAssistantState.Idle, "Assets/Hanabe/Animated/OldMoney/idle.gif")]
+    [InlineData(HanabeAssistantVisualStyle.RainyAnimated, HanabeAssistantState.Scanning, "Assets/Hanabe/Animated/Rainy/scanning.gif")]
+    [InlineData(HanabeAssistantVisualStyle.WinterAnimated, HanabeAssistantState.Completed, "Assets/Hanabe/Animated/Winter/completed.gif")]
     public void Resolver_ReturnsStyleAndStateSpecificResource(HanabeAssistantVisualStyle style, HanabeAssistantState state, string expected)
     {
         HanabeAssistantAnimationResolver.Resolve(style, state).Should().Be(expected);

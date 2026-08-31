@@ -6,7 +6,16 @@ public enum HanabeAssistantState
     Recoverable, Resuming, Completed, CompletedWithIssues, Failed, Error
 }
 
-public enum HanabeAssistantVisualStyle { ChibiAnimated, PixelAnimated, Static, Off }
+public enum HanabeAssistantVisualStyle
+{
+    ChibiAnimated,
+    PixelAnimated,
+    OldMoneyAnimated,
+    RainyAnimated,
+    WinterAnimated,
+    Static,
+    Off
+}
 
 internal static class HanabeAssistantAnimationResolver
 {
@@ -21,7 +30,14 @@ internal static class HanabeAssistantAnimationResolver
             HanabeAssistantState.CompletedWithIssues => "completed",
             _ => state.ToString().ToLowerInvariant()
         };
-        var folder = style == HanabeAssistantVisualStyle.PixelAnimated ? "Pixel" : "Chibi";
+        var folder = style switch
+        {
+            HanabeAssistantVisualStyle.PixelAnimated => "Pixel",
+            HanabeAssistantVisualStyle.OldMoneyAnimated => "OldMoney",
+            HanabeAssistantVisualStyle.RainyAnimated => "Rainy",
+            HanabeAssistantVisualStyle.WinterAnimated => "Winter",
+            _ => "Chibi"
+        };
         return $"Assets/Hanabe/Animated/{folder}/{animation}.gif";
     }
 }

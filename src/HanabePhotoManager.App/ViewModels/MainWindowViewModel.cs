@@ -1717,6 +1717,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [
         new(HanabeAssistantVisualStyle.ChibiAnimated, "Q 版动态"),
         new(HanabeAssistantVisualStyle.PixelAnimated, "8-bit 像素动态"),
+        new(HanabeAssistantVisualStyle.OldMoneyAnimated, "老钱风动态"),
+        new(HanabeAssistantVisualStyle.RainyAnimated, "雨天动态"),
+        new(HanabeAssistantVisualStyle.WinterAnimated, "冬季动态"),
         new(HanabeAssistantVisualStyle.Static, "静态形象"),
         new(HanabeAssistantVisualStyle.Off, "关闭助手")
     ];

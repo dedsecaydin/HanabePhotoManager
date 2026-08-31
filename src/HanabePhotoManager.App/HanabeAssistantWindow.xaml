@@ -2,8 +2,8 @@
   <Window.Resources><BooleanToVisibilityConverter x:Key="BoolToVis"/></Window.Resources>
   <Border Margin="8" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Elevated}" BorderThickness="0" PreviewMouseLeftButtonDown="Surface_PreviewMouseLeftButtonDown">
     <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="48"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-      <Border Width="44" Height="44" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent" VerticalAlignment="Top">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="68"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <Border Width="64" Height="72" CornerRadius="{StaticResource Radius.Card}" ClipToBounds="True" Background="Transparent" VerticalAlignment="Top">
         <controls:AnimatedGifImage AnimationSource="{Binding AssistantAnimationSource}" FallbackSource="Assets/Hanabe/hanabe-assistant.png" UseNearestNeighbor="{Binding IsPixelAssistantStyle}" Stretch="Uniform"/>
       </Border>
       <StackPanel Grid.Column="1" Margin="10,0,0,0">

@@ -1124,3 +1124,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 一级导航取消重复悬浮提示，重新设计图片工具图标。
 - 相机视频恢复候选在分析过程中逐条追加，原生白色 DataGrid 替换为符合应用主题的候选卡片列表。
 - 验证：`dotnet build HanabePhotoManager.sln -c Release /warnaserror` 通过（0 警告、0 错误）；`dotnet test HanabePhotoManager.sln -c Release --no-build` 通过（758/758）。按用户要求未发布、未覆盖运行版本。
+
+## 2026-09-01 — 悬浮助手全身 Q 版角色
+
+- 四套悬浮助手皮肤全部替换为透明背景的完整全身 Q 版动画，完整保留发梢、服装下摆和鞋子。
+- 角色显示位由 44×44 扩展到 64×72，并保持透明裁切，避免全身角色过小或被截断。
+- 动画资源继续覆盖空闲、扫描、检查、导入、完成和错误六种状态，皮肤切换入口保持在“设置 → 外观 → Hanabe 角色助手”。

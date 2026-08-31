@@ -1118,6 +1118,7 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Hanabe 悬浮助手改为紧凑对齐布局，使用明确关闭图标，并在恢复扫描、图片处理与主任务并行时按横行分别显示。
 - 悬浮助手标题栏实时显示导入成功、失败、跳过数量。
 - 悬浮助手新增老钱风、雨天、冬季三套独立循环动画皮肤；统一 128×128 帧与底部锚点，切换时仅加载当前皮肤资源，避免动画叠放和人物错位。
+- 重复内容扫描在主窗口底栏和悬浮助手同步显示扫描阶段、已处理/总数、当前文件、已发现重复组数及预计剩余时间。
 - 一级导航取消重复悬浮提示，重新设计图片工具图标。
 - 相机视频恢复候选在分析过程中逐条追加，原生白色 DataGrid 替换为符合应用主题的候选卡片列表。
 - 验证：`dotnet build HanabePhotoManager.sln -c Release /warnaserror` 通过（0 警告、0 错误）；`dotnet test HanabePhotoManager.sln -c Release --no-build` 通过（758/758）。按用户要求未发布、未覆盖运行版本。

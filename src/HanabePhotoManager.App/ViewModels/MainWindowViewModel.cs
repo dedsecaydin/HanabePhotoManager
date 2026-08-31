@@ -4093,10 +4093,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var runVisual = DuplicateMergeScopePolicy.IncludesVisual(scope);
             var exactProgress = new Progress<double>(value => ProgressValue = Math.Clamp(value * (runVisual ? 0.8 : 1), 0, runVisual ? 80 : 100));
             var visualProgress = new Progress<double>(value => ProgressValue = Math.Clamp((runExact ? 80 : 0) + value * (runExact ? 0.2 : 1), 0, 100));
+            var detailProgress = new Progress<DuplicateScanProgress>(detail =>
+            {
+                var current = string.IsNullOrWhiteSpace(detail.CurrentPath) ? string.Empty : $" · {Path.GetFileName(detail.CurrentPath)}";
+                var found = detail.GroupsFound > 0 ? $" · 已发现 {detail.GroupsFound:N0} 组" : string.Empty;
+                ProgressLabel = $"{detail.Stage} · {detail.Processed:N0}/{detail.Total:N0}{found}{current}";
+                StatusMessage = $"正在{detail.Stage}：已处理 {detail.Processed:N0}/{detail.Total:N0}{found}";
+            });
             if (runExact)
             {
                 exactGroups = await _contentScanner.FindAllDuplicatesAsync(
-                    LibraryRoot, ContentScanExtensions, cancellationToken, exactProgress).ConfigureAwait(true);
+                    LibraryRoot, ContentScanExtensions, cancellationToken, exactProgress, detailProgress).ConfigureAwait(true);
             }
 
             var covered = exactGroups
@@ -4105,7 +4112,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (runVisual)
             {
                 visualGroups = await _contentScanner.FindVisualDuplicatesAsync(
-                    LibraryRoot, ContentScanExtensions, covered, cancellationToken, visualProgress).ConfigureAwait(true);
+                    LibraryRoot, ContentScanExtensions, covered, cancellationToken, visualProgress, detailProgress).ConfigureAwait(true);
             }
         }
         catch (OperationCanceledException) { return; }

@@ -132,6 +132,26 @@ public sealed class LibraryContentScannerTests : IDisposable
     }
 
     [Fact]
+    public async Task FindAllDuplicatesAsync_ReportsDetailedStageAndCurrentFile()
+    {
+        await File.WriteAllBytesAsync(Path.Combine(_root, "a.jpg"), [1, 2, 3]);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "b.jpg"), [1, 2, 3]);
+        var reports = new List<DuplicateScanProgress>();
+
+        await _scanner.FindAllDuplicatesAsync(
+            _root,
+            Extensions,
+            default,
+            detailProgress: new InlineProgress<DuplicateScanProgress>(reports.Add));
+
+        reports.Should().Contain(report => report.Stage == "建立文件清单" && report.Total == 2);
+        reports.Should().Contain(report => report.Stage == "SHA-256 精确比对"
+            && report.Processed == 2
+            && report.GroupsFound == 1
+            && !string.IsNullOrWhiteSpace(report.CurrentPath));
+    }
+
+    [Fact]
     public async Task FindAllDuplicatesAsync_ReturnsEmptyWhenNoDuplicates()
     {
         await File.WriteAllBytesAsync(Path.Combine(_root, "a.jpg"), [1, 2]);
@@ -319,4 +339,9 @@ public sealed class LibraryContentScannerTests : IDisposable
     {
         try { if (Directory.Exists(_root)) Directory.Delete(_root, true); } catch { }
     }
+}
+
+internal sealed class InlineProgress<T>(Action<T> report) : IProgress<T>
+{
+    public void Report(T value) => report(value);
 }

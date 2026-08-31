@@ -7,6 +7,13 @@ using SixLabors.ImageSharp.Processing;
 
 namespace HanabePhotoManager.Infrastructure.Files;
 
+public sealed record DuplicateScanProgress(
+    string Stage,
+    int Processed,
+    int Total,
+    string? CurrentPath,
+    int GroupsFound);
+
 /// <summary>
 /// 扫描照片库并检测内容重复和视觉近似文件。精确查重先按大小分桶，再使用 SHA-256 确认，
 /// 与 <see cref="DestinationProbe"/> 的冲突判断策略保持一致。
@@ -28,7 +35,8 @@ public sealed class LibraryContentScanner
         string libraryRoot,
         IReadOnlySet<string> extensions,
         CancellationToken cancellationToken,
-        IProgress<double>? progress = null)
+        IProgress<double>? progress = null,
+        IProgress<DuplicateScanProgress>? detailProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
@@ -56,6 +64,7 @@ public sealed class LibraryContentScanner
 
             // 枚举阶段：0% → 40%
             progress?.Report(files.Length == 0 ? 40d : index * 40d / files.Length);
+            detailProgress?.Report(new("建立文件清单", index + 1, files.Length, path, 0));
         }
 
         return await Task.FromResult(sizeMap).ConfigureAwait(false);
@@ -115,12 +124,13 @@ public sealed class LibraryContentScanner
         string libraryRoot,
         IReadOnlySet<string> extensions,
         CancellationToken cancellationToken,
-        IProgress<double>? progress = null)
+        IProgress<double>? progress = null,
+        IProgress<DuplicateScanProgress>? detailProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
 
-        var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken, progress)
+        var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken, progress, detailProgress)
             .ConfigureAwait(false);
 
         var duplicateGroups = new List<List<string>>();
@@ -169,6 +179,7 @@ public sealed class LibraryContentScanner
                     byHash[hash] = group;
                 }
                 group.Add(candidate);
+                detailProgress?.Report(new("SHA-256 精确比对", hashedIndex, totalCandidates, candidate, duplicateGroups.Count));
             }
 
             foreach (var group in byHash.Values)
@@ -178,6 +189,7 @@ public sealed class LibraryContentScanner
                     duplicateGroups.Add(group);
                     foreach (var path in group)
                         processed.Add(path);
+                    detailProgress?.Report(new("SHA-256 精确比对", hashedIndex, totalCandidates, group[0], duplicateGroups.Count));
                 }
             }
         }
@@ -200,7 +212,8 @@ public sealed class LibraryContentScanner
         IReadOnlySet<string> extensions,
         IReadOnlyCollection<string>? excludePaths,
         CancellationToken cancellationToken,
-        IProgress<double>? progress = null)
+        IProgress<double>? progress = null,
+        IProgress<DuplicateScanProgress>? detailProgress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(libraryRoot);
         ArgumentNullException.ThrowIfNull(extensions);
@@ -239,6 +252,7 @@ public sealed class LibraryContentScanner
 
             // 视觉指纹检测阶段：0% → 100%（VM 层会缩放到 80% → 100%）
             progress?.Report(index * 100d / paths.Count);
+            detailProgress?.Report(new("视觉指纹生成", index + 1, paths.Count, path, 0));
 
             // 周期性让出执行权，防止大图库视觉扫描长期占满调用线程。
             if ((hashes.Count & 31) == 0)
@@ -289,7 +303,10 @@ public sealed class LibraryContentScanner
             }
 
             if (group.Count >= 2)
+            {
                 groups.Add(group);
+                detailProgress?.Report(new("视觉近似分组", i + 1, hashes.Count, hashes[i].Path, groups.Count));
+            }
         }
 
         return groups;

@@ -18,6 +18,7 @@ public partial class HanabeAssistantWindow : Window
     private int _idleActionIndex;
     private System.Windows.Point _avatarPointerStart;
     private bool _avatarDragCandidate;
+    private bool _hasUserPosition;
 
     public HanabeAssistantWindow()
     {
@@ -32,9 +33,9 @@ public partial class HanabeAssistantWindow : Window
         };
         Loaded += (_, _) => { AttachViewModel(); UpdatePresentation(); _idleActionTimer.Start(); };
         DataContextChanged += (_, _) => { AttachViewModel(); UpdatePresentation(); };
-        SizeChanged += (_, _) => PositionAtWorkAreaEdge();
+        SizeChanged += (_, _) => PositionAutomatically();
         Closed += (_, _) => { _idleActionTimer.Stop(); _singleClickTimer.Stop(); DetachViewModel(); };
-        PositionAtWorkAreaEdge();
+        PositionAutomatically();
     }
 
     private void AttachViewModel()
@@ -77,7 +78,7 @@ public partial class HanabeAssistantWindow : Window
         Width = active ? Math.Max(420, avatarWidth + 324) : avatarWidth + 154;
         MinHeight = active ? Math.Max(136, avatarHeight + 24) : avatarHeight + 16;
         if (active) ResetAvatarMotion(); else PlayIdleAction(_idleActionIndex);
-        PositionAtWorkAreaEdge();
+        PositionAutomatically();
     }
 
     private void IdleActionTimer_Tick(object? sender, EventArgs e)
@@ -179,7 +180,11 @@ public partial class HanabeAssistantWindow : Window
 
         _avatarDragCandidate = false;
         AssistantAvatar.ReleaseMouseCapture();
-        try { DragMove(); }
+        try
+        {
+            DragMove();
+            _hasUserPosition = true;
+        }
         catch (InvalidOperationException) { }
         e.Handled = true;
     }
@@ -194,8 +199,9 @@ public partial class HanabeAssistantWindow : Window
         e.Handled = true;
     }
 
-    private void PositionAtWorkAreaEdge()
+    private void PositionAutomatically()
     {
+        if (_hasUserPosition) return;
         var area = SystemParameters.WorkArea;
         Left = Math.Max(area.Left, area.Right - Width - 24);
         Top = Math.Max(area.Top, area.Bottom - ActualHeight - 24);
@@ -215,7 +221,11 @@ public partial class HanabeAssistantWindow : Window
             return;
         }
 
-        try { DragMove(); }
+        try
+        {
+            DragMove();
+            _hasUserPosition = true;
+        }
         catch (InvalidOperationException) { }
     }
 

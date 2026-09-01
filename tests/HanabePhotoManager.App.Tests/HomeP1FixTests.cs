@@ -24,7 +24,9 @@ public sealed class HomeP1FixTests
         xaml.Should().Contain("HomeRecentFolders");
         xaml.Should().Contain("Cover1.Thumbnail");
         xaml.Should().Contain("Icon.Folder");
-        xaml.Should().Contain("打开日期文件夹");
+        xaml.Should().Contain("FolderName");
+        xaml.Should().Contain("DateText");
+        xaml.Should().Contain("查看这次拍摄");
     }
 
     [Fact]

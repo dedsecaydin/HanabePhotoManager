@@ -50,9 +50,11 @@ public sealed class ControlThemeTests
     {
         var root = FindSourceRoot();
         var xamlPath = Path.Combine(root, "src", "HanabePhotoManager.App", "HanabeAssistantWindow.xaml");
+        var codePath = Path.Combine(root, "src", "HanabePhotoManager.App", "HanabeAssistantWindow.xaml.cs");
         var project = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "HanabePhotoManager.App.csproj"));
         File.Exists(xamlPath).Should().BeTrue();
         var xaml = File.ReadAllText(xamlPath);
+        var code = File.ReadAllText(codePath);
 
         xaml.Should().Contain("Title=\"Hanabe 任务助手\"")
             .And.Contain("BooleanToVisibilityConverter x:Key=\"BoolToVis\"")
@@ -83,6 +85,8 @@ public sealed class ControlThemeTests
             .And.Contain("Text=\"{Binding ImportSkippedCount, Mode=OneWay}\"")
             .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
         project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
+        code.Should().Contain("_hasUserPosition = true")
+            .And.Contain("if (_hasUserPosition) return;");
     }
 
     [Fact]

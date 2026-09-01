@@ -7674,7 +7674,8 @@ public sealed record HomeRecentFolderViewModel(
     string SizeText,
     IReadOnlyList<PreviewFileViewModel> Covers)
 {
-    public string Title => Node.Title;
+    public string FolderName => Path.GetFileName(Node.FullPath);
+    public string DateText => Node.Date is { } date ? $"{date.Year}.{date.Month:00}.{date.Day:00}" : Node.Title;
     public string Subtitle => $"{PhotoCount:N0} 张照片 · {VideoCount:N0} 个视频 · {SizeText}";
     public PreviewFileViewModel? Cover1 => Covers.ElementAtOrDefault(0);
     public PreviewFileViewModel? Cover2 => Covers.ElementAtOrDefault(1);

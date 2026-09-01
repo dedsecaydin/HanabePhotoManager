@@ -697,29 +697,38 @@
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:HomeRecentFolderViewModel}">
-                          <Button Width="300" Height="172" Margin="0,0,14,14" Padding="0" HorizontalContentAlignment="Stretch"
+                          <Button Width="286" Height="206" Margin="0,0,14,14" Padding="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                                   Style="{StaticResource Button.Ghost}" Command="{Binding DataContext.OpenHomeRecentFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
-                            <Grid Margin="4,8,4,4">
-                              <Grid.RowDefinitions><RowDefinition Height="28"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                              <Border Width="132" Height="30" Padding="12,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.PrimaryContainer}">
-                                <TextBlock Text="{Binding DateText}" VerticalAlignment="Center" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Primary}"/>
-                              </Border>
-                              <Border Grid.Row="1" Margin="0,-3,0,0" Padding="12" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1">
-                                <Grid>
-                                  <Grid.ColumnDefinitions><ColumnDefinition Width="112"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                  <Grid Width="106" Height="84" VerticalAlignment="Center">
-                                    <Border Width="62" Height="62" Margin="0,8,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" ClipToBounds="True"><Image Source="{Binding Cover3.Thumbnail}" Stretch="UniformToFill"/></Border>
-                                    <Border Width="62" Height="62" Margin="18,4,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True"><Image Source="{Binding Cover2.Thumbnail}" Stretch="UniformToFill"/></Border>
-                                    <Border Width="62" Height="62" Margin="36,0,0,0" HorizontalAlignment="Left" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.Border.Strong}" BorderThickness="1" ClipToBounds="True"><Image Source="{Binding Cover1.Thumbnail}" Stretch="UniformToFill"/></Border>
+                            <Border Margin="3" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True">
+                              <Grid>
+                                <Grid.RowDefinitions><RowDefinition Height="118"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <Grid Background="{DynamicResource Brush.Surface.Container}">
+                                  <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                  <Border BorderBrush="{DynamicResource Brush.Surface.Subtle}" BorderThickness="0,0,2,0" ClipToBounds="True">
+                                    <Image Source="{Binding Cover1.Thumbnail}" Stretch="UniformToFill"/>
+                                  </Border>
+                                  <Grid Grid.Column="1">
+                                    <Grid.RowDefinitions><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                                    <Border BorderBrush="{DynamicResource Brush.Surface.Subtle}" BorderThickness="0,0,0,1" ClipToBounds="True"><Image Source="{Binding Cover2.Thumbnail}" Stretch="UniformToFill"/></Border>
+                                    <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Surface.Subtle}" BorderThickness="0,1,0,0" ClipToBounds="True"><Image Source="{Binding Cover3.Thumbnail}" Stretch="UniformToFill"/></Border>
                                   </Grid>
-                                  <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
-                                    <DockPanel><Path DockPanel.Dock="Left" Data="{StaticResource Icon.Folder}" Width="20" Height="20" Stretch="Uniform" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.7" Margin="0,0,8,0"/><TextBlock Text="{Binding FolderName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderName}"/></DockPanel>
-                                    <TextBlock Text="{Binding Subtitle}" Margin="0,7,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" TextWrapping="Wrap"/>
-                                    <TextBlock Text="查看这次拍摄  →" Margin="0,9,0,0" Foreground="{DynamicResource Brush.Primary}" FontSize="{StaticResource Typography.Caption}"/>
-                                  </StackPanel>
+                                  <Border Margin="10" Padding="9,4" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="{StaticResource Radius.Pill}" Background="{DynamicResource Brush.Surface.Overlay}">
+                                    <TextBlock Text="{Binding DateText}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}"/>
+                                  </Border>
                                 </Grid>
-                              </Border>
-                            </Grid>
+                                <Grid Grid.Row="1" Margin="14,11,14,12">
+                                  <Grid.ColumnDefinitions><ColumnDefinition Width="34"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                  <Border Width="30" Height="30" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.PrimaryContainer}">
+                                    <Viewbox Width="17" Height="17"><Path Data="{StaticResource Icon.Folder}" Stretch="Uniform" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.7" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/></Viewbox>
+                                  </Border>
+                                  <StackPanel Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FolderName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding FolderName}"/>
+                                    <TextBlock Text="{Binding Subtitle}" Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" TextTrimming="CharacterEllipsis"/>
+                                  </StackPanel>
+                                  <TextBlock Grid.Column="2" Text="›" VerticalAlignment="Center" FontSize="22" Foreground="{DynamicResource Brush.Text.Tertiary}"/>
+                                </Grid>
+                              </Grid>
+                            </Border>
                           </Button>
                         </DataTemplate>
                       </ItemsControl.ItemTemplate>

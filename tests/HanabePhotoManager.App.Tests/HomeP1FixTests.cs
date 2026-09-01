@@ -16,6 +16,7 @@ public sealed class HomeP1FixTests
     public void Home_RecentMediaUsesAdaptiveDateFolderCards()
     {
         var xaml = Read("MainWindow.xaml");
+        var radiusTokens = Read("Themes", "Tokens", "Radius.xaml");
 
         // P1-2: adaptive wrap, no fixed column count; image-first main visual.
         xaml.Should().Contain("<WrapPanel");
@@ -28,6 +29,8 @@ public sealed class HomeP1FixTests
         xaml.Should().Contain("DateText");
         xaml.Should().Contain("Brush.Surface.Overlay");
         xaml.Should().Contain("Cover3.Thumbnail");
+        xaml.Should().Contain("Radius.Full").And.NotContain("Radius.Pill");
+        radiusTokens.Should().Contain("x:Key=\"Radius.Full\"");
     }
 
     [Fact]

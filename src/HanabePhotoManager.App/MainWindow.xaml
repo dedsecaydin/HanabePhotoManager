@@ -712,7 +712,7 @@
                                     <Border BorderBrush="{DynamicResource Brush.Surface.Subtle}" BorderThickness="0,0,0,1" ClipToBounds="True"><Image Source="{Binding Cover2.Thumbnail}" Stretch="UniformToFill"/></Border>
                                     <Border Grid.Row="1" BorderBrush="{DynamicResource Brush.Surface.Subtle}" BorderThickness="0,1,0,0" ClipToBounds="True"><Image Source="{Binding Cover3.Thumbnail}" Stretch="UniformToFill"/></Border>
                                   </Grid>
-                                  <Border Margin="10" Padding="9,4" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="{StaticResource Radius.Pill}" Background="{DynamicResource Brush.Surface.Overlay}">
+                                  <Border Margin="10" Padding="9,4" HorizontalAlignment="Left" VerticalAlignment="Top" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.Overlay}">
                                     <TextBlock Text="{Binding DateText}" FontSize="{StaticResource Typography.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}"/>
                                   </Border>
                                 </Grid>

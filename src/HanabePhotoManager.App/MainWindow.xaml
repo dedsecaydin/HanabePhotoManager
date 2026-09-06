@@ -445,6 +445,8 @@
         </Style.Triggers>
       </Style>
       <Style x:Key="PageSurface" TargetType="{x:Type FrameworkElement}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="VerticalAlignment" Value="Stretch" />
         <Setter Property="UIElement.Opacity" Value="1" />
         <Setter Property="RenderTransform">
           <Setter.Value>
@@ -667,7 +669,7 @@
             </Grid>
           </Border>
           <Grid Margin="24,8,24,8">
-            <Border Name="HomePage" Style="{StaticResource PageSurface}" Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}">
+            <Border Name="HomePage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Style="{StaticResource PageSurface}" Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="24,20">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                   <StackPanel>
@@ -700,12 +702,12 @@
                     <ItemsControl ItemContainerStyle="{StaticResource PreviewItemContainer}" ItemsSource="{Binding HomeRecentFolders}">
                       <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                          <WrapPanel />
+                          <UniformGrid Columns="4" />
                         </ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:HomeRecentFolderViewModel}">
-                          <Button Width="286" Height="206" Margin="0,0,14,14" Padding="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                          <Button Height="206" Margin="0,0,14,14" Padding="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                                   Style="{StaticResource Button.Ghost}" Command="{Binding DataContext.OpenHomeRecentFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}" CommandParameter="{Binding}">
                             <Border Margin="3" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.Subtle}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ClipToBounds="True">
                               <Grid>
@@ -1304,7 +1306,7 @@
                 </DockPanel>
               </Border>
             </Grid>
-            <Grid Name="PreviewPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
+            <Grid Name="PreviewPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Style="{StaticResource PageSurface}" Visibility="{Binding IsPreviewPage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
                 <DockPanel LastChildFill="True">
                   <DockPanel DockPanel.Dock="Top" Margin="0,0,0,14" LastChildFill="True">
@@ -1325,7 +1327,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
               </Grid.RowDefinitions>
-              <Expander x:Name="BrowseConditionsPanel" Grid.Row="0" Header="浏览条件"
+              <Expander x:Name="BrowseConditionsPanel" HorizontalAlignment="Stretch" Grid.Row="0" Header="浏览条件"
                         IsExpanded="{Binding IsBrowseConditionsExpanded, Mode=TwoWay}" Margin="0,0,0,14">
                 <Expander.HeaderTemplate>
                   <DataTemplate>
@@ -2146,7 +2148,7 @@
                 </DockPanel>
               </Border>
             </Grid>
-            <Grid Name="FaceSearchPage" Style="{StaticResource PageSurface}" Visibility="{Binding IsFaceSearchPage, Converter={StaticResource BoolToVis}}">
+            <Grid Name="FaceSearchPage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Style="{StaticResource PageSurface}" Visibility="{Binding IsFaceSearchPage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
                 <DockPanel LastChildFill="True">
                   <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
@@ -2169,7 +2171,7 @@
 
               <!-- Tab 1：人物相册 -->
               <Grid Grid.Row="1">
-                <ScrollViewer x:Name="PeopleGroupsPanel" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer x:Name="PeopleGroupsPanel" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalScrollBarVisibility="Auto">
                   <StackPanel>
                     <!-- 扫描状态条：模型徽章 / 汇总 / 进度 / 就绪 -->
                   <Border Margin="0,0,0,16" Padding="14,12" Background="Transparent" BorderThickness="0">
@@ -2211,11 +2213,11 @@
                     </TextBlock>
                     <ItemsControl ItemsSource="{Binding PeopleAlbums.Albums}">
                       <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type vm:PersonAlbumItemViewModel}">
-                          <Button Width="150" Margin="0,0,10,16" Padding="10,12" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center" Command="{Binding SelectCommand}" ToolTip="点击查看此人物的照片" Cursor="Hand">
+                          <Button Margin="0,0,10,16" Padding="10,12" Background="Transparent" BorderThickness="0" HorizontalContentAlignment="Center" Command="{Binding SelectCommand}" ToolTip="点击查看此人物的照片" Cursor="Hand">
                             <StackPanel>
                               <Border Width="96" Height="96" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" ClipToBounds="True" HorizontalAlignment="Center">
                                 <Grid>

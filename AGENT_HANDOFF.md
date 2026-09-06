@@ -7,6 +7,7 @@
 - Verification: Release build succeeded and 782 tests passed; full similarity-dialog interaction acceptance remains pending.
 - Daily desktop shortcut target was backed up to `.artifacts/backups/pre-alpha21` and replaced with the locally built alpha.21 payload; application DLL hashes matched. This is a local replacement, not a new published release.
 - Pending: Audacity-produced event sounds, per-event controls, settings category/anchor redesign, final version increment and release validation. Audacity portable is under `.artifacts/audio-tools` on D:.
+- 2026-09-06 follow-up: event sounds, per-event switches, tool defaults, AI/person settings section, and same-page settings anchors implemented. Release verification and daily shortcut replacement are still pending for this follow-up.
 
 ## 2026-08-31 Hanabe sound and duplicate-report update
 

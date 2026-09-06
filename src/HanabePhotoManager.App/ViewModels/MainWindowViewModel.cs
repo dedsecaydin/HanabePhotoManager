@@ -1786,7 +1786,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool HanabeSoundQuietMode { get => _hanabeSoundQuietMode; set { if (SetProperty(ref _hanabeSoundQuietMode, value)) _ = SaveSettingsAsync(); } }
     public bool RestoreWindowAfterDuplicateDetection { get => _restoreWindowAfterDuplicateDetection; set { if (SetProperty(ref _restoreWindowAfterDuplicateDetection, value)) _ = SaveSettingsAsync(); } }
 
-    private HanabeSoundSettings CurrentHanabeSoundSettings => new(HanabeSoundEnabled, HanabeSoundStyle, HanabeSoundVolume, HanabeSoundQuietMode);
+    private HanabeSoundSettings CurrentHanabeSoundSettings => new(HanabeSoundEnabled, HanabeSoundStyle, HanabeSoundVolume, HanabeSoundQuietMode,
+        HanabeSoundStartEnabled, HanabeSoundCompletionEnabled, HanabeSoundFailureEnabled, HanabeSoundSkipEnabled, HanabeSoundOpenEnabled, HanabeSoundCancelEnabled);
 
     private void PreviewHanabeSound(string? styleName)
     {
@@ -2473,6 +2474,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         HanabeSoundStyle = Enum.TryParse<HanabeSoundStyle>(settings.HanabeSoundStyle, true, out var soundStyle) ? soundStyle : HanabeSoundStyle.Mixed;
         HanabeSoundVolume = settings.HanabeSoundVolume;
         HanabeSoundQuietMode = settings.HanabeSoundQuietMode;
+        LoadSoundEvents(settings);
+        LoadToolDefaults(settings);
         RestoreWindowAfterDuplicateDetection = settings.RestoreWindowAfterDuplicateDetection;
         BackgroundMode = settings.BackgroundMode;
         BackgroundImageLayout = string.IsNullOrWhiteSpace(settings.BackgroundImageLayout) ? "填充" : settings.BackgroundImageLayout;
@@ -4156,6 +4159,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
         }
 
+        if (skipped > 0) _hanabeSoundService.PlayEvent(HanabeSoundEvent.Skipped, CurrentHanabeSoundSettings);
         return new ImportRunResult(success, skipped, failed, lines, failureLines);
     }
 
@@ -4992,6 +4996,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             if (SetProperty(ref _currentPage, value))
             {
                 RecordQuickActionUsage(value);
+                if (_isInitialized) _hanabeSoundService.PlayEvent(HanabeSoundEvent.FeatureOpened, CurrentHanabeSoundSettings);
                 OnPropertyChanged(nameof(IsHomePage));
                 OnPropertyChanged(nameof(IsImportPage));
                 OnPropertyChanged(nameof(IsPreviewPage));
@@ -6434,6 +6439,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.HanabeSoundStyle = HanabeSoundStyle.ToString();
             settings.HanabeSoundVolume = HanabeSoundVolume;
             settings.HanabeSoundQuietMode = HanabeSoundQuietMode;
+            SaveSoundEvents(settings);
+            SaveToolDefaults(settings);
             settings.RestoreWindowAfterDuplicateDetection = RestoreWindowAfterDuplicateDetection;
             settings.BackgroundMode = BackgroundMode;
             settings.BackgroundImageLayout = BackgroundImageLayout;

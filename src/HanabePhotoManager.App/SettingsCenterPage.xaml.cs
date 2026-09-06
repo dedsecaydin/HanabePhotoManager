@@ -74,6 +74,37 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         LibrarySection.Visibility = key == "library" ? Visibility.Visible : Visibility.Collapsed;
         BrowseSection.Visibility = key == "browse" ? Visibility.Visible : Visibility.Collapsed;
         AdvancedSection.Visibility = key == "advanced" ? Visibility.Visible : Visibility.Collapsed;
+        IntelligenceSection.Visibility = key == "intelligence" ? Visibility.Visible : Visibility.Collapsed;
+        ToolsSection.Visibility = key == "tools" ? Visibility.Visible : Visibility.Collapsed;
+        var section = key switch
+        {
+            "appearance" => AppearanceSection, "sound" => SoundSection,
+            "general" => GeneralSection, "library" => LibrarySection,
+            "browse" => BrowseSection, "intelligence" => IntelligenceSection,
+            "tools" => ToolsSection, _ => AdvancedSection
+        };
+        AnchorList.ItemsSource = FindHeaders(section).Select(header => new SettingAnchor(header.Text, header)).ToArray();
+        SettingsScroll.ScrollToTop();
+    }
+
+    private sealed record SettingAnchor(string Text, FrameworkElement Target);
+
+    private IEnumerable<TextBlock> FindHeaders(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            if (child is TextBlock text && ReferenceEquals(text.Style, FindResource("Settings.GroupHeader"))) yield return text;
+            foreach (var header in FindHeaders(child)) yield return header;
+        }
+    }
+
+    private void SettingAnchor_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button { Tag: FrameworkElement target })
+        {
+            var offset = target.TranslatePoint(new System.Windows.Point(), SettingsScroll).Y + SettingsScroll.VerticalOffset;
+            SettingsScroll.ScrollToVerticalOffset(Math.Max(0, offset));
+        }
     }
 
     private void UpdateThemeIndicators()

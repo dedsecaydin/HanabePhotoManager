@@ -187,6 +187,12 @@ public sealed class AppSettingsStore
 /// <summary>可持久化的用户设置模型；默认值同时承担旧版本兼容回退。</summary>
 public sealed class AppSettings
 {
+    public double DefaultCompressionMegabytes { get; set; } = 2;
+    public bool DefaultCollageLimitSize { get; set; }
+    public bool DefaultCollageBlur { get; set; }
+    public double DefaultWatermarkOpacity { get; set; } = .72;
+    public bool DefaultWatermarkPreserveMetadata { get; set; } = true;
+    public bool DefaultWatermarkRecursive { get; set; } = true;
     public bool HasCompletedOnboarding { get; set; }
 
     public bool ShowHanabeAssistant { get; set; } = true;
@@ -196,6 +202,12 @@ public sealed class AppSettings
     public string HanabeSoundStyle { get; set; } = "Mixed";
     public double HanabeSoundVolume { get; set; } = 35;
     public bool HanabeSoundQuietMode { get; set; }
+    public bool HanabeSoundStartEnabled { get; set; } = true;
+    public bool HanabeSoundCompletionEnabled { get; set; } = true;
+    public bool HanabeSoundFailureEnabled { get; set; } = true;
+    public bool HanabeSoundSkipEnabled { get; set; } = true;
+    public bool HanabeSoundOpenEnabled { get; set; }
+    public bool HanabeSoundCancelEnabled { get; set; } = true;
     public bool RestoreWindowAfterDuplicateDetection { get; set; } = true;
 
     public List<string> NavigationOrder { get; set; } = [];

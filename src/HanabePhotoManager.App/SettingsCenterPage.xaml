@@ -101,13 +101,15 @@
         <ListBoxItem Tag="sound"><TextBlock Text="音效" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="general"><TextBlock Text="常规" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="library"><TextBlock Text="照片库与导入" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="browse"><TextBlock Text="浏览与 AI" FontWeight="SemiBold" /></ListBoxItem>
+        <ListBoxItem Tag="browse"><TextBlock Text="浏览" FontWeight="SemiBold" /></ListBoxItem>
+        <ListBoxItem Tag="intelligence"><TextBlock Text="AI 与人物" FontWeight="SemiBold" /></ListBoxItem>
+        <ListBoxItem Tag="tools"><TextBlock Text="工具默认值" FontWeight="SemiBold" /></ListBoxItem>
         <ListBoxItem Tag="advanced"><TextBlock Text="高级" FontWeight="SemiBold" /></ListBoxItem>
       </ListBox>
     </Border>
 
     <!-- 右：设置内容（分组列表） -->
-    <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="SettingsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto">
       <StackPanel Margin="4,0,4,0">
 
         <!-- ─────── 外观 ─────── -->
@@ -415,6 +417,17 @@
               <StackPanel Orientation="Horizontal" Margin="0,14,0,0"><Button Content="试听 A · 相机机械" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Camera" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" /><Button Content="试听 B · Q 版" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Cute" Style="{StaticResource Button.Secondary}" Margin="0,0,8,0" /><Button Content="试听 C · 混合" Command="{Binding PreviewHanabeSoundCommand}" CommandParameter="Mixed" Style="{StaticResource Button.Secondary}" /></StackPanel>
             </StackPanel>
           </Border>
+
+          <TextBlock Text="按事件控制与试听" Style="{StaticResource Settings.GroupHeader}" />
+          <TextBlock Text="试听使用当前风格与音量，不受自动播放开关限制；音量为零时静音。安静模式优先，只允许已开启的完成和失败提示。" Style="{StaticResource Settings.RowDesc}" />
+          <Border Style="{StaticResource Settings.Group}"><StackPanel>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="开始 / 恢复" IsChecked="{Binding HanabeSoundStartEnabled, Mode=TwoWay}" /><TextBlock Text="扫描、校验与传输阶段开始时提示。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听开始 / 恢复" Command="{Binding PreviewSoundEventCommand}" CommandParameter="Start" Style="{StaticResource Button.Secondary}" /></Grid>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="完成" IsChecked="{Binding HanabeSoundCompletionEnabled, Mode=TwoWay}" /><TextBlock Text="任务成功结束时播放上行收束音。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听完成" Command="{Binding PreviewSoundEventCommand}" CommandParameter="Completed" Style="{StaticResource Button.Secondary}" /></Grid>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="失败 / 需要处理" IsChecked="{Binding HanabeSoundFailureEnabled, Mode=TwoWay}" /><TextBlock Text="失败、意外中断或存在未处理问题时提示。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听失败 / 需要处理" Command="{Binding PreviewSoundEventCommand}" CommandParameter="Failure" Style="{StaticResource Button.Secondary}" /></Grid>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="跳过" IsChecked="{Binding HanabeSoundSkipEnabled, Mode=TwoWay}" /><TextBlock Text="导入遇到已存在或主动跳过项目时提示；连续项目合并提示。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听跳过" Command="{Binding PreviewSoundEventCommand}" CommandParameter="Skipped" Style="{StaticResource Button.Secondary}" /></Grid>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="打开功能" IsChecked="{Binding HanabeSoundOpenEnabled, Mode=TwoWay}" /><TextBlock Text="切换功能页面时播放轻提示音，默认关闭。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听打开功能" Command="{Binding PreviewSoundEventCommand}" CommandParameter="FeatureOpened" Style="{StaticResource Button.Secondary}" /></Grid>
+            <Grid Margin="{StaticResource Spacing.Stack.8}"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><CheckBox Content="安全停止" IsChecked="{Binding HanabeSoundCancelEnabled, Mode=TwoWay}" /><TextBlock Text="到达安全停止点后提示，请求停止时不提前报结束。" Style="{StaticResource Settings.RowDesc}" /></StackPanel><Button Grid.Column="1" Content="试听" AutomationProperties.Name="试听安全停止" Command="{Binding PreviewSoundEventCommand}" CommandParameter="Canceled" Style="{StaticResource Button.Secondary}" /></Grid>
+          </StackPanel></Border>
         </StackPanel>
 
         <!-- ─────── 常规 ─────── -->
@@ -661,7 +674,7 @@
           </Border>
         </StackPanel>
         <StackPanel x:Name="BrowseSection" Visibility="Collapsed">
-          <TextBlock Text="浏览与 AI" Style="{StaticResource Layout.PageTitle}" />
+          <TextBlock Text="浏览" Style="{StaticResource Layout.PageTitle}" />
           <TextBlock Text="这里的默认值不会被当前浏览会话覆盖。" Style="{StaticResource Layout.SettingsHint}" />
 
           <Grid Margin="0,12,0,8">
@@ -711,6 +724,24 @@
 
           <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="图库显示" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}"><StackPanel>
+            <CheckBox Content="图库显示 PSD 文件" IsChecked="{Binding IsShowingPsdFiles, Mode=TwoWay}" />
+            <TextBlock Text="控制照片墙中的 PSD 可见性，不删除或转换文件。" Style="{StaticResource Settings.RowDesc}" />
+            <Border Style="{StaticResource Settings.Divider}" />
+            <CheckBox Content="矩形树图使用无边框布局" IsChecked="{Binding IsTreemapBorderless, Mode=TwoWay}" />
+            <TextBlock Text="矩形树图面积依据" Style="{StaticResource Settings.RowTitle}" />
+            <ComboBox ItemsSource="{Binding TreemapWeightModes}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding TreemapWeightMode, Mode=TwoWay}" Style="{StaticResource Input.SettingsComboBox}" />
+          </StackPanel></Border>
+        </StackPanel>
+
+        <StackPanel x:Name="IntelligenceSection" Visibility="Collapsed">
+          <TextBlock Text="AI 与人物" Style="{StaticResource Layout.PageTitle}" />
+          <TextBlock Text="配置本地识别、人物匹配与推理设备；调整参数不会自动启动扫描。" Style="{StaticResource Layout.SettingsHint}" />
+          <Grid Margin="0,20,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="AI 识别" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
@@ -746,13 +777,6 @@
               <TextBlock Text="语义参数仅对支持语义标签的引擎生效；人物识别继续在人物页面手动触发。" Style="{StaticResource Settings.RowDesc}" />
             </StackPanel>
           </Border>
-        </StackPanel>
-
-        <!-- ─────── 高级 ─────── -->
-        <StackPanel x:Name="AdvancedSection" Visibility="Collapsed">
-          <TextBlock Text="高级" Style="{StaticResource Layout.PageTitle}" />
-          <TextBlock Text="性能、存储位置、诊断、安全与快捷键参考。" Style="{StaticResource Layout.SettingsHint}" />
-
           <Grid Margin="0,12,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="性能" Style="{StaticResource Settings.GroupHeader}" />
@@ -817,11 +841,48 @@
 
           <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="人物与地图入口" Style="{StaticResource Settings.GroupHeader}" />
+          </Grid>
+          <WrapPanel><Button Content="打开人物识别" Command="{Binding ShowFaceSearchCommand}" Style="{StaticResource Button.Secondary}" /><Button Content="打开照片地图" Command="{Binding ShowMapPhotosCommand}" Style="{StaticResource Button.Secondary}" /></WrapPanel>
+          <TextBlock Text="人物识别按需在功能页启动；照片地图的位置修正需逐项确认。" Style="{StaticResource Settings.RowDesc}" />
+        </StackPanel>
+
+        <StackPanel x:Name="ToolsSection" Visibility="Collapsed">
+          <TextBlock Text="工具默认值" Style="{StaticResource Layout.PageTitle}" />
+          <TextBlock Text="设置会立即保存，并用于下次启动；任务进行时请先等待完成再调整参数。" Style="{StaticResource Layout.SettingsHint}" />
+          <TextBlock Text="压缩与拼图" Style="{StaticResource Settings.GroupHeader}" />
+          <Border Style="{StaticResource Settings.Group}"><StackPanel>
+            <TextBlock Text="默认目标大小（MB，每张）" Style="{StaticResource Settings.RowTitle}" />
+            <TextBox Text="{Binding DefaultCompressionMegabytes, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" Style="{StaticResource Input.TextBox}" />
+            <TextBlock Text="范围 0.1–100 MB。作为下次启动的初始目标，不保证所有格式都能达到指定体积。" Style="{StaticResource Settings.RowDesc}" />
+            <CheckBox Content="拼图限制输出尺寸" IsChecked="{Binding DefaultCollageLimitSize, Mode=TwoWay}" />
+            <CheckBox Content="拼图使用模糊背景" IsChecked="{Binding DefaultCollageBlur, Mode=TwoWay}" />
+            <Button Content="打开压缩与拼图" Command="{Binding ShowCompressionCommand}" Style="{StaticResource Button.Secondary}" />
+          </StackPanel></Border>
+          <TextBlock Text="水印" Style="{StaticResource Settings.GroupHeader}" />
+          <Border Style="{StaticResource Settings.Group}"><StackPanel>
+            <CheckBox Content="默认保留原图元数据" IsChecked="{Binding DefaultWatermarkPreserveMetadata, Mode=TwoWay}" />
+            <CheckBox Content="文件夹扫描包含子文件夹" IsChecked="{Binding DefaultWatermarkRecursive, Mode=TwoWay}" />
+            <TextBlock Text="默认水印不透明度" Style="{StaticResource Settings.RowTitle}" />
+            <Slider Minimum="0.05" Maximum="1" Value="{Binding DefaultWatermarkOpacity, Mode=TwoWay}" Style="{StaticResource Selection.Slider}" />
+            <TextBlock Text="默认值在下次启动时应用；当前任务可在水印页面单独调整。图片、水印与输出目录仍由每次任务选择。" Style="{StaticResource Settings.RowDesc}" />
+            <Button Content="打开水印工具" Command="{Binding ShowWatermarkCommand}" Style="{StaticResource Button.Secondary}" />
+          </StackPanel></Border>
+          <TextBlock Text="相册、目录与恢复" Style="{StaticResource Settings.GroupHeader}" />
+          <TextBlock Text="相册成员、日期目录命名和恢复目标属于具体任务，在对应功能页确认。" Style="{StaticResource Settings.RowDesc}" />
+          <WrapPanel><Button Content="相册" Command="{Binding ShowCustomAlbumsCommand}" Style="{StaticResource Button.Secondary}" /><Button Content="日期目录" Command="{Binding ShowDateFoldersCommand}" Style="{StaticResource Button.Secondary}" /><Button Content="文件恢复" Command="{Binding ShowRecoveryCommand}" Style="{StaticResource Button.Secondary}" /></WrapPanel>
+        </StackPanel>
+
+        <StackPanel x:Name="AdvancedSection" Visibility="Collapsed">
+          <TextBlock Text="高级" Style="{StaticResource Layout.PageTitle}" />
+          <TextBlock Text="存储位置、诊断、安全与快捷键参考。" Style="{StaticResource Layout.SettingsHint}" />
+          <Grid Margin="0,20,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="存储与诊断" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
-            <TextBlock Text="settings.json、主题、元数据、人物相册、地图缓存与云会话均位于当前 Windows 用户的本机应用数据目录。第一期只读展示，不提供清理、迁移或修改路径。" Style="{StaticResource Settings.RowDesc}" />
+            <TextBlock Text="设置、主题、索引、人物相册与地图缓存保存于下方显示的本机应用数据目录。指纹缓存可在“照片库与导入”单独清理；清理不删除照片。" Style="{StaticResource Settings.RowDesc}" />
           </Border>
 
           <Grid Margin="0,20,0,8">
@@ -839,7 +900,7 @@
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
-            <TextBlock Text="云凭据使用本地加密；本地 AI 在设备上运行。删除确认始终启用且不可关闭。" Style="{StaticResource Settings.RowDesc}" />
+            <TextBlock Text="AI 识别在本机运行。重复删除前重新核对文件内容，并要求人工确认；照片地图加载在线底图时需要网络连接。" Style="{StaticResource Settings.RowDesc}" />
           </Border>
         </StackPanel>
 
@@ -850,6 +911,13 @@
     <Border Grid.Column="4" Style="{StaticResource Inspector.Panel}">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
+          <TextBlock Text="本页目录" Style="{StaticResource Inspector.SectionLabel}" />
+          <TextBlock Text="点击定位到同一页面内的设置分组" Style="{StaticResource Settings.RowDesc}" />
+          <ItemsControl x:Name="AnchorList">
+            <ItemsControl.ItemTemplate><DataTemplate>
+              <Button Content="{Binding Text}" Tag="{Binding Target}" Click="SettingAnchor_Click" HorizontalContentAlignment="Left" Style="{StaticResource Button.Ghost}" />
+            </DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
           <TextBlock Text="当前主题" Style="{StaticResource Inspector.SectionLabel}" />
           <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
             <StackPanel>

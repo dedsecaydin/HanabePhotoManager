@@ -7,6 +7,32 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class HanabeSoundPolicyTests
 {
     [Theory]
+    [InlineData(HanabeAssistantState.Failed, "error")]
+    [InlineData(HanabeAssistantState.Interrupted, "error")]
+    [InlineData(HanabeAssistantState.CompletedWithIssues, "error")]
+    [InlineData(HanabeAssistantState.Resuming, "importing")]
+    [InlineData(HanabeAssistantState.Canceled, "canceled")]
+    public void RecoveryAndTerminalStates_ResolveExistingCueNames(HanabeAssistantState state, string cue)
+    {
+        HanabeSoundPolicy.Resolve(state, new(true, HanabeSoundStyle.Mixed, 35, false))
+            .Should().EndWith($"/{cue}.wav");
+    }
+
+    [Fact]
+    public void PerEventSwitchesAndQuietMode_AreBothRespected()
+    {
+        var disabled = new HanabeSoundSettings(true, HanabeSoundStyle.Mixed, 35, false,
+            false, false, false, false, false, false);
+        foreach (var kind in Enum.GetValues<HanabeSoundEvent>())
+            HanabeSoundPolicy.Resolve(kind, disabled).Should().BeNull();
+        HanabeSoundPolicy.Resolve(HanabeSoundEvent.Skipped, disabled with { SkipEnabled = true }).Should().EndWith("/skipped.wav");
+        HanabeSoundPolicy.Resolve(HanabeSoundEvent.FeatureOpened, disabled with { OpenEnabled = true }).Should().EndWith("/opened.wav");
+        HanabeSoundPolicy.Resolve(HanabeSoundEvent.Skipped, disabled with { SkipEnabled = true, QuietMode = true }).Should().BeNull();
+        HanabeSoundPolicy.Resolve(HanabeAssistantState.Failed, disabled with { FailureEnabled = true, QuietMode = true }).Should().EndWith("/error.wav");
+        HanabeSoundPolicy.Resolve(HanabeAssistantState.StopRequested, disabled with { CancelEnabled = true }).Should().BeNull();
+        HanabeSoundPolicy.Resolve(HanabeAssistantState.Recoverable, disabled with { StartEnabled = true }).Should().BeNull();
+    }
+    [Theory]
     [InlineData(HanabeSoundStyle.Camera, HanabeAssistantState.Scanning, "Assets/Hanabe/Sounds/Camera/scanning.wav")]
     [InlineData(HanabeSoundStyle.Cute, HanabeAssistantState.Completed, "Assets/Hanabe/Sounds/Cute/completed.wav")]
     [InlineData(HanabeSoundStyle.Mixed, HanabeAssistantState.Error, "Assets/Hanabe/Sounds/Mixed/error.wav")]

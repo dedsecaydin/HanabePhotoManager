@@ -85,6 +85,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         };
         AnchorList.ItemsSource = FindHeaders(section).Select(header => new SettingAnchor(header.Text, header)).ToArray();
         SettingsScroll.ScrollToTop();
+        CurrentAnchorText.Text = "当前分组：顶部";
     }
 
     private sealed record SettingAnchor(string Text, FrameworkElement Target);
@@ -105,6 +106,24 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
             var offset = target.TranslatePoint(new System.Windows.Point(), SettingsScroll).Y + SettingsScroll.VerticalOffset;
             SettingsScroll.ScrollToVerticalOffset(Math.Max(0, offset));
         }
+    }
+
+    private void SettingsScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (AnchorList.ItemsSource is not IEnumerable<SettingAnchor> anchors)
+            return;
+
+        var visible = anchors
+            .Select(anchor => new
+            {
+                anchor.Text,
+                Offset = anchor.Target.TranslatePoint(new System.Windows.Point(0, 0), SettingsScroll).Y
+            })
+            .Where(item => item.Offset <= 96)
+            .OrderByDescending(item => item.Offset)
+            .FirstOrDefault();
+
+        CurrentAnchorText.Text = visible is null ? "当前分组：顶部" : $"当前分组：{visible.Text}";
     }
 
     private void UpdateThemeIndicators()

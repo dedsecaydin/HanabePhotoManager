@@ -87,11 +87,11 @@
   </UserControl.Resources>
   <Grid Background="{DynamicResource Brush.Background.Canvas}">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="240" />
+      <ColumnDefinition Width="196" />
       <ColumnDefinition Width="16" />
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="16" />
-      <ColumnDefinition Width="320" />
+      <ColumnDefinition Width="280" />
     </Grid.ColumnDefinitions>
 
     <!-- 左：设置分区导航 -->
@@ -109,7 +109,7 @@
     </Border>
 
     <!-- 右：设置内容（分组列表） -->
-    <ScrollViewer x:Name="SettingsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto">
+    <ScrollViewer x:Name="SettingsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" ScrollChanged="SettingsScroll_ScrollChanged">
       <StackPanel Margin="4,0,4,0">
 
         <!-- ─────── 外观 ─────── -->
@@ -913,6 +913,7 @@
         <StackPanel>
           <TextBlock Text="本页目录" Style="{StaticResource Inspector.SectionLabel}" />
           <TextBlock Text="点击定位到同一页面内的设置分组" Style="{StaticResource Settings.RowDesc}" />
+          <TextBlock x:Name="CurrentAnchorText" Text="当前分组：顶部" Style="{StaticResource Settings.RowTitle}" Margin="0,8,0,4" />
           <ItemsControl x:Name="AnchorList">
             <ItemsControl.ItemTemplate><DataTemplate>
               <Button Content="{Binding Text}" Tag="{Binding Target}" Click="SettingAnchor_Click" HorizontalContentAlignment="Left" Style="{StaticResource Button.Ghost}" />

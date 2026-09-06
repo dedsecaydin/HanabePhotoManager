@@ -1193,3 +1193,8 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - 新增六类事件提示音及逐项开关/试听；三种风格共 24 个 48 kHz 单声道 WAV，使用 D 盘 Audacity 3.7.7 本地脚本管线和独立生成脚本。
 - 设置中心拆分浏览、AI 与人物、工具默认值和高级分区，工具默认参数写入 AppSettings；右侧目录支持页内滚动定位。
 - 验证：Release 构建 0 警告/0 错误；全量测试通过（Core 166、Infrastructure 64、App 547、Installer 12）。
+
+## 2026-09-06 — 设置导航密度与三级目录
+
+- 二级设置导航收窄至 196px；三级目录按当前分区重新生成，并在滚动时更新当前分组提示。
+- 验证：Release 构建 0 警告/0 错误。

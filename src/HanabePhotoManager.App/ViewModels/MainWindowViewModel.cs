@@ -257,6 +257,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private BrowseSnapshot? _sessionBrowseSnapshot;
 
     private string _diagnosticsText = "⏱ 库扫描 · 等待触发扫描…";
+    private bool _isPageHelpOpen;
 
     public MainWindowViewModel(
         IWindowsWallpaperService? wallpaperService = null,
@@ -390,6 +391,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         });
         NavigateTreemapCommand = new RelayCommand<string?>(TreemapBrowser.NavigateToAncestor);
         ShowSettingsCommand = new RelayCommand(() => CurrentPage = "Settings");
+        TogglePageHelpCommand = new RelayCommand(() => IsPageHelpOpen = !IsPageHelpOpen);
         ResetNavigationItems(null);
         SetPreviewCategoryCommand = new RelayCommand<string>(category => CurrentPreviewCategory = category!);
         NavigateGridCategoryCommand = new RelayCommand<string?>(NavigateGridCategory);
@@ -988,6 +990,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public IRelayCommand<string?> NavigateTreemapCommand { get; }
 
     public IRelayCommand ShowSettingsCommand { get; }
+
+    /// <summary>打开或关闭当前页面的操作说明。</summary>
+    public IRelayCommand TogglePageHelpCommand { get; }
 
     public IRelayCommand<string> SetPreviewCategoryCommand { get; }
 
@@ -5010,6 +5015,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 OnPropertyChanged(nameof(IsSettingsPage));
                 OnPropertyChanged(nameof(PageTitle));
                 OnPropertyChanged(nameof(PageSubtitle));
+                OnPropertyChanged(nameof(PageHelpTitle));
+                OnPropertyChanged(nameof(PageHelpOverview));
+                OnPropertyChanged(nameof(PageHelpSteps));
+                IsPageHelpOpen = false;
 
                 if (IsPreviewPage)
                 {
@@ -5155,6 +5164,57 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "DateFolders" => "集中查看日期目录，并一次保存所有备注更改。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
         _ => "设备连接、照片库状态和常用入口。"
+    };
+
+    public bool IsPageHelpOpen
+    {
+        get => _isPageHelpOpen;
+        set => SetProperty(ref _isPageHelpOpen, value);
+    }
+
+    public string PageHelpTitle => CurrentPage switch
+    {
+        "Import" => "导入照片 · 页面说明",
+        "Preview" => "照片图库 · 页面说明",
+        "CustomAlbums" => "自定义相册 · 页面说明",
+        "FaceSearch" => "人物查找 · 页面说明",
+        "MapPhotos" => "地图照片 · 页面说明",
+        "Compression" => "图片小工具 · 页面说明",
+        "Recovery" => "相机视频安全恢复 · 页面说明",
+        "Watermark" => "批量水印 · 页面说明",
+        "DateFolders" => "日期文件夹 · 页面说明",
+        "Settings" => "设置 · 页面说明",
+        _ => "主页 · 页面说明"
+    };
+
+    public string PageHelpOverview => CurrentPage switch
+    {
+        "Import" => "先选择来源和图库，再分析并确认日期文件夹；确认后才会开始复制或移动。中断时使用“继续导入”恢复未完成项目。",
+        "Preview" => "这里按日期浏览图库。筛选、搜索、缩放和右侧检查器只改变查看方式，不会改动原文件。",
+        "CustomAlbums" => "自定义相册是文件夹引用，适合把不同位置的照片集中查看；移除引用不会删除磁盘文件。",
+        "FaceSearch" => "使用一张参考人脸在本机图库中查找相似人物。结果按相似度排序，可双击打开原图。",
+        "MapPhotos" => "查看照片的 EXIF 位置，也可以给选中的照片手动标记地点；位置索引保存在本机。",
+        "Compression" => "选择压缩、拼接或其他图片工具，先调整参数和预览，再提交队列批量处理。",
+        "Recovery" => "对相机镜像执行只读扫描。可按卡片写入时间缩小范围，确认证据后再导出恢复文件。",
+        "Watermark" => "批量添加 PNG 签名或铺满水印。输出为新文件，原始照片不会被覆盖。",
+        "DateFolders" => "集中查看日期目录和备注，一次保存更改；适合整理导入后的日期命名。",
+        "Settings" => "按分类管理外观、导入、查重、AI、音效、工具默认值和高级选项；修改会自动保存。",
+        _ => "从这里选择图库、导入、人物、地图和图片工具，也能查看设备状态与最近日期文件夹。"
+    };
+
+    public string PageHelpSteps => CurrentPage switch
+    {
+        "Import" => "操作顺序\n1 选择来源\n2 分析并检查日期\n3 确认目录\n4 开始导入\n5 中断后继续或放弃恢复记录",
+        "Preview" => "操作顺序\n1 选择日期或分类\n2 使用搜索/高级筛选\n3 选中照片查看右侧信息\n4 用工具栏或右键执行操作",
+        "CustomAlbums" => "操作顺序\n1 新建或添加文件夹\n2 点击相册进入详情\n3 使用网格/列表查看\n4 需要时刷新或移除引用",
+        "FaceSearch" => "操作顺序\n1 拖入参考照片\n2 选择搜索范围和匹配强度\n3 开始查找\n4 双击结果查看原图",
+        "MapPhotos" => "操作顺序\n1 选择地点或照片\n2 在地图上查看\n3 多选照片后填写经纬度和名称\n4 保存手动标记",
+        "Compression" => "操作顺序\n1 选择工具\n2 添加文件\n3 调整参数并预览\n4 开始处理\n5 在结果区打开输出目录",
+        "Recovery" => "操作顺序\n1 打开 .img/.raw 镜像\n2 可选写入时间范围\n3 开始扫描并查看证据\n4 选择候选后安全导出",
+        "Watermark" => "操作顺序\n1 选择输入文件\n2 选择水印图片和位置\n3 设置透明度/缩放\n4 预览后批量导出",
+        "DateFolders" => "操作顺序\n1 选择日期目录\n2 编辑备注\n3 查看目标路径预览\n4 保存全部更改",
+        "Settings" => "操作顺序\n1 从左侧选择分类\n2 在同页滚动查看分组\n3 修改开关、下拉或数值\n4 使用右侧目录快速定位",
+        _ => "操作顺序\n1 选择图库根目录\n2 查看设备和最近日期\n3 从快速操作进入功能页\n4 遇到问题先查看右下角状态提示"
     };
 
     private void AddPreviewFile(string file, string category)

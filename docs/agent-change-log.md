@@ -1,5 +1,12 @@
 # Agent Change Log
 
+## 2026-09-07 — 全页面功能说明入口
+
+- 主窗口状态栏右下角新增“本页说明”，以 Popup 展示当前页面的用途、推荐操作顺序和安全提示。
+- 说明内容随 `CurrentPage` 自动切换，覆盖主页、导入、图库、自定义相册、人物查找、地图、图片工具、恢复、水印、日期文件夹和设置。
+- 新增 `docs/user-guide.md` 作为可离线阅读的功能说明书；不改变既有命令、绑定或业务流程。
+- 验证：Release 构建 `/warnaserror` 通过，0 警告、0 错误。
+
 ## 2026-08-31 — Hanabe 音效无声热修复
 
 - 根因：当前 Windows 环境下 WPF `MediaPlayer` 未触发媒体打开/播放事件，而同一 WAV 由 `System.Media.SoundPlayer` 可正常加载播放。

@@ -13,10 +13,11 @@ public sealed class RecoveryImageService
     private const int SearchBlockSize = 4 * 1024 * 1024;
 
     public async Task<RecoveryScanResult> ScanAsync(string imagePath, IProgress<double>? progress, CancellationToken cancellationToken,
-        IProgress<RecoveryCandidate>? candidateProgress = null)
+        IProgress<RecoveryCandidate>? candidateProgress = null, DateTime? writtenFrom = null, DateTime? writtenTo = null, bool includeUnknownTime = true)
     {
         if (!RecoverySafetyPolicy.IsSupportedImage(imagePath)) throw new NotSupportedException("仅支持 .img 和 .raw 镜像。");
         await using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, SearchBlockSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        if (stream.Length < 512) throw new InvalidDataException("镜像不足 512 字节，请选择完整的存储卡镜像。");
         var boot = new byte[512];
         await stream.ReadExactlyAsync(boot, cancellationToken);
         var exfatOffset = FindExFatOffset(stream, boot, cancellationToken);
@@ -24,17 +25,33 @@ public sealed class RecoveryImageService
         var sectorSize = isExFat ? 1 << bootAt(stream, exfatOffset + 108) : 0;
         var clusterSize = isExFat ? sectorSize * (1 << bootAt(stream, exfatOffset + 109)) : 0;
 
-        var starts = await FindFtypSignaturesAsync(stream, progress, cancellationToken);
+        if (writtenFrom.HasValue != writtenTo.HasValue || writtenFrom > writtenTo) throw new ArgumentException("请填写有效的起止写入时间。");
+        IReadOnlyList<ExFatTimeIndex.Entry>? index = null;
+        if (writtenFrom is not null)
+        {
+            if (!isExFat) throw new NotSupportedException("按写入时间快速扫描需要可读取的 exFAT 目录。请选择完整扫描查找目录已丢失的视频。");
+            index = ExFatTimeIndex.Read(stream, exfatOffset, cancellationToken)
+                .Where(e => e.LastWrite is { } time ? time >= writtenFrom && time <= writtenTo : includeUnknownTime).ToArray();
+        }
+        var starts = index is null ? await FindFtypSignaturesAsync(stream, progress, cancellationToken) : index.Select(e => e.Offset).Distinct().ToList();
         var candidates = new List<RecoveryCandidate>();
         foreach (var start in starts)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var candidate = ReadCandidate(stream, start);
+            if (candidate is not null && index is not null)
+            {
+                var entry = index.First(e => e.Offset == start);
+                var safe = entry.Contiguous && candidate.Length == entry.Length;
+                candidate = candidate with { LastWriteTime = entry.LastWrite, IsFragmented = !safe,
+                    Status = safe ? candidate.Status : RecoveryCandidateStatus.Experimental };
+            }
             if (candidate is not null && candidates.All(item => Math.Abs(item.StartOffset - candidate.StartOffset) > 16))
             {
                 candidates.Add(candidate);
                 candidateProgress?.Report(candidate);
             }
+            if (index is not null) progress?.Report((starts.IndexOf(start) + 1d) * 100 / Math.Max(1, starts.Count));
         }
         progress?.Report(100);
         return new(imagePath, stream.Length, isExFat, sectorSize, clusterSize, candidates, DateTimeOffset.UtcNow);
@@ -117,18 +134,40 @@ public sealed class RecoveryImageService
 
     public async Task<string> ExportDirectAsync(RecoveryScanResult scan, RecoveryCandidate candidate, string outputDirectory, IProgress<double>? progress, CancellationToken token)
     {
-        if (!RecoverySafetyPolicy.CanExport(candidate, scan.ImageLength)) throw new InvalidOperationException("该候选不满足安全直恢条件。实验候选不会自动导出。");
-        Directory.CreateDirectory(outputDirectory);
+        if (!RecoverySafetyPolicy.CanExport(candidate, scan.ImageLength) || !scan.Candidates.Contains(candidate)) throw new InvalidOperationException("该候选不满足安全直恢条件。实验候选不会自动导出。");
+        if (Path.GetFileName(candidate.ExpectedFileName) != candidate.ExpectedFileName || Path.GetFileName(candidate.Id) != candidate.Id)
+            throw new InvalidDataException("候选文件名无效。");
+        await using var imageLock = new FileStream(scan.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        if (imageLock.Length != scan.ImageLength || ReadCandidate(imageLock, candidate.StartOffset) is not { CanRecoverDirectly: true } current || current.EndOffset != candidate.EndOffset)
+            throw new InvalidDataException("镜像或候选结构发生变化，请重新扫描。");
+        token.ThrowIfCancellationRequested();
+        var finalDirectory = Path.Combine(Path.GetFullPath(outputDirectory), "recovered_" + Guid.NewGuid().ToString("N"));
+        var stagingDirectory = finalDirectory + ".partial";
+        Directory.CreateDirectory(stagingDirectory);
+        try
+        {
+        outputDirectory = stagingDirectory;
         var rawPath = Path.Combine(outputDirectory, candidate.Id + ".raw-candidate");
         var mp4Path = Path.Combine(outputDirectory, candidate.ExpectedFileName);
         await CopyRangeAsync(scan.ImagePath, rawPath, candidate.StartOffset, candidate.Length, progress, token);
-        File.Copy(rawPath, mp4Path, overwrite: false);
-        await using var recoveredStream = File.OpenRead(mp4Path);
-        var sha = Convert.ToHexString(await SHA256.HashDataAsync(recoveredStream, token)).ToLowerInvariant();
+        await CopyRangeAsync(rawPath, mp4Path, 0, candidate.Length, null, token);
+        string sha;
+        await using (var recoveredStream = File.OpenRead(mp4Path))
+            sha = Convert.ToHexString(await SHA256.HashDataAsync(recoveredStream, token)).ToLowerInvariant();
         var report = new { observed = new { scan.ImagePath, scan.ImageLength, scan.IsExFat }, verified = new { candidate.HasFtyp, candidate.HasMdat, candidate.HasMoov, candidate.HasSampleTables, sha256 = sha }, inferred = new { candidate.ExpectedFileName, candidate.Confidence }, experimental = false };
         await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }), token);
-        await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".md"), $"# 相机视频安全恢复报告\n\n- 镜像：`{scan.ImagePath}`\n- 输出：`{mp4Path}`\n- SHA-256：`{sha}`\n- 验证：ftyp / mdat / moov / sample tables 均存在\n- 原始候选永久保留：`{rawPath}`\n", token);
-        return mp4Path;
+        await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".md"), $"# 相机视频恢复报告\n\n- 镜像：`{scan.ImagePath}`\n- 输出：`{Path.Combine(finalDirectory, candidate.ExpectedFileName)}`\n- SHA-256：`{sha}`\n- 验证：已识别 ftyp / mdat / moov / 采样表标记；未验证解码及完整播放\n- 原始候选：`{Path.Combine(finalDirectory, candidate.Id + ".raw-candidate")}`\n", token);
+        token.ThrowIfCancellationRequested();
+        Directory.Move(stagingDirectory, finalDirectory);
+        progress?.Report(100);
+        return Path.Combine(finalDirectory, candidate.ExpectedFileName);
+        }
+        catch
+        {
+            // Only this attempt's isolated output is removed; source and previous exports are untouched.
+            if (Directory.Exists(stagingDirectory)) Directory.Delete(stagingDirectory, true);
+            throw;
+        }
     }
 
     private static async Task CopyRangeAsync(string sourcePath, string destinationPath, long offset, long length, IProgress<double>? progress, CancellationToken token)

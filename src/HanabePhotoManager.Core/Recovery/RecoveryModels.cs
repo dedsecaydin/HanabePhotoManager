@@ -8,8 +8,10 @@ public sealed record RecoveryCandidate(
     bool HasFtyp, bool HasMdat, bool HasMoov, bool HasSampleTables,
     bool IsFragmented, RecoveryConfidence Confidence, RecoveryCandidateStatus Status)
 {
+    public DateTime? LastWriteTime { get; init; }
+    public string TimeDescription => LastWriteTime is { } time ? $"卡内最后写入：{time:yyyy-MM-dd HH:mm:ss}" : "写入时间未知";
     public long Length => EndOffset - StartOffset;
-    public bool CanRecoverDirectly => Status == RecoveryCandidateStatus.Direct && HasFtyp && HasMdat && HasMoov && !IsFragmented;
+    public bool CanRecoverDirectly => Status == RecoveryCandidateStatus.Direct && HasFtyp && HasMdat && HasMoov && HasSampleTables && !IsFragmented;
 }
 
 public sealed record RecoveryScanResult(

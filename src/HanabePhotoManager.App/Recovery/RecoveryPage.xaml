@@ -1,19 +1,32 @@
 <UserControl x:Class="HanabePhotoManager.App.Recovery.RecoveryPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:recovery="clr-namespace:HanabePhotoManager.Core.Recovery;assembly=HanabePhotoManager.Core">
+  <UserControl.Resources><BooleanToVisibilityConverter x:Key="RecoveryVisibility" /></UserControl.Resources>
   <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
       <StackPanel><TextBlock Text="相机视频安全恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="从 Sony 相机卡的只读镜像中寻找并安全导出异常或缺失的 XAVC MP4。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
-      <Border Grid.Row="1" Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
+      <StackPanel Grid.Row="1">
+      <Border Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
           <StackPanel><TextBlock Text="安全保证" FontWeight="SemiBold"/><TextBlock Text="原卡与镜像只读 · 不运行 CHKDSK · 不修改 FAT、位图或目录 · 实验候选不会自动恢复" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
-          <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
-          <Button Grid.Column="2" Content="开始扫描" Command="{Binding ScanCommand}" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"/>
+          <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
+          <Button Grid.Column="2" Content="开始扫描" Command="{Binding ScanCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"/>
         </Grid>
       </Border>
+      <StackPanel IsEnabled="{Binding CanEditScanOptions}" Margin="0,0,0,16">
+        <CheckBox Content="按写入日期时间快速扫描" IsChecked="{Binding UseWriteTimeRange}" />
+        <WrapPanel IsEnabled="{Binding UseWriteTimeRange}" Margin="0,8,0,8">
+          <TextBlock Text="开始 " VerticalAlignment="Center"/><DatePicker SelectedDate="{Binding WrittenFromDate}" Width="150"/><TextBox Text="{Binding WrittenFromClock, UpdateSourceTrigger=PropertyChanged}" Width="100" Style="{StaticResource Input.TextBox}" ToolTip="HH:mm:ss"/>
+          <TextBlock Text="  结束 " VerticalAlignment="Center"/><DatePicker SelectedDate="{Binding WrittenToDate}" Width="150"/><TextBox Text="{Binding WrittenToClock, UpdateSourceTrigger=PropertyChanged}" Width="100" Style="{StaticResource Input.TextBox}" ToolTip="HH:mm:ss"/>
+          <CheckBox Content="包含目录中时间未知的视频" IsChecked="{Binding IncludeUnknownTime}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        </WrapPanel>
+        <TextBlock Text="按存储卡记录的本地最后写入时间筛选，精确到秒。快速扫描只读取现存目录及其中保留的删除记录；目录已丢失的内容需关闭此选项进行完整扫描。相机时钟不准也会影响结果。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" />
+      </StackPanel>
+      </StackPanel>
       <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="320"/></Grid.ColumnDefinitions>
         <Border Style="{StaticResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-          <DockPanel><TextBlock Text="恢复候选" Style="{StaticResource Layout.SectionTitle}"/><Button DockPanel.Dock="Right" Content="取消" Command="{Binding CancelCommand}" Style="{StaticResource Button.Ghost}"/></DockPanel>
-          <StackPanel Grid.Row="1" Margin="0,10,0,12"><ProgressBar Height="6" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/><TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"/></StackPanel>
+          <DockPanel LastChildFill="True"><Button DockPanel.Dock="Right" Content="停止任务" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Style="{StaticResource Button.Ghost}"/><StackPanel><TextBlock Text="恢复候选" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="{Binding CandidateSummary}" Style="{StaticResource Status.Description}" /></StackPanel></DockPanel>
+          <StackPanel Grid.Row="1" Margin="0,10,0,12"><ProgressBar Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Height="6" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/><TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"/></StackPanel>
+          <TextBlock Grid.Row="2" Text="{Binding EmptyStateText}" Visibility="{Binding ShowEmptyState, Converter={StaticResource RecoveryVisibility}}" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" />
           <ListBox Grid.Row="2" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
                    Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemContainerStyle>
@@ -30,6 +43,7 @@
                     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                     <StackPanel>
                       <TextBlock Text="{Binding ExpectedFileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding TimeDescription}" Foreground="{DynamicResource Brush.Text.Secondary}" />
                       <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}">
                         <Run Text="偏移 "/><Run Text="{Binding StartOffset}"/><Run Text=" · "/><Run Text="{Binding Confidence}"/>
                       </TextBlock>
@@ -47,7 +61,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </Grid></Border>
-        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><StackPanel><TextBlock Text="证据" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold"/><TextBlock Text="只允许 ftyp、mdat、moov 与 sample tables 完整且非碎片候选直接恢复。其他候选标记为 EXPERIMENTAL，仅展示证据。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="安全恢复所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/></StackPanel></Border>
+        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="候选证据与导出" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding CandidateEvidence}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="导出所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/><TextBlock Text="输出包括视频副本、原始候选和 SHA-256 报告，至少需要候选大小两倍的可用空间。请在原存储卡以外的位置保存。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" Margin="0,8,0,16"/><Button Content="打开上次输出目录" Command="{Binding OpenOutputCommand}" Style="{StaticResource Button.Secondary}" /></StackPanel></ScrollViewer></Border>
       </Grid>
     </Grid>
   </Border>

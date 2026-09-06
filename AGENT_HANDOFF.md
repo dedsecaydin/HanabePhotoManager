@@ -1,5 +1,11 @@
 # Agent Handoff — Current Project State
 
+## 2026-09-07 Recovery assistant alpha.24
+
+- Added directory-based exFAT last-write time range scanning (card-local time), unknown-time inclusion and explicit full-scan fallback instructions.
+- Recovery resets stale selection on image changes; export rechecks structure and publishes isolated output only after completion, cleaning canceled output.
+- 792 tests pass; actual damaged-card recovery effectiveness remains unverified. No fragmented-file reconstruction is implemented.
+
 ## 2026-09-06 Import recovery and incremental duplicate review
 
 - Implemented frozen import recovery plans, durable transfer receipts before source deletion, and explicit resume/discard controls.

@@ -3,30 +3,30 @@
   <Border Style="{StaticResource Layout.PagePanel}" Padding="16">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <StackPanel><TextBlock Text="相机视频安全恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="从 Sony 相机卡的只读镜像中寻找并安全导出异常或缺失的 XAVC MP4。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
+      <StackPanel><TextBlock Text="相机视频安全恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="选择镜像，按写入时间查找视频，再检查证据并导出。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
       <StackPanel Grid.Row="1">
       <Border Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="安全保证" FontWeight="SemiBold"/><TextBlock Text="原卡与镜像只读 · 不运行 CHKDSK · 不修改 FAT、位图或目录 · 实验候选不会自动恢复" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
+          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="支持 Sony 存储卡 .img / .raw 镜像" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
           <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
-          <Button Grid.Column="2" Content="开始扫描" Command="{Binding ScanCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Primary}" Margin="8,0,0,0"/>
         </Grid>
       </Border>
       <StackPanel IsEnabled="{Binding CanEditScanOptions}" Margin="0,0,0,16">
-        <CheckBox Content="按写入日期时间快速扫描" IsChecked="{Binding UseWriteTimeRange}" />
-        <WrapPanel IsEnabled="{Binding UseWriteTimeRange}" Margin="0,8,0,8">
-          <TextBlock Text="开始 " VerticalAlignment="Center"/><DatePicker SelectedDate="{Binding WrittenFromDate}" Width="150"/><TextBox Text="{Binding WrittenFromClock, UpdateSourceTrigger=PropertyChanged}" Width="100" Style="{StaticResource Input.TextBox}" ToolTip="HH:mm:ss"/>
-          <TextBlock Text="  结束 " VerticalAlignment="Center"/><DatePicker SelectedDate="{Binding WrittenToDate}" Width="150"/><TextBox Text="{Binding WrittenToClock, UpdateSourceTrigger=PropertyChanged}" Width="100" Style="{StaticResource Input.TextBox}" ToolTip="HH:mm:ss"/>
-          <CheckBox Content="包含目录中时间未知的视频" IsChecked="{Binding IncludeUnknownTime}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+        <DockPanel LastChildFill="True"><Button DockPanel.Dock="Right" Content="开始扫描" Command="{Binding ScanCommand}" Style="{StaticResource Button.Primary}"/><StackPanel><TextBlock Text="02  查找范围" Style="{StaticResource Layout.SectionTitle}"/><CheckBox Content="按写入日期时间快速扫描" IsChecked="{Binding UseWriteTimeRange}" Margin="0,8,0,0"/></StackPanel></DockPanel>
+        <WrapPanel Visibility="{Binding UseWriteTimeRange, Converter={StaticResource RecoveryVisibility}}" Margin="0,8,0,8">
+          <StackPanel Margin="0,0,24,8"><TextBlock Text="开始时间" Style="{StaticResource Status.Description}"/><StackPanel Orientation="Horizontal" Margin="0,4,0,0"><DatePicker SelectedDate="{Binding WrittenFromDate}" Width="160" VerticalContentAlignment="Center"/><TextBox Text="{Binding WrittenFromClock, UpdateSourceTrigger=PropertyChanged}" Width="110" Margin="8,0,0,0" Style="{StaticResource Input.TextBox}" ToolTip="时:分:秒，例如 09:30:00"/></StackPanel></StackPanel>
+          <StackPanel Margin="0,0,24,8"><TextBlock Text="结束时间" Style="{StaticResource Status.Description}"/><StackPanel Orientation="Horizontal" Margin="0,4,0,0"><DatePicker SelectedDate="{Binding WrittenToDate}" Width="160" VerticalContentAlignment="Center"/><TextBox Text="{Binding WrittenToClock, UpdateSourceTrigger=PropertyChanged}" Width="110" Margin="8,0,0,0" Style="{StaticResource Input.TextBox}" ToolTip="时:分:秒，例如 18:00:00"/></StackPanel></StackPanel>
+          <CheckBox Content="保留时间未知的视频" IsChecked="{Binding IncludeUnknownTime}" VerticalAlignment="Center"/>
         </WrapPanel>
-        <TextBlock Text="按存储卡记录的本地最后写入时间筛选，精确到秒。快速扫描只读取现存目录及其中保留的删除记录；目录已丢失的内容需关闭此选项进行完整扫描。相机时钟不准也会影响结果。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" />
+        <TextBlock Text="开启后按卡内最后写入时间定位；关闭后完整扫描。目录记录已丢失的视频需要完整扫描。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" />
+        <TextBlock Text="原卡与镜像只读 · 实验候选不会自动恢复" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,0" />
       </StackPanel>
       </StackPanel>
       <Grid Grid.Row="2"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="320"/></Grid.ColumnDefinitions>
         <Border Style="{StaticResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
           <DockPanel LastChildFill="True"><Button DockPanel.Dock="Right" Content="停止任务" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Style="{StaticResource Button.Ghost}"/><StackPanel><TextBlock Text="恢复候选" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="{Binding CandidateSummary}" Style="{StaticResource Status.Description}" /></StackPanel></DockPanel>
           <StackPanel Grid.Row="1" Margin="0,10,0,12"><ProgressBar Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Height="6" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/><TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"/></StackPanel>
-          <TextBlock Grid.Row="2" Text="{Binding EmptyStateText}" Visibility="{Binding ShowEmptyState, Converter={StaticResource RecoveryVisibility}}" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" />
+          <StackPanel Grid.Row="2" Visibility="{Binding ShowEmptyState, Converter={StaticResource RecoveryVisibility}}" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="440"><TextBlock Text="在这里查看找到的视频" Style="{StaticResource Layout.SectionTitle}" TextAlignment="Center"/><TextBlock Text="{Binding EmptyStateText}" Margin="0,16,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
           <ListBox Grid.Row="2" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
                    Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemContainerStyle>
@@ -45,14 +45,13 @@
                       <TextBlock Text="{Binding ExpectedFileName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                       <TextBlock Text="{Binding TimeDescription}" Foreground="{DynamicResource Brush.Text.Secondary}" />
                       <TextBlock Margin="0,4,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}">
-                        <Run Text="偏移 "/><Run Text="{Binding StartOffset}"/><Run Text=" · "/><Run Text="{Binding Confidence}"/>
+                        <Run Text="{Binding SizeDescription}"/>
                       </TextBlock>
                     </StackPanel>
                     <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                      <TextBlock Text="{Binding Status}" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Right"/>
+                      <TextBlock Text="{Binding StatusDescription}" Foreground="{DynamicResource Brush.Primary}" HorizontalAlignment="Right"/>
                       <TextBlock Margin="16,5,0,0" Foreground="{DynamicResource Brush.Text.Secondary}">
-                        <Run Text="ftyp "/><Run Text="{Binding HasFtyp}"/><Run Text=" · mdat "/><Run Text="{Binding HasMdat}"/>
-                        <Run Text=" · moov "/><Run Text="{Binding HasMoov}"/><Run Text=" · 样本表 "/><Run Text="{Binding HasSampleTables}"/>
+                        <Run Text="选中查看结构证据"/>
                       </TextBlock>
                     </StackPanel>
                   </Grid>

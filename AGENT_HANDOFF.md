@@ -1,5 +1,11 @@
 # Agent Handoff — Current Project State
 
+## 2026-09-07 Recovery UI alpha.25
+
+- Recovery page now groups image selection and scan range, expands date/time inputs on demand, and shows readable candidate summaries with evidence in the inspector.
+- Release build and 792 tests passed. Dark-theme empty-state screenshot: `.artifacts/recovery-ui-refined.png`; other interactive visual states and real damaged-card recovery remain unverified.
+- Release package: `artifacts/0.3.2-alpha.25`; daily executable remains at the existing desktop shortcut target.
+
 ## 2026-09-07 Recovery assistant alpha.24
 
 - Added directory-based exFAT last-write time range scanning (card-local time), unknown-time inclusion and explicit full-scan fallback instructions.
@@ -25,7 +31,7 @@
 
 > **Purpose:** First-read document for any agent taking over this project.  
 > **Last Updated:** 2026-08-14  
-> **Current Version:** `0.3.2-alpha.22`（2026-09-06）
+> **Current Version:** `0.3.2-alpha.25`（2026-09-07）
 > **Current Branch:** `codex/photo-treemap-browser`  
 > **Project Path:** `D:\HanabePhoto`
 

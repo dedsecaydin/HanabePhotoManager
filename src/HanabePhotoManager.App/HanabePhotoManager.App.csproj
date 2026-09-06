@@ -63,7 +63,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.3.2-alpha.24</HanabeVersion>
+    <HanabeVersion Condition="'$(HanabeVersion)' == ''">0.3.2-alpha.25</HanabeVersion>
     <Version>$(HanabeVersion)</Version>
     <Product>照片管理器</Product>
     <!-- libvlc 原生库只部署 win-x64（应用实际以 x64 运行），裁剪 x86/arm64 省 ~180MB -->

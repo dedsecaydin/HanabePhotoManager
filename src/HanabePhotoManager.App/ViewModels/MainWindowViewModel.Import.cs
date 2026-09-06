@@ -99,7 +99,7 @@ public sealed partial class MainWindowViewModel
             foreach (var source in sameSizeSources)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var hash = await _fileHasher.ComputeSha256Async(source.FullName, cancellationToken).ConfigureAwait(true);
+                var hash = await _duplicateHasher.ComputeSha256Async(source.FullName, cancellationToken).ConfigureAwait(true);
                 if (firstPathByHash.TryGetValue(hash, out var firstPath))
                 {
                     matches.TryAdd(source.FullName, new ImportDuplicateMatch(source.FullName, firstPath, false));

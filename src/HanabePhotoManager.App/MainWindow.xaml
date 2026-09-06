@@ -1006,7 +1006,7 @@
                     </Border>
 
                     <Button Content="开始分析与导入" Style="{StaticResource Button.Primary}" Margin="0,12,0,0" Command="{Binding AnalyzeAndImportCommand}" Visibility="{Binding IsImportQueueVisible, Converter={StaticResource BoolToVis}}" />
-                    <Button Content="取消导入" Style="{StaticResource Button.Secondary}" Margin="0,10,0,0" Command="{Binding CancelCurrentTaskCommand}" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}" />
+                    <Button Content="安全停止 · 保留进度" Style="{StaticResource Button.Secondary}" Margin="0,10,0,0" Command="{Binding CancelCurrentTaskCommand}" Visibility="{Binding IsImportRunning, Converter={StaticResource BoolToVis}}" ToolTip="停止当前传输并保留恢复记录，之后可以继续未完成项目。" />
                   </StackPanel>
                 </ScrollViewer>
               </Border>
@@ -1017,7 +1017,14 @@
                   <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                     <TextBlock Text="导入队列" FontSize="{StaticResource Typography.Title}" FontWeight="SemiBold" />
                     <TextBlock FontWeight="SemiBold" Opacity="0.88" Margin="0,6,0,0" Text="{Binding TargetDateText}" />
-                    <TextBlock TextWrapping="Wrap" Opacity="0.88" Margin="0,6,0,0" Text="{Binding ImportReport}" />
+                    <StackPanel Visibility="{Binding HasPendingImportResume, Converter={StaticResource BoolToVis}}">
+                      <TextBlock Text="{Binding PendingImportResumeSummary}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                      <WrapPanel Margin="{StaticResource Spacing.Row.Vertical.8}">
+                        <Button Content="继续未完成导入" Command="{Binding ContinueImportCommand}" Style="{StaticResource Button.Primary}" AutomationProperties.Name="继续未完成导入" />
+                        <Button Content="放弃恢复记录" Margin="{StaticResource Spacing.Inline.8}" Command="{Binding DiscardImportCommand}" Style="{StaticResource Button.Secondary}" ToolTip="仅移除恢复记录，不删除已导入文件或源文件。" />
+                      </WrapPanel>
+                      <TextBlock Text="来源断开时请先重新连接。已完成项保留，失败项可再次尝试；放弃记录不会删除照片。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                    </StackPanel>
                     <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
                       <ScrollViewer.Style>
                         <Style TargetType="ScrollViewer">
@@ -1037,7 +1044,7 @@
                       <DockPanel>
                         <StackPanel>
                           <TextBlock Text="{Binding ProgressLabel}" FontWeight="SemiBold" />
-                          <ProgressBar Width="240" HorizontalAlignment="Left" Margin="0,8,0,0" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" />
+                          <ProgressBar HorizontalAlignment="Stretch" Margin="0,8,0,0" Height="8" Minimum="0" Maximum="100" Value="{Binding ProgressValue}" IsIndeterminate="{Binding IsProgressIndeterminate}" />
                         </StackPanel>
                       </DockPanel>
                     </Border>

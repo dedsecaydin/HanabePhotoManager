@@ -10,6 +10,16 @@ namespace HanabePhotoManager.Infrastructure.Tests.Files;
 
 public sealed class LibraryContentScannerTests : IDisposable
 {
+    [Fact]
+    public void VisualEvidence_ReportsActualDifferingGridCells()
+    {
+        var evidence = new VisualSimilarityEvidence(0UL, (1UL << 63) | 1UL);
+        evidence.DifferentCells.Should().Be(2);
+        evidence.MatchingCells.Should().Be(62);
+        evidence.AgreementPercent.Should().Be(96.875);
+        evidence.DifferenceMask.Should().Be((1UL << 63) | 1UL);
+    }
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), "hanabe-scanner-" + Guid.NewGuid().ToString("N"));
     private readonly Sha256FileHasher _hasher = new();
     private readonly LibraryContentScanner _scanner;

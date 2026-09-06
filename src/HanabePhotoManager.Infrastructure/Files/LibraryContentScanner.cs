@@ -21,6 +21,8 @@ public sealed record DuplicateScanProgress(
 public sealed class LibraryContentScanner
 {
     private readonly IFileHasher _fileHasher;
+    public int VisualHammingThreshold { get; set; } = DuplicateHammingThreshold;
+    public int HashParallelism { get; set; } = 2;
 
     /// <summary>创建使用指定哈希实现的内容扫描器。</summary>
     public LibraryContentScanner(IFileHasher fileHasher)
@@ -146,7 +148,7 @@ public sealed class LibraryContentScanner
         {
             CancellationToken = cancellationToken,
             // 少量并行可显著利用 SSD 和 SHA 硬件加速，同时避免大量并发读拖慢机械盘。
-            MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4)
+            MaxDegreeOfParallelism = Math.Clamp(HashParallelism, 1, 4)
         };
         await Parallel.ForEachAsync(hashTasks, parallelOptions, async (item, token) =>
         {
@@ -161,7 +163,7 @@ public sealed class LibraryContentScanner
             {
                 var completed = Interlocked.Increment(ref hashedIndex);
                 progress?.Report(40d + completed * 60d / totalCandidates);
-                detailProgress?.Report(new("SHA-256 并行比对", completed, totalCandidates, item.Path, 0));
+                detailProgress?.Report(new(_fileHasher is CachedFileHasher cache ? $"SHA-256 增量比对 · 复用 {cache.Hits} · 新算 {cache.Computed}" : "SHA-256 并行比对", completed, totalCandidates, item.Path, 0));
             }
         }).ConfigureAwait(false);
 
@@ -171,7 +173,7 @@ public sealed class LibraryContentScanner
             .Select(group => group.Select(item => item.Path).OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToList())
             .ToList();
         if (duplicateGroups.Count > 0)
-            detailProgress?.Report(new("SHA-256 并行比对", hashedIndex, totalCandidates, duplicateGroups[^1][0], duplicateGroups.Count));
+            detailProgress?.Report(new(_fileHasher is CachedFileHasher cache ? $"SHA-256 增量比对 · 复用 {cache.Hits} · 新算 {cache.Computed}" : "SHA-256 并行比对", hashedIndex, totalCandidates, duplicateGroups[^1][0], duplicateGroups.Count));
 
         progress?.Report(100d);
         return duplicateGroups;
@@ -219,7 +221,7 @@ public sealed class LibraryContentScanner
             var path = paths[index];
             try
             {
-                hashes.Add((path, ComputeAverageHash(path)));
+                hashes.Add((path, await GetAverageHashAsync(path, cancellationToken).ConfigureAwait(false)));
             }
             catch (FileNotFoundException) { }
             catch (IOException) { }
@@ -238,18 +240,16 @@ public sealed class LibraryContentScanner
                 await Task.Yield();
         }
 
-        // 按哈希高 16 位分桶，避免对整个图库执行 O(n²) 两两比较。
-        var buckets = new Dictionary<uint, List<int>>();
+        // 64 位分为 9 段：距离 <= 8 必然至少有一段完全相同，避免旧高位邻桶漏检。
+        var buckets = new Dictionary<(int Part, ulong Bits), List<int>>();
         for (var index = 0; index < hashes.Count; index++)
         {
-            var key = (uint)(hashes[index].Hash >> 48);
-            if (!buckets.TryGetValue(key, out var list))
+            for (var part = 0; part < 9; part++)
             {
-                list = new List<int>();
-                buckets[key] = list;
+                var key = (part, (hashes[index].Hash >> (part * 7)) & (part == 8 ? 255UL : 127UL));
+                if (!buckets.TryGetValue(key, out var list)) buckets[key] = list = [];
+                list.Add(index);
             }
-
-            list.Add(index);
         }
 
         var visited = new bool[hashes.Count];
@@ -262,22 +262,17 @@ public sealed class LibraryContentScanner
             var group = new List<string> { hashes[i].Path };
             visited[i] = true;
 
-            var top = (int)(hashes[i].Hash >> 48);
-            for (var bucketKey = top - 2; bucketKey <= top + 2; bucketKey++)
+            cancellationToken.ThrowIfCancellationRequested();
+            var candidates = new HashSet<int>();
+            for (var part = 0; part < 9; part++)
+                candidates.UnionWith(buckets[(part, (hashes[i].Hash >> (part * 7)) & (part == 8 ? 255UL : 127UL))]);
+            foreach (var j in candidates.OrderBy(value => value))
             {
-                if (bucketKey < 0 || !buckets.TryGetValue((uint)bucketKey, out var bucket))
-                    continue;
-
-                foreach (var j in bucket)
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!visited[j] && HammingDistance(hashes[i].Hash, hashes[j].Hash) <= Math.Clamp(VisualHammingThreshold, 0, 8))
                 {
-                    if (visited[j] || j == i)
-                        continue;
-
-                    if (HammingDistance(hashes[i].Hash, hashes[j].Hash) <= DuplicateHammingThreshold)
-                    {
-                        group.Add(hashes[j].Path);
-                        visited[j] = true;
-                    }
+                    group.Add(hashes[j].Path);
+                    visited[j] = true;
                 }
             }
 
@@ -289,6 +284,24 @@ public sealed class LibraryContentScanner
         }
 
         return groups;
+    }
+
+    public async Task<VisualSimilarityEvidence> CompareVisualAsync(string left, string right, CancellationToken token)
+    {
+        var leftHash = await GetAverageHashAsync(left, token).ConfigureAwait(false);
+        var rightHash = await GetAverageHashAsync(right, token).ConfigureAwait(false);
+        return new VisualSimilarityEvidence(leftHash, rightHash);
+    }
+
+    private async Task<ulong> GetAverageHashAsync(string path, CancellationToken token)
+    {
+        if (_fileHasher is CachedFileHasher cache)
+        {
+            var value = await cache.GetOrComputeAsync(path, "average-hash-8x8-box-v1",
+                ct => Task.Run(() => ComputeAverageHash(path).ToString("X16"), ct), token).ConfigureAwait(false);
+            return ulong.Parse(value, System.Globalization.NumberStyles.HexNumber);
+        }
+        return await Task.Run(() => ComputeAverageHash(path), token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -370,4 +383,13 @@ public sealed class LibraryContentScanner
             }
         }
     }
+}
+
+/// <summary>算法实际比较的亮暗格子，百分比不是同图概率或物体识别置信度。</summary>
+public sealed record VisualSimilarityEvidence(ulong LeftHash, ulong RightHash)
+{
+    public ulong DifferenceMask => LeftHash ^ RightHash;
+    public int DifferentCells => System.Numerics.BitOperations.PopCount(DifferenceMask);
+    public int MatchingCells => 64 - DifferentCells;
+    public double AgreementPercent => MatchingCells * 100d / 64;
 }

@@ -25,7 +25,8 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
     public async Task<GroupTransferResult> TransferGroupAsync(
         ImportPlanItem item,
         bool deleteSourcesAfterVerify,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<IReadOnlyList<VerifiedFileResult>>? beforeSourceDeletion = null)
     {
         ArgumentNullException.ThrowIfNull(item);
 
@@ -165,6 +166,8 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 copiedTemporaryFiles.Remove(file.TemporaryPath);
             }
             publishingCompleted = true;
+            // 恢复凭据必须先可靠落盘，随后才允许删除任何源文件。
+            beforeSourceDeletion?.Invoke(verifiedFiles.AsReadOnly());
 
             if (deleteSourcesAfterVerify)
             {
@@ -178,6 +181,11 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
         }
         catch (OperationCanceledException)
         {
+            CleanupTemporaryFiles(copiedTemporaryFiles);
+            if (!deletingSources && !publishingCompleted)
+            {
+                CleanupPublishedDestinations(publishedDestinations);
+            }
             throw;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

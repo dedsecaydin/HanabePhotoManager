@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using HanabePhotoManager.Core.Imports;
+using HanabePhotoManager.Infrastructure.Files;
 
 namespace HanabePhotoManager.App.Services;
 
@@ -16,6 +18,9 @@ public sealed class ImportResumeEntry
     public int Month { get; set; }
     public int Day { get; set; }
     public string TargetDateDirectory { get; set; } = "";
+    public ImportPlanItem? Plan { get; set; }
+    public bool SkipTransfer { get; set; }
+    public List<VerifiedFileResult> VerifiedFiles { get; set; } = [];
 }
 
 /// <summary>导入续传状态：中断后重启据此提示继续，配合边传边验边删幂等重放。</summary>
@@ -23,6 +28,7 @@ public sealed class ImportResumeEntry
 public sealed class ImportResumeState
 {
     public bool DeleteSourcesAfterVerify { get; set; }
+    public string? NamingTemplate { get; set; }
     public List<ImportResumeEntry> Entries { get; set; } = [];
 }
 
@@ -50,7 +56,9 @@ public sealed class ImportResumeStore
             }
 
             var json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<ImportResumeState>(json, Options);
+            var state = JsonSerializer.Deserialize<ImportResumeState>(json, Options);
+            return state?.Entries is null || state.Entries.Any(entry => entry is null || entry.SidecarPaths is null || entry.VerifiedFiles is null)
+                ? null : state;
         }
         catch
         {
@@ -60,14 +68,20 @@ public sealed class ImportResumeStore
 
     public void Save(ImportResumeState state)
     {
+        var temporaryPath = _path + ".tmp";
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(_path))!);
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(state, Options));
+            using (var stream = new FileStream(temporaryPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                JsonSerializer.Serialize(stream, state, Options);
+                stream.Flush(flushToDisk: true);
+            }
+            File.Move(temporaryPath, _path, overwrite: true);
         }
-        catch
+        finally
         {
-            // 持久化失败不应中断导入流程。
+            if (File.Exists(temporaryPath)) File.Delete(temporaryPath);
         }
     }
 

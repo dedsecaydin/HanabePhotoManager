@@ -307,6 +307,11 @@ public sealed class AppSettings
     /// 默认关闭（导入更快、不做跨库去重）；开启后每次导入前检查重复并弹窗。
     /// </summary>
     public bool CheckDuplicatesOnImport { get; set; } = false;
+    public bool UseDuplicateHashCache { get; set; } = true;
+    public int DuplicateHashParallelism { get; set; } = 2;
+    public int VisualDuplicateThreshold { get; set; } = 8;
+    public bool ShowSimilarityDifferenceGrid { get; set; } = true;
+    public bool PromptImportResumeAtStartup { get; set; } = true;
 
     /// <summary>
     /// 照片图库筛选面板「功能说明」（字段标签）位置：Top（标签在上）或 Left（标签在左）。

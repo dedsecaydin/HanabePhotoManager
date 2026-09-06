@@ -8,6 +8,44 @@ namespace HanabePhotoManager.Infrastructure.Tests.Files;
 public sealed class VerifiedFileTransferTests
 {
     [Fact]
+    public async Task CheckpointFailure_BeforeSourceDeletion_KeepsSourceAndPublishedCopy()
+    {
+        using var workspace = new TransferWorkspace();
+        var source = workspace.WriteSource("receipt.jpg", [1, 2, 3]);
+        var file = workspace.Plan(source, "JPG生图", ConflictKind.None);
+        var result = await new VerifiedFileTransfer(new Sha256FileHasher()).TransferGroupAsync(
+            CreateItem(file), true, CancellationToken.None, _ => throw new IOException("checkpoint unavailable"));
+        result.Success.Should().BeFalse();
+        File.Exists(source.FullPath).Should().BeTrue();
+        File.ReadAllBytes(file.DestinationPath).Should().Equal(1, 2, 3);
+    }
+
+    [Fact]
+    public async Task CancellationDuringVerification_CleansTemporaryFilesAndKeepsSources()
+    {
+        using var workspace = new TransferWorkspace();
+        using var cancellation = new CancellationTokenSource();
+        var source = workspace.WriteSource("cancel.jpg", [1, 2, 3]);
+        var file = workspace.Plan(source, "JPG生图", ConflictKind.None);
+        var transfer = new VerifiedFileTransfer(new CancelingHasher(cancellation));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            transfer.TransferGroupAsync(CreateItem(file), true, cancellation.Token));
+        File.Exists(source.FullPath).Should().BeTrue();
+        File.Exists(file.DestinationPath).Should().BeFalse();
+        File.Exists(file.TemporaryPath).Should().BeFalse();
+    }
+
+    private sealed class CancelingHasher(CancellationTokenSource cancellation) : IFileHasher
+    {
+        public Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
+        {
+            cancellation.Cancel();
+            cancellationToken.ThrowIfCancellationRequested();
+            return Task.FromResult("");
+        }
+    }
+
+    [Fact]
     public async Task TransferGroupAsync_SuccessfulCopyKeepsSourceAndRemovesTemporaryFile()
     {
         using var workspace = new TransferWorkspace();

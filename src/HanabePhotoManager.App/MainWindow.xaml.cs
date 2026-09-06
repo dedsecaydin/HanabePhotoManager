@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -523,7 +523,8 @@ public partial class MainWindow : Window
 
         if (App.ScreenshotPath is null && App.ViewerFile is null && _viewModel.HasPendingImportResume)
         {
-            PromptResumePendingImport();
+            if (_viewModel.PromptImportResumeAtStartup) PromptResumePendingImport();
+            else _viewModel.MarkPendingImportResumeAvailable();
         }
 
         if (App.ScreenshotPath is { } screenshotPath && App.ViewerFile is null)
@@ -797,7 +798,7 @@ public partial class MainWindow : Window
         _viewModel.PropertyChanged -= MainWindowViewModel_PropertyChanged;
         _viewModel.DuplicateActionRequired -= OnDuplicateActionRequired;
         _viewModel.FaceSearch.Cancel();
-        MapPageHost.Dispose();
+        MapPageHost?.Dispose();
         base.OnClosed(e);
     }
 

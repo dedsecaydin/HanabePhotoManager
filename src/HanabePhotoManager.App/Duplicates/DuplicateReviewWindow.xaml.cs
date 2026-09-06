@@ -14,13 +14,16 @@ public partial class DuplicateReviewWindow : Window
 {
     private readonly List<DuplicateItem> _items = [];
     private readonly string _libraryRoot;
+    private readonly LibraryContentScanner _scanner;
 
     public HashSet<string> FilesToDelete { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates, string libraryRoot)
+    public DuplicateReviewWindow(List<DuplicateCandidateGroup> candidates, string libraryRoot, LibraryContentScanner? scanner = null, bool showDifferenceGrid = true)
     {
         _libraryRoot = libraryRoot;
+        _scanner = scanner ?? new LibraryContentScanner(new Sha256FileHasher());
         InitializeComponent();
+        ShowDifferenceGrid.IsChecked = showDifferenceGrid;
         var totalFiles = candidates.Sum(group => group.Paths.Count);
         var suspectedCount = candidates.Count(group => group.IsSuspected);
         SummaryText.Text = $"发现 {candidates.Count} 组重复内容，共 {totalFiles} 个文件。" +
@@ -29,6 +32,9 @@ public partial class DuplicateReviewWindow : Window
                                : string.Empty) +
                            "勾选要删除的文件（取消勾选=保留）。";
         BuildGroups(candidates);
+        Closed += (_, _) => _comparisonCancellation?.Cancel();
+        if (candidates.FirstOrDefault() is { } first && first.Paths.Count > 1)
+            _ = ShowComparisonAsync(first, first.Paths[1]);
     }
 
     private void BuildGroups(List<DuplicateCandidateGroup> candidates)
@@ -47,10 +53,9 @@ public partial class DuplicateReviewWindow : Window
                 Text = headerText,
                 FontWeight = FontWeights.SemiBold,
                 Margin = new Thickness(0, 0, 0, 4),
-                Foreground = group.IsSuspected
-                    ? System.Windows.Media.Brushes.OrangeRed
-                    : System.Windows.Media.Brushes.Black
+                TextWrapping = TextWrapping.Wrap
             };
+            header.SetResourceReference(TextBlock.ForegroundProperty, "Brush.Text.Primary");
             groupPanel.Children.Add(header);
 
             foreach (var path in group.Paths.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))
@@ -59,7 +64,7 @@ public partial class DuplicateReviewWindow : Window
                 {
                     Tag = path,
                     Margin = new Thickness(16, 2, 0, 2),
-                    IsChecked = true
+                    IsChecked = !group.IsSuspected
                 };
                 checkbox.SetResourceReference(FrameworkElement.StyleProperty, "Selection.CheckBox");
 
@@ -67,12 +72,12 @@ public partial class DuplicateReviewWindow : Window
                 var dirName = Path.GetDirectoryName(path);
                 var shortDir = string.IsNullOrEmpty(dirName) ? path : dirName;
                 if (shortDir.Length > 60) shortDir = "..." + shortDir[^57..];
-                var info = new TextBlock();
+                var info = new TextBlock { TextWrapping = TextWrapping.Wrap, ToolTip = path };
                 info.Inlines.Add(fileName);
                 info.Inlines.Add(new System.Windows.Documents.Run("  " + shortDir)
                 {
                     FontSize = 11,
-                    Foreground = System.Windows.Media.Brushes.Gray
+                    Foreground = (System.Windows.Media.Brush)FindResource("Brush.Text.Secondary")
                 });
                 checkbox.Content = info;
 
@@ -86,11 +91,15 @@ public partial class DuplicateReviewWindow : Window
                     info.Inlines.Add(new System.Windows.Documents.Run("  只读保留")
                     {
                         FontSize = 11,
-                        Foreground = System.Windows.Media.Brushes.DarkOrange
+                        Foreground = (System.Windows.Media.Brush)FindResource("Brush.Primary")
                     });
                 }
 
                 groupPanel.Children.Add(checkbox);
+                var compare = new System.Windows.Controls.Button { Content = "查看对照" };
+                compare.SetResourceReference(StyleProperty, "Button.Secondary");
+                compare.Click += async (_, _) => await ShowComparisonAsync(group, path);
+                groupPanel.Children.Add(compare);
                 _items.Add(new DuplicateItem(i, path, checkbox));
             }
 

@@ -1,7 +1,7 @@
 <Window x:Class="HanabePhotoManager.App.DuplicateReviewWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="重复内容审查" Width="640" Height="560"
+        Title="重复与相似图片复核" Width="1100" Height="760" MinWidth="860" MinHeight="620"
         WindowStartupLocation="CenterOwner"
         Style="{DynamicResource Dialog.Window}">
   <Border Margin="16" Style="{DynamicResource Dialog.Surface}">
@@ -18,12 +18,37 @@
                    Style="{DynamicResource Dialog.Body}" Margin="0,8,0,0" TextWrapping="Wrap" />
       </StackPanel>
 
-      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
-        <StackPanel Name="GroupsPanel" />
-      </ScrollViewer>
+      <Grid Grid.Row="1">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="{StaticResource Spacing.Field.Gap}">
+          <StackPanel Name="GroupsPanel"/>
+        </ScrollViewer>
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock Name="ComparisonTitle" Style="{DynamicResource Dialog.Title}" Text="选择文件查看对照"/>
+            <TextBlock Name="EvidenceText" TextWrapping="Wrap" Margin="{StaticResource Spacing.Row.Vertical.8}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+            <CheckBox Name="ShowDifferenceGrid" Content="标出亮暗指纹不一致区域" IsChecked="True" Checked="OverlayChanged" Unchecked="OverlayChanged" Style="{DynamicResource Selection.CheckBox}"/>
+            <Grid Margin="{StaticResource Spacing.Row.Vertical.8}">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <StackPanel Margin="{StaticResource Spacing.Field.Gap}">
+                <TextBlock Text="本组参考图" FontWeight="SemiBold"/>
+                <Viewbox Height="300" Stretch="Uniform"><Grid Name="LeftImageHost"/></Viewbox>
+                <TextBlock Name="LeftCaption" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="当前对比图" FontWeight="SemiBold"/>
+                <Viewbox Height="300" Stretch="Uniform"><Grid Name="RightImageHost"/></Viewbox>
+                <TextBlock Name="RightCaption" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+              </StackPanel>
+            </Grid>
+            <TextBlock Text="算法将图片缩成 8×8 灰度图，再比较各格相对平均亮度的亮暗。框线标出不一致格子；未框出的格子参与一致率计算。它不识别人物身份、物体语义或精细纹理，纯色图也可能得到高分。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+            <Button Content="打开当前图片查看原图" Click="OpenCompared_Click" Style="{DynamicResource Button.Secondary}" HorizontalAlignment="Left" Margin="{StaticResource Spacing.Stack.8}"/>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
 
       <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
-        <Button Content="跳过" Width="88" Margin="0,0,8,0"
+        <Button Content="保留并关闭" IsCancel="True" Margin="0,0,8,0"
                 Style="{DynamicResource Button.Secondary}" Click="Skip_Click" />
         <Button Content="合并/删除选中" Width="132"
                 Style="{DynamicResource Button.Primary}" Click="Delete_Click" />

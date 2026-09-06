@@ -522,7 +522,7 @@
         <!-- ─────── 照片库与导入 ─────── -->
         <StackPanel x:Name="LibrarySection" Visibility="Collapsed">
           <TextBlock Text="照片库与导入" Style="{StaticResource Layout.PageTitle}" />
-          <TextBlock Text="管理唯一的照片库根目录；导入任务参数仍留在导入页面。" Style="{StaticResource Layout.SettingsHint}" />
+          <TextBlock Text="管理照片库、导入恢复与增量查重。选项自动保存；本次来源、日期和复制/移动方式在导入页确认。" Style="{StaticResource Layout.SettingsHint}" />
 
           <Grid Margin="0,12,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -571,6 +571,25 @@
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
             <StackPanel>
+              <TextBlock Text="导入中断与恢复" Style="{StaticResource Settings.RowTitle}" />
+              <CheckBox Content="启动时提示继续未完成导入" IsChecked="{Binding PromptImportResumeAtStartup, Mode=TwoWay}" Margin="{StaticResource Spacing.Stack.8}" />
+              <TextBlock Text="关闭后不再弹出启动询问，仍可从导入页继续。安全停止会保留已完成文件和恢复点；移动模式始终先校验、保存凭据，再删除来源。" Style="{StaticResource Settings.RowDesc}" Margin="{StaticResource Spacing.Stack.4}" />
+              <Border Style="{StaticResource Settings.Divider}" Margin="{StaticResource Spacing.Row.Vertical.8}" />
+              <TextBlock Text="增量指纹缓存" Style="{StaticResource Settings.RowTitle}" />
+              <CheckBox Content="复用最近导入与上次扫描的 SHA-256 / 视觉指纹" IsChecked="{Binding UseDuplicateHashCache, Mode=TwoWay}" Margin="{StaticResource Spacing.Stack.8}" />
+              <TextBlock Text="默认开启。文件路径、大小、修改时间和创建时间未变时复用指纹；新增或变化文件重新计算。中断后保留已算结果，重启仍有效。关闭后每次重新读取内容；传输校验和精确重复删除前核对始终实时计算。" Style="{StaticResource Settings.RowDesc}" Margin="{StaticResource Spacing.Stack.4}" />
+              <Button Content="清空查重缓存，下次重新计算" Command="{Binding ClearDuplicateHashCacheCommand}" Style="{StaticResource Button.Secondary}" HorizontalAlignment="Left" Margin="{StaticResource Spacing.Stack.8}" />
+              <TextBlock Text="只清除指纹记录，不删除照片或导入恢复点。任务运行时不可清空。" Style="{StaticResource Settings.RowDesc}" Margin="{StaticResource Spacing.Stack.4}" />
+              <TextBlock Text="SHA-256 同时读取文件数" Style="{StaticResource Settings.RowTitle}" Margin="{StaticResource Spacing.Stack.8}" />
+              <Slider Minimum="1" Maximum="4" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding DuplicateHashParallelism, Mode=TwoWay}" Style="{StaticResource Selection.Slider}" AutomationProperties.Name="查重读取并行度" />
+              <TextBlock Text="{Binding DuplicateHashParallelism, StringFormat=当前 {0} 个；机械盘或网络共享建议 1，SSD 可用 2–4。下次扫描生效。}" Style="{StaticResource Settings.RowDesc}" />
+              <Border Style="{StaticResource Settings.Divider}" Margin="{StaticResource Spacing.Row.Vertical.8}" />
+              <TextBlock Text="视觉相似严格程度" Style="{StaticResource Settings.RowTitle}" />
+              <Slider Minimum="0" Maximum="8" TickFrequency="1" IsSnapToTickEnabled="True" Value="{Binding VisualDuplicateThreshold, Mode=TwoWay}" Style="{StaticResource Selection.Slider}" AutomationProperties.Name="视觉相似允许差异格数" />
+              <TextBlock Text="{Binding VisualDuplicateThresholdHint}" Style="{StaticResource Settings.RowDesc}" />
+              <CheckBox Content="对照图默认显示差异格标注" IsChecked="{Binding ShowSimilarityDifferenceGrid, Mode=TwoWay}" Margin="{StaticResource Spacing.Stack.8}" />
+              <TextBlock Text="可在复核窗口临时隐藏。视觉相似项默认全部保留，只由你勾选删除；修后目录始终只读。" Style="{StaticResource Settings.RowDesc}" Margin="{StaticResource Spacing.Stack.4}" />
+              <Border Style="{StaticResource Settings.Divider}" Margin="{StaticResource Spacing.Row.Vertical.8}" />
               <TextBlock Text="扫描重复内容" Style="{StaticResource Settings.RowTitle}" />
               <TextBlock Text="对整个图库做两层检测：① 文件哈希（SHA-256）找出完全相同的副本；② 视觉指纹进一步比对画面/内容相似的图片（如重压缩、改尺寸、二次截图等），并支持逐组勾选删除。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,10" />
               <Grid>

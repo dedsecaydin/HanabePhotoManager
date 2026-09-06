@@ -7,6 +7,39 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class ImportResumeStoreTests
 {
+    [Theory]
+    [InlineData("{\"Entries\":null}")]
+    [InlineData("{\"Entries\":[null]}")]
+    [InlineData("{broken")]
+    public void Load_CorruptRecord_IsRetainedForExplicitRecovery(string json)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "HanabePhotoManagerTests", Guid.NewGuid().ToString("N"), "resume.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        try
+        {
+            File.WriteAllText(path, json);
+            var store = new ImportResumeStore(path);
+            store.Load().Should().BeNull();
+            store.HasPending.Should().BeTrue();
+            File.ReadAllText(path).Should().Be(json);
+        }
+        finally { Directory.Delete(Path.GetDirectoryName(path)!, true); }
+    }
+
+    [Fact]
+    public void Save_WhenDestinationIsDirectory_ReportsFailure()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "HanabePhotoManagerTests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            var store = new ImportResumeStore(path);
+            Action save = () => store.Save(new ImportResumeState());
+            save.Should().Throw<Exception>();
+        }
+        finally { Directory.Delete(path, true); }
+    }
+
     [Fact]
     public void SaveAndLoad_PreservesTheConfirmedTargetDateDirectory()
     {

@@ -111,6 +111,8 @@ Views consume semantic resources and shared component styles; they do not depend
 
 The App discovers candidate files and captures user choices. Core classifies media, groups sidecars, resolves dates, and builds an import plan. Infrastructure hashes, transfers, journals, and stores files. ViewModels receive progress and results and update observable UI state.
 
+Import recovery snapshots persist the confirmed naming template, per-group planned destination files, duplicate skip decisions, and verified-file receipts. `ImportResumeStore` flushes a replacement snapshot before atomically replacing the previous file; a write failure is surfaced. `VerifiedFileTransfer` invokes the checkpoint callback after publication and before source deletion. Recovery rechecks the frozen destinations rather than allocating new sequence numbers. Missing sources require a saved receipt and a matching destination hash; unresolved entries remain pending. Legacy snapshots without plans retain source/date reconstruction, but inaccessible sources are never interpreted as completed imports.
+
 ### Library browsing and metadata
 
 App services scan media, read thumbnails/EXIF, maintain app settings and metadata, and feed ViewModels. ViewModels expose filtered or grouped collections to WPF views. Long-running work is cancelable and reports throttled progress where applicable.

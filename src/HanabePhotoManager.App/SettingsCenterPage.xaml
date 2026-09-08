@@ -445,6 +445,15 @@
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                  <TextBlock Text="检测存储卡并提示导入" Style="{StaticResource Settings.RowTitle}" />
+                  <TextBlock Text="应用运行时检查可移动磁盘中的照片与视频，同次插入只提醒一次；确认后选择导入内容。" Style="{StaticResource Settings.RowDesc}" />
+                </StackPanel>
+                <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding PromptOnMediaDevice, Mode=TwoWay}" />
+              </Grid>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,16,0">
                   <TextBlock Text="开机自启动" Style="{StaticResource Settings.RowTitle}" />
                   <TextBlock Text="写入 Windows 当前用户启动项；失败时自动回滚并提示。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" />
                 </StackPanel>

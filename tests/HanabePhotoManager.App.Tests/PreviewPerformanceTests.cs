@@ -38,12 +38,14 @@ public sealed class PreviewPerformanceTests
         video.HasXmlSidecar.Should().BeTrue();
     }
 
-    [Fact]
-    public void PreviewWall_HidesVideoPosterJpegButKeepsItsVideo()
+    [Theory]
+    [InlineData("JK0001", "JK0001")]
+    [InlineData("C9400", "C9400T01")]
+    public void PreviewWall_HidesVideoPosterJpegButKeepsItsVideo(string videoStem, string posterStem)
     {
         var viewModel = new MainWindowViewModel();
-        var video = new PreviewFileViewModel("JK0001.mp4", "视频", @"C:\photos\08.15\视频\JK0001.mp4", "1 MB", "MP4", null);
-        var poster = new PreviewFileViewModel("JK0001.jpg", "JPG生图", @"C:\photos\08.15\JPG生图\JK0001.jpg", "100 KB", "JPG", null);
+        var video = new PreviewFileViewModel(videoStem + ".mp4", "视频", $@"D:\photos\08.15\视频\{videoStem}.mp4", "1 MB", "MP4", null);
+        var poster = new PreviewFileViewModel(posterStem + ".jpg", "JPG生图", $@"D:\photos\08.15\JPG生图\{posterStem}.jpg", "100 KB", "JPG", null);
         var photo = new PreviewFileViewModel("JK0002.jpg", "JPG生图", @"C:\photos\08.15\JPG生图\JK0002.jpg", "100 KB", "JPG", null);
         viewModel.PreviewFiles.Add(video);
         viewModel.PreviewFiles.Add(poster);
@@ -55,6 +57,35 @@ public sealed class PreviewPerformanceTests
         viewModel.PreviewWallItems.Should().Contain(video);
         viewModel.PreviewWallItems.Should().Contain(photo);
         viewModel.PreviewWallItems.Should().NotContain(poster);
+        viewModel.FilteredPreviewFiles.Should().NotContain(poster);
+    }
+
+    [Fact]
+    public void VideoPosterMatching_KeepsOrphansAndOtherDates()
+    {
+        var vm = new MainWindowViewModel();
+        var video = new PreviewFileViewModel("C9400.mp4", "视频", @"D:\photos\09.05\视频\C9400.mp4", "1 MB", "MP4", null);
+        var orphan = new PreviewFileViewModel("C9401T01.jpg", "JPG生图", @"D:\photos\09.05\JPG生图\C9401T01.jpg", "1 KB", "JPG", null);
+        var otherDate = new PreviewFileViewModel("C9400T01.jpg", "JPG生图", @"D:\photos\09.06\JPG生图\C9400T01.jpg", "1 KB", "JPG", null);
+        vm.PreviewFiles.Add(video); vm.PreviewFiles.Add(orphan); vm.PreviewFiles.Add(otherDate);
+        vm.CurrentPreviewCategory = "视频"; vm.CurrentPreviewCategory = "全部";
+        vm.FilteredPreviewFiles.Should().Contain(orphan).And.Contain(otherDate);
+    }
+
+    [Fact]
+    public void VideoPosterLookup_UsesSonyThumbnailFromSiblingPhotoFolder()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "HanabePosterTests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(root, "视频"));
+            Directory.CreateDirectory(Path.Combine(root, "JPG生图"));
+            var poster = Path.Combine(root, "JPG生图", "C9400T01.JPG");
+            File.WriteAllBytes(poster, [1]);
+            var method = typeof(MainWindowViewModel).GetMethod("TryFindVideoPosterJpeg", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
+            method.Invoke(null, [Path.Combine(root, "视频", "C9400.MP4")]).Should().Be(poster);
+        }
+        finally { Directory.Delete(root, true); }
     }
 
     [Fact]

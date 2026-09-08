@@ -1241,3 +1241,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Added bounded format readers for TIFF-family ARW/CR2/NEF/DNG and Canon CR3; added RAW signatures, exFAT directory extensions, evidence text, and CR3/MP4 dispatch separation.
 - Export remains read-only and requires a contiguous directory-backed boundary for RAW, preserving the byte range and SHA-256 report.
 - Sources reviewed: PhotoRec TIFF carving, canon_cr3 format documentation, and LibRaw CRX decoder reference. No GPL source copied.
+
+## 2026-09-08 — 设备导入提醒和视频配套 JPG
+
+- Read-only inspection of the selected library revealed Sony Cxxxx.MP4 / CxxxxT01.JPG pairs. Normalize that suffix in browse filtering and prioritize the paired JPG before cached video icons. Orphan posters and different dates remain visible; original files are untouched.
+- Added background removable-volume detection, one prompt per observed insertion, busy-state deferral, destination display/selection and a persisted settings switch. Limited to removable drive letters, not MTP/fixed USB volumes. Corrected the unrelated person-recognition RAW support description from the preceding change.
+- Release build: zero warnings/errors. All 803 tests passed (Core 166, Infrastructure 64, App 561, Installer 12). Added Sony pairing, cross-date/orphan, poster-path and media-discovery regression coverage. Physical hot-plug and runtime visual validation remain outstanding; no daily executable overwrite in this batch.

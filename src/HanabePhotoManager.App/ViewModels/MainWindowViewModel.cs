@@ -2015,10 +2015,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void RefreshFilteredCache(bool resetPage = false)
     {
+        var videoKeys = PreviewFiles
+            .Where(file => VideoExtensions.Contains($".{file.Extension.TrimStart('.')}"))
+            .Select(CreateDateStemKey).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var categoryItems = CurrentPreviewCategory == "全部"
             ? PreviewFiles
             : PreviewFiles.Where(file => string.Equals(file.Category, CurrentPreviewCategory, StringComparison.OrdinalIgnoreCase));
-        _filteredCache = ApplyFilters(categoryItems).ToList();
+        _filteredCache = ApplyFilters(categoryItems.Where(file => !IsVideoPosterJpeg(file, videoKeys))).ToList();
         if (resetPage)
         {
             _previewPage = 0;
@@ -2530,6 +2533,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _windowTop = settings.WindowTop;
         _savedWindowState = settings.WindowState;
         _restoreWindowState = settings.RestoreWindowState;
+        _promptOnMediaDevice = settings.PromptOnMediaDevice;
+        OnPropertyChanged(nameof(PromptOnMediaDevice));
         OnPropertyChanged(nameof(RestoreWindowState));
         OnPropertyChanged(nameof(WindowStateSummary));
         EnablePersonRecognition = false;
@@ -5326,8 +5331,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var extension = $".{file.Extension.TrimStart('.')}";
         return (extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
                 extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)) &&
-               videoKeys.Contains(CreateDateStemKey(file));
+               (videoKeys.Contains(CreateDateStemKey(file)) ||
+                videoKeys.Contains(RemoveSonyThumbnailSuffix(CreateDateStemKey(file))));
     }
+
+    private static string RemoveSonyThumbnailSuffix(string key) =>
+        Regex.IsMatch(Path.GetFileName(key), @"^C\d+T\d{2}$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
+            ? key[..^3] : key;
 
     private static string CreateDateStemKey(PreviewFileViewModel file)
     {
@@ -6023,6 +6033,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static ImageSource? TryLoadThumbnail(string path, int decodeWidth = 260)
     {
         var extension = Path.GetExtension(path);
+        // Resolve the paired poster before consulting the video's cached Shell icon.
+        // The image cache includes poster mtime/size, so replacing the poster invalidates it.
+        if (VideoExtensions.Contains(extension) && TryFindVideoPosterJpeg(path) is { } poster)
+        {
+            var image = TryLoadThumbnail(poster, decodeWidth);
+            if (image is not null) return image;
+        }
         if (!ThumbnailCandidateExtensions.Contains(extension))
         {
             return null;
@@ -6103,10 +6120,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(dateDirectory)) return null;
 
         var stem = Path.GetFileNameWithoutExtension(videoPath);
-        foreach (var category in new[] { "JPG生图", "素材" })
+        foreach (var folder in new[] { categoryDirectory!, Path.Combine(dateDirectory, "JPG生图"), Path.Combine(dateDirectory, "素材") })
+        foreach (var posterStem in new[] { stem, stem + "T01" })
         foreach (var extension in new[] { ".JPG", ".jpg", ".JPEG", ".jpeg" })
         {
-            var candidate = Path.Combine(dateDirectory, category, stem + extension);
+            if (posterStem != stem && !Regex.IsMatch(stem, @"^C\d+$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)) continue;
+            var candidate = Path.Combine(folder, posterStem + extension);
             if (File.Exists(candidate)) return candidate;
         }
 
@@ -6526,6 +6545,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.WindowTop = _windowTop;
             settings.WindowState = _savedWindowState;
             settings.RestoreWindowState = RestoreWindowState;
+            settings.PromptOnMediaDevice = PromptOnMediaDevice;
             settings.BrowseEntryMode = BrowseEntryModeSetting.ToString();
             settings.BrowseSnapshot = CaptureBrowseSnapshot();
             settings.BrowseDisplayMode = BrowseDisplayMode.ToString();

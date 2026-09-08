@@ -502,6 +502,7 @@ public partial class MainWindow : Window
         ApplyTitleBarTheme();
         ApplyWindowMaterial();
         _importTipTimer.Start();
+        StartMediaDeviceMonitor();
         if (App.ScreenshotPage is { } page)
         {
             _viewModel.CurrentPage = page;
@@ -792,6 +793,8 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        _deviceMonitorTimer?.Stop();
+        _deviceMonitorCancellation.Cancel();
         _windowStateSaveTimer.Stop();
         PersistWindowState();
         _hanabeAssistantWindow?.Close();

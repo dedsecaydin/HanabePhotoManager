@@ -293,6 +293,7 @@ public sealed class AppSettings
     public bool RestoreWindowState { get; set; } = true;
 
     public bool EnablePersonRecognition { get; set; }
+    public bool PromptOnMediaDevice { get; set; } = true;
 
     public string BrowseEntryMode { get; set; } = nameof(global::HanabePhotoManager.App.Services.BrowseEntryMode.SessionRestore);
 

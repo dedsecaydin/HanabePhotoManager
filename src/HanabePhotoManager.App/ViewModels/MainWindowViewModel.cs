@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -5144,7 +5144,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "人物查找",
         "MapPhotos" => "地图照片",
         "Compression" => "图片小工具",
-        "Recovery" => "相机视频安全恢复",
+        "Recovery" => "相机照片与视频恢复",
         "Watermark" => "批量水印",
         "DateFolders" => "日期文件夹",
         "Settings" => "设置",
@@ -5159,7 +5159,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "放入一张参考人脸，在本机照片库中寻找相似人物。",
         "MapPhotos" => "按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。",
         "Compression" => "批量压缩，或按原始尺寸纵向、横向拼接图片。",
-        "Recovery" => "从只读相机卡镜像中分析并安全恢复 Sony XAVC MP4。",
+        "Recovery" => "从只读相机卡镜像中分析并安全恢复 JPG/JPEG 照片与 Sony XAVC MP4。",
         "Watermark" => "批量添加 PNG 签名或铺满水印，保持原格式与原始像素尺寸。",
         "DateFolders" => "集中查看日期目录，并一次保存所有备注更改。",
         "Settings" => "玻璃效果、背景、自启动、窗口大小都在这里。",
@@ -5180,7 +5180,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "人物查找 · 页面说明",
         "MapPhotos" => "地图照片 · 页面说明",
         "Compression" => "图片小工具 · 页面说明",
-        "Recovery" => "相机视频安全恢复 · 页面说明",
+        "Recovery" => "相机照片与视频恢复 · 页面说明",
         "Watermark" => "批量水印 · 页面说明",
         "DateFolders" => "日期文件夹 · 页面说明",
         "Settings" => "设置 · 页面说明",
@@ -5195,7 +5195,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         "FaceSearch" => "使用一张参考人脸在本机图库中查找相似人物。结果按相似度排序，可双击打开原图。",
         "MapPhotos" => "查看照片的 EXIF 位置，也可以给选中的照片手动标记地点；位置索引保存在本机。",
         "Compression" => "选择压缩、拼接或其他图片工具，先调整参数和预览，再提交队列批量处理。",
-        "Recovery" => "对相机镜像执行只读扫描。可按卡片写入时间缩小范围，确认证据后再导出恢复文件。",
+        "Recovery" => "对相机镜像执行只读扫描（支持 JPG/JPEG 与 MP4，暂不支持相机 RAW 照片）。可按卡片写入时间缩小范围，确认证据后再导出恢复文件。",
         "Watermark" => "批量添加 PNG 签名或铺满水印。输出为新文件，原始照片不会被覆盖。",
         "DateFolders" => "集中查看日期目录和备注，一次保存更改；适合整理导入后的日期命名。",
         "Settings" => "按分类管理外观、导入、查重、AI、音效、工具默认值和高级选项；修改会自动保存。",

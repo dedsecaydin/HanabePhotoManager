@@ -35,10 +35,11 @@ public sealed class RecoveryImageService
         }
         var starts = index is null ? await FindFtypSignaturesAsync(stream, progress, cancellationToken) : index.Select(e => e.Offset).Distinct().ToList();
         var candidates = new List<RecoveryCandidate>();
-        foreach (var start in starts)
+        foreach (var start in starts.OrderBy(x => x))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var candidate = ReadCandidate(stream, start);
+            if (candidates.Any(c => c.IsJpeg && start > c.StartOffset && start < c.EndOffset)) continue;
+            var candidate = ReadCandidate(stream, start) ?? JpegRecoveryReader.Read(stream, start, cancellationToken);
             if (candidate is not null && index is not null)
             {
                 var entry = index.First(e => e.Offset == start);
@@ -88,6 +89,8 @@ public sealed class RecoveryImageService
             token.ThrowIfCancellationRequested();
             stream.Position = offset;
             var read = await stream.ReadAsync(buffer.AsMemory(0, (int)Math.Min(SearchBlockSize, stream.Length - offset)), token);
+            for (var j = 0; j + 3 <= read; j++)
+                if (buffer[j] == 0xff && buffer[j + 1] == 0xd8 && buffer[j + 2] == 0xff) starts.Add(offset + j);
             for (var i = 4; i + 4 <= read; i++)
                 if (buffer[i] == (byte)'f' && buffer[i + 1] == (byte)'t' && buffer[i + 2] == (byte)'y' && buffer[i + 3] == (byte)'p') starts.Add(offset + i - 4);
             offset += Math.Max(1, read - 8);
@@ -138,7 +141,7 @@ public sealed class RecoveryImageService
         if (Path.GetFileName(candidate.ExpectedFileName) != candidate.ExpectedFileName || Path.GetFileName(candidate.Id) != candidate.Id)
             throw new InvalidDataException("候选文件名无效。");
         await using var imageLock = new FileStream(scan.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        if (imageLock.Length != scan.ImageLength || ReadCandidate(imageLock, candidate.StartOffset) is not { CanRecoverDirectly: true } current || current.EndOffset != candidate.EndOffset)
+        if (imageLock.Length != scan.ImageLength || (candidate.IsJpeg ? JpegRecoveryReader.Read(imageLock, candidate.StartOffset, token) : ReadCandidate(imageLock, candidate.StartOffset)) is not { CanRecoverDirectly: true } current || current.EndOffset != candidate.EndOffset)
             throw new InvalidDataException("镜像或候选结构发生变化，请重新扫描。");
         token.ThrowIfCancellationRequested();
         var finalDirectory = Path.Combine(Path.GetFullPath(outputDirectory), "recovered_" + Guid.NewGuid().ToString("N"));
@@ -154,9 +157,9 @@ public sealed class RecoveryImageService
         string sha;
         await using (var recoveredStream = File.OpenRead(mp4Path))
             sha = Convert.ToHexString(await SHA256.HashDataAsync(recoveredStream, token)).ToLowerInvariant();
-        var report = new { observed = new { scan.ImagePath, scan.ImageLength, scan.IsExFat }, verified = new { candidate.HasFtyp, candidate.HasMdat, candidate.HasMoov, candidate.HasSampleTables, sha256 = sha }, inferred = new { candidate.ExpectedFileName, candidate.Confidence }, experimental = false };
+        var report = new { observed = new { scan.ImagePath, scan.ImageLength, scan.IsExFat }, verified = new { candidate.IsJpeg, candidate.HasCompletePhotoStructure, candidate.HasFtyp, candidate.HasMdat, candidate.HasMoov, candidate.HasSampleTables, sha256 = sha }, inferred = new { candidate.ExpectedFileName, candidate.Confidence }, experimental = false };
         await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }), token);
-        await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".md"), $"# 相机视频恢复报告\n\n- 镜像：`{scan.ImagePath}`\n- 输出：`{Path.Combine(finalDirectory, candidate.ExpectedFileName)}`\n- SHA-256：`{sha}`\n- 验证：已识别 ftyp / mdat / moov / 采样表标记；未验证解码及完整播放\n- 原始候选：`{Path.Combine(finalDirectory, candidate.Id + ".raw-candidate")}`\n", token);
+        await File.WriteAllTextAsync(Path.Combine(outputDirectory, candidate.Id + ".md"), $"# 相机媒体恢复报告\n\n- 镜像：`{scan.ImagePath}`\n- 输出：`{Path.Combine(finalDirectory, candidate.ExpectedFileName)}`\n- SHA-256：`{sha}`\n- 验证：{(candidate.IsJpeg ? "已识别 JPEG 帧、扫描数据和结束标记；未验证全部像素解码" : "已识别 ftyp / mdat / moov / 采样表标记；未验证完整播放")}\n- 原始候选：`{Path.Combine(finalDirectory, candidate.Id + ".raw-candidate")}`\n", token);
         token.ThrowIfCancellationRequested();
         Directory.Move(stagingDirectory, finalDirectory);
         progress?.Report(100);

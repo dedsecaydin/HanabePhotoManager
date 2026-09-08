@@ -6,11 +6,11 @@
   <Border Style="{StaticResource Layout.PagePanel}" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <StackPanel><TextBlock Text="相机视频安全恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="选择镜像，按写入时间查找视频，再检查证据并导出。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
+      <StackPanel><TextBlock Text="相机照片与视频恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="选择镜像，按写入时间查找照片与视频，再检查证据并导出。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
       <StackPanel Grid.Row="1">
       <Border Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="支持 Sony 存储卡 .img / .raw 镜像" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
+          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="支持 JPG/JPEG 照片与 MP4 视频 · .img / .raw 镜像（暂不支持相机 RAW 照片）" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
           <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
         </Grid>
       </Border>
@@ -26,9 +26,9 @@
             <DatePicker SelectedDate="{Binding WrittenToDate}" SelectedDateFormat="Short" Width="174" Height="40" Padding="10,0" VerticalContentAlignment="Center" Background="{DynamicResource Brush.Surface.Default}" Foreground="{DynamicResource Brush.Text.Primary}" BorderBrush="{DynamicResource Brush.Border.Default}" BorderThickness="1" ToolTip="选择结束日期"/>
             <TextBox Text="{Binding WrittenToClock, UpdateSourceTrigger=PropertyChanged}" Width="128" Height="40" Margin="8,0,0,0" Style="{StaticResource Input.TextBox}" HorizontalContentAlignment="Center" ToolTip="时:分:秒，例如 18:00:00"/>
           </StackPanel></StackPanel>
-          <CheckBox Grid.Column="4" Content="保留时间未知的视频" IsChecked="{Binding IncludeUnknownTime}" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+          <CheckBox Grid.Column="4" Content="保留时间未知的文件" IsChecked="{Binding IncludeUnknownTime}" VerticalAlignment="Bottom" Margin="0,0,0,8"/>
         </Grid>
-        <TextBlock Text="开启后按卡内最后写入时间定位；关闭后完整扫描。目录记录已丢失的视频需要完整扫描。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" />
+        <TextBlock Text="开启后按卡内最后写入时间定位；关闭后完整扫描。目录记录已丢失的文件需要完整扫描。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" />
         <TextBlock Text="原卡与镜像只读 · 实验候选不会自动恢复" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,0" />
       </StackPanel>
       </StackPanel>
@@ -36,7 +36,7 @@
         <Border Style="{StaticResource Card.Default}"><Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
           <DockPanel LastChildFill="True"><Button DockPanel.Dock="Right" Content="停止任务" Command="{Binding CancelCommand}" Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Style="{StaticResource Button.Ghost}"/><StackPanel><TextBlock Text="恢复候选" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="{Binding CandidateSummary}" Style="{StaticResource Status.Description}" /></StackPanel></DockPanel>
           <StackPanel Grid.Row="1" Margin="0,10,0,12"><ProgressBar Visibility="{Binding IsBusy, Converter={StaticResource RecoveryVisibility}}" Height="6" Maximum="100" Value="{Binding ProgressValue, Mode=OneWay}"/><TextBlock Text="{Binding StatusText}" Margin="0,6,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap"/></StackPanel>
-          <StackPanel Grid.Row="2" Visibility="{Binding ShowEmptyState, Converter={StaticResource RecoveryVisibility}}" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="440"><TextBlock Text="在这里查看找到的视频" Style="{StaticResource Layout.SectionTitle}" TextAlignment="Center"/><TextBlock Text="{Binding EmptyStateText}" Margin="0,16,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
+          <StackPanel Grid.Row="2" Visibility="{Binding ShowEmptyState, Converter={StaticResource RecoveryVisibility}}" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="440"><TextBlock Text="在这里查看找到的照片与视频" Style="{StaticResource Layout.SectionTitle}" TextAlignment="Center"/><TextBlock Text="{Binding EmptyStateText}" Margin="0,16,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" TextWrapping="Wrap" TextAlignment="Center"/></StackPanel>
           <ListBox Grid.Row="2" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
                    Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
             <ListBox.ItemContainerStyle>
@@ -70,7 +70,7 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </Grid></Border>
-        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="候选证据与导出" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding CandidateEvidence}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="导出所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/><TextBlock Text="输出包括视频副本、原始候选和 SHA-256 报告，至少需要候选大小两倍的可用空间。请在原存储卡以外的位置保存。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" Margin="0,8,0,16"/><Button Content="打开上次输出目录" Command="{Binding OpenOutputCommand}" Style="{StaticResource Button.Secondary}" /></StackPanel></ScrollViewer></Border>
+        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="候选证据与导出" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding CandidateEvidence}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="导出所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/><TextBlock Text="输出包括媒体副本、原始候选和 SHA-256 报告，至少需要候选大小两倍的可用空间。请在原存储卡以外的位置保存。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" Margin="0,8,0,16"/><Button Content="打开上次输出目录" Command="{Binding OpenOutputCommand}" Style="{StaticResource Button.Secondary}" /></StackPanel></ScrollViewer></Border>
       </Grid>
     </Grid>
   </Border>

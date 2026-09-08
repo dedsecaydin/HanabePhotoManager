@@ -12,6 +12,32 @@ public sealed class RecoveryImageServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "HanabeRecoveryTests", Guid.NewGuid().ToString("N"));
     public RecoveryImageServiceTests() => Directory.CreateDirectory(_root);
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task JpegRecovery_PreservesPhotoAndRejectsTruncation(bool truncated)
+    {
+        using var bitmap = new System.Drawing.Bitmap(32, 24);
+        using var encoded = new MemoryStream();
+        bitmap.Save(encoded, System.Drawing.Imaging.ImageFormat.Jpeg);
+        var jpeg = encoded.ToArray();
+        // An APP segment containing a thumbnail end marker must not end the photo.
+        byte[] app = [0xff, 0xe1, 0, 6, 0xff, 0xd8, 0xff, 0xd9];
+        jpeg = jpeg.Take(2).Concat(app).Concat(jpeg.Skip(2)).ToArray();
+        var imageBytes = new byte[512].Concat(truncated ? jpeg[..^2] : jpeg).ToArray();
+        var image = Path.Combine(_root, "photo.img");
+        await File.WriteAllBytesAsync(image, imageBytes);
+        var service = new RecoveryImageService();
+        var scan = await service.ScanAsync(image, null, default);
+        if (truncated) { scan.Candidates.Should().BeEmpty(); return; }
+        var candidate = scan.Candidates.Should().ContainSingle().Subject;
+        candidate.IsJpeg.Should().BeTrue();
+        candidate.Length.Should().Be(jpeg.Length);
+        var output = await service.ExportDirectAsync(scan, candidate, Path.Combine(_root, "photos"), null, default);
+        (await File.ReadAllBytesAsync(output)).Should().Equal(jpeg);
+        (await File.ReadAllBytesAsync(image)).Should().Equal(imageBytes);
+    }
+
     [Fact]
     public async Task ScanAsync_FindsBoundedCompleteMp4AndAllowsSafeCopyOnly()
     {
@@ -77,21 +103,31 @@ public sealed class RecoveryImageServiceTests : IDisposable
         return stream.ToArray();
     }
 
-    [Fact]
-    public async Task WriteTimeRange_UsesDirectoryLastWriteAndSkipsOutOfRange()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task WriteTimeRange_UsesDirectoryLastWriteAndSkipsOutOfRange(bool photo)
     {
         var path = Path.Combine(_root, "dated.img");
         var bytes = new byte[4096];
         "EXFAT   "u8.CopyTo(bytes.AsSpan(3)); bytes[108] = 9;
         void U32(int at, uint value) => BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(at), value);
         U32(80, 1); U32(88, 2); U32(92, 4); U32(96, 2); U32(512 + 8, 0xffffffff);
-        var file = BuildImage()[512..]; file.CopyTo(bytes, 1536);
+        var file = BuildImage()[512..];
+        if (photo)
+        {
+            using var bitmap = new System.Drawing.Bitmap(16, 16);
+            using var encoded = new MemoryStream();
+            bitmap.Save(encoded, System.Drawing.Imaging.ImageFormat.Jpeg);
+            file = encoded.ToArray();
+        }
+        file.CopyTo(bytes, 1536);
         bytes[1024] = 0x85; bytes[1025] = 2;
         uint timestamp = (46u << 25) | (9u << 21) | (7u << 16) | (14u << 11) | (30u << 5);
         U32(1036, timestamp);
         bytes[1056] = 0xc0; bytes[1057] = 3; bytes[1059] = 5; U32(1076, 3);
         BinaryPrimitives.WriteUInt64LittleEndian(bytes.AsSpan(1080), (ulong)file.Length);
-        bytes[1088] = 0xc1; System.Text.Encoding.Unicode.GetBytes("a.mp4").CopyTo(bytes, 1090);
+        bytes[1088] = 0xc1; System.Text.Encoding.Unicode.GetBytes(photo ? "a.jpg" : "a.mp4").CopyTo(bytes, 1090);
         await File.WriteAllBytesAsync(path, bytes);
         var service = new RecoveryImageService();
         var inside = await service.ScanAsync(path, null, default, writtenFrom: new(2026, 9, 7, 14, 0, 0), writtenTo: new(2026, 9, 7, 15, 0, 0));

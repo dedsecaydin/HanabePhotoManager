@@ -47,8 +47,9 @@ public sealed class RecoveryViewModel : ObservableObject
     public string LastOutputDirectory { get; private set; } = string.Empty;
     public string CandidateSummary => $"共 {Candidates.Count:N0} 个 · 可导出 {Candidates.Count(c => c.CanRecoverDirectly):N0} 个 · 需进一步分析 {Candidates.Count(c => !c.CanRecoverDirectly):N0} 个";
     public bool ShowEmptyState => !IsBusy && !HasCandidates;
-    public string EmptyStateText => string.IsNullOrEmpty(ImagePath) ? "1. 准备存储卡镜像\n2. 打开 .img 或 .raw 文件\n3. 扫描并查看候选证据\n4. 导出到独立文件夹" : "暂无候选。点击开始扫描；扫描完成后仍为空表示未找到支持的完整 MP4 结构。";
+    public string EmptyStateText => string.IsNullOrEmpty(ImagePath) ? "1. 准备存储卡镜像\n2. 打开 .img 或 .raw 文件\n3. 扫描并查看候选证据\n4. 导出到独立文件夹" : "暂无候选。点击开始扫描；扫描完成后仍为空表示未找到支持的完整 媒体结构。";
     public string CandidateEvidence => SelectedCandidate is not { } c ? "选中候选后查看结构证据与导出条件。" :
+        c.IsJpeg ? $"{c.TimeDescription}\n大小：{c.SizeDescription}\nJPEG 帧、扫描数据与结束标记：已识别\n连续数据：{(!c.IsFragmented ? "是" : "未确认")}\n{(c.CanRecoverDirectly ? "可导出照片副本，请打开检查画面完整性。" : "目录长度或连续性未确认，暂不支持直接导出。")} " :
         $"{c.TimeDescription}\n范围：{c.StartOffset:N0}–{c.EndOffset:N0} 字节\n大小：{c.Length / 1048576d:N2} MB\n文件类型 ftyp：{Evidence(c.HasFtyp)}\n媒体数据 mdat：{Evidence(c.HasMdat)}\n媒体索引 moov：{Evidence(c.HasMoov)}\n采样表：{Evidence(c.HasSampleTables)}\n\n" +
         (c.CanRecoverDirectly ? "结构检查通过，可导出连续数据副本。仍需用播放器确认画面、声音及完整时长。" : "结构证据不足，暂不支持自动导出。此工具不会重建缺失索引或拼接碎片。" );
     private static string Evidence(bool present) => present ? "已识别" : "未识别";
@@ -94,7 +95,7 @@ public sealed class RecoveryViewModel : ObservableObject
         _cancellation = new CancellationTokenSource(); IsBusy = true;
         try
         {
-            StatusText = "正在只读扫描 exFAT 与 MP4 结构…";
+            StatusText = "正在只读扫描 exFAT 与 媒体结构…";
             var discovered = new Progress<RecoveryCandidate>(candidate =>
             {
                 Candidates.Add(candidate);
@@ -108,7 +109,7 @@ public sealed class RecoveryViewModel : ObservableObject
             _scan = await Task.Run(() => _service.ScanAsync(ImagePath, progress, _cancellation.Token, discovered, from, to, includeUnknown));
             SelectedCandidate = Candidates.FirstOrDefault();
             OnPropertyChanged(nameof(HasCandidates)); OnPropertyChanged(nameof(IsExFat)); OnPropertyChanged(nameof(FileSystemSummary));
-            StatusText = Candidates.Count == 0 ? "扫描完成，没有找到可识别的 MP4 候选。" : $"扫描完成：{Candidates.Count:N0} 个候选；仅完整结构可直接恢复。";
+            StatusText = Candidates.Count == 0 ? "扫描完成，没有找到可识别的 媒体候选。" : $"扫描完成：{Candidates.Count:N0} 个候选；仅完整结构可直接恢复。";
         }
         catch (OperationCanceledException) { StatusText = "扫描已取消；镜像和原卡均未修改。"; }
         catch (Exception ex) { StatusText = "扫描失败：" + ex.Message; }

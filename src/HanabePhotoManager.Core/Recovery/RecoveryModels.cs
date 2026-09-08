@@ -8,12 +8,15 @@ public sealed record RecoveryCandidate(
     bool HasFtyp, bool HasMdat, bool HasMoov, bool HasSampleTables,
     bool IsFragmented, RecoveryConfidence Confidence, RecoveryCandidateStatus Status)
 {
+    public bool IsJpeg { get; init; }
+    public bool HasCompletePhotoStructure { get; init; }
     public DateTime? LastWriteTime { get; init; }
     public string TimeDescription => LastWriteTime is { } time ? $"卡内最后写入：{time:yyyy-MM-dd HH:mm:ss}" : "写入时间未知";
     public string SizeDescription => $"{Length / 1048576d:N2} MB · 镜像偏移 {StartOffset:N0}";
     public string StatusDescription => CanRecoverDirectly ? "可导出副本" : "需要进一步分析";
     public long Length => EndOffset - StartOffset;
-    public bool CanRecoverDirectly => Status == RecoveryCandidateStatus.Direct && HasFtyp && HasMdat && HasMoov && HasSampleTables && !IsFragmented;
+    public bool CanRecoverDirectly => Status == RecoveryCandidateStatus.Direct && !IsFragmented &&
+        (IsJpeg ? HasCompletePhotoStructure : HasFtyp && HasMdat && HasMoov && HasSampleTables);
 }
 
 public sealed record RecoveryScanResult(

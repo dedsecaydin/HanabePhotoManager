@@ -4302,7 +4302,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     }
                 }
                 var length = new FileInfo(path).Length;
-                File.Delete(path);
+                await new LibraryQuarantineService().QuarantineAsync(LibraryRoot, path, cancellationToken).ConfigureAwait(true);
                 deletedCount++;
                 freedBytes += length;
             }
@@ -4312,10 +4312,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (deletedCount > 0)
         {
-            LibraryResequenceService.ResequenceLibrary(LibraryRoot);
             if (CurrentPage == "Preview")
                 await RefreshLibraryAsync().ConfigureAwait(true);
-            StatusMessage = $"已清理 {deletedCount} 个重复文件，序列已重新排列。";
+            StatusMessage = $"已隔离 {deletedCount} 个重复文件，可在安全隔离区恢复；原始路径和文件内容已保留。";
         }
 
         DuplicateActionRequired?.Invoke(this, selectedCount);

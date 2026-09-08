@@ -1253,3 +1253,7 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Added person photo correction commands with persisted one-step undo, bounded recovery previews, and safe quarantine/restore primitives for duplicate cleanup.
 - Added a read-only library health report and reusable task status item model. Main task-center visual aggregation remains to be wired to every tool.
 - Release build passed with zero warnings/errors; full suite passed: Core 166, Infrastructure 64, App 568, Installer 12.
+
+## 2026-09-08 — enhancement closeout
+
+- Duplicate cleanup now moves verified duplicates into the library quarantine journal instead of deleting them; the duplicate page exposes the recovery area entry.

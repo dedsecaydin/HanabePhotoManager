@@ -1341,6 +1341,7 @@
                         <TextBlock Text="正在扫描重复内容" Margin="8,0,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" />
                       </StackPanel>
                       <Button Content="扫描重复内容" Style="{StaticResource Button.Secondary}" Command="{Binding ScanLibraryDuplicatesCommand}" AutomationProperties.Name="扫描图库重复内容" />
+                      <Button Content="安全隔离区" Style="{StaticResource Button.Ghost}" Margin="8,0,0,0" Command="{Binding OpenQuarantineCommand}" AutomationProperties.Name="打开安全隔离区" />
                     </StackPanel>
                     <StackPanel>
                       <TextBlock Style="{StaticResource Layout.PageTitle}" Text="{Binding PageTitle}" />

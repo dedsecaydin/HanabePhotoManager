@@ -91,7 +91,8 @@ internal sealed class RawRecoveryReader(FileStream stream, long start, long? dir
                 if (tag == 50706) { _format = "DNG"; raw = true; }
                 if (tag is 33421 or 33422) raw = true;
                 if (tag is not (259 or 262 or 273 or 279 or 324 or 325 or 330 or 34665 or 34853 or 40965 or 513 or 514)) continue;
-                if (type is not (3 or 4 or 13) || n > 65536) throw new InvalidDataException();
+                // RAW metadata uses BYTE/ASCII/SHORT/LONG/UNDEFINED depending on vendor.
+                if (type is not (1 or 2 or 3 or 4 or 6 or 7 or 13) || n > 65536) throw new InvalidDataException();
                 var data = Bytes(offset, (int)size);
                 var list = new uint[n];
                 for (int j = 0; j < list.Length; j++) list[j] = unit == 2 ? U16(data.AsSpan(j * unit)) : U32(data.AsSpan(j * unit));

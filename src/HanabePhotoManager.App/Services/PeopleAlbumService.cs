@@ -11,12 +11,14 @@ public sealed class PeopleAlbumService
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
     private readonly string? _storePath;
     private readonly ILocalFaceEmbeddingService _embeddingService;
-    private readonly SemaphoreSlim _gate = new(1, 1);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> Gates = new(StringComparer.OrdinalIgnoreCase);
+    private readonly SemaphoreSlim _gate;
 
     public PeopleAlbumService(string? storePath = null, ILocalFaceEmbeddingService? embeddingService = null)
     {
         _storePath = storePath;
         _embeddingService = embeddingService ?? new LocalFaceEmbeddingService();
+        _gate = Gates.GetOrAdd(Path.GetFullPath(ResolveStorePath()), _ => new SemaphoreSlim(1, 1));
     }
 
     public FaceModelIdentity ModelIdentity => _embeddingService.ModelIdentity;
@@ -46,7 +48,8 @@ public sealed class PeopleAlbumService
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             var rescanned = scanPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var album in snapshot.Albums)
-                album.PhotoPaths.RemoveAll(path => rescanned.Contains(Path.GetFullPath(path)));
+                album.PhotoPaths.RemoveAll(path => rescanned.Contains(Path.GetFullPath(path))
+                    && !album.ManualPhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase));
 
             var detectedFaces = 0;
             const int batchSize = 16;
@@ -97,6 +100,7 @@ public sealed class PeopleAlbumService
             }
 
             snapshot.Albums.RemoveAll(album => album.PhotoPaths.Count == 0 && string.IsNullOrWhiteSpace(album.Name));
+            snapshot.Undo = null; // A completed scan establishes a new baseline.
             await SaveCoreAsync(snapshot, cancellationToken).ConfigureAwait(false);
             return snapshot;
         }
@@ -114,11 +118,15 @@ public sealed class PeopleAlbumService
         MutateAsync(snapshot =>
         {
             var fullPath = Path.GetFullPath(path);
+            var album = snapshot.Albums.FirstOrDefault(item => item.Id == albumId);
+            if (album is null || !album.PhotoPaths.Contains(fullPath, StringComparer.OrdinalIgnoreCase)) return;
             if (!snapshot.RemovedPhotos.TryGetValue(albumId, out var removed))
                 snapshot.RemovedPhotos[albumId] = removed = [];
             if (!removed.Contains(fullPath, StringComparer.OrdinalIgnoreCase)) removed.Add(fullPath);
             snapshot.Albums.FirstOrDefault(item => item.Id == albumId)?.PhotoPaths
                 .RemoveAll(item => string.Equals(item, fullPath, StringComparison.OrdinalIgnoreCase));
+            album.ManualPhotoPaths.RemoveAll(item => string.Equals(item, fullPath, StringComparison.OrdinalIgnoreCase));
+            album.CoverPath = album.PhotoPaths.FirstOrDefault() ?? string.Empty;
         }, cancellationToken);
 
     public Task MergeAsync(string targetId, string sourceId, CancellationToken cancellationToken) =>
@@ -128,6 +136,8 @@ public sealed class PeopleAlbumService
             var source = snapshot.Albums.FirstOrDefault(item => item.Id == sourceId);
             if (target is null || source is null || ReferenceEquals(target, source)) return;
             foreach (var centroid in source.MatchCentroids) target.MatchCentroids.Add(centroid);
+            foreach (var path in source.ManualPhotoPaths)
+                if (!target.ManualPhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase)) target.ManualPhotoPaths.Add(path);
             foreach (var path in source.PhotoPaths)
                 if (!target.PhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase)) target.PhotoPaths.Add(path);
             if (snapshot.RemovedPhotos.TryGetValue(sourceId, out var removed))
@@ -141,13 +151,62 @@ public sealed class PeopleAlbumService
             snapshot.Albums.Remove(source);
         }, cancellationToken);
 
+    /// <summary>Move references into a manual album without touching media or retraining from an ambiguous photo.</summary>
+    public async Task<string> SplitAsync(string sourceId, IEnumerable<string> paths, string name, CancellationToken cancellationToken)
+    {
+        var selected = paths.Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var id = Guid.NewGuid().ToString("N");
+        await MutateAsync(snapshot =>
+        {
+            var source = snapshot.Albums.FirstOrDefault(album => album.Id == sourceId)
+                ?? throw new InvalidOperationException("人物已不存在，请刷新后重试。");
+            if (selected.Length == 0 || selected.Any(path => !source.PhotoPaths.Contains(path, StringComparer.OrdinalIgnoreCase)))
+                throw new InvalidOperationException("请选择当前人物中的照片。");
+            snapshot.Albums.Add(new PersonAlbum
+            {
+                Id = id, Name = string.IsNullOrWhiteSpace(name) ? NextDefaultName(snapshot.Albums) : name.Trim(),
+                CoverPath = selected[0], PhotoPaths = selected.ToList(), ManualPhotoPaths = selected.ToList()
+            });
+            if (!snapshot.RemovedPhotos.TryGetValue(sourceId, out var removed))
+                snapshot.RemovedPhotos[sourceId] = removed = [];
+            foreach (var path in selected)
+            {
+                source.PhotoPaths.RemoveAll(item => string.Equals(item, path, StringComparison.OrdinalIgnoreCase));
+                source.ManualPhotoPaths.RemoveAll(item => string.Equals(item, path, StringComparison.OrdinalIgnoreCase));
+                if (!removed.Contains(path, StringComparer.OrdinalIgnoreCase)) removed.Add(path);
+            }
+            source.CoverPath = source.PhotoPaths.FirstOrDefault() ?? string.Empty;
+        }, cancellationToken).ConfigureAwait(false);
+        return id;
+    }
+
+    public async Task<bool> UndoAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var snapshot = await LoadCoreAsync(cancellationToken).ConfigureAwait(false);
+            if (snapshot.Undo is null) return false;
+            snapshot.Albums = snapshot.Undo.Albums;
+            snapshot.RemovedPhotos = snapshot.Undo.RemovedPhotos;
+            snapshot.Undo = null;
+            await SaveCoreAsync(snapshot, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        finally { _gate.Release(); }
+    }
+
     private async Task MutateAsync(Action<PeopleAlbumSnapshot> mutation, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             var snapshot = await LoadCoreAsync(cancellationToken).ConfigureAwait(false);
+            var before = JsonSerializer.Serialize(new PeopleAlbumUndo { Albums = snapshot.Albums, RemovedPhotos = snapshot.RemovedPhotos }, JsonOptions);
             mutation(snapshot);
+            var after = JsonSerializer.Serialize(new PeopleAlbumUndo { Albums = snapshot.Albums, RemovedPhotos = snapshot.RemovedPhotos }, JsonOptions);
+            if (before == after) return;
+            snapshot.Undo = JsonSerializer.Deserialize<PeopleAlbumUndo>(before, JsonOptions);
             await SaveCoreAsync(snapshot, cancellationToken).ConfigureAwait(false);
         }
         finally { _gate.Release(); }
@@ -178,7 +237,7 @@ public sealed class PeopleAlbumService
             }
             return snapshot;
         }
-        catch (JsonException) { return NewSnapshot(); }
+        catch (JsonException exception) { throw new InvalidDataException("人物记录损坏，已停止写入以保留原记录。", exception); }
     }
 
     private async Task SaveCoreAsync(PeopleAlbumSnapshot snapshot, CancellationToken cancellationToken)
@@ -186,7 +245,7 @@ public sealed class PeopleAlbumService
         var storePath = ResolveStorePath();
         var directory = Path.GetDirectoryName(storePath);
         if (!string.IsNullOrWhiteSpace(directory)) Directory.CreateDirectory(directory);
-        var temporary = storePath + ".tmp";
+        var temporary = storePath + $".{Guid.NewGuid():N}.tmp";
         try
         {
             await using (var stream = File.Create(temporary))
@@ -319,6 +378,13 @@ public sealed class PeopleAlbumSnapshot
     public double MatchThreshold { get; set; } = FaceRecognitionDefaults.YuNetSFaceThreshold;
     public List<PersonAlbum> Albums { get; set; } = [];
     public Dictionary<string, List<string>> RemovedPhotos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public PeopleAlbumUndo? Undo { get; set; }
+}
+
+public sealed class PeopleAlbumUndo
+{
+    public List<PersonAlbum> Albums { get; set; } = [];
+    public Dictionary<string, List<string>> RemovedPhotos { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>人物标签、封面和其包含媒体路径组成的相册。</summary>
@@ -329,4 +395,5 @@ public sealed class PersonAlbum
     public string CoverPath { get; set; } = string.Empty;
     public List<string> PhotoPaths { get; set; } = [];
     public List<float[]> MatchCentroids { get; set; } = [];
+    public List<string> ManualPhotoPaths { get; set; } = [];
 }

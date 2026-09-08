@@ -1247,3 +1247,9 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Read-only inspection of the selected library revealed Sony Cxxxx.MP4 / CxxxxT01.JPG pairs. Normalize that suffix in browse filtering and prioritize the paired JPG before cached video icons. Orphan posters and different dates remain visible; original files are untouched.
 - Added background removable-volume detection, one prompt per observed insertion, busy-state deferral, destination display/selection and a persisted settings switch. Limited to removable drive letters, not MTP/fixed USB volumes. Corrected the unrelated person-recognition RAW support description from the preceding change.
 - Release build: zero warnings/errors. All 803 tests passed (Core 166, Infrastructure 64, App 561, Installer 12). Added Sony pairing, cross-date/orphan, poster-path and media-discovery regression coverage. Physical hot-plug and runtime visual validation remain outstanding; no daily executable overwrite in this batch.
+
+## 2026-09-08 — enhancement batch
+
+- Added person photo correction commands with persisted one-step undo, bounded recovery previews, and safe quarantine/restore primitives for duplicate cleanup.
+- Added a read-only library health report and reusable task status item model. Main task-center visual aggregation remains to be wired to every tool.
+- Release build passed with zero warnings/errors; full suite passed: Core 166, Infrastructure 64, App 568, Installer 12.

@@ -26,6 +26,15 @@ public sealed class PeopleAlbumViewModel : ObservableObject
     private CancellationTokenSource? _scanCancellation;
     private double _scanProgressValue;
     private int _detectedFaceCount;
+    private PersonPhotoViewModel? _selectedPhoto;
+    private bool _isEditing;
+    private bool _canUndo;
+    public PersonPhotoViewModel? SelectedPhoto { get => _selectedPhoto; set { if (SetProperty(ref _selectedPhoto, value)) NotifyEditingCommands(); } }
+    public bool IsEditing { get => _isEditing; private set { if (SetProperty(ref _isEditing, value)) NotifyEditingCommands(); } }
+    public bool CanUndo { get => _canUndo; private set { if (SetProperty(ref _canUndo, value)) UndoCommand.NotifyCanExecuteChanged(); } }
+    public IAsyncRelayCommand RemovePhotoCommand { get; }
+    public IAsyncRelayCommand SplitPhotoCommand { get; }
+    public IAsyncRelayCommand UndoCommand { get; }
 
     public PeopleAlbumViewModel(
         PeopleAlbumService service,
@@ -35,11 +44,14 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         _service = service;
         _pathProvider = pathProvider;
         _mergeTargetPicker = mergeTargetPicker ?? ShowMergeDialog;
-        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsScanning);
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsScanning && !IsEditing);
         CancelScanCommand = new RelayCommand(CancelScan, () => IsScanning);
         ToggleBubblesCommand = new RelayCommand(() => AreBubblesOpen = !AreBubblesOpen);
         ClearSelectionCommand = new RelayCommand(() => { SelectedAlbum = null; AreBubblesOpen = false; });
         MergeCommand = new AsyncRelayCommand(MergeSelectedAsync, CanMerge);
+        RemovePhotoCommand = new AsyncRelayCommand(() => EditPhotoAsync(false), CanEditPhoto);
+        SplitPhotoCommand = new AsyncRelayCommand(() => EditPhotoAsync(true), CanEditPhoto);
+        UndoCommand = new AsyncRelayCommand(UndoAsync, () => CanUndo && !IsScanning && !IsEditing);
         Albums.CollectionChanged += (_, _) => MergeCommand.NotifyCanExecuteChanged();
     }
 
@@ -50,7 +62,10 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         set
         {
             if (SetProperty(ref _selectedAlbum, value))
-                MergeCommand.NotifyCanExecuteChanged();
+            {
+                SelectedPhoto = null;
+                NotifyEditingCommands();
+            }
         }
     }
     public bool IsScanning
@@ -62,6 +77,7 @@ public sealed class PeopleAlbumViewModel : ObservableObject
             {
                 ScanCommand.NotifyCanExecuteChanged();
                 CancelScanCommand.NotifyCanExecuteChanged();
+                NotifyEditingCommands();
             }
         }
     }
@@ -106,7 +122,7 @@ public sealed class PeopleAlbumViewModel : ObservableObject
 
     public async Task ScanPathsAsync(IEnumerable<string> sourcePaths)
     {
-        if (IsScanning) return;
+        if (IsScanning || IsEditing) return;
         _scanCancellation?.Dispose();
         _scanCancellation = new CancellationTokenSource();
         IsScanning = true;
@@ -148,7 +164,46 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         OnPropertyChanged(nameof(SummaryText));
     }
 
-    private bool CanMerge() => SelectedAlbum is not null && Albums.Count >= 2;
+    private bool CanMerge() => !IsScanning && !IsEditing && SelectedAlbum is not null && Albums.Count >= 2;
+    private bool CanEditPhoto() => !IsScanning && !IsEditing && SelectedAlbum is not null && SelectedPhoto is not null
+        && SelectedAlbum.PhotoPaths.Contains(SelectedPhoto.Path);
+    private void NotifyEditingCommands()
+    {
+        MergeCommand.NotifyCanExecuteChanged();
+        RemovePhotoCommand.NotifyCanExecuteChanged();
+        SplitPhotoCommand.NotifyCanExecuteChanged();
+        UndoCommand.NotifyCanExecuteChanged();
+        ScanCommand.NotifyCanExecuteChanged();
+    }
+    private async Task EditPhotoAsync(bool split)
+    {
+        if (!CanEditPhoto()) return;
+        var albumId = SelectedAlbum!.Id;
+        var path = SelectedPhoto!.Path;
+        IsEditing = true;
+        try
+        {
+            if (split) albumId = await _service.SplitAsync(albumId, [path], string.Empty, default);
+            else await _service.RemovePhotoAsync(albumId, path, default);
+            await RefreshAlbumsAsync();
+            SelectedAlbum = Albums.FirstOrDefault(album => album.Id == albumId);
+            StatusText = split ? "已将照片拆分到新人物，可撤销。原照片保留。" : "已移出误识别照片，可撤销。原照片保留。";
+        }
+        catch (Exception exception) { StatusText = $"人物整理失败：{exception.Message}"; }
+        finally { IsEditing = false; }
+    }
+    private async Task UndoAsync()
+    {
+        IsEditing = true;
+        try
+        {
+            var restored = await _service.UndoAsync();
+            await RefreshAlbumsAsync();
+            StatusText = restored ? "已撤销最近一次人物整理。" : "暂无可撤销的人物整理。";
+        }
+        catch (Exception exception) { StatusText = $"撤销失败：{exception.Message}"; }
+        finally { IsEditing = false; }
+    }
 
     private async Task MergeSelectedAsync()
     {
@@ -163,6 +218,9 @@ public sealed class PeopleAlbumViewModel : ObservableObject
 
         var sourceName = source.Name;
         var targetName = target.Name;
+        IsEditing = true;
+        try
+        {
         await _service.MergeAsync(target.Id, source.Id, default).ConfigureAwait(true);
         await RefreshAlbumsAsync().ConfigureAwait(true);
 
@@ -170,6 +228,9 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         StatusText = string.IsNullOrWhiteSpace(sourceName)
             ? $"已合并到「{targetName}」"
             : $"已将「{sourceName}」合并到「{targetName}」";
+        }
+        catch (Exception exception) { StatusText = $"合并失败：{exception.Message}"; }
+        finally { IsEditing = false; }
     }
 
     private async Task RefreshAlbumsAsync()
@@ -231,6 +292,7 @@ public sealed class PeopleAlbumViewModel : ObservableObject
 
     private void ReplaceAlbums(PeopleAlbumSnapshot snapshot)
     {
+        CanUndo = snapshot.Undo is not null;
         var selectedId = SelectedAlbum?.Id;
         Albums.Clear();
         foreach (var album in snapshot.Albums.OrderBy(album => album.Name, StringComparer.CurrentCultureIgnoreCase))

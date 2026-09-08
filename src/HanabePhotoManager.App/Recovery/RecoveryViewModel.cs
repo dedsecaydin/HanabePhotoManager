@@ -11,6 +11,13 @@ public sealed class RecoveryViewModel : ObservableObject
 {
     private readonly RecoveryImageService _service = new();
     private CancellationTokenSource? _cancellation;
+    private CancellationTokenSource? _previewCancellation;
+    private readonly SemaphoreSlim _previewGate = new(1, 1);
+    private System.Windows.Media.Imaging.BitmapSource? _previewImage;
+    private string _previewStatus = "选中照片后自动检查预览。";
+    private string _lastOutputFile = string.Empty;
+    public System.Windows.Media.Imaging.BitmapSource? PreviewImage { get => _previewImage; private set => SetProperty(ref _previewImage, value); }
+    public string PreviewStatus { get => _previewStatus; private set => SetProperty(ref _previewStatus, value); }
     private string _imagePath = string.Empty;
     private string _statusText = "请选择 相机存储卡的 .img 或 .raw 镜像。";
     private double _progressValue;
@@ -36,6 +43,11 @@ public sealed class RecoveryViewModel : ObservableObject
         CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => IsBusy);
         RecoverCommand = new AsyncRelayCommand(RecoverAsync, () => !IsBusy && _scan is not null && SelectedCandidate?.CanRecoverDirectly == true && _scan.Candidates.Contains(SelectedCandidate));
         OpenOutputCommand = new RelayCommand(OpenOutput, () => Directory.Exists(LastOutputDirectory));
+        OpenRecoveredFileCommand = new RelayCommand(() =>
+        {
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_lastOutputFile) { UseShellExecute = true }); }
+            catch (Exception ex) { StatusText = "无法打开恢复文件：" + ex.Message; }
+        }, () => File.Exists(_lastOutputFile));
     }
 
     public ObservableCollection<RecoveryCandidate> Candidates { get; } = [];
@@ -44,6 +56,7 @@ public sealed class RecoveryViewModel : ObservableObject
     public IRelayCommand CancelCommand { get; }
     public IAsyncRelayCommand RecoverCommand { get; }
     public IRelayCommand OpenOutputCommand { get; }
+    public IRelayCommand OpenRecoveredFileCommand { get; }
     public string LastOutputDirectory { get; private set; } = string.Empty;
     public string CandidateSummary => $"共 {Candidates.Count:N0} 个 · 可导出 {Candidates.Count(c => c.CanRecoverDirectly):N0} 个 · 需进一步分析 {Candidates.Count(c => !c.CanRecoverDirectly):N0} 个";
     public bool ShowEmptyState => !IsBusy && !HasCandidates;
@@ -67,7 +80,32 @@ public sealed class RecoveryViewModel : ObservableObject
     public bool HasCandidates => Candidates.Count > 0;
     public bool IsExFat => _scan?.IsExFat == true;
     public string FileSystemSummary => _scan is null ? "尚未扫描" : _scan.IsExFat ? $"exFAT · 扇区 {_scan.SectorSize:N0} B · 簇 {_scan.ClusterSize:N0} B" : "未识别为 exFAT";
-    public RecoveryCandidate? SelectedCandidate { get => _selectedCandidate; set { if (SetProperty(ref _selectedCandidate, value)) { NotifyCommands(); OnPropertyChanged(nameof(CandidateEvidence)); } } }
+    public RecoveryCandidate? SelectedCandidate { get => _selectedCandidate; set { if (SetProperty(ref _selectedCandidate, value)) { NotifyCommands(); OnPropertyChanged(nameof(CandidateEvidence)); _ = LoadPreviewAsync(value); } } }
+
+    private async Task LoadPreviewAsync(RecoveryCandidate? candidate)
+    {
+        _previewCancellation?.Cancel();
+        var cancellation = new CancellationTokenSource();
+        _previewCancellation = cancellation;
+        PreviewImage = null;
+        PreviewStatus = candidate is null ? "选中照片后自动检查预览。" : "正在检查像素预览…";
+        try
+        {
+            if (candidate is null) return;
+            await _previewGate.WaitAsync(cancellation.Token);
+            try
+            {
+                var result = await RecoveryPreviewService.LoadAsync(ImagePath, candidate, cancellation.Token);
+                if (cancellation.IsCancellationRequested || !ReferenceEquals(_previewCancellation, cancellation)) return;
+                PreviewImage = result.Image;
+                PreviewStatus = result.Description;
+            }
+            finally { _previewGate.Release(); }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception ex) { if (ReferenceEquals(_previewCancellation, cancellation)) PreviewStatus = "预览检查失败：" + ex.Message; }
+        finally { if (ReferenceEquals(_previewCancellation, cancellation)) _previewCancellation = null; cancellation.Dispose(); }
+    }
 
     private void ChooseImage()
     {
@@ -129,6 +167,8 @@ public sealed class RecoveryViewModel : ObservableObject
             var path = await _service.ExportDirectAsync(_scan, SelectedCandidate, dialog.FolderName, new Progress<double>(value => ProgressValue = value), _cancellation.Token);
             StatusText = "恢复完成：" + path;
             LastOutputDirectory = Path.GetDirectoryName(path)!;
+            _lastOutputFile = path;
+            OpenRecoveredFileCommand.NotifyCanExecuteChanged();
             OpenOutputCommand.NotifyCanExecuteChanged();
         }
         catch (OperationCanceledException) { StatusText = "恢复已取消；原镜像未修改。"; }

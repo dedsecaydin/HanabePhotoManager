@@ -70,7 +70,18 @@
             </ListBox.ItemTemplate>
           </ListBox>
         </Grid></Border>
-        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel><TextBlock Text="候选证据与导出" Style="{StaticResource Inspector.Header}"/><TextBlock Text="{Binding FileSystemSummary}" Margin="0,8,0,14" Foreground="{DynamicResource Brush.Text.Secondary}"/><TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold" TextWrapping="Wrap"/><TextBlock Text="{Binding CandidateEvidence}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/><Button Content="导出所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/><TextBlock Text="输出包括媒体副本、原始候选和 SHA-256 报告，至少需要候选大小两倍的可用空间。请在原存储卡以外的位置保存。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" Margin="0,8,0,16"/><Button Content="打开上次输出目录" Command="{Binding OpenOutputCommand}" Style="{StaticResource Button.Secondary}" /></StackPanel></ScrollViewer></Border>
+        <Border Grid.Column="2" Style="{StaticResource Inspector.Panel}"><ScrollViewer VerticalScrollBarVisibility="Auto"><StackPanel>
+          <TextBlock Text="候选证据与导出" Style="{StaticResource Inspector.Header}"/>
+          <TextBlock Text="{Binding FileSystemSummary}" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+          <TextBlock Text="{Binding SelectedCandidate.ExpectedFileName}" FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <Image Source="{Binding PreviewImage}" MaxHeight="240" Stretch="Uniform"/>
+          <TextBlock Text="{Binding PreviewStatus}" Style="{StaticResource Status.Description}" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding CandidateEvidence}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,8,0,16"/>
+          <Button Content="导出所选候选" Command="{Binding RecoverCommand}" Style="{StaticResource Button.Primary}"/>
+          <TextBlock Text="输出包括媒体副本、原始候选和 SHA-256 报告，至少需要候选大小两倍的可用空间。请在原存储卡以外的位置保存。" Style="{StaticResource Status.Description}" TextWrapping="Wrap" Margin="0,8,0,16"/>
+          <Button Content="打开 / 播放上次恢复文件" Command="{Binding OpenRecoveredFileCommand}" Style="{StaticResource Button.Secondary}"/>
+          <Button Content="打开上次输出目录" Command="{Binding OpenOutputCommand}" Style="{StaticResource Button.Secondary}" />
+        </StackPanel></ScrollViewer></Border>
       </Grid>
     </Grid>
   </Border>

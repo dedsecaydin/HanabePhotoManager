@@ -178,6 +178,75 @@ public sealed class PeopleAlbumServiceTests : IDisposable
         service.ModelIdentity.Should().Be(identity);
     }
 
+    [Fact]
+    public async Task SplitAndUndo_PersistAcrossRestartAndPreserveOriginalMedia()
+    {
+        var paths = CreateFiles("split-a.jpg", "split-b.jpg");
+        var embeddings = new FakeEmbeddingService(paths.ToDictionary(path => path, _ => new float[] { 1, 0 }));
+        var store = Path.Combine(_directory, "split.json");
+        var service = new PeopleAlbumService(store, embeddings);
+        var initial = await service.ScanAsync(paths, default);
+        var sourceId = initial.Albums.Single().Id;
+        var newId = await service.SplitAsync(sourceId, [paths[0]], "新人物", default);
+        var restarted = new PeopleAlbumService(store, embeddings);
+        var split = await restarted.LoadAsync();
+        split.Albums.Single(album => album.Id == newId).PhotoPaths.Should().Equal(paths[0]);
+        split.Albums.Single(album => album.Id == sourceId).PhotoPaths.Should().Equal(paths[1]);
+        (await restarted.UndoAsync()).Should().BeTrue();
+        var restored = await service.LoadAsync();
+        restored.Albums.Should().ContainSingle();
+        restored.Albums[0].PhotoPaths.Should().BeEquivalentTo(paths);
+        (await service.UndoAsync()).Should().BeFalse();
+        File.ReadAllText(paths[0]).Should().Be("split-a.jpg");
+    }
+
+    [Fact]
+    public async Task Split_ManualAssignmentSurvivesRescanAndInvalidatesStaleUndo()
+    {
+        var paths = CreateFiles("manual-a.jpg", "manual-b.jpg");
+        var embeddings = new FakeEmbeddingService(paths.ToDictionary(path => path, _ => new float[] { 1, 0 }));
+        var service = new PeopleAlbumService(Path.Combine(_directory, "manual.json"), embeddings);
+        var initial = await service.ScanAsync(paths, default);
+        var sourceId = initial.Albums.Single().Id;
+        var splitId = await service.SplitAsync(sourceId, [paths[0]], "另一个人", default);
+        var rescanned = await service.ScanAsync(paths, default);
+        rescanned.Albums.Single(album => album.Id == splitId).PhotoPaths.Should().Contain(paths[0]);
+        rescanned.Albums.Single(album => album.Id == sourceId).PhotoPaths.Should().NotContain(paths[0]);
+        rescanned.Undo.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RemovalAndMergeUndo_RestoreExclusionsAndBothIdentities()
+    {
+        var paths = CreateFiles("undo-a.jpg", "undo-b.jpg");
+        var embeddings = new FakeEmbeddingService(new Dictionary<string, float[]> { [paths[0]] = [1, 0], [paths[1]] = [0, 1] });
+        var service = new PeopleAlbumService(Path.Combine(_directory, "undo.json"), embeddings);
+        var initial = await service.ScanAsync(paths, default);
+        await service.RemovePhotoAsync(initial.Albums[0].Id, paths[0], default);
+        await service.UndoAsync();
+        (await service.LoadAsync()).RemovedPhotos.Should().BeEmpty();
+        await service.MergeAsync(initial.Albums[0].Id, initial.Albums[1].Id, default);
+        await service.UndoAsync();
+        (await service.LoadAsync()).Albums.Select(album => album.Id).Should().BeEquivalentTo(initial.Albums.Select(album => album.Id));
+    }
+
+    [Fact]
+    public async Task CancelledMutationAndMalformedStore_DoNotOverwriteSavedData()
+    {
+        var paths = CreateFiles("cancel.jpg");
+        var store = Path.Combine(_directory, "cancel.json");
+        var service = new PeopleAlbumService(store, new FakeEmbeddingService(new Dictionary<string, float[]> { [paths[0]] = [1, 0] }));
+        var initial = await service.ScanAsync(paths, default);
+        var before = await File.ReadAllBytesAsync(store);
+        var action = () => service.RemovePhotoAsync(initial.Albums[0].Id, paths[0], new CancellationToken(true));
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        (await File.ReadAllBytesAsync(store)).Should().Equal(before);
+        await File.WriteAllTextAsync(store, "broken json");
+        var corrupt = () => service.RenameAsync(initial.Albums[0].Id, "name", default);
+        await corrupt.Should().ThrowAsync<InvalidDataException>();
+        (await File.ReadAllTextAsync(store)).Should().Be("broken json");
+    }
+
     private string[] CreateFiles(params string[] names)
     {
         Directory.CreateDirectory(_directory);

@@ -95,7 +95,7 @@ internal sealed class RawRecoveryReader(FileStream stream, long start, long? dir
                 if (type is not (1 or 2 or 3 or 4 or 6 or 7 or 13) || n > 65536) throw new InvalidDataException();
                 var data = Bytes(offset, (int)size);
                 var list = new uint[n];
-                for (int j = 0; j < list.Length; j++) list[j] = unit == 2 ? U16(data.AsSpan(j * unit)) : U32(data.AsSpan(j * unit));
+                for (int j = 0; j < list.Length; j++) list[j] = unit == 1 ? data[j] : unit == 2 ? U16(data.AsSpan(j * unit)) : U32(data.AsSpan(j * unit));
                 if (!values.TryAdd(tag, list)) throw new InvalidDataException();
                 if (tag is 330 or 34665 or 34853 or 40965) foreach (var child in list) queue.Enqueue(child);
                 if (tag == 262 && list.Contains(32803u) || tag == 259 && list.Contains(32767u)) raw = true;

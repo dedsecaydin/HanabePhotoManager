@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,7 +12,7 @@ public sealed class RecoveryViewModel : ObservableObject
     private readonly RecoveryImageService _service = new();
     private CancellationTokenSource? _cancellation;
     private string _imagePath = string.Empty;
-    private string _statusText = "请选择 Sony 相机卡的 .img 或 .raw 镜像。";
+    private string _statusText = "请选择 相机存储卡的 .img 或 .raw 镜像。";
     private double _progressValue;
     private bool _isBusy;
     private RecoveryCandidate? _selectedCandidate;
@@ -49,6 +49,7 @@ public sealed class RecoveryViewModel : ObservableObject
     public bool ShowEmptyState => !IsBusy && !HasCandidates;
     public string EmptyStateText => string.IsNullOrEmpty(ImagePath) ? "1. 准备存储卡镜像\n2. 打开 .img 或 .raw 文件\n3. 扫描并查看候选证据\n4. 导出到独立文件夹" : "暂无候选。点击开始扫描；扫描完成后仍为空表示未找到支持的完整 媒体结构。";
     public string CandidateEvidence => SelectedCandidate is not { } c ? "选中候选后查看结构证据与导出条件。" :
+        c.IsRawPhoto ? $"{c.TimeDescription}\n大小：{c.SizeDescription}\n{c.StructureEvidence}" :
         c.IsJpeg ? $"{c.TimeDescription}\n大小：{c.SizeDescription}\nJPEG 帧、扫描数据与结束标记：已识别\n连续数据：{(!c.IsFragmented ? "是" : "未确认")}\n{(c.CanRecoverDirectly ? "可导出照片副本，请打开检查画面完整性。" : "目录长度或连续性未确认，暂不支持直接导出。")} " :
         $"{c.TimeDescription}\n范围：{c.StartOffset:N0}–{c.EndOffset:N0} 字节\n大小：{c.Length / 1048576d:N2} MB\n文件类型 ftyp：{Evidence(c.HasFtyp)}\n媒体数据 mdat：{Evidence(c.HasMdat)}\n媒体索引 moov：{Evidence(c.HasMoov)}\n采样表：{Evidence(c.HasSampleTables)}\n\n" +
         (c.CanRecoverDirectly ? "结构检查通过，可导出连续数据副本。仍需用播放器确认画面、声音及完整时长。" : "结构证据不足，暂不支持自动导出。此工具不会重建缺失索引或拼接碎片。" );

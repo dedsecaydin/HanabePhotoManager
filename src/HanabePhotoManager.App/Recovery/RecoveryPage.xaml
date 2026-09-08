@@ -1,4 +1,4 @@
-<UserControl x:Class="HanabePhotoManager.App.Recovery.RecoveryPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:recovery="clr-namespace:HanabePhotoManager.Core.Recovery;assembly=HanabePhotoManager.Core">
+﻿<UserControl x:Class="HanabePhotoManager.App.Recovery.RecoveryPage" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:recovery="clr-namespace:HanabePhotoManager.Core.Recovery;assembly=HanabePhotoManager.Core">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="RecoveryVisibility" />
     <Style TargetType="{x:Type DatePickerTextBox}" BasedOn="{StaticResource Input.TextBox}" />
@@ -10,7 +10,7 @@
       <StackPanel Grid.Row="1">
       <Border Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="支持 JPG/JPEG 照片与 MP4 视频 · .img / .raw 镜像（暂不支持相机 RAW 照片）" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
+          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="照片 JPG / ARW / CR2 / CR3 / NEF / DNG · 视频 MP4 · 打开 .img / .raw 镜像" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
           <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
         </Grid>
       </Border>

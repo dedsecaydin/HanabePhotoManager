@@ -1,4 +1,4 @@
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
@@ -79,7 +79,7 @@ internal static class ExFatTimeIndex
                 text = text[..entries[stream + 3]];
                 bool isDirectory = (entries[i + 4] & 0x10) != 0;
                 if (isDirectory && entries[i] == 0x85) queue.Enqueue((first, length, contiguous));
-                else if (!isDirectory && (text.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || text.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || text.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)))
+                else if (!isDirectory && (text.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase) || text.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || text.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase) || new[] { ".arw", ".cr2", ".cr3", ".nef", ".dng" }.Contains(Path.GetExtension(text), StringComparer.OrdinalIgnoreCase)))
                     result.Add(new(Address(first), length, text, DecodeTimestamp(U32(entries, i + 12), entries[i + 21]), contiguous));
                 i += secondary * 32;
             }

@@ -1016,7 +1016,7 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
                               <TextBlock Text="本地 AI 人物识别" FontWeight="SemiBold" />
-                              <TextBlock Text="只识别 JPG/JPEG；同名 RAW 自动继承，视频跳过；仅本机处理。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,3,10,0" />
+                              <TextBlock Text="支持 JPG/JPEG、ARW、CR2、CR3、NEF、DNG；视频跳过；仅本机处理。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" Margin="0,3,10,0" />
                             </StackPanel>
                             <CheckBox Grid.Column="1" VerticalAlignment="Center" IsChecked="{Binding EnablePersonRecognition}" />
                           </Grid>

@@ -1236,3 +1236,8 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - JPEG 按段长度、帧、扫描和结束标记确定范围，避免 EXIF 缩略图结束标记截断主照片；单候选上限 128 MiB。
 - 照片沿用只读来源、导出前结构复核、隔离输出、取消清理和 SHA-256 报告。界面明确暂不支持相机 RAW、碎片重组；结构完整不代表全部像素可解码，真实损坏卡效果未验证。
 - Release 构建通过，796 项测试通过，包含真实编码 JPEG 原样导出、截断拒绝、缩略图标记与照片时间筛选。
+## 2026-09-08 — RAW photo recovery
+
+- Added bounded format readers for TIFF-family ARW/CR2/NEF/DNG and Canon CR3; added RAW signatures, exFAT directory extensions, evidence text, and CR3/MP4 dispatch separation.
+- Export remains read-only and requires a contiguous directory-backed boundary for RAW, preserving the byte range and SHA-256 report.
+- Sources reviewed: PhotoRec TIFF carving, canon_cr3 format documentation, and LibRaw CRX decoder reference. No GPL source copied.

@@ -7,6 +7,21 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class DesignSystemResourceTests
 {
+    [Fact]
+    public void SharedWorkspace_PagesFillRemainingSpaceAfterChromeAndHelp()
+    {
+        var document = System.Xml.Linq.XDocument.Parse(Read("MainWindow.xaml"));
+        System.Xml.Linq.XNamespace ns = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+        var workspace = document.Descendants(ns + "Grid").Single(e => (string?)e.Attribute("Margin") == "24,8,24,8");
+        var dock = workspace.Parent!;
+        dock.Name.Should().Be(ns + "DockPanel");
+        dock.Elements().Last().Should().BeSameAs(workspace,
+            "DockPanel only stretches its last child; a trailing help Popup shrinks every page");
+        var names = workspace.Elements().Select(e => (string?)e.Attribute("Name")
+            ?? (string?)e.Attribute(System.Xml.Linq.XName.Get("Name", "http://schemas.microsoft.com/winfx/2006/xaml"))).ToArray();
+        names.Should().Contain(new[] { "HomePage", "ImportPage", "PreviewPage", "FaceSearchPage", "MapPageHost", "CustomAlbumsPageHost", "CompressionPageHost", "RecoveryPageHost", "WatermarkPageHost", "DateFolderManagementPageHost", "SettingsCenterPageHost" });
+    }
+
     private static readonly string[] RequiredThemeKeys =
     [
         "Brush.Background.Canvas", "Brush.Surface.Default", "Brush.Surface.Subtle",

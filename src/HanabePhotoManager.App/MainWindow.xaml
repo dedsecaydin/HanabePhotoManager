@@ -668,6 +668,31 @@
               </StackPanel>
             </Grid>
           </Border>
+          <Popup Placement="Bottom" PlacementTarget="{Binding ElementName=TopBarSurface}" StaysOpen="False"
+                 IsOpen="{Binding IsPageHelpOpen, Mode=TwoWay}" AllowsTransparency="True" PopupAnimation="Fade">
+            <Border Width="390" MaxHeight="460" Margin="0,0,20,52" Padding="20"
+                    Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.OutlineVariant}"
+                    BorderThickness="1" CornerRadius="{StaticResource Radius.Container}">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                  <DockPanel Margin="0,0,0,10">
+                    <Button DockPanel.Dock="Right" Content="×" Width="28" Height="28" Padding="0" Style="{StaticResource Button.Ghost}"
+                            Command="{Binding TogglePageHelpCommand}" ToolTip="关闭说明" />
+                    <TextBlock Text="{Binding PageHelpTitle}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.OnSurface}" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <TextBlock Text="{Binding PageHelpOverview}" TextWrapping="Wrap" LineHeight="22"
+                             Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,16" />
+                  <Border Background="{DynamicResource Brush.Surface.ContainerHigh}" CornerRadius="{StaticResource Radius.Card}" Padding="14,12">
+                    <TextBlock Text="{Binding PageHelpSteps}" TextWrapping="Wrap" LineHeight="22"
+                               Foreground="{DynamicResource Brush.OnSurface}" />
+                  </Border>
+                  <TextBlock Text="说明会随当前页面自动切换，可在右下角再次打开。" FontSize="{StaticResource Typography.Caption}"
+                             Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,14,0,0" />
+                </StackPanel>
+              </ScrollViewer>
+            </Border>
+          </Popup>
           <Grid Margin="24,8,24,8">
             <Border Name="HomePage" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Style="{StaticResource PageSurface}" Visibility="{Binding IsHomePage, Converter={StaticResource BoolToVis}}">
               <Border Style="{StaticResource Layout.PagePanel}" Padding="24,20">
@@ -2586,31 +2611,7 @@
               </StackPanel>
             </ScrollViewer>
           </Grid>
-          <Popup Placement="Bottom" PlacementTarget="{Binding ElementName=TopBarSurface}" StaysOpen="False"
-                 IsOpen="{Binding IsPageHelpOpen, Mode=TwoWay}" AllowsTransparency="True" PopupAnimation="Fade">
-            <Border Width="390" MaxHeight="460" Margin="0,0,20,52" Padding="20"
-                    Background="{DynamicResource Brush.Surface.Container}" BorderBrush="{DynamicResource Brush.OutlineVariant}"
-                    BorderThickness="1" CornerRadius="{StaticResource Radius.Container}">
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
-                  <DockPanel Margin="0,0,0,10">
-                    <Button DockPanel.Dock="Right" Content="×" Width="28" Height="28" Padding="0" Style="{StaticResource Button.Ghost}"
-                            Command="{Binding TogglePageHelpCommand}" ToolTip="关闭说明" />
-                    <TextBlock Text="{Binding PageHelpTitle}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"
-                               Foreground="{DynamicResource Brush.OnSurface}" VerticalAlignment="Center" />
-                  </DockPanel>
-                  <TextBlock Text="{Binding PageHelpOverview}" TextWrapping="Wrap" LineHeight="22"
-                             Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,16" />
-                  <Border Background="{DynamicResource Brush.Surface.ContainerHigh}" CornerRadius="{StaticResource Radius.Card}" Padding="14,12">
-                    <TextBlock Text="{Binding PageHelpSteps}" TextWrapping="Wrap" LineHeight="22"
-                               Foreground="{DynamicResource Brush.OnSurface}" />
-                  </Border>
-                  <TextBlock Text="说明会随当前页面自动切换，可在右下角再次打开。" FontSize="{StaticResource Typography.Caption}"
-                             Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,14,0,0" />
-                </StackPanel>
-              </ScrollViewer>
-            </Border>
-          </Popup>
+
         </DockPanel>
       </Border>
       <Border Grid.ColumnSpan="2" Panel.ZIndex="100" Visibility="{Binding IsOnboardingVisible, Converter={StaticResource BoolToVis}}">

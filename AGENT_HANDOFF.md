@@ -389,3 +389,9 @@ After any code change:
 2. If a bug was fixed → update [`docs/known-issues.md`](docs/known-issues.md)
 3. If feature state changed → update [`docs/current-status.md`](docs/current-status.md)
 4. If version bumped → update this file + [`CHANGELOG.md`](CHANGELOG.md)
+
+## 2026-09-08 — 修复全部页面未铺满公共工作区
+
+- 根因：说明 Popup 成为 DockPanel 的最后一个子元素，使页面 Grid 失去 LastChildFill，按内容宽度停靠左侧；之前增加 Stretch 无法解决父布局问题。
+- 将帮助 Popup 放在页面 Grid 前，确保全部 11 个功能入口共用的 Grid 填满剩余空间，保留标题栏、状态栏和正常边距。
+- Release 构建零警告零错误，793 项测试通过；新增公共宿主顺序与 11 页面覆盖回归检查。独立测试数据下已查看页面总览截图 `.artifacts/fill-all-pages.png`，恢复等页面铺满；导入入口回落主页，其独立视觉验收未完成。日用目录已覆盖并校验 App DLL 一致。

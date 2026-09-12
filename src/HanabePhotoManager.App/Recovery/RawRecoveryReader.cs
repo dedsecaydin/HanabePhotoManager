@@ -7,7 +7,7 @@ namespace HanabePhotoManager.App.Recovery;
 
 // Independent format-based reader. No PhotoRec or LibRaw source is embedded.
 // RAW has vendor trailers: only a directory-bounded, contiguous file is exportable.
-internal sealed class RawRecoveryReader(FileStream stream, long start, long? directoryLength, CancellationToken token)
+internal sealed class RawRecoveryReader(Stream stream, long start, long? directoryLength, CancellationToken token)
 {
     private readonly long _limit = Math.Min(directoryLength ?? 512L * 1024 * 1024, stream.Length - start);
     private long _end;

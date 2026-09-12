@@ -134,6 +134,12 @@ models can never be compared or merged.
 
 Core defines provider-neutral models, stores, authentication contracts, and scheduling policy. Infrastructure supplies persistent stores and provider implementations. The cloud App module composes these capabilities into navigation and transfer states. Credentials and sessions must remain outside source control and logs.
 
+### Direct recovery volume reading
+
+The recovery page launches the same executable with the restricted `--recovery-reader` entry point before normal application startup/single-instance handling. This elevated helper exposes only bounded reads over a current-user named pipe. Infrastructure opens a mounted removable volume with `GENERIC_READ`, verifies physical disk extents against the system volume and D: destination, and aligns reads to native sectors. The retained handle and media-change counter prohibit transparent device reconnection. The non-elevated App owns parsing and all output writes; the shared scanner now consumes seekable streams for both files and device sessions. Cancellation closes the pipe; restarting a scan requires a new session and clears previous candidates. No lock/dismount/repair/write operation is issued to the source. Device selection currently excludes fixed disks and devices without drive letters.
+
+Output paths are generated under `D:\HanabeRecovery` using local date, time, a source label and a unique task identifier. Destination checks reject directory links and insufficient space. Device export additionally rechecks physical separation through the helper before creating staging output. Source media can still be modified by other programs; structural checks do not establish successful full decoding or fragmented reconstruction.
+
 ### Theme switching
 
 The user selection reaches `ThemeManager`, which swaps the composed theme dictionary and persists the preference. Existing bindings resolve equivalent resource keys from the new dictionary without ViewModel changes.

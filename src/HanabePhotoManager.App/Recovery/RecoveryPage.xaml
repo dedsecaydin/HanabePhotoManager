@@ -6,14 +6,24 @@
   <Border Style="{StaticResource Layout.PagePanel}" Padding="16" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
     <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-      <StackPanel><TextBlock Text="相机照片与视频恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="选择镜像，按写入时间查找照片与视频，再检查证据并导出。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
+      <StackPanel><TextBlock Text="相机照片与视频恢复助手" Style="{StaticResource Layout.PageTitle}"/><TextBlock Text="选择存储卡或镜像，查找照片与视频。恢复目录按日期自动生成。" Style="{StaticResource Status.Description}" Margin="0,6,0,0"/></StackPanel>
       <StackPanel Grid.Row="1">
       <Border Style="{StaticResource Card.Subtle}" Margin="0,16,0,16">
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="01  镜像来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="照片 JPG / ARW / CR2 / CR3 / NEF / DNG · 视频 MP4 · 打开 .img / .raw 镜像" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
+          <StackPanel><TextBlock Text="01  恢复来源" Style="{StaticResource Layout.SectionTitle}"/><TextBlock Text="照片 JPG / ARW / CR2 / CR3 / NEF / DNG · 视频 MP4 · 存储卡或 .img / .raw 镜像" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,5,0,0"/><TextBlock Text="{Binding ImagePath}" ToolTip="{Binding ImagePath}" TextTrimming="CharacterEllipsis" Margin="0,9,0,0" FontFamily="{StaticResource Typography.FontFamily.Mono}"/></StackPanel>
           <Button Grid.Column="1" Content="打开镜像" Command="{Binding ChooseImageCommand}" VerticalAlignment="Center" Style="{StaticResource Button.Secondary}" Margin="12,0,0,0"/>
         </Grid>
       </Border>
+      <StackPanel IsEnabled="{Binding CanEditScanOptions}">
+        <WrapPanel>
+          <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" MinWidth="120" ToolTip="选择有盘符的可移动存储卡或 U 盘"/>
+          <Button Content="刷新设备" Command="{Binding RefreshDevicesCommand}" Style="{StaticResource Button.Ghost}"/>
+          <Button Content="使用此设备" Command="{Binding ChooseDeviceCommand}" Style="{StaticResource Button.Secondary}"/>
+        </WrapPanel>
+        <TextBlock Text="直接读取已分配盘符的存储卡，包含未被覆盖的删除数据；不制作整盘镜像。拔出或取消后需重新扫描。" Style="{StaticResource Status.Description}" TextWrapping="Wrap"/>
+        <TextBlock Text="自动输出位置" Style="{StaticResource Status.Description}"/>
+        <TextBlock Text="{Binding OutputDirectory}" ToolTip="{Binding OutputDirectory}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+      </StackPanel>
       <StackPanel IsEnabled="{Binding CanEditScanOptions}" Margin="0,0,0,16">
         <DockPanel LastChildFill="True"><Button DockPanel.Dock="Right" Content="开始扫描" Command="{Binding ScanCommand}" Style="{StaticResource Button.Primary}"/><StackPanel><TextBlock Text="02  查找范围" Style="{StaticResource Layout.SectionTitle}"/><CheckBox Content="按写入日期时间快速扫描" IsChecked="{Binding UseWriteTimeRange}" Margin="0,8,0,0"/></StackPanel></DockPanel>
         <Grid Visibility="{Binding UseWriteTimeRange, Converter={StaticResource RecoveryVisibility}}" Margin="0,12,0,10">

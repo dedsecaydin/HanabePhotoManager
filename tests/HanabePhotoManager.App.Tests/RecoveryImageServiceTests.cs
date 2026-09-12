@@ -12,6 +12,61 @@ public sealed class RecoveryImageServiceTests : IDisposable
     private readonly string _root = Path.Combine(Path.GetTempPath(), "HanabeRecoveryTests", Guid.NewGuid().ToString("N"));
     public RecoveryImageServiceTests() => Directory.CreateDirectory(_root);
 
+    [Fact]
+    public async Task DeviceStream_ScansAndExportsWithoutImageFile()
+    {
+        var bytes = BuildImage();
+        var before = bytes.ToArray();
+        var service = new RecoveryImageService("device-fixture", () => new MemoryStream(bytes, writable: false));
+        var scan = await service.ScanAsync("device-fixture", null, default);
+        var candidate = scan.Candidates.First(c => c.CanRecoverDirectly);
+        var path = await service.ExportDirectAsync(scan, candidate, Path.Combine(_root, "device-output"), null, default);
+        (await File.ReadAllBytesAsync(path)).Should().Equal(bytes.Skip((int)candidate.StartOffset).Take((int)candidate.Length));
+        bytes.Should().Equal(before);
+    }
+
+    [Fact]
+    public async Task DeviceStream_CanceledScanDoesNotProduceOutput()
+    {
+        var service = new RecoveryImageService("device-fixture", () => new MemoryStream(BuildImage(), writable: false));
+        using var canceled = new CancellationTokenSource(); canceled.Cancel();
+        Func<Task> action = () => service.ScanAsync("device-fixture", null, canceled.Token);
+        await action.Should().ThrowAsync<OperationCanceledException>();
+        Directory.EnumerateFileSystemEntries(_root).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeviceExport_RejectsUnsafeDestinationBeforeWriting()
+    {
+        var service = new RecoveryImageService("device-fixture", () => new MemoryStream(BuildImage(), writable: false),
+            _ => throw new IOException("Source disk destination"));
+        var scan = await service.ScanAsync("device-fixture", null, default);
+        Func<Task> export = () => service.ExportDirectAsync(scan, scan.Candidates.First(c => c.CanRecoverDirectly), _root, null, default);
+        await export.Should().ThrowAsync<IOException>();
+        Directory.EnumerateFileSystemEntries(_root).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AutomaticOutput_UsesDateAndUniqueTaskWithoutCreatingFiles()
+    {
+        var clock = new DateTime(2026, 9, 12, 14, 35, 26);
+        var root = Path.Combine(_root, "output");
+        var first = RecoveryOutputDirectory.CreatePath("camera.img", clock, root);
+        var second = RecoveryOutputDirectory.CreatePath("camera.img", clock, root);
+        first.Should().StartWith(Path.Combine(root, "2026-09-12", "143526_camera_"));
+        first.Should().NotBe(second);
+        Directory.Exists(root).Should().BeFalse();
+    }
+
+    [Fact]
+    public void AutomaticOutput_RejectsInsufficientSpaceBeforeCreatingDirectory()
+    {
+        var path = Path.Combine(_root, "output");
+        Action validate = () => RecoveryOutputDirectory.Validate(path, long.MaxValue);
+        validate.Should().Throw<IOException>();
+        Directory.Exists(path).Should().BeFalse();
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -9,14 +9,22 @@ namespace HanabePhotoManager.App.Recovery;
 
 public sealed class RecoveryImageService
 {
+    private readonly string? _devicePath;
+    private readonly Func<Stream>? _deviceReader;
+    private readonly Action<string>? _validateOutput;
+    public RecoveryImageService() { }
+    internal RecoveryImageService(string devicePath, Func<Stream> reader, Action<string>? validateOutput = null)
+    { _devicePath = devicePath; _deviceReader = reader; _validateOutput = validateOutput; }
+    private Stream OpenSource(string path) => path == _devicePath && _deviceReader is not null
+        ? _deviceReader() : new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, SearchBlockSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
     private const long MaximumBoxSize = 16L * 1024 * 1024 * 1024;
     private const int SearchBlockSize = 4 * 1024 * 1024;
 
     public async Task<RecoveryScanResult> ScanAsync(string imagePath, IProgress<double>? progress, CancellationToken cancellationToken,
         IProgress<RecoveryCandidate>? candidateProgress = null, DateTime? writtenFrom = null, DateTime? writtenTo = null, bool includeUnknownTime = true)
     {
-        if (!RecoverySafetyPolicy.IsSupportedImage(imagePath)) throw new NotSupportedException("仅支持 .img 和 .raw 镜像。");
-        await using var stream = new FileStream(imagePath, FileMode.Open, FileAccess.Read, FileShare.Read, SearchBlockSize, FileOptions.Asynchronous | FileOptions.SequentialScan);
+        if (imagePath != _devicePath && !RecoverySafetyPolicy.IsSupportedImage(imagePath)) throw new NotSupportedException("仅支持 .img 和 .raw 镜像。");
+        await using var stream = OpenSource(imagePath);
         if (stream.Length < 512) throw new InvalidDataException("镜像不足 512 字节，请选择完整的存储卡镜像。");
         var boot = new byte[512];
         await stream.ReadExactlyAsync(boot, cancellationToken);
@@ -66,10 +74,10 @@ public sealed class RecoveryImageService
         progress?.Report(100);
         return new(imagePath, stream.Length, isExFat, sectorSize, clusterSize, candidates, DateTimeOffset.UtcNow);
 
-        static byte bootAt(FileStream source, long offset) { source.Position = offset; var value = source.ReadByte(); return value < 0 ? (byte)0 : (byte)value; }
+        static byte bootAt(Stream source, long offset) { source.Position = offset; var value = source.ReadByte(); return value < 0 ? (byte)0 : (byte)value; }
     }
 
-    private static long FindExFatOffset(FileStream stream, byte[] first, CancellationToken token)
+    private static long FindExFatOffset(Stream stream, byte[] first, CancellationToken token)
     {
         if (first.AsSpan(3, 8).SequenceEqual("EXFAT   "u8)) return 0;
         if (first[510] != 0x55 || first[511] != 0xAA) return -1;
@@ -88,7 +96,7 @@ public sealed class RecoveryImageService
         return -1;
     }
 
-    private static async Task<List<long>> FindFtypSignaturesAsync(FileStream stream, IProgress<double>? progress, CancellationToken token)
+    private static async Task<List<long>> FindFtypSignaturesAsync(Stream stream, IProgress<double>? progress, CancellationToken token)
     {
         var starts = new List<long>();
         var buffer = new byte[SearchBlockSize + 16];
@@ -110,7 +118,7 @@ public sealed class RecoveryImageService
         return starts;
     }
 
-    private static RecoveryCandidate? ReadMediaCandidate(FileStream stream, long start, CancellationToken token, long? directoryLength = null)
+    private static RecoveryCandidate? ReadMediaCandidate(Stream stream, long start, CancellationToken token, long? directoryLength = null)
     {
         if (start < 0 || start > stream.Length - 16) return null;
         stream.Position = start;
@@ -120,7 +128,7 @@ public sealed class RecoveryImageService
         return JpegRecoveryReader.Read(stream, start, token) ?? ReadCandidate(stream, start);
     }
 
-    private static RecoveryCandidate? ReadCandidate(FileStream stream, long start)
+    private static RecoveryCandidate? ReadCandidate(Stream stream, long start)
     {
         var position = start;
         var hasFtyp = false; var hasMdat = false; var hasMoov = false; var hasTables = false;
@@ -147,7 +155,7 @@ public sealed class RecoveryImageService
             direct ? RecoveryCandidateStatus.Direct : RecoveryCandidateStatus.Experimental);
     }
 
-    private static bool ContainsSampleTable(FileStream stream, long offset, long length)
+    private static bool ContainsSampleTable(Stream stream, long offset, long length)
     {
         var readLength = (int)Math.Min(length, 32 * 1024 * 1024);
         var data = new byte[readLength]; stream.Position = offset;
@@ -158,10 +166,12 @@ public sealed class RecoveryImageService
 
     public async Task<string> ExportDirectAsync(RecoveryScanResult scan, RecoveryCandidate candidate, string outputDirectory, IProgress<double>? progress, CancellationToken token)
     {
+        token.ThrowIfCancellationRequested();
+        _validateOutput?.Invoke(outputDirectory);
         if (!RecoverySafetyPolicy.CanExport(candidate, scan.ImageLength) || !scan.Candidates.Contains(candidate)) throw new InvalidOperationException("该候选不满足安全直恢条件。实验候选不会自动导出。");
         if (Path.GetFileName(candidate.ExpectedFileName) != candidate.ExpectedFileName || Path.GetFileName(candidate.Id) != candidate.Id)
             throw new InvalidDataException("候选文件名无效。");
-        await using var imageLock = new FileStream(scan.ImagePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        await using var imageLock = OpenSource(scan.ImagePath);
         if (imageLock.Length != scan.ImageLength || ReadMediaCandidate(imageLock, candidate.StartOffset, token, candidate.DirectoryLength) is not { CanRecoverDirectly: true } current || current.EndOffset != candidate.EndOffset)
             throw new InvalidDataException("镜像或候选结构发生变化，请重新扫描。");
         token.ThrowIfCancellationRequested();
@@ -194,9 +204,9 @@ public sealed class RecoveryImageService
         }
     }
 
-    private static async Task CopyRangeAsync(string sourcePath, string destinationPath, long offset, long length, IProgress<double>? progress, CancellationToken token)
+    private async Task CopyRangeAsync(string sourcePath, string destinationPath, long offset, long length, IProgress<double>? progress, CancellationToken token)
     {
-        await using var source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, true);
+        await using var source = OpenSource(sourcePath);
         await using var destination = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, true);
         source.Position = offset; var buffer = new byte[1024 * 1024]; long copied = 0;
         while (copied < length)

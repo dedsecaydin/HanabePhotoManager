@@ -1257,3 +1257,10 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 ## 2026-09-08 — enhancement closeout
 
 - Duplicate cleanup now moves verified duplicates into the library quarantine journal instead of deleting them; the duplicate page exposes the recovery area entry.
+
+## 2026-09-12 — Direct removable-volume recovery and automatic output
+
+- Added drive-letter removable-volume selection, a dedicated pre-WPF elevated reader entry point, sector-aligned read-only native access and current-user pipe transport with buffered seekable views. The reader blocks fixed/system disks and checks destination physical disk extents; retains the handle and checks media changes instead of silently reconnecting.
+- Reused JPEG, TIFF RAW, CR3 and MP4 parsers through Stream inputs. Added automatic dated task directories on D:, writable/capacity/link checks, export destination revalidation, cancellation session closure and frozen export selection. Updated page help and user/release documentation.
+- Added nine tests covering stream-backed recovery, output rejection/cancellation, date/task uniqueness, low space, invalid raw paths and remote cross-block reads. Published startup smoke initially exposed WPF StartupUri handling; moved helper dispatch into Program before WPF initialization. Retest successfully returned fixed-drive rejection and process exit code 1 in approximately one second, with the daily app still running.
+- Release build and full automated results are recorded in current-status. Self-contained verification output: `.artifacts/direct-recovery-publish`. Actual removable media, UAC, physical unplug and interactive Light/Dark visual verification remain unperformed. No installed/daily files or GitHub release assets were overwritten by this change.

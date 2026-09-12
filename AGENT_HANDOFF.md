@@ -1,5 +1,11 @@
 # Agent Handoff — Current Project State
 
+## 2026-09-12 Direct removable-volume recovery
+
+- Added a restricted elevated read helper, seekable stream reuse for the image parsers, and removable drive selection. D: output is automatically dated and unique; the helper rejects system disks and same-physical-disk output.
+- Unsupported: fixed USB drives, unlettered volumes/lost partitions, fragmented reconstruction, in-page device preview. Actual UAC/removable-card/hot-unplug verification remains outstanding; do not claim hardware acceptance or installer deployment based on unit tests.
+- Current change is unreleased; see current-status and agent-change-log for verification evidence.
+
 ## 2026-09-07 Recovery UI alpha.25
 
 - Recovery page now groups image selection and scan range, expands date/time inputs on demand, and shows readable candidate summaries with evidence in the inspector.

@@ -1,5 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <PropertyGroup>
+    <StartupObject>HanabePhotoManager.App.Program</StartupObject>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\HanabePhotoManager.Core\HanabePhotoManager.Core.csproj" />
     <ProjectReference Include="..\HanabePhotoManager.Infrastructure\HanabePhotoManager.Infrastructure.csproj" />

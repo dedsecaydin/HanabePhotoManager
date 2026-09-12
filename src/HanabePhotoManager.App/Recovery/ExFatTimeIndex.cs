@@ -9,7 +9,7 @@ internal static class ExFatTimeIndex
 {
     internal sealed record Entry(long Offset, long Length, string Name, DateTime? LastWrite, bool Contiguous);
 
-    internal static IReadOnlyList<Entry> Read(FileStream image, long volume, CancellationToken token)
+    internal static IReadOnlyList<Entry> Read(Stream image, long volume, CancellationToken token)
     {
         byte[] ReadAt(long offset, int count)
         {

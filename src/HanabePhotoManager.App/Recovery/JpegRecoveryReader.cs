@@ -6,7 +6,7 @@ namespace HanabePhotoManager.App.Recovery;
 internal static class JpegRecoveryReader
 {
     // Read marker lengths rather than mistaking an EXIF thumbnail's EOI for the main image end.
-    internal static RecoveryCandidate? Read(FileStream stream, long start, CancellationToken token)
+    internal static RecoveryCandidate? Read(Stream stream, long start, CancellationToken token)
     {
         stream.Position = start;
         long limit = Math.Min(stream.Length, start + 128L * 1024 * 1024);

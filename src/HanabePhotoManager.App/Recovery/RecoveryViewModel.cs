@@ -9,7 +9,14 @@ namespace HanabePhotoManager.App.Recovery;
 
 public sealed class RecoveryViewModel : ObservableObject
 {
-    private readonly RecoveryImageService _service = new();
+    private RecoveryImageService _service = new();
+    private RecoveryDeviceSession? _deviceSession;
+    private bool _useDevice;
+    public ObservableCollection<string> Devices { get; } = [];
+    private string? _selectedDevice;
+    public string? SelectedDevice { get => _selectedDevice; set { SetProperty(ref _selectedDevice, value); ChooseDeviceCommand.NotifyCanExecuteChanged(); } }
+    public IRelayCommand RefreshDevicesCommand { get; }
+    public IRelayCommand ChooseDeviceCommand { get; }
     private CancellationTokenSource? _cancellation;
     private CancellationTokenSource? _previewCancellation;
     private readonly SemaphoreSlim _previewGate = new(1, 1);
@@ -19,6 +26,8 @@ public sealed class RecoveryViewModel : ObservableObject
     public System.Windows.Media.Imaging.BitmapSource? PreviewImage { get => _previewImage; private set => SetProperty(ref _previewImage, value); }
     public string PreviewStatus { get => _previewStatus; private set => SetProperty(ref _previewStatus, value); }
     private string _imagePath = string.Empty;
+    private string _outputDirectory = string.Empty;
+    public string OutputDirectory { get => _outputDirectory; private set => SetProperty(ref _outputDirectory, value); }
     private string _statusText = "请选择 相机存储卡的 .img 或 .raw 镜像。";
     private double _progressValue;
     private bool _isBusy;
@@ -39,7 +48,17 @@ public sealed class RecoveryViewModel : ObservableObject
     public RecoveryViewModel()
     {
         ChooseImageCommand = new RelayCommand(ChooseImage, () => !IsBusy);
-        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && File.Exists(ImagePath));
+        ScanCommand = new AsyncRelayCommand(ScanAsync, () => !IsBusy && (_useDevice || File.Exists(ImagePath)));
+        RefreshDevicesCommand = new RelayCommand(RefreshDevices, () => !IsBusy);
+        ChooseDeviceCommand = new RelayCommand(() =>
+        {
+            _deviceSession?.Dispose(); _deviceSession = null;
+            _useDevice = true;
+            ImagePath = SelectedDevice!;
+            OutputDirectory = RecoveryOutputDirectory.CreatePath("存储卡_" + ImagePath[0], DateTime.Now);
+            ResetScan();
+            StatusText = "已选择存储卡。开始扫描时将请求 Windows 只读访问权限；输出目录已自动安排。";
+        }, () => !IsBusy && SelectedDevice is not null);
         CancelCommand = new RelayCommand(() => _cancellation?.Cancel(), () => IsBusy);
         RecoverCommand = new AsyncRelayCommand(RecoverAsync, () => !IsBusy && _scan is not null && SelectedCandidate?.CanRecoverDirectly == true && _scan.Candidates.Contains(SelectedCandidate));
         OpenOutputCommand = new RelayCommand(OpenOutput, () => Directory.Exists(LastOutputDirectory));
@@ -48,6 +67,20 @@ public sealed class RecoveryViewModel : ObservableObject
             try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_lastOutputFile) { UseShellExecute = true }); }
             catch (Exception ex) { StatusText = "无法打开恢复文件：" + ex.Message; }
         }, () => File.Exists(_lastOutputFile));
+        RefreshDevices();
+    }
+
+    private void RefreshDevices()
+    {
+        try
+        {
+            var selected = SelectedDevice;
+            Devices.Clear();
+            foreach (var drive in DriveInfo.GetDrives())
+                if (drive.DriveType == DriveType.Removable) Devices.Add(drive.Name);
+            SelectedDevice = Devices.Contains(selected ?? "") ? selected : Devices.FirstOrDefault();
+        }
+        catch (Exception ex) { StatusText = "设备列表读取失败：" + ex.Message; }
     }
 
     public ObservableCollection<RecoveryCandidate> Candidates { get; } = [];
@@ -92,6 +125,7 @@ public sealed class RecoveryViewModel : ObservableObject
         try
         {
             if (candidate is null) return;
+            if (_useDevice) { PreviewStatus = "设备扫描候选请导出后打开检查；当前保留结构证据。"; return; }
             await _previewGate.WaitAsync(cancellation.Token);
             try
             {
@@ -111,7 +145,10 @@ public sealed class RecoveryViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFileDialog { Title = "打开相机存储卡镜像", Filter = "Raw image|*.img;*.raw", CheckFileExists = true };
         if (dialog.ShowDialog() != true) return;
+        _deviceSession?.Dispose(); _deviceSession = null;
+        _useDevice = false; _service = new RecoveryImageService();
         ImagePath = dialog.FileName;
+        OutputDirectory = RecoveryOutputDirectory.CreatePath(ImagePath, DateTime.Now);
         ResetScan();
         StatusText = "镜像只读打开；可以开始扫描。";
     }
@@ -134,6 +171,24 @@ public sealed class RecoveryViewModel : ObservableObject
         _cancellation = new CancellationTokenSource(); IsBusy = true;
         try
         {
+            if (string.IsNullOrEmpty(OutputDirectory)) OutputDirectory = RecoveryOutputDirectory.CreatePath(ImagePath, DateTime.Now);
+            RecoveryOutputDirectory.Validate(OutputDirectory);
+            if (_useDevice)
+            {
+                StatusText = "正在启动独立只读进程，并核对来源盘与输出盘…";
+                _deviceSession?.Dispose(); _deviceSession = null;
+                _deviceSession = await RecoveryDeviceSession.ConnectAsync(ImagePath, _cancellation.Token);
+                var session = _deviceSession;
+                _service = new RecoveryImageService(ImagePath, session.OpenRead, output =>
+                {
+                    if (!string.Equals(Path.GetPathRoot(Path.GetFullPath(output)), @"D:\", StringComparison.OrdinalIgnoreCase))
+                        throw new IOException("设备恢复只能写入已核对的 D 盘输出位置。");
+                    RecoveryOutputDirectory.Validate(output);
+                    session.ValidateDestination();
+                });
+            }
+            RecoveryOutputDirectory.Prepare(OutputDirectory);
+            using var deviceCancellation = _cancellation.Token.Register(() => { if (_useDevice) _deviceSession?.Dispose(); });
             StatusText = "正在只读扫描 exFAT 与 媒体结构…";
             var discovered = new Progress<RecoveryCandidate>(candidate =>
             {
@@ -150,35 +205,47 @@ public sealed class RecoveryViewModel : ObservableObject
             OnPropertyChanged(nameof(HasCandidates)); OnPropertyChanged(nameof(IsExFat)); OnPropertyChanged(nameof(FileSystemSummary));
             StatusText = Candidates.Count == 0 ? "扫描完成，没有找到可识别的 媒体候选。" : $"扫描完成：{Candidates.Count:N0} 个候选；仅完整结构可直接恢复。";
         }
-        catch (OperationCanceledException) { StatusText = "扫描已取消；镜像和原卡均未修改。"; }
-        catch (Exception ex) { StatusText = "扫描失败：" + ex.Message; }
+        catch (OperationCanceledException) { CloseFailedDevice(); StatusText = "扫描已取消；镜像和原卡均未修改。"; }
+        catch (Exception ex) { CloseFailedDevice(); StatusText = _cancellation.IsCancellationRequested ? "扫描已停止；来源未修改。再次扫描将重新连接设备。" : "扫描失败：" + ex.Message; }
         finally { IsBusy = false; _cancellation.Dispose(); _cancellation = null; }
     }
 
     private async Task RecoverAsync()
     {
         if (_scan is null || SelectedCandidate is null) return;
-        var dialog = new OpenFolderDialog { Title = "选择恢复输出目录" };
-        if (dialog.ShowDialog() != true) return;
+        var scan = _scan;
+        var candidate = SelectedCandidate;
         _cancellation = new CancellationTokenSource(); IsBusy = true; ProgressValue = 0;
         try
         {
+            if (string.IsNullOrEmpty(OutputDirectory)) OutputDirectory = RecoveryOutputDirectory.CreatePath(ImagePath, DateTime.Now);
+            RecoveryOutputDirectory.Validate(OutputDirectory, checked(candidate.Length * 2 + 1024 * 1024));
+            using var deviceCancellation = _cancellation.Token.Register(() => { if (_useDevice) _deviceSession?.Dispose(); });
             StatusText = "正在保留原始候选并生成恢复副本…";
-            var path = await _service.ExportDirectAsync(_scan, SelectedCandidate, dialog.FolderName, new Progress<double>(value => ProgressValue = value), _cancellation.Token);
+            var progress = new Progress<double>(value => ProgressValue = value);
+            var path = await Task.Run(() => _service.ExportDirectAsync(scan, candidate, OutputDirectory, progress, _cancellation.Token));
             StatusText = "恢复完成：" + path;
             LastOutputDirectory = Path.GetDirectoryName(path)!;
             _lastOutputFile = path;
             OpenRecoveredFileCommand.NotifyCanExecuteChanged();
             OpenOutputCommand.NotifyCanExecuteChanged();
         }
-        catch (OperationCanceledException) { StatusText = "恢复已取消；原镜像未修改。"; }
-        catch (Exception ex) { StatusText = "恢复失败：" + ex.Message; }
+        catch (OperationCanceledException) { CloseFailedDevice(); StatusText = "恢复已取消；来源未修改。"; }
+        catch (Exception ex) { CloseFailedDevice(); StatusText = _cancellation.IsCancellationRequested ? "恢复已停止；来源未修改。设备模式需重新扫描。" : "恢复失败：" + ex.Message; }
         finally { IsBusy = false; _cancellation.Dispose(); _cancellation = null; }
+    }
+
+    private void CloseFailedDevice()
+    {
+        if (!_useDevice) return;
+        _deviceSession?.Dispose(); _deviceSession = null;
+        _scan = null;
     }
 
     private void NotifyCommands()
     {
         ChooseImageCommand.NotifyCanExecuteChanged(); ScanCommand.NotifyCanExecuteChanged(); CancelCommand.NotifyCanExecuteChanged(); RecoverCommand.NotifyCanExecuteChanged();
+        ChooseDeviceCommand.NotifyCanExecuteChanged(); RefreshDevicesCommand.NotifyCanExecuteChanged();
     }
 
     private void ResetScan()

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -22,6 +22,20 @@ namespace HanabePhotoManager.App;
 /// </remarks>
 public partial class MainWindow : Window
 {
+    private void OpenSessions_Click(object sender, RoutedEventArgs e)
+    {
+        var paths = _viewModel.PreviewFiles.Where(f => f.IsSelected).Select(f => f.FullPath).ToArray();
+        if ((sender as FrameworkElement)?.Tag as string == "ImportLast") paths = _viewModel.LastImportedSessionPaths.Where(System.IO.File.Exists).ToArray();
+        else if (paths.Length == 0) paths = _viewModel.PreviewFiles.Select(f => f.FullPath).ToArray();
+        if (paths.Length == 0)
+        {
+            var picker = new Microsoft.Win32.OpenFileDialog { Title = "选择需要分场的素材（可多选）", Multiselect = true, Filter = "影像素材|*.jpg;*.jpeg;*.tif;*.tiff;*.png;*.arw;*.cr2;*.cr3;*.nef;*.dng;*.heic;*.hif|所有文件|*.*" };
+            if (picker.ShowDialog(this) != true) return;
+            paths = picker.FileNames;
+        }
+        var store = new HanabePhotoManager.Infrastructure.Sessions.JsonSessionStore(ImportSessionWriter.StorePath(_viewModel.LibraryRoot));
+        new Sessions.SessionsWindow(new Sessions.SessionsViewModel(store, new HanabePhotoManager.Infrastructure.Sessions.ExifCaptureTimeReader(), paths)) { Owner = this }.Show();
+    }
     private static readonly ImageSource DefaultAppIcon = BitmapFrame.Create(
         new Uri("pack://application:,,,/Assets/HanabeApp.ico", UriKind.Absolute));
 
@@ -279,7 +293,8 @@ public partial class MainWindow : Window
     private void TopBarSurface_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
-        if (FindVisualAncestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null)
+        if (FindVisualAncestor<System.Windows.Controls.Primitives.ButtonBase>(e.OriginalSource as DependencyObject) is not null ||
+            FindVisualAncestor<System.Windows.Controls.Primitives.TextBoxBase>(e.OriginalSource as DependencyObject) is not null)
         {
             return;
         }
@@ -347,6 +362,9 @@ public partial class MainWindow : Window
         };
         _importTipTimer.Tick += ImportTipTimer_Tick;
         InitializeComponent();
+        PreviewWallItemsControl.AddHandler(
+            HanabePhotoManager.App.Controls.VirtualizingWrapPanel.ScrollInfoChangedEvent,
+            new RoutedEventHandler(GalleryPanel_ScrollInfoChanged));
         UpdateThemeToggleAppearance(ThemeManager.Current);
         DataContext = _viewModel;
         Loaded += MainWindow_Loaded;
@@ -589,6 +607,11 @@ public partial class MainWindow : Window
     private async Task CaptureScreenshotAfterDelayAsync(string path)
     {
         await Task.Delay(TimeSpan.FromSeconds(8));
+        if (App.OpenSettingsOverview && _viewModel.IsSettingsPage)
+        {
+            SettingsCenterPageHost.ShowImportRoutingOverview();
+            await Task.Delay(TimeSpan.FromMilliseconds(250));
+        }
         if (App.SelectFirstForScreenshot && _viewModel.PreviewFiles.Count > 0)
         {
             _viewModel.SelectedPreviewFile = _viewModel.PreviewFiles.FirstOrDefault();
@@ -746,7 +769,9 @@ public partial class MainWindow : Window
         // A fresh transform avoids any in-flight translate animation on the page,
         // and BeginAnimation is inherently interruptible (SnapshotAndReplace).
         var translate = new TranslateTransform();
-        page.RenderTransform = translate;
+        var scale = new ScaleTransform(1, 1);
+        page.RenderTransformOrigin = new System.Windows.Point(0.5, 0.35);
+        page.RenderTransform = new TransformGroup { Children = { scale, translate } };
         page.BeginAnimation(UIElement.OpacityProperty, null);
 
         if (!SystemParameters.ClientAreaAnimation)
@@ -757,22 +782,35 @@ public partial class MainWindow : Window
         }
 
         page.Opacity = 0;
-        translate.Y = 6;
+        translate.Y = 14;
+        scale.ScaleX = scale.ScaleY = 0.985;
 
-        var duration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
+        // 页面切换：淡入 + 轻微上浮 + 微缩放，指数缓出；动画期间位图缓存，减少大页面重绘造成的卡顿。
+        var baseDuration = FindResource("Motion.Duration.Normal") is Duration motionDuration && motionDuration.HasTimeSpan
             ? motionDuration.TimeSpan
             : TimeSpan.FromMilliseconds(180);
-        var ease = FindResource("Motion.Easing.Standard") as IEasingFunction
-            ?? new CubicEase { EasingMode = EasingMode.EaseOut };
+        var duration = TimeSpan.FromMilliseconds(Math.Max(260, baseDuration.TotalMilliseconds * 1.5));
+        var fadeDuration = TimeSpan.FromMilliseconds(duration.TotalMilliseconds * 0.7);
+        var ease = new ExponentialEase { EasingMode = EasingMode.EaseOut, Exponent = 5 };
 
-        page.BeginAnimation(
-            UIElement.OpacityProperty,
-            new DoubleAnimation(0, 1, duration) { EasingFunction = ease },
-            HandoffBehavior.SnapshotAndReplace);
-        translate.BeginAnimation(
-            TranslateTransform.YProperty,
-            new DoubleAnimation(6, 0, duration) { EasingFunction = ease },
-            HandoffBehavior.SnapshotAndReplace);
+        if (!ReferenceEquals(page, MapPageHost))
+        {
+            page.CacheMode = new BitmapCache { EnableClearType = true, RenderAtScale = VisualTreeHelper.GetDpi(this).DpiScaleX };
+        }
+        var fade = new DoubleAnimation(0, 1, fadeDuration) { EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut } };
+        var rise = new DoubleAnimation(14, 0, duration) { EasingFunction = ease };
+        rise.Completed += (_, _) =>
+        {
+            if (ReferenceEquals(page.RenderTransform, translate) || page.RenderTransform is TransformGroup group && group.Children.Contains(translate))
+            {
+                page.CacheMode = null;
+            }
+        };
+
+        page.BeginAnimation(UIElement.OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        translate.BeginAnimation(TranslateTransform.YProperty, rise, HandoffBehavior.SnapshotAndReplace);
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, new DoubleAnimation(0.985, 1, duration) { EasingFunction = ease }, HandoffBehavior.SnapshotAndReplace);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, new DoubleAnimation(0.985, 1, duration) { EasingFunction = ease }, HandoffBehavior.SnapshotAndReplace);
     }
 
     private FrameworkElement? ResolveCurrentPage() => _viewModel.CurrentPage switch
@@ -1581,8 +1619,153 @@ public partial class MainWindow : Window
         _viewModel.DeleteSelectedFilesCommand.Execute(null);
     }
 
+    private void HomeSearch_Click(object sender, RoutedEventArgs e) => FocusGallerySearch();
+
+    private int _shootingHoverIndex = -2;
+
+    /// <summary>拍摄频率“鱼眼”效果：指针所在的条变粗，相邻渐细，其余收窄，随指针平滑流动。</summary>
+    private void ShootingBars_MouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        var count = ShootingFrequencyBarsHost.Items.Count;
+        if (count == 0) return;
+        var x = e.GetPosition(ShootingFrequencyBarsHost).X;
+        var width = Math.Max(1, ShootingFrequencyBarsHost.ActualWidth);
+        var index = Math.Clamp((int)(x / width * count), 0, count - 1);
+        if (index == _shootingHoverIndex) return;
+        _shootingHoverIndex = index;
+        ApplyShootingBarWidths(index);
+    }
+
+    private void ShootingBars_MouseLeave(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        _shootingHoverIndex = -2;
+        ApplyShootingBarWidths(null);
+    }
+
+    private void ApplyShootingBarWidths(int? hoverIndex)
+    {
+        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
+        for (var i = 0; i < ShootingFrequencyBarsHost.Items.Count; i++)
+        {
+            if (ShootingFrequencyBarsHost.ItemContainerGenerator.ContainerFromIndex(i) is not ContentPresenter presenter) continue;
+            if (presenter.ContentTemplate?.FindName("BarScale", presenter) is not ScaleTransform scale) continue;
+            var target = hoverIndex is not { } hover ? 1.0 : Math.Abs(i - hover) switch
+            {
+                0 => 1.9,
+                1 => 1.2,
+                2 => 0.85,
+                _ => 0.6,
+            };
+            scale.BeginAnimation(
+                ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(target, TimeSpan.FromMilliseconds(hoverIndex is null ? 260 : 180)) { EasingFunction = ease },
+                HandoffBehavior.SnapshotAndReplace);
+        }
+    }
+
+    private void HomeScheduleInput_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            _viewModel.AddScheduleCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Escape)
+        {
+            _viewModel.NewScheduleText = string.Empty;
+            e.Handled = true;
+        }
+    }
+
+    private bool _gallerySyncQueued;
+    private bool _gallerySyncingScrollBar;
+
+    /// <summary>照片墙虚拟化面板的范围/偏移变化后，同步右侧的位置指示滚动条（合并到一次布局后更新）。</summary>
+    private void GalleryPanel_ScrollInfoChanged(object sender, RoutedEventArgs e)
+    {
+        if (_gallerySyncQueued) return;
+        _gallerySyncQueued = true;
+        Dispatcher.BeginInvoke(() =>
+        {
+            _gallerySyncQueued = false;
+            var panel = GetGalleryPanel();
+            if (panel is null) return;
+            var scrollable = Math.Max(0, panel.ExtentHeight - panel.ViewportHeight);
+            _gallerySyncingScrollBar = true;
+            GalleryScrollBar.Minimum = 0;
+            GalleryScrollBar.Maximum = scrollable;
+            GalleryScrollBar.ViewportSize = Math.Max(1, panel.ViewportHeight);
+            GalleryScrollBar.LargeChange = Math.Max(1, panel.ViewportHeight * 0.9);
+            GalleryScrollBar.SmallChange = 48;
+            GalleryScrollBar.Value = Math.Clamp(panel.VerticalOffset, 0, scrollable);
+            GalleryScrollBar.Visibility = scrollable > 1 ? Visibility.Visible : Visibility.Collapsed;
+            _gallerySyncingScrollBar = false;
+        }, DispatcherPriority.Render);
+    }
+
+    private void GalleryScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
+    {
+        if (_gallerySyncingScrollBar) return;
+        GetGalleryPanel()?.SetVerticalOffset(e.NewValue);
+    }
+
+    private void ToggleTaskCenter_Click(object sender, RoutedEventArgs e) =>
+        TaskCenterPopup.IsOpen = !TaskCenterPopup.IsOpen;
+
+    private async void WorkspaceSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+        e.Handled = true;
+        await _viewModel.SearchFromWorkspaceAsync(WorkspaceSearchBox.Text);
+        BrowseSmartSearchBox.Focus();
+        BrowseSmartSearchBox.SelectAll();
+    }
+
+    private void SearchExample_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string text })
+        {
+            _viewModel.UnifiedSearchText = text;
+            BrowseSmartSearchBox.Focus();
+            BrowseSmartSearchBox.CaretIndex = text.Length;
+        }
+    }
+
+    private void FocusGallerySearch()
+    {
+        _viewModel.ShowPreviewCommand.Execute(null);
+        Dispatcher.BeginInvoke(() =>
+        {
+            BrowseSmartSearchBox.Focus();
+            BrowseSmartSearchBox.SelectAll();
+        }, DispatcherPriority.Input);
+    }
+
+    private async void HomeResumeContinue_Click(object sender, RoutedEventArgs e)
+    {
+        _viewModel.ShowImportCommand.Execute(null);
+        await _viewModel.ResumePendingImportAsync();
+    }
+
+    private void HomeResumeDiscard_Click(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "放弃这次导入的恢复记录？\n已经导入的文件会保留，源文件也不会被删除；之后无法再从中断处继续。",
+            "放弃恢复记录",
+            MessageBoxButton.OKCancel,
+            MessageBoxImage.Question);
+        if (result == MessageBoxResult.OK) _viewModel.DiscardPendingImportResume();
+    }
+
     private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            FocusGallerySearch();
+            e.Handled = true;
+            return;
+        }
+
         // Space = enter canvas drag mode (treemap only, not in text fields)
         if (e.Key == Key.Space &&
             _viewModel.IsTreemapBrowseMode &&
@@ -1837,7 +2020,8 @@ public partial class MainWindow : Window
         if (e.ChangedButton != MouseButton.Left ||
             FindPreviewCard(e.OriginalSource as DependencyObject) is not null ||
             FindVisualAncestor<System.Windows.Controls.Button>(e.OriginalSource as DependencyObject) is not null ||
-            FindVisualAncestor<System.Windows.Controls.Primitives.ScrollBar>(e.OriginalSource as DependencyObject) is not null)
+            FindVisualAncestor<System.Windows.Controls.Primitives.ScrollBar>(e.OriginalSource as DependencyObject) is not null ||
+            (e.OriginalSource is Visual source && GallerySelectionActionBar.IsAncestorOf(source)))
         {
             return;
         }

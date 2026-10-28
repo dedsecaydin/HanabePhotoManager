@@ -5,7 +5,6 @@ namespace HanabePhotoManager.App;
 /// </summary>
 public partial class App : System.Windows.Application
 {
-    private const string SingleInstanceMutexName = "HanabePhotoManager.SingleInstance";
     private Mutex? _singleInstanceMutex;
     private bool _ownsSingleInstanceMutex;
 
@@ -23,6 +22,7 @@ public partial class App : System.Windows.Application
     /// pages (e.g. Home) in the headless-safe screenshot workflow.
     /// </summary>
     internal static string? ScreenshotPage { get; private set; }
+    internal static bool OpenSettingsOverview { get; private set; }
 
     /// <summary>
     /// When launched with <c>--viewer &lt;path&gt;</c>, the app opens the immersive
@@ -85,6 +85,10 @@ public partial class App : System.Windows.Application
                 ScreenshotPage = args[index + 1];
                 index++;
             }
+            else if (string.Equals(arg, "--settings-overview", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenSettingsOverview = true;
+            }
             else if (string.Equals(arg, "--select-first", StringComparison.OrdinalIgnoreCase))
             {
                 SelectFirstForScreenshot = true;
@@ -112,7 +116,8 @@ public partial class App : System.Windows.Application
             }
         }
 
-        _singleInstanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var createdNew);
+        var instanceName = Services.AppInstanceIdentity.MutexName(Environment.GetEnvironmentVariable("HANABE_APP_DATA_DIR"));
+        _singleInstanceMutex = new Mutex(initiallyOwned: true, instanceName, out var createdNew);
         _ownsSingleInstanceMutex = createdNew;
         if (!createdNew)
         {

@@ -31,9 +31,10 @@ public sealed class RecoveryDeviceSessionTests
         var worker = Task.Run(() =>
         {
             using var reader = new BinaryReader(client, System.Text.Encoding.UTF8, true);
-            using var writer = new BinaryWriter(client, System.Text.Encoding.UTF8, true);
             try
             {
+                // Closing the session can also race the writer's final Dispose/Flush.
+                using var writer = new BinaryWriter(client, System.Text.Encoding.UTF8, true);
                 while (true)
                 {
                     var offset = reader.ReadInt64(); var count = reader.ReadInt32();

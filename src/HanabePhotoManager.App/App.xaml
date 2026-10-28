@@ -5,7 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="Themes/Themes/Violet.Light.xaml" />
+                <ResourceDictionary Source="Themes/Themes/Hanabe.Dark.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- ════════════════════════════════════════════
@@ -270,16 +270,24 @@
                     <Setter.Value>
                         <ControlTemplate TargetType="CheckBox">
                             <StackPanel Orientation="Horizontal">
-                                <Grid Width="40" Height="22" VerticalAlignment="Center">
-                                    <Border x:Name="SwitchTrack" CornerRadius="11" Background="{DynamicResource Brush.Surface.ContainerHighest}" BorderBrush="{DynamicResource Brush.Outline}" BorderThickness="1" />
-                                    <Ellipse x:Name="SwitchThumb" Width="18" Height="18" Fill="{DynamicResource Brush.Surface.Default}" HorizontalAlignment="Left" Margin="1" />
+                                <Grid Width="44" Height="24" VerticalAlignment="Center">
+                                    <Border x:Name="SwitchTrack" CornerRadius="12" Background="{DynamicResource Brush.Surface.ContainerHighest}" BorderBrush="{DynamicResource Brush.Outline}" BorderThickness="1" />
+                                    <Ellipse x:Name="SwitchThumb" Width="18" Height="18" Fill="{DynamicResource Brush.Viewer.Text}" Stroke="{DynamicResource Brush.Border.Default}" StrokeThickness="0.5" HorizontalAlignment="Left" Margin="3,0" Effect="{StaticResource Shadow.Floating}" />
                                 </Grid>
                                 <ContentPresenter Margin="8,0,0,0" VerticalAlignment="Center" RecognizesAccessKey="True" />
                             </StackPanel>
                             <ControlTemplate.Triggers>
-                                <Trigger Property="IsChecked" Value="True">
-                                    <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource Brush.Primary}" />
+                                <Trigger Property="IsMouseOver" Value="True">
                                     <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource Brush.Primary}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocused" Value="True">
+                                    <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" />
+                                    <Setter TargetName="SwitchTrack" Property="BorderThickness" Value="2" />
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="SwitchTrack" Property="Background" Value="{DynamicResource Brush.Primary.Fill}" />
+                                    <Setter TargetName="SwitchTrack" Property="BorderBrush" Value="{DynamicResource Brush.Glass.Stroke}" />
+                                    <Setter TargetName="SwitchThumb" Property="Stroke" Value="{x:Null}" />
                                     <Setter TargetName="SwitchThumb" Property="HorizontalAlignment" Value="Right" />
                                 </Trigger>
                                 <Trigger Property="IsEnabled" Value="False">
@@ -404,14 +412,17 @@
             </Style>
 
             <Style x:Key="GlassScrollThumb" TargetType="Thumb">
-                <Setter Property="Background" Value="{DynamicResource Brush.Surface.Subtle}" />
+                <!-- 滚动位置指示：主题强调色，深浅两套主题下都清晰可见 -->
+                <Setter Property="Background" Value="{DynamicResource Brush.Primary}" />
+                <Setter Property="Opacity" Value="0.72" />
                 <Setter Property="Cursor" Value="Hand" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Thumb">
                             <Border x:Name="ThumbSurface" CornerRadius="4" Background="{TemplateBinding Background}" />
                             <ControlTemplate.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Accent.Hover}" /></Trigger>
+                                <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Accent.Hover}" /><Setter Property="Opacity" Value="1" /></Trigger>
+                                <Trigger Property="IsDragging" Value="True"><Setter Property="Opacity" Value="1" /></Trigger>
                                 <Trigger Property="IsDragging" Value="True"><Setter TargetName="ThumbSurface" Property="Background" Value="{DynamicResource Brush.Accent.Pressed}" /></Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>

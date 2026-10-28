@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows.Threading;
+using System.Windows;
+using HanabePhotoManager.App.Imports;
 using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App;
@@ -31,7 +33,20 @@ public partial class MainWindow
             while (_pendingMediaDevices.Count > 0 && !_viewModel.IsBusy && !_deviceMonitorCancellation.IsCancellationRequested)
             {
                 var root = _pendingMediaDevices.Dequeue();
-                if (Directory.Exists(root)) await _viewModel.OfferDeviceImportAsync(root);
+                if (!Directory.Exists(root)) continue;
+                if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+                Show();
+                Activate();
+                var prompt = new DeviceImportPromptWindow(root, _viewModel.HasLibraryRoot ? _viewModel.LibraryRoot : null)
+                {
+                    Owner = this
+                };
+                if (prompt.ShowDialog() == true)
+                {
+                    await _viewModel.OfferDeviceImportAsync(root);
+                    Activate();
+                    await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+                }
             }
         }
         catch (OperationCanceledException) { }

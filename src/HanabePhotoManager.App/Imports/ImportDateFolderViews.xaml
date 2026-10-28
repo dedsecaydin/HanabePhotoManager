@@ -1,0 +1,94 @@
+<UserControl x:Class="HanabePhotoManager.App.Imports.ImportDateFolderViews"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="GraphBoolToVis" />
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <!-- Both views consume this one editor and the same ImportDateFolderDecision instances. -->
+    <DataTemplate x:Key="DateFolderEditor">
+      
+                              <Border Margin="0,0,0,12" Padding="14" Background="{DynamicResource Brush.Surface.ContainerHigh}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" CornerRadius="{StaticResource Radius.Control}">
+                                <Grid>
+                                  <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                                  </Grid.RowDefinitions>
+                                  <Grid.ColumnDefinitions><ColumnDefinition Width="110" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                                  <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal">
+                                    <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding DateText}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" />
+                                    <TextBlock Margin="10,2,0,0" Text="{Binding MediaCount, StringFormat={}{0} 组媒体}" Foreground="{DynamicResource Brush.OnSurfaceVariant}" />
+                                  </StackPanel>
+                                  <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Grid.Row="1" Grid.Column="0" Margin="0,10,10,0" Text="处理方式" VerticalAlignment="Center" />
+                                  <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,10,0,0" ItemsSource="{Binding AvailableStrategies}" Style="{StaticResource Input.ComboBox}" SelectedValuePath="Value" SelectedValue="{Binding Strategy}" AutomationProperties.Name="日期文件夹处理方式"><ComboBox.ItemTemplate><DataTemplate><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                                  <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Grid.Row="2" Grid.Column="0" Margin="0,10,10,0" Text="已有文件夹" VerticalAlignment="Center" Visibility="{Binding HasExistingFolders, Converter={StaticResource BoolToVis}}" />
+                                  <ComboBox Grid.Row="2" Grid.Column="1" Margin="0,10,0,0" ItemsSource="{Binding ExistingFolders}" Style="{StaticResource Input.ComboBox}" SelectedItem="{Binding SelectedExistingFolder}" AutomationProperties.Name="选择已有日期文件夹" Visibility="{Binding HasExistingFolders, Converter={StaticResource BoolToVis}}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                                  <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Grid.Row="3" Grid.Column="0" Margin="0,10,10,0" Text="备注" VerticalAlignment="Center" />
+                                  <TextBox Style="{StaticResource Input.TextBox}" Grid.Row="3" Grid.Column="1" Margin="0,10,0,0" Text="{Binding Remark, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="日期文件夹备注" />
+                                  <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                                    <TextBlock Text="最终文件夹" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
+                                    <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding FinalDirectoryName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding ValidationMessage}" Foreground="{DynamicResource Brush.Status.Warning}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                                  </StackPanel>
+                                </Grid>
+                              </Border>
+                            
+    </DataTemplate>
+  </UserControl.Resources>
+  <DockPanel>
+    <CheckBox DockPanel.Dock="Top" Content="关系图" Style="{StaticResource Input.Switch}"
+              IsChecked="{Binding IsImportDateGraphView, Mode=TwoWay}" Margin="{StaticResource Spacing.Stack.16}"
+              ToolTip="关闭显示原列表，打开显示日期与素材的关系图" AutomationProperties.Name="切换导入日期关系图" />
+    <Grid>
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ScrollViewer.Style><Style TargetType="ScrollViewer"><Setter Property="Visibility" Value="Visible" /><Style.Triggers><DataTrigger Binding="{Binding IsImportDateGraphView}" Value="True"><Setter Property="Visibility" Value="Collapsed" /></DataTrigger></Style.Triggers></Style></ScrollViewer.Style>
+        <ItemsControl ItemsSource="{Binding ImportDateFolderDecisions}" ItemTemplate="{StaticResource DateFolderEditor}" />
+      </ScrollViewer>
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="{Binding IsImportDateGraphView, Converter={StaticResource GraphBoolToVis}}">
+        <StackPanel>
+          <Border Background="{DynamicResource Brush.Surface.ContainerHigh}" CornerRadius="{StaticResource Radius.Control}" Padding="{StaticResource Spacing.Control}" HorizontalAlignment="Center">
+            <StackPanel><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="已选择的来源" FontSize="{StaticResource Typography.Label}" /><ItemsControl ItemsSource="{Binding SelectedImportSourceFolders}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding}" TextWrapping="Wrap" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
+          </Border>
+          <TextBlock Text="↓ 按拍摄日期分流" HorizontalAlignment="Center" Margin="{StaticResource Spacing.Row.Vertical.8}" Foreground="{DynamicResource Brush.Text.Secondary}" />
+          <ItemsControl ItemsSource="{Binding ImportDateGraphMonths}">
+            <ItemsControl.ItemTemplate><DataTemplate>
+              <Expander Foreground="{DynamicResource Brush.Text.Primary}" BorderBrush="{DynamicResource Brush.OutlineVariant}" Header="{Binding Title}" IsExpanded="True" Margin="{StaticResource Spacing.Stack.16}">
+                <ItemsControl ItemsSource="{Binding Groups}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate><DataTemplate>
+                    <StackPanel Width="{StaticResource Size.Import.DateNode}" Margin="{StaticResource Spacing.Field.Gap}">
+                      <Border Width="{StaticResource Size.Import.DateNode}" Height="{StaticResource Size.Import.DateNode}" CornerRadius="{StaticResource Radius.Full}" BorderThickness="1">
+                        <Border.Style><Style TargetType="Border"><Setter Property="Background" Value="{DynamicResource Brush.Surface.ContainerHigh}" /><Setter Property="BorderBrush" Value="{DynamicResource Brush.OutlineVariant}" /><Style.Triggers><DataTrigger Binding="{Binding IsSelected}" Value="True"><Setter Property="Background" Value="{DynamicResource Brush.Surface.Selected}" /><Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" /><Setter Property="BorderThickness" Value="2" /></DataTrigger></Style.Triggers></Style></Border.Style>
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                          <Button Style="{StaticResource Button.Ghost}" Command="{Binding DataContext.SelectImportDateGraphGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding FullDateText}">
+                            <StackPanel><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding FullDateText}" FontSize="{StaticResource Typography.TitleSmall}" HorizontalAlignment="Center" /><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding Decision.MediaCount, StringFormat={}{0} 组媒体}" HorizontalAlignment="Center" /></StackPanel>
+                          </Button>
+                          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="{StaticResource Spacing.Stack.8}">
+                            <ItemsControl ItemsSource="{Binding Samples}"><ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate></ItemsControl.ItemsPanel><ItemsControl.ItemTemplate><DataTemplate>
+                              <Button Style="{StaticResource Button.Ghost}" Padding="0" Click="PreviewMedia_Click" ToolTip="{Binding Detail}" AutomationProperties.Name="{Binding SourceFileName}" Width="{StaticResource Size.Import.MediaNode}" Height="{StaticResource Size.Import.MediaNode}">
+                                <Border Width="{StaticResource Size.Import.MediaNode}" Height="{StaticResource Size.Import.MediaNode}" CornerRadius="{StaticResource Radius.Full}" Background="{DynamicResource Brush.Surface.ContainerHighest}" ClipToBounds="True">
+                                  <Grid><TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding ExtensionBadge}" FontSize="{StaticResource Typography.Caption}" HorizontalAlignment="Center" VerticalAlignment="Center" /><Ellipse><Ellipse.Fill><ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" /></Ellipse.Fill></Ellipse></Grid>
+                                </Border>
+                              </Button>
+                            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                            <Button Content="{Binding OverflowText}" Visibility="{Binding HasOverflow, Converter={StaticResource GraphBoolToVis}}" Style="{StaticResource Button.Ghost}" Command="{Binding DataContext.SelectImportDateGraphGroupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" ToolTip="展开该日期的全部媒体" AutomationProperties.Name="展开该日期的全部媒体" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+                      <TextBlock Text="↓" HorizontalAlignment="Center" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                      <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="{Binding Decision.FinalDirectoryName}" TextWrapping="Wrap" TextAlignment="Center" ToolTip="{Binding Decision.FinalDirectoryPath}" Margin="{StaticResource Spacing.Stack.16}" />
+                    </StackPanel>
+                  </DataTemplate></ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Expander>
+            </DataTemplate></ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <ContentControl Content="{Binding SelectedImportDateGraphGroup.Decision}" ContentTemplate="{StaticResource DateFolderEditor}" />
+          <TextBlock Text="{Binding SelectedImportDateGraphGroup.Decision.FinalDirectoryPath}" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="{StaticResource Spacing.Stack.8}" />
+          <TextBlock Foreground="{DynamicResource Brush.Text.Primary}" Text="该日期的全部媒体（点击预览）" Margin="{StaticResource Spacing.Stack.8}" />
+          <ListBox Style="{StaticResource List.Default}" ItemsSource="{Binding SelectedImportDateGraphGroup.Items}" MaxHeight="{StaticResource Size.Import.MediaListMaxHeight}" ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+            <ListBox.ItemTemplate><DataTemplate><Button Content="{Binding Detail}" Style="{StaticResource Button.Ghost}" Click="PreviewMedia_Click" ToolTip="{Binding PrimaryPath}" AutomationProperties.Name="{Binding SourceFileName}" /></DataTemplate></ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

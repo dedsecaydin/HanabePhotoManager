@@ -6,6 +6,19 @@ namespace HanabePhotoManager.Core.Tests.Imports;
 public sealed class ImportPlanBuilderTests
 {
     [Fact]
+    public async Task BuildAsync_RoutesSelectedCustomFolderAndKeepsSequencesSeparate()
+    {
+        var first = new MediaGroup("A", MediaCategory.Material, CreateSource(@"D:\camera\A.JPG"), [], "客户成片");
+        var second = new MediaGroup("B", MediaCategory.Material, CreateSource(@"D:\camera\B.JPG"), [], "素材");
+        var plan = await new ImportPlanBuilder(new RecordingProbe(_ => ConflictKind.None))
+            .BuildAsync(@"E:\library", new LibraryDate(2026, 9, 28), TransferMode.CopyKeepSource,
+                [first, second], CancellationToken.None);
+
+        plan.Items[0].Files[0].DestinationPath.Should().Be(Path.Combine(@"E:\library", "9月", "09.28", "客户成片", "JK0001.JPG"));
+        plan.Items[1].Files[0].DestinationPath.Should().Be(Path.Combine(@"E:\library", "9月", "09.28", "素材", "JK0001.JPG"));
+    }
+
+    [Fact]
     public async Task BuildAsync_UsesExplicitDateDirectoryForDestinations()
     {
         var source = CreateSource(@"D:\camera\DSC_1234.JPG");

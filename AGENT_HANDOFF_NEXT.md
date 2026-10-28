@@ -8,7 +8,7 @@
 
 依次读取 `docs/HERMES_MASTER_GUIDE.md`、`AGENT_HANDOFF.md`、`docs/current-status.md`、`docs/known-issues.md`、`docs/design-system.md` 和本文件。
 
-项目固定在 `D:\HanabePhoto`，不要在 OneDrive 创建项目、工作树或发布目录。当前分支为 `master`；开始前检查 `git status`，保留用户未跟踪文件，不要擅自加入安装器素材。
+项目固定在 `C:\HanabePhoto`，不要在 OneDrive 创建项目、工作树或发布目录。当前分支为 `master`；开始前检查 `git status`，保留用户未跟踪文件，不要擅自加入安装器素材。
 
 ## 2. 当前真实状态
 
@@ -118,4 +118,4 @@ Running → Completed / CompletedWithIssues / Failed
 
 ## 7. 新任务首条消息（可直接复制）
 
-> `HANABE-FLOATING-STATUS-V2`。请在 `D:\HanabePhoto` 读取 `AGENTS.md`、`docs/HERMES_MASTER_GUIDE.md`、`AGENT_HANDOFF.md` 和 `AGENT_HANDOFF_NEXT.md`，直接实现“Hanabe 悬浮窗任务状态闭环”。重点修复用户主动停止被误判为 Error，完整覆盖扫描、校验、导入、安全停止、已取消、意外中断、可恢复、恢复中、完成、完成但有问题和失败；显示当前文件、当前/总数、速度、剩余时间及结果摘要，并提供与状态匹配的停止、打开、恢复和查看报告操作。保留仅最小化显示、可拖动、无虚线、Q版/像素/GIF 回退及重复检测报告行为。音效暂缓，不要处理。无需向我确认方案，按交接文档实现、测试、提交并推送。
+> `HANABE-FLOATING-STATUS-V2`。请在 `C:\HanabePhoto` 读取 `AGENTS.md`、`docs/HERMES_MASTER_GUIDE.md`、`AGENT_HANDOFF.md` 和 `AGENT_HANDOFF_NEXT.md`，直接实现“Hanabe 悬浮窗任务状态闭环”。重点修复用户主动停止被误判为 Error，完整覆盖扫描、校验、导入、安全停止、已取消、意外中断、可恢复、恢复中、完成、完成但有问题和失败；显示当前文件、当前/总数、速度、剩余时间及结果摘要，并提供与状态匹配的停止、打开、恢复和查看报告操作。保留仅最小化显示、可拖动、无虚线、Q版/像素/GIF 回退及重复检测报告行为。音效暂缓，不要处理。无需向我确认方案，按交接文档实现、测试、提交并推送。

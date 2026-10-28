@@ -45,6 +45,10 @@ Material 3 在 HanabePhoto 中是桌面设计体系，不是移动端模板。Sh
 
 ## Component Library
 
+导入确认区提供列表和关系图两种呈现，默认保留列表，通过 `Input.Switch` 切换。开关的尺寸与滑块位置使用 `Size.Switch.*` / `Spacing.Switch.Thumb.*`，覆盖选中、悬停、按下、焦点和禁用状态。关系图的大圈表示一个日期目标，小圈表示已分析媒体；节点尺寸使用 `Size.Import.DateNode` / `Size.Import.MediaNode`，全部媒体列表使用 `Size.Import.MediaListMaxHeight` 并保持虚拟化。月份可折叠，日期按可用宽度换行。
+
+两种呈现必须共用 `ImportDateFolderDecision` 及 `ImportDateFolderViews` 中的 `DateFolderEditor`，共享备注、处理方式、已有目录、最终路径和校验。修改上述内容时必须同时回归列表与关系图。
+
 - Button：Primary、Secondary、Ghost、Danger、Icon、Toolbar、Disclosure、Fab（56×56 圆形 primary）。
 - Input：TextBox、PasswordBox、ComboBox、CheckBox、RadioButton、Slider。
 - Card：Default、Subtle、Interactive、Selected。
@@ -55,14 +59,14 @@ Material 3 在 HanabePhoto 中是桌面设计体系，不是移动端模板。Sh
 - List：Default、ListItem.Default。
 - Menu：Context、Item、Separator.Menu。
 - Status：Panel、Title、Description。
-- Inspector：Container、Header、SectionLabel、Panel（320px surface-container-low 大圆角面板）。
+- Inspector：Container、Header、SectionLabel、Panel（320px surface-container-low 轻面板）。
 - Layout：PageSurface、PageTitle、SectionTitle。
 
 所有交互组件必须覆盖 Normal、Hover、Pressed、Focus、Disabled；输入组件还需覆盖 ReadOnly 和 ValidationError。
 
 ## Layout and States
 
-主界面使用 88px Navigation Rail 与弹性工作区（M3 排版变体 001：Rail 88 / Topbar surface-container-low / Workspace surface-container-lowest / Inspector 320 / Statusbar 44 / FAB 右下角）。Shell 顶部区域与主内容区共享连续 Shell 背景与统一对齐体系。页面使用 16/24px gutter，标题、说明、表单和列表遵循同一左边线。首页统计使用轻量摘要区；缩略图、设备项、文件夹项等独立语义单元可以保留小 Card。PhotoViewer 是唯一固定深色画布，工具栏与信息栏仍使用共享组件。
+主界面使用 88px Navigation Rail 与弹性工作区（M3 排版变体 001：Rail 88 / Topbar surface-container-low / Workspace surface-container-lowest / Inspector 320 / Statusbar 36 / FAB 右下角）。Shell 顶部区域与主内容区共享连续 Shell 背景与统一对齐体系。页面使用 16/24px gutter，标题、说明、表单和列表遵循同一左边线。首页统计使用轻量摘要区；缩略图、设备项、文件夹项等独立语义单元可以保留小 Card。PhotoViewer 是唯一固定深色画布，工具栏与信息栏仍使用共享组件。
 
 ## Controlled Visual Effects
 
@@ -90,3 +94,21 @@ Loading 使用进度与文字；Empty 说明原因并提供主操作；Error 使
 ## Contribution Checklist
 
 确认 Light/Dark 均可读；只使用 Token；优先复用组件；键盘与焦点可用；Loading/Empty/Error 完整；Release Build 与测试通过；新增公共资源时同步更新本文档。
+
+## 2026-10-27 连续桌面工作区
+
+- 页面外层 Layout.PagePanel 使用无圆角、无重复边框的 Canvas，与公共工作区衔接；不改变照片、设备、弹窗的小型语义卡片。
+- 侧栏使用 Shell.Background 与右侧细分隔；状态栏使用 36px 控件高度及水平 Padding；页面主标题使用 Typography.Title（20），分区标题仍为 TitleSmall（16）。Inspector.Panel 圆角改为 Radius.Card。
+- Button.ActionTile 基于 Button.Secondary，继承 Hover/Pressed/Focus/Disabled；352px 宽、116px 最小高，20px 内边距，图标与文本并列。使用 Size.ActionTile.*、Spacing.Tile.Gap，不允许页面复制模板。
+- 工具按图片、视频、媒体恢复分区；视频与恢复可并排换行。设置表单用轻分隔，不反复嵌套有边框的分组卡片。
+`Button.Subtle`：基于 Secondary，使用 Surface.Subtle 及透明常态边框，适用于连续工作区次要动作；保留交互状态。
+
+## 2026-10-28 图片工具对比度
+- Button.ImageToolTile 基于 Button.ActionTile，使用 Brush.Surface.Default、Brush.Outline、Brush.Text.Primary 增强入口边界和文字可辨识度。仅供图片工具入口使用，沿用已有交互状态与明暗主题契约。
+- 切图预览使用 Viewer Canvas/Chrome/Text 及 Overlay Scrim 资源，分割线双层描边；设置区使用 Surface.ContainerLow 与正文颜色。
+
+## 2026-10-28 用户九页参考稿公共外观
+- 本轮常规侧栏采用 Size.Sidebar.Width=248，替代历史固定 112px；ColumnDefinition 经 Binding 转换 Double 为 GridLength，Sidebar.Container 复用同一尺寸。
+- 页面大标题使用 Typography.PageHeading=30，其他分区保留原有字号。
+- 浅色画布采用中性浅灰，独立内容面板采用白色细边框和 Radius.Card；保留当前配色偏好及 Dark 契约。
+- 九页结构精修仍在进行，不能以公共样式更新视为逐页验收完成。

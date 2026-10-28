@@ -68,7 +68,8 @@ public sealed record MediaGroup(
     string GroupKey,
     MediaCategory Category,
     SourceMediaFile Primary,
-    IReadOnlyList<SourceMediaFile> Sidecars)
+    IReadOnlyList<SourceMediaFile> Sidecars,
+    string? DestinationFolderName = null)
 {
     public IReadOnlyList<SourceMediaFile> Sidecars { get; } = Array.AsReadOnly(Sidecars.ToArray());
 }

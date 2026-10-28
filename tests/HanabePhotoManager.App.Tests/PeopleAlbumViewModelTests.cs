@@ -9,6 +9,21 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class PeopleAlbumViewModelTests
 {
     [Fact]
+    public async Task ScanFailure_IsReportedOnPage_AndAllowsRetryWithoutEscapingCommand()
+    {
+        var directory = Path.Combine(@"D:\HanabePhoto\.artifacts", $"people-failure-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var store = Path.Combine(directory, "people.json");
+        await File.WriteAllTextAsync(store, "{broken index");
+        var viewModel = new PeopleAlbumViewModel(new PeopleAlbumService(store), () => []);
+        await viewModel.ScanCommand.ExecuteAsync(null);
+        viewModel.IsScanning.Should().BeFalse();
+        viewModel.StatusText.Should().Contain("扫描失败");
+        viewModel.ScanCommand.CanExecute(null).Should().BeTrue();
+        (await File.ReadAllTextAsync(store)).Should().Be("{broken index");
+    }
+
+    [Fact]
     public void ToggleBubbles_OpensAndClearSelectionCloses()
     {
         var store = Path.Combine(Path.GetTempPath(), $"people-{Guid.NewGuid():N}.json");
@@ -96,6 +111,44 @@ public sealed class PeopleAlbumViewModelTests
         viewModel.MergeCommand.CanExecute(null).Should().BeFalse();
     }
 
+    [Fact]
+    public async Task CompletedScan_IgnoresAlreadyQueuedProgress()
+    {
+        var directory = Path.Combine(@"D:\HanabePhoto\.artifacts", $"people-progress-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var service = new PeopleAlbumService(Path.Combine(directory, "people.json"),
+            new FakeEmbeddingService(new Dictionary<string, float[]>()));
+        var viewModel = new PeopleAlbumViewModel(service, () => []);
+        var context = new DelayedProgressContext();
+        var previous = SynchronizationContext.Current;
+        Task scan;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(context);
+            scan = viewModel.ScanPathsAsync([]);
+        }
+        finally { SynchronizationContext.SetSynchronizationContext(previous); }
+        await scan;
+        viewModel.StatusText.Should().Be("没有检测到清晰人脸");
+        context.DrainProgress();
+        viewModel.StatusText.Should().Be("没有检测到清晰人脸");
+        viewModel.ScanProgressValue.Should().Be(100);
+    }
+
+    private sealed class DelayedProgressContext : SynchronizationContext
+    {
+        private readonly System.Collections.Concurrent.ConcurrentQueue<Action> _progress = new();
+        public override void Post(SendOrPostCallback callback, object? state)
+        {
+            if (state is PeopleScanProgress) _progress.Enqueue(() => callback(state));
+            else ThreadPool.QueueUserWorkItem(_ => callback(state));
+        }
+        public void DrainProgress()
+        {
+            _progress.Should().NotBeEmpty("the service must report progress before completing");
+            while (_progress.TryDequeue(out var callback)) callback();
+        }
+    }
     private static string FindSourceRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
@@ -120,3 +173,4 @@ public sealed class PeopleAlbumViewModelTests
         }
     }
 }
+

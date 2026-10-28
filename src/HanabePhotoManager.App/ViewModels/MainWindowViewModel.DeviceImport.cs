@@ -1,6 +1,4 @@
 using System.IO;
-using System.Windows;
-using HanabePhotoManager.App.Services;
 
 namespace HanabePhotoManager.App.ViewModels;
 
@@ -13,28 +11,31 @@ public sealed partial class MainWindowViewModel
         set { if (SetProperty(ref _promptOnMediaDevice, value)) _ = SaveSettingsAsync(); }
     }
 
+    /// <summary>用户确认后准备设备来源；不依赖设备概览缓存，也不在这里显示对话框。</summary>
     public async Task OfferDeviceImportAsync(string root)
     {
-        if (!PromptOnMediaDevice || IsBusy || !Directory.Exists(root)) return;
-        var destination = HasLibraryRoot ? LibraryRoot : "尚未指定（下一步选择）";
-        var answer = System.Windows.MessageBox.Show(System.Windows.Application.Current.MainWindow,
-            $"检测到 {root} 中有可导入的照片或视频。\n\n目标照片库：{destination}\n\n是否进入导入页面？你可以检查目标位置和文件后开始导入。",
-            "检测到媒体设备", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
-        if (answer != MessageBoxResult.Yes || !Directory.Exists(root)) return;
-        if (!HasLibraryRoot)
+        if (!PromptOnMediaDevice || IsBusy) return;
+        CurrentPage = "Import";
+        if (!Directory.Exists(root))
         {
-            var picker = new Microsoft.Win32.OpenFolderDialog { Title = "选择导入目标照片库" };
-            if (picker.ShowDialog() != true) return;
-            LibraryRoot = picker.FolderName;
+            StatusMessage = "设备已断开或无法读取，请重新连接后选择来源。";
+            return;
         }
-        var target = Path.GetFullPath(LibraryRoot).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (target.StartsWith(Path.GetFullPath(root), StringComparison.OrdinalIgnoreCase))
+        var sourceRoot = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        var sourcePrefix = sourceRoot + Path.DirectorySeparatorChar;
+        var target = HasLibraryRoot
+            ? Path.GetFullPath(LibraryRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            : null;
+        if (target is not null && (target.Equals(sourceRoot, StringComparison.OrdinalIgnoreCase) ||
+                                  target.StartsWith(sourcePrefix, StringComparison.OrdinalIgnoreCase)))
         {
             StatusMessage = "导入目标不能位于来源设备中，请先更换照片库位置。";
             return;
         }
-        RefreshConnectedDevices();
-        var device = ConnectedDevices.FirstOrDefault(d => string.Equals(d.Path, root, StringComparison.OrdinalIgnoreCase));
-        if (device is not null) await ImportFromDeviceAsync(device);
+        var device = ConnectedDevices.FirstOrDefault(d => string.Equals(d.Path, root, StringComparison.OrdinalIgnoreCase))
+            ?? new ConnectedDeviceViewModel("媒体设备", "U盘 / 存储卡", root, true, "▣", "媒体设备", "已接入", root);
+        await ImportFromDeviceAsync(device);
+        if (!HasLibraryRoot)
+            StatusMessage = "已进入导入并选中设备来源，请先选择目标照片库，再开始分析。";
     }
 }

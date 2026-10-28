@@ -44,6 +44,25 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     private const double ScrollLineAmount = 16d;
     private const int RealizationBufferRows = 12;
 
+    /// <summary>
+    /// 范围、视口或偏移变化时冒泡通知。照片墙的 ScrollViewer 包裹的是 ItemsControl 而非面板本身，
+    /// 系统滚动条拿不到这里的 IScrollInfo，外层据此同步独立的位置指示滚动条。
+    /// </summary>
+    public static readonly RoutedEvent ScrollInfoChangedEvent = EventManager.RegisterRoutedEvent(
+        nameof(ScrollInfoChanged), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(VirtualizingWrapPanel));
+
+    public event RoutedEventHandler ScrollInfoChanged
+    {
+        add => AddHandler(ScrollInfoChangedEvent, value);
+        remove => RemoveHandler(ScrollInfoChangedEvent, value);
+    }
+
+    private void NotifyScrollInfoChanged()
+    {
+        _scrollOwner?.InvalidateScrollInfo();
+        RaiseEvent(new RoutedEventArgs(ScrollInfoChangedEvent, this));
+    }
+
     private Size _extent = new();
     private Size _viewport = new();
     private Point _offset = new();
@@ -227,7 +246,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         _offset.X = offset;
-        _scrollOwner?.InvalidateScrollInfo();
+        NotifyScrollInfoChanged();
         InvalidateMeasure();
         InvalidateVisual();
     }
@@ -241,7 +260,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         _offset.Y = offset;
-        _scrollOwner?.InvalidateScrollInfo();
+        NotifyScrollInfoChanged();
         InvalidateMeasure();
         InvalidateVisual();
     }
@@ -649,7 +668,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         if (extent != _extent)
         {
             _extent = extent;
-            _scrollOwner?.InvalidateScrollInfo();
+            NotifyScrollInfoChanged();
         }
 
         // 虚拟化面板在 CanContentScroll=True 下会被以「高度无穷大」测量；
@@ -663,7 +682,7 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         if (viewport != _viewport)
         {
             _viewport = viewport;
-            _scrollOwner?.InvalidateScrollInfo();
+            NotifyScrollInfoChanged();
         }
     }
 

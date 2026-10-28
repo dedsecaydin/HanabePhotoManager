@@ -11,7 +11,7 @@ public sealed class ImportWorkflowUiTests
     {
         var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("Content=\"开始分析与导入\" Style=\"{StaticResource Button.Primary}\" Margin=\"0,12,0,0\"");
+        xaml.Should().Contain("Content=\"{Binding ImportPrimaryActionText}\" Style=\"{StaticResource Button.Primary}\" Margin=\"0,12,0,0\"");
     }
 
     [Fact]
@@ -30,15 +30,20 @@ public sealed class ImportWorkflowUiTests
     [Fact]
     public void ImportDateFolderPreflight_ProvidesScrollableBatchEditingAndExplicitActions()
     {
-        var xaml = File.ReadAllText(Path.Combine(FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var root = FindSourceRoot();
+        var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
+        var views = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Imports", "ImportDateFolderViews.xaml"));
 
         xaml.Should().Contain("Text=\"确认日期文件夹\"");
-        xaml.Should().Contain("ItemsSource=\"{Binding ImportDateFolderDecisions}\"");
-        xaml.Should().Contain("Text=\"{Binding DateText}\"");
-        xaml.Should().Contain("Text=\"{Binding Remark, UpdateSourceTrigger=PropertyChanged}\"");
-        xaml.Should().Contain("SelectedValue=\"{Binding Strategy}\"");
-        xaml.Should().Contain("ItemsSource=\"{Binding ExistingFolders}\"");
-        xaml.Should().Contain("Text=\"{Binding FinalDirectoryName}\"");
+        xaml.Should().Contain("<imports:ImportDateFolderViews />");
+        views.Should().Contain("ItemsSource=\"{Binding ImportDateFolderDecisions}\"");
+        views.Should().Contain("Text=\"{Binding DateText}\"");
+        views.Should().Contain("Text=\"{Binding Remark, UpdateSourceTrigger=PropertyChanged}\"");
+        views.Should().Contain("SelectedValue=\"{Binding Strategy}\"");
+        views.Should().Contain("ItemsSource=\"{Binding ExistingFolders}\"");
+        views.Should().Contain("Text=\"{Binding FinalDirectoryName}\"");
+        views.Should().Contain("Style=\"{StaticResource Input.Switch}\"");
+        views.Should().Contain("Content=\"{Binding SelectedImportDateGraphGroup.Decision}\" ContentTemplate=\"{StaticResource DateFolderEditor}\"");
         xaml.Should().Contain("Command=\"{Binding BackFromImportDateFoldersCommand}\"");
         xaml.Should().Contain("Command=\"{Binding ConfirmImportDateFoldersCommand}\"");
         xaml.Should().Contain("AutomationProperties.Name=\"确认并开始导入\"");

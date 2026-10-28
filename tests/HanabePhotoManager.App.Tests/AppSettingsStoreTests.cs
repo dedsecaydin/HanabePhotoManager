@@ -10,6 +10,29 @@ namespace HanabePhotoManager.App.Tests;
 public sealed class AppSettingsStoreTests
 {
     [Fact]
+    public async Task ImportRoutingRules_SurviveRestartInPriorityOrder()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"hanabe-routing-{Guid.NewGuid():N}.json");
+        try
+        {
+            var rules = new List<ImportRoutingRule>
+            {
+                new(ImportRuleMatchKind.NameStartsWith, "DJI_", "action视频"),
+                new(ImportRuleMatchKind.Extension, "CR3", "RAW生图")
+            };
+            await new AppSettingsStore(path).SaveAsync(new AppSettings { ImportRoutingRules = rules });
+
+            var loaded = await new AppSettingsStore(path).LoadAsync();
+
+            loaded.ImportRoutingRules.Should().Equal(rules);
+        }
+        finally
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void HanabeAssistant_IsVisibleByDefault()
     {
         var settings = new AppSettings();
@@ -234,20 +257,23 @@ public sealed class AppSettingsStoreTests
         }
     }
 
-    [Fact]
-    public async Task CheckDuplicatesOnImport_DefaultsOffAndSurvivesRestart()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CheckDuplicatesOnImport_DefaultsOnAndExplicitChoiceSurvivesRestart(bool enabled)
     {
         var directory = Path.Combine(Path.GetTempPath(), "hanabe-dedup-switch-" + Guid.NewGuid().ToString("N"));
         var path = Path.Combine(directory, "settings.json");
         try
         {
-            new AppSettings().CheckDuplicatesOnImport.Should().BeFalse();
+            new AppSettings().CheckDuplicatesOnImport.Should().BeTrue();
 
             var store = new AppSettingsStore(path);
-            await store.SaveAsync(new AppSettings { CheckDuplicatesOnImport = true });
+            await store.SaveAsync(new AppSettings { CheckDuplicatesOnImport = enabled, ImportDuplicateHandling = "DecideIndividually" });
 
             var loaded = await new AppSettingsStore(path).LoadAsync();
-            loaded.CheckDuplicatesOnImport.Should().BeTrue();
+            loaded.CheckDuplicatesOnImport.Should().Be(enabled);
+            loaded.ImportDuplicateHandling.Should().Be("DecideIndividually");
         }
         finally
         {

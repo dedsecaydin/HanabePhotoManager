@@ -7,16 +7,16 @@ namespace HanabePhotoManager.App.Services;
 public enum AppTheme { Light, Dark }
 
 /// <summary>
-/// 五套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰 / 经典中性 / 绯夜蔷薇）。与 <see cref="AppTheme"/> 明暗维度组合成 10 套主题。
+/// 五套 M3 配色方案（动态色彩 / 森林绿 / 紫罗兰 / 经典中性 / 樱粉镜面）。与 <see cref="AppTheme"/> 明暗维度组合成 10 套主题。
 /// </summary>
 public enum AppColorScheme { Dynamic, Forest, Violet, Classic, Hanabe }
 
 /// <summary>切换成对主题资源字典，并维护当前主题和配色方案。</summary>
 public static class ThemeManager
 {
-    private static readonly string PreferencePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HanabePhotoManager", "ui-theme.txt");
-    public static AppTheme Current { get; private set; } = AppTheme.Light;
-    public static AppColorScheme CurrentScheme { get; private set; } = AppColorScheme.Violet;
+    private static string PreferencePath => Path.Combine(AppDataPaths.Root, "ui-theme.txt");
+    public static AppTheme Current { get; private set; } = AppTheme.Dark;
+    public static AppColorScheme CurrentScheme { get; private set; } = AppColorScheme.Hanabe;
     public static event EventHandler<AppTheme>? ThemeChanged;
     public static AppTheme ParsePreference(string? value) => string.Equals(value?.Trim(), "dark", StringComparison.OrdinalIgnoreCase) ? AppTheme.Dark : AppTheme.Light;
 
@@ -71,7 +71,7 @@ public static class ThemeManager
     private static (AppTheme Theme, AppColorScheme Scheme) ParseCombinedPreference(string? value)
     {
         var trimmed = value?.Trim();
-        if (string.IsNullOrEmpty(trimmed)) return (AppTheme.Light, AppColorScheme.Violet);
+        if (string.IsNullOrEmpty(trimmed)) return (AppTheme.Dark, AppColorScheme.Hanabe);
         var parts = trimmed.Split('.');
         return parts.Length == 2
             ? (ParsePreference(parts[1]), ParseSchemePreference(parts[0]))

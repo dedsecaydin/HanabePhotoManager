@@ -25,3 +25,10 @@ src/HanabePhotoManager.App/Models/ChineseCLIP/
 AGENTS.md
 CLAUDE.md
 .cursorrules
+
+# local builds / user data
+/app/
+/data/
+/recovered-app/
+/releases/
+*.lnk

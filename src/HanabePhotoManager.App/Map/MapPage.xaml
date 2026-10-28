@@ -7,12 +7,13 @@
     <Style x:Key="MapStatBlock" TargetType="Border">
       <Setter Property="Padding" Value="8,12"/>
       <Setter Property="CornerRadius" Value="{StaticResource Radius.Control}"/>
-      <Setter Property="Background" Value="{DynamicResource Brush.Surface.Container}"/>
+      <Setter Property="Background" Value="{DynamicResource Brush.Glass.Surface}"/>
     </Style>
   </UserControl.Resources>
-  <Border Style="{DynamicResource Layout.PagePanel}" Padding="16">
+  <Border Style="{DynamicResource Layout.PagePanel}" Padding="{StaticResource Spacing.Card}">
     <DockPanel LastChildFill="True">
       <StackPanel DockPanel.Dock="Top" Margin="0,0,0,14">
+        <TextBlock Text="Places &amp; memories" Style="{DynamicResource Layout.Eyebrow}" />
         <TextBlock Style="{DynamicResource Layout.PageTitle}" Text="地图照片" />
         <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,2,0,0" Text="按 EXIF 或手动位置浏览照片；照片与位置索引始终保存在本机。" />
       </StackPanel>
@@ -24,7 +25,7 @@
     </Grid.ColumnDefinitions>
 
     <!-- ═══════ 地图工作区 ═══════ -->
-    <Border Padding="0" ClipToBounds="True" Background="Transparent">
+    <Border Style="{DynamicResource Layout.GlassPanel}" Padding="0" ClipToBounds="True">
       <Grid>
         <wv2:WebView2 x:Name="MapWebView"/>
         <Border x:Name="MapStatusPanel" Style="{DynamicResource Status.Panel}"
@@ -41,7 +42,7 @@
           </StackPanel>
         </Border>
         <Border VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16" Padding="12,8"
-                CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLow}"
+                CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Glass.Surface}"
                 IsHitTestVisible="False">
           <TextBlock Foreground="{DynamicResource Brush.Text.Secondary}"
                      Text="选择聚合点浏览照片，或在地图上选取手动位置。"/>
@@ -59,7 +60,7 @@
         <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
 
-      <Border Style="{DynamicResource Layout.Section}">
+      <Border Style="{DynamicResource Layout.GlassPanel}">
         <StackPanel>
           <DockPanel>
             <TextBlock Text="地图照片" Style="{DynamicResource Inspector.Header}"/>

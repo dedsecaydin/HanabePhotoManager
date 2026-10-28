@@ -13,4 +13,7 @@
   <Color x:Key="Color.Surface">#121318</Color><Color x:Key="Color.OnSurface">#E3E1E9</Color><Color x:Key="Color.Surface.Variant">#45464F</Color><Color x:Key="Color.OnSurfaceVariant">#C6C5D0</Color>
   <Color x:Key="Color.Surface.Dim">#121318</Color><Color x:Key="Color.Surface.ContainerLowest">#0D0E13</Color><Color x:Key="Color.Surface.ContainerLow">#18191E</Color><Color x:Key="Color.Surface.Container">#1D1E24</Color><Color x:Key="Color.Surface.ContainerHigh">#27282F</Color><Color x:Key="Color.Surface.ContainerHighest">#32333B</Color>
   <Color x:Key="Color.Outline">#90919B</Color><Color x:Key="Color.OutlineVariant">#45464F</Color>
+  <!-- 镜面玻璃键（本配色保持原外观：无光晕、纯色主按钮、原描边） -->
+  <Color x:Key="Color.Shell.Glow1">#00FFFFFF</Color><Color x:Key="Color.Shell.Glow2">#00FFFFFF</Color><Color x:Key="Color.Shell.Glow3">#00FFFFFF</Color><Color x:Key="Color.Shell.GlowClear">#00FFFFFF</Color><Color x:Key="Color.Background.Page">#0D0E13</Color><Color x:Key="Color.Primary.FillStart">#BCC3FF</Color><Color x:Key="Color.Primary.FillEnd">#BCC3FF</Color><Color x:Key="Color.Glass.StrokeTop">#45464F</Color><Color x:Key="Color.Glass.StrokeBottom">#45464F</Color>
+  <Color x:Key="Color.Glass.SurfaceStart">#121318</Color><Color x:Key="Color.Glass.SurfaceEnd">#121318</Color>
 </ResourceDictionary>

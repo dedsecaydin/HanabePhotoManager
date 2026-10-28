@@ -8,7 +8,7 @@ namespace HanabePhotoManager.Core.Imports;
 public sealed partial class MediaClassifier
 {
     private static readonly HashSet<string> BuiltInExtensions = new(
-        new[] { ".JPG", ".JPEG", ".MP4", ".MOV", ".MTS", ".M2TS", ".XML", ".LRF", ".AAC" },
+        new[] { ".JPG", ".JPEG", ".HEIF", ".HEIC", ".HIF", ".MP4", ".MOV", ".MTS", ".M2TS", ".XML", ".LRF", ".AAC" },
         StringComparer.OrdinalIgnoreCase);
 
     private readonly HashSet<string> _rawExtensions;
@@ -55,9 +55,12 @@ public sealed partial class MediaClassifier
         }
 
         if (extension.Equals(".JPG", StringComparison.OrdinalIgnoreCase) ||
-            extension.Equals(".JPEG", StringComparison.OrdinalIgnoreCase))
+            extension.Equals(".JPEG", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".HEIF", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".HEIC", StringComparison.OrdinalIgnoreCase) ||
+            extension.Equals(".HIF", StringComparison.OrdinalIgnoreCase))
         {
-            return Recognized(file, MediaCategory.Jpeg, "JPEG extension");
+            return Recognized(file, MediaCategory.Jpeg, "JPEG / HEIF image extension");
         }
 
         if (VideoContainerExtensions.Contains(extension) || _customVideoExtensions.Contains(extension))

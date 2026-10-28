@@ -70,7 +70,7 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var categoryFolder = CategoryFolders[group.Category];
+            var categoryFolder = ResolveCategoryFolder(group);
             var plannedFiles = new List<PlannedFile>();
             var sequence = sequenceByGroup[group];
             var extensionCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -116,16 +116,20 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
                     $"媒体组类别 '{group.Category}' 不是具体的导入类别。",
                     parameterName);
             }
+            if (group.DestinationFolderName is { } folder &&
+                (string.IsNullOrWhiteSpace(folder) || folder is "." or ".." ||
+                 folder.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+                 folder.Contains(Path.DirectorySeparatorChar) || folder.Contains(Path.AltDirectorySeparatorChar)))
+                throw new ArgumentException("分类文件夹名称无效。", parameterName);
         }
     }
 
     private static Dictionary<MediaGroup, int> BuildSequenceMap(string dateDirectory, IReadOnlyList<MediaGroup> groups)
     {
         var result = new Dictionary<MediaGroup, int>();
-        foreach (var categoryGroup in groups.GroupBy(group => group.Category))
+        foreach (var categoryGroup in groups.GroupBy(ResolveCategoryFolder, StringComparer.OrdinalIgnoreCase))
         {
-            var categoryFolder = CategoryFolders[categoryGroup.Key];
-            var next = FindNextSequence(Path.Combine(dateDirectory, categoryFolder));
+            var next = FindNextSequence(Path.Combine(dateDirectory, categoryGroup.Key));
             foreach (var group in categoryGroup
                          .OrderBy(group => Path.GetFileNameWithoutExtension(group.Primary.FullPath), NaturalStringComparer.OrdinalIgnoreCase)
                          .ThenBy(group => group.Primary.FullPath, StringComparer.OrdinalIgnoreCase))
@@ -137,6 +141,9 @@ public sealed class ImportPlanBuilder(IDestinationProbe destinationProbe)
 
         return result;
     }
+
+    private static string ResolveCategoryFolder(MediaGroup group) =>
+        group.DestinationFolderName ?? CategoryFolders[group.Category];
 
     private static int FindNextSequence(string categoryDirectory)
     {

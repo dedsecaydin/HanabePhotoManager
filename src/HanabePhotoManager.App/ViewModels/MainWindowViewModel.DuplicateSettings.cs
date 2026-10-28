@@ -1,9 +1,39 @@
 using CommunityToolkit.Mvvm.Input;
+using HanabePhotoManager.App.Duplicates;
 
 namespace HanabePhotoManager.App.ViewModels;
 
 public sealed partial class MainWindowViewModel
 {
+    private ImportDuplicateBatchDecision _importDuplicateHandling = ImportDuplicateBatchDecision.SkipAll;
+
+    public bool SkipImportDuplicates
+    {
+        get => _importDuplicateHandling == ImportDuplicateBatchDecision.SkipAll;
+        set { if (value) SetImportDuplicateHandling(ImportDuplicateBatchDecision.SkipAll); }
+    }
+
+    public bool KeepImportDuplicates
+    {
+        get => _importDuplicateHandling == ImportDuplicateBatchDecision.ImportAll;
+        set { if (value) SetImportDuplicateHandling(ImportDuplicateBatchDecision.ImportAll); }
+    }
+
+    public bool ReviewImportDuplicates
+    {
+        get => _importDuplicateHandling == ImportDuplicateBatchDecision.DecideIndividually;
+        set { if (value) SetImportDuplicateHandling(ImportDuplicateBatchDecision.DecideIndividually); }
+    }
+
+    private void SetImportDuplicateHandling(ImportDuplicateBatchDecision decision)
+    {
+        _importDuplicateHandling = decision;
+        OnPropertyChanged(nameof(SkipImportDuplicates));
+        OnPropertyChanged(nameof(KeepImportDuplicates));
+        OnPropertyChanged(nameof(ReviewImportDuplicates));
+        _ = SaveSettingsAsync();
+    }
+
     private bool _useDuplicateHashCache = true;
     private int _duplicateHashParallelism = 2;
     private int _visualDuplicateThreshold = 8;

@@ -18,6 +18,37 @@ public sealed class DateFolderManagementViewModel : ObservableObject
         _dateFolderService = dateFolderService ?? new LibraryDateFolderServiceAdapter();
         RefreshCommand = new AsyncRelayCommand(RefreshAsync, CanOperate);
         SaveAllCommand = new AsyncRelayCommand(SaveAllAsync, CanOperate);
+        SelectHeatCellCommand = new RelayCommand<DateHeatCell?>(cell =>
+        {
+            if (cell?.Item is { } item) SelectedItem = item;
+        });
+        RebuildHeatMonths();
+    }
+
+    private DateFolderItemViewModel? _selectedItem;
+
+    /// <summary>月历热力图：12 个月 × 每日一格，有日期文件夹的格子可点击定位到右侧备注行。</summary>
+    public IReadOnlyList<DateHeatMonth> HeatMonths { get; private set; } = [];
+
+    public IRelayCommand<DateHeatCell?> SelectHeatCellCommand { get; }
+
+    public DateFolderItemViewModel? SelectedItem
+    {
+        get => _selectedItem;
+        set => SetProperty(ref _selectedItem, value);
+    }
+
+    private void RebuildHeatMonths()
+    {
+        var lookup = Items.GroupBy(item => (item.Month, item.Day)).ToDictionary(group => group.Key, group => group.First());
+        HeatMonths = Enumerable.Range(1, 12)
+            .Select(month => new DateHeatMonth(
+                month,
+                Enumerable.Range(1, DateTime.DaysInMonth(2024, month))
+                    .Select(day => new DateHeatCell(month, day, lookup.GetValueOrDefault((month, day))))
+                    .ToArray()))
+            .ToArray();
+        OnPropertyChanged(nameof(HeatMonths));
     }
 
     public ObservableCollection<DateFolderItemViewModel> Items { get; } = [];
@@ -87,6 +118,7 @@ public sealed class DateFolderManagementViewModel : ObservableObject
             }
 
             Summary = $"已加载 {Items.Count} 个日期文件夹。";
+            RebuildHeatMonths();
         }
         catch (Exception exception)
         {
@@ -155,6 +187,7 @@ public sealed class DateFolderManagementViewModel : ObservableObject
             }
 
             Summary = $"保存完成：成功 {succeeded}，跳过 {skipped}，失败 {failed}";
+            RebuildHeatMonths();
         }
         finally
         {

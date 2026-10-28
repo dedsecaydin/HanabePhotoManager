@@ -225,6 +225,12 @@ public sealed class AppSettings
     /// <summary>用户自定义的视频格式后缀（不含点，如 BRAW）。</summary>
     public List<string> CustomVideoExtensions { get; set; } = [];
 
+    /// <summary>新日期目录下自动创建并供导入选择的分类文件夹。</summary>
+    public List<string>? ImportCategoryFolders { get; set; }
+
+    /// <summary>按顺序匹配主文件，首条命中的规则决定整组媒体的目标分类。</summary>
+    public List<HanabePhotoManager.Core.Imports.ImportRoutingRule> ImportRoutingRules { get; set; } = [];
+
     /// <summary>导入文件命名模板（占位符 {seq}/{seq:N}/{orig}/{date}，默认 JK{seq}）。</summary>
     public string ImportNamingTemplate { get; set; } = "JK{seq}";
 
@@ -233,6 +239,7 @@ public sealed class AppSettings
     public double ZoomableGridTileSize { get; set; } = 150;
 
     public double TreemapZoom { get; set; } = 1.0;
+    public double ShootingBarGap { get; set; } = 2.0;
 
     [System.Text.Json.Serialization.JsonPropertyName("ThumbnailSize")]
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
@@ -316,10 +323,10 @@ public sealed class AppSettings
     public bool IsAdvancedFiltersExpanded { get; set; }
 
     /// <summary>
-    /// 导入时是否对来源文件做全库 SHA-256 哈希查重并弹窗确认。
-    /// 默认关闭（导入更快、不做跨库去重）；开启后每次导入前检查重复并弹窗。
+    /// 导入时检查目标日期目录及本批来源的重复内容，默认开启。
     /// </summary>
-    public bool CheckDuplicatesOnImport { get; set; } = false;
+    public bool CheckDuplicatesOnImport { get; set; } = true;
+    public string ImportDuplicateHandling { get; set; } = "SkipAll";
     public bool UseDuplicateHashCache { get; set; } = true;
     public int DuplicateHashParallelism { get; set; } = 2;
     public int VisualDuplicateThreshold { get; set; } = 8;

@@ -1,0 +1,82 @@
+<Window x:Class="HanabePhotoManager.App.Video.SLog3Window"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="S-Log3 批量还原" Width="960" Height="760" MinWidth="760" MinHeight="680"
+        WindowStartupLocation="CenterOwner" Style="{DynamicResource Dialog.Window}">
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/><RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <StackPanel Grid.Row="0" Margin="0,0,0,18">
+      <TextBlock Text="S-Log3 批量还原" Style="{DynamicResource Layout.PageTitle}"/>
+      <TextBlock Text="确认素材的 S-Log3 色域，使用标准 Rec.709 变换或匹配的自选 LUT；预览和导出共用色彩配置。原视频保持不变。"
+                 TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,6,0,0"/>
+    </StackPanel>
+    <Grid Grid.Row="1" Margin="0,0,0,14">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Button Content="添加视频" Style="{DynamicResource Button.Secondary}" Click="AddVideos_Click"/>
+      <TextBlock x:Name="CountText" Grid.Column="1" VerticalAlignment="Center" Margin="14,0" Text="尚未选择视频" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+      <Button Grid.Column="2" Content="移除所选" Style="{DynamicResource Button.Ghost}" Click="RemoveSelected_Click"/>
+    </Grid>
+    <ListBox x:Name="VideoList" Grid.Row="2" MinHeight="120" Style="{DynamicResource List.Default}" SelectionMode="Extended"
+             AutomationProperties.Name="待还原视频列表">
+      <ListBox.ItemTemplate><DataTemplate><StackPanel Orientation="Horizontal">
+        <TextBlock Text="{Binding State}" Width="70"/>
+        <TextBlock Text="{Binding Name}" Width="220"/>
+        <TextBlock Text="{Binding Detail}" TextTrimming="CharacterEllipsis" Width="500"/>
+      </StackPanel></DataTemplate></ListBox.ItemTemplate>
+    </ListBox>
+    <ScrollViewer Grid.Row="3" Margin="0,14,0,0" MaxHeight="300" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel>
+        <WrapPanel>
+          <StackPanel Margin="0,0,12,8"><TextBlock Text="导出预设"/><ComboBox x:Name="PresetBox" Style="{DynamicResource Input.ComboBox}" Width="140"/></StackPanel>
+          <StackPanel Margin="0,0,12,8"><TextBlock Text="素材色域（手动确认）"/><ComboBox x:Name="GamutBox" Style="{DynamicResource Input.ComboBox}" Width="160"/></StackPanel>
+        </WrapPanel>
+        <TextBlock x:Name="SourceInfoText" Text="选择一个视频以查看文件标记；请确认素材实际为 S-Log3。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,8"/>
+        <CheckBox x:Name="ConfirmSLog3Box" Content="我已确认素材为 S-Log3，且色域及高级设置中的输入范围、矩阵与拍摄设置一致" Margin="0,0,0,8"/>
+        <TextBlock Text="标准变换把超出 Rec.709 的高光裁切；自选 LUT 必须匹配所选色域的 S-Log3 输入及 Rec.709 输出。"
+                   TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}"/>
+        <TextBlock Text="转换 LUT（留空使用标准变换）" FontWeight="SemiBold" Margin="0,8,0,0"/>
+        <Grid Margin="0,6,0,8">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBox x:Name="LutPathBox" Style="{DynamicResource Input.TextBox}" IsReadOnly="True"/>
+          <Button Grid.Column="1" Content="选择 LUT" Style="{DynamicResource Button.Secondary}" Click="ChooseLut_Click" Margin="8,0,0,0"/>
+          <Button Grid.Column="2" Content="使用标准变换" Style="{DynamicResource Button.Ghost}" Click="StandardLut_Click" Margin="8,0,0,0"/>
+        </Grid>
+        <TextBlock Text="导出位置" FontWeight="SemiBold"/>
+        <Grid Margin="0,6,0,8">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <TextBox x:Name="OutputPathBox" Style="{DynamicResource Input.TextBox}" IsReadOnly="True"/>
+          <Button Grid.Column="1" Content="选择目录" Style="{DynamicResource Button.Secondary}" Click="ChooseOutput_Click" Margin="8,0,0,0"/>
+        </Grid>
+        <Expander Header="高级设置 · 编码、位深、输入范围与矩阵" Foreground="{DynamicResource Brush.Text.Primary}">
+          <StackPanel Margin="0,8,0,0">
+            <WrapPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="编码器"/><ComboBox x:Name="EncoderBox" Style="{DynamicResource Input.ComboBox}" Width="160"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="输出位深"/><ComboBox x:Name="DepthBox" Style="{DynamicResource Input.ComboBox}" Width="90"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="质量控制"/><ComboBox x:Name="QualityModeBox" Style="{DynamicResource Input.ComboBox}" Width="140"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="质量值"/><TextBox x:Name="QualityBox" Style="{DynamicResource Input.TextBox}" Width="60"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="目标码率 Mb/s"/><TextBox x:Name="BitrateBox" Style="{DynamicResource Input.TextBox}" Width="75"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="输入范围"/><ComboBox x:Name="RangeBox" Style="{DynamicResource Input.ComboBox}" Width="100"/></StackPanel>
+              <StackPanel Margin="0,0,12,8"><TextBlock Text="输入 YCbCr 矩阵"/><ComboBox x:Name="MatrixBox" Style="{DynamicResource Input.ComboBox}" Width="110"/></StackPanel>
+            </WrapPanel>
+            <TextBlock x:Name="CapabilityText" Text="编码器将通过实际一帧编码探测。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,8"/>
+            <CheckBox x:Name="FallbackBox" Content="硬件编码失败时自动改用软件编码" Margin="0,0,0,8"/>
+          </StackPanel>
+        </Expander>
+      </StackPanel>
+    </ScrollViewer>
+    <Grid Grid.Row="4" Margin="0,18,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <StackPanel VerticalAlignment="Center" Margin="0,0,16,0">
+        <TextBlock x:Name="StatusText" Text="{Binding Status}" TextWrapping="Wrap"/>
+        <ProgressBar x:Name="ExportProgress" Value="{Binding Progress, Mode=OneWay}" Height="5" Minimum="0" Maximum="100" Margin="0,6,0,0"/>
+      </StackPanel>
+      <Button x:Name="PreviewButton" Grid.Column="1" Content="预览所选前 10 秒" Style="{DynamicResource Button.Secondary}" Click="Preview_Click" Margin="0,0,8,0"/>
+      <Button x:Name="ExportButton" Grid.Column="2" Content="批量导出" Style="{DynamicResource Button.Primary}" Click="Export_Click" Margin="0,0,8,0"/>
+      <Button x:Name="RetryButton" Grid.Column="3" Content="重试失败" Style="{DynamicResource Button.Secondary}" Click="Retry_Click" Margin="0,0,8,0"/>
+      <Button x:Name="CancelButton" Grid.Column="4" Content="取消任务" Style="{DynamicResource Button.Ghost}" Click="Cancel_Click" IsEnabled="False"/>
+    </Grid>
+  </Grid>
+</Window>

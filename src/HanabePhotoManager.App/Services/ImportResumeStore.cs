@@ -12,7 +12,11 @@ public sealed class ImportResumeEntry
 {
     public string GroupKey { get; set; } = "";
     public string Category { get; set; } = "";
+    public string? DestinationFolderName { get; set; }
     public string PrimaryPath { get; set; } = "";
+    public string? SessionName { get; set; }
+    public string? SessionLibraryRoot { get; set; }
+    public string? SessionBatchId { get; set; }
     public List<string> SidecarPaths { get; set; } = [];
     public int Year { get; set; }
     public int Month { get; set; }
@@ -20,6 +24,7 @@ public sealed class ImportResumeEntry
     public string TargetDateDirectory { get; set; } = "";
     public ImportPlanItem? Plan { get; set; }
     public bool SkipTransfer { get; set; }
+    public string? DuplicateExistingPath { get; set; }
     public List<VerifiedFileResult> VerifiedFiles { get; set; } = [];
 }
 

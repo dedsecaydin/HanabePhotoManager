@@ -5,6 +5,20 @@ namespace HanabePhotoManager.App.Services;
 /// <summary>集中提供当前用户的设置、缓存、索引和托管资源目录。</summary>
 public static class AppDataPaths
 {
+    /// <summary>新处理工作流的持久数据；验证进程沿用隔离根，默认保存在 D 盘项目内。</summary>
+    public static string ProcessingRoot
+    {
+        get
+        {
+            var isolated = Environment.GetEnvironmentVariable("HANABE_APP_DATA_DIR");
+            return ResolveProcessingRoot(isolated);
+        }
+    }
+
+    internal static string ResolveProcessingRoot(string? isolated) => string.IsNullOrWhiteSpace(isolated)
+        ? @"D:\HanabePhoto\data"
+        : Path.Combine(Path.GetFullPath(isolated), "processing");
+
     public static string Root
     {
         get

@@ -1,5 +1,46 @@
 # Agent Change Log
 
+## 2026-10-11 — 项目迁移到 C 盘
+
+- 完整复制项目到 `C:\HanabePhoto`，包括 Git 历史、未提交改动、未跟踪文件和构建产物；迁移前后 Robocopy 清单显示 46,223 个文件、29,903,496,636 字节且无差异。
+- 将当前项目说明、S-Log3 默认导出及临时目录、相关测试目录从 `D:\HanabePhoto` 更新为 `C:\HanabePhoto`。历史计划文件仍保留其原始路径记录。
+- 新位置执行 Release 构建，临时关闭 NuGet 漏洞审计后 0 警告、0 错误；全量 842 项测试通过。原样 `/warnaserror` 构建因现有 SixLabors.ImageSharp 3.1.11 漏洞审计警告 NU1902/NU1903 失败，需另行升级依赖。
+- 旧 `D:\HanabePhoto` 目录当前被 Windows 进程占用，重命名被拒绝；保留为旧副本，后续开发应使用 C 盘目录。
+
+## 2026-10-02 — 导入来源可见性和 S-Log3 批量还原
+
+- 导入源面板把单行汇总改成已选文件夹路径列表；`SelectedImportSourceFolders` 从真实扫描路径派生，选择与拖放时更新通知。
+- 工具页增加 S-Log3 入口和独立工作台；以用户选择的 `.cube` LUT 调用 FFmpeg，预览前 10 秒并顺序导出 Rec.709 MP4。输出先写临时文件，成功后移入结果名称；不覆盖已存在文件，取消时停止转码并清理临时文件。
+- 新增窗口初始化、输出重名和本机 FFmpeg 短片转码测试。Release 全解决方案构建 0 警告、0 错误；全量 832 项测试通过，D 盘独立发布至 `.artifacts/slog3-publish`。真实 S-Log3 机内素材及界面人工验收仍待完成。
+
+## 2026-09-28 — 分类与自动分流设置总览
+
+- 将“分类文件夹”与“自动分流规则”合成按目标文件夹排列的总览表。每行同时显示内置识别、自定义规则的全局优先级，以及添加规则和移除文件夹入口。
+- 新建规则和新建文件夹集中在总览表下方；自定义 RAW/视频后缀与命名模板移入独立的“扩展格式与命名”分组。规则保存格式与导入行为保持不变。
+- 新增设置总览截图入口供视觉回归检查；独立测试配置加载示例规则后，已检查整张表在实际窗口中的显示。
+
+## 2026-09-28 — 自定义导入分流规则
+
+- 设置页新增按扩展名、文件名开头、包含、结尾匹配的分流规则；用户可指定目标分类、调整优先级和移除规则。主文件命中时整组视频与附属文件进入同一分类，导入预览仍可手动修改。
+- 规则与分类文件夹一同保存；被规则使用的分类须先移除规则才能删除。未命中规则的文件继续使用原有自动分类。
+- 扫描范围同步纳入内置媒体格式、用户自定义 RAW/视频后缀和规则指定的格式；每次分析按当前设置构建分类器，修复后缀设置已保存却未参与扫描/分类的问题。
+- 验证：Release 构建 0 警告/0 错误，Core 174 项、App 579 项测试通过。
+
+## 2026-09-28 — 设置中心结构与操作优化
+
+- 设置导航按使用流程排列：导入与照片库、浏览与显示、AI 与人物、工具默认值、外观与导航、音效、应用常规、高级与帮助。浏览相关字段从照片库页移到浏览页。
+- 左侧增加设置搜索，可通过结果或回车定位项目，Esc 清空；右侧只显示当前分区有关的主题预览、照片库存储或关于信息，减少常驻干扰。
+- 导入分类改为逐项展示与增删，并显示输入错误；保留默认六类，拒绝重复、非法及 Windows 保留文件夹名称。
+- 增加键盘焦点提示与搜索框提示文字。Release 构建及 App 578 项测试通过，并检查独立发布版的设置页截图。
+
+## 2026-09-28 — 导入冲突、分类目录与报告
+
+- 同名不同内容的媒体组改用共同的“保留”前缀生成新目标名，保留原目标；新计划先写入恢复记录再传输。
+- 日期文件夹确认按钮移至列表上方；导入报告按冲突类型汇总，错误弹窗限制逐项详情数量。
+- 设置页支持增删导入分类文件夹名称，默认 RAW生图、JPG生图、修后、视频、action视频、素材；新日期导入时创建所选目录，自定义目录可在导入队列选择。
+- 待续传的 218 组视频与 XML 已复制并逐文件校验到 `\\Hanabe\拍照2`；436 个源文件与新目标文件均存在且大小一致，416 个旧同名目标文件保留，恢复记录剩余 0 项。见 `.artifacts/pending-import-recovery/progress.log`。
+- 验证：Release 发布成功；Core 167 项和 App 578 项测试通过。
+
 ## 2026-09-07 — 页面伸展、圆角与日期筛选 UI 审查
 
 - 页面根容器与 `Layout.PagePanel` 增加伸展对齐，修复人物页在宽窗口中只占左侧、浏览条件区未利用可用宽度的问题。
@@ -1264,3 +1305,178 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Reused JPEG, TIFF RAW, CR3 and MP4 parsers through Stream inputs. Added automatic dated task directories on D:, writable/capacity/link checks, export destination revalidation, cancellation session closure and frozen export selection. Updated page help and user/release documentation.
 - Added nine tests covering stream-backed recovery, output rejection/cancellation, date/task uniqueness, low space, invalid raw paths and remote cross-block reads. Published startup smoke initially exposed WPF StartupUri handling; moved helper dispatch into Program before WPF initialization. Retest successfully returned fixed-drive rejection and process exit code 1 in approximately one second, with the daily app still running.
 - Release build and full automated results are recorded in current-status. Self-contained verification output: `.artifacts/direct-recovery-publish`. Actual removable media, UAC, physical unplug and interactive Light/Dark visual verification remain unperformed. No installed/daily files or GitHub release assets were overwritten by this change.
+
+## 2026-10-02 — 设备接入提示与便携 FFmpeg 修复
+
+- 将系统设备询问框替换为共享 Dialog / Button 资源构成的主题窗口；明确显示来源、目标、稍后处理和进入导入，恢复最小化主窗口。
+- 确认后的来源准备不依赖刷新设备概览的匹配结果；未配置图库时也能进入导入，保留设备内目标拒绝，修正同名路径前缀的误判。
+- FFmpeg 使用程序包 tools、程序旁、PATH 的顺序解析为绝对路径，直接启动 EXE 能识别已附带的 FFmpeg。
+- Release 解决方案构建零警告零错误；全量 840 项测试通过。浅色 / 深色提示截图在 .artifacts/device-import-ui-20261002，已检查可读性和按钮。真实设备拔插及远端完整交互仍未验证。
+- 交付：已更新远端“公用下载”中的同名程序包，复制无失败；主程序、应用 DLL、FFmpeg 和说明文件的 SHA-256 与本地一致。使用远端复制的应用 DLL 验证空 PATH 下可定位包内 FFmpeg；未通过远程执行在目标机上启动完整交互。
+
+## 2026-10-03 — 导入日期列表与关系图双视图
+
+- 保留默认列表，增加共享 Input.Switch；按月份折叠的关系图显示日期大圈、两项媒体小圈与余量，选中日期查看全部媒体，复用原媒体预览窗口。
+- 两种视图共享 ImportDateFolderDecision 引用、DateFolderEditor 编辑模板、确认/返回命令及校验，无第二份路由计划；同步维护要求写入 AGENTS.md、设计规范和组件清单。
+- 补充双视图状态、目标同步、校验和返回清理测试；调整既有 XAML 测试读取新的共用组件。修复恢复测试在 BinaryWriter 收尾 Flush 时的退出竞争，只修改测试，不改生产恢复逻辑。
+- 验证：Release 构建零警告零错误，全量 842 项测试通过（Core 174、Infrastructure 64、App 592、Installer 12）；已检查浅色/深色列表及关系图截图，隔离发布版启动响应正常。实机媒体播放、键盘完整流程和远端完整交互尚未验收。
+- 部署输出在 .artifacts/import-dual-publish；远端旧同名包的应用 EXE/DLL被运行中的进程锁住，因此另放公用下载 HanabePhoto-2026-10-03。最终传输结果以 dual-view-new-remote.log 为准。
+- 复制中因路径转义误生成 D:\DESKTOP-EQVLO2N\Users\Public\Downloads\HanabePhoto-2026-10-02 本地副本；删除清理被自动审批阻止，未绕过或继续删除。
+- 远端新包完成：510 文件传输零失败、零不匹配；EXE、应用 DLL、FFmpeg 与说明文件 SHA-256 全部匹配。旧同名包仍保留，目标机应关闭旧版后从 2026-10-03 新目录启动。
+
+## 2026-10-23 — Wire import duplicate controls and add HEIF routing
+- Work performed in D:\HanabePhoto after copying current C-drive source/Git with existing edits preserved. User requires D-drive projects and no OneDrive storage.
+- Fixed misleading static checked/disabled import controls; bound real duplicate check and mutually exclusive persistent decisions. Enabled checking/SkipAll defaults. Old resume plans now check unverified entries; protected partial receipts and existing skip decisions.
+- Added HEIF/HEIC/HIF as JPG生图 inputs with unchanged bytes/extensions, including discovery, library scans and duplicate scope.
+- Reproduced failures before changes (static controls/default off and resume success instead of skip). Final Release solution build zero warnings/errors with /m:1, NuGetAudit=false, SelfContained=false, PublishSingleFile=false and cached RestoreSources; 854 passing tests. Installer standalone-runtime restore was unavailable, so no installer release was made. Light/Dark controls inspected.
+- Safely stopped current import, retained pending record, backed settings/resume up in .artifacts/duplicate-fix-20261023/before. Updated local desktop/start menu shortcuts to D-drive executable; no user duplicate photos removed. Real-library reimport not performed.
+
+## 2026-10-23 — HEIF original + JPEG derivative and duplicate lookup acceleration
+- User requested automatic HEIF-family conversion while retaining originals, plus faster duplicate-import checks. Work and verification remain on D:.
+- Added bundled dynamic libheif primary-image decoder and quality-95 JPEG creation with ICC copying. Original HEIF bytes remain unchanged; adjacent content receipts permit reuse/regeneration. Existing and planned JPEG names are preserved; edited derivatives get a new name.
+- Integrated conversion before settling import recovery entries, including skipped existing originals, old skip records without target paths, moved sources and plans whose primary mapping was pruned. Source-card paths remain excluded from output. Two review findings were reproduced with failing tests before fixes; reviewer verified both fixes.
+- Duplicate lookup now uses content hashes first, lazy per-target original-metadata indexes, stamped persistent metadata caching, candidate existence/change checks and verified source hash reuse. Destination enumeration moved off UI thread; duplicate progress includes current source/count.
+- Controlled benchmark: 20 queries and 40 targets, simulated 1ms metadata read latency; old access pattern 800 reads vs 40 with shared index, approximately 12.18s vs 0.63s. This is not actual NAS/card throughput.
+- Final Release solution build /warnaserror /m:1 succeeded, 0 warnings/errors. Used cached RestoreSources, NuGetAudit=false, SelfContained=false, PublishSingleFile=false and .artifacts/heif-speed-build. All 867 tests passed: Core 177, Infrastructure 64, App 614, InstallerShell 12. Real libheif fixture validates original bytes, JPG dimensions, repeat import, cancellation, corruption, output collisions and resume.
+- Published framework-dependent local runtime to D:\HanabePhoto\app with decoding DLLs/notices. Application DLL hash matches tested build. Isolated published-app startup/screenshot succeeded. Desktop/start-menu/project shortcuts now point to published runtime, previous links and app settings/recovery state backed up under .artifacts/heif-speed-20261023/before-update.
+- No actual library import or duplicate cleanup performed. First uncached large-file hashes still require content reads; Sony HDR rendering not calibrated with camera samples.
+
+## 2026-10-27 — S-Log3 video workspace and guarded export
+
+- Replaced the old C-drive paths in the video workflow with D-drive project output and `AppDataPaths.ProcessingRoot` for preferences, queue, LUT snapshots, probes and previews. The source file is read only; all FFmpeg output is staged privately and published without overwriting another file.
+- Added one immutable profile shared by preview and export: manually confirmed S-Gamut3.Cine/S-Gamut3, input range and YCbCr matrix, standard mathematical S-Log3-to-BT.709 conversion or validated custom 3D `.cube`, 8/10-bit output, H.264/H.265 software/NVENC/AMF, constant quality or target bitrate. The standard conversion uses Sony's technical summary and clips out-of-gamut SDR values; it is not a creative look or real camera calibration.
+- Hardware availability now requires an actual one-frame encode and ffprobe pixel-format check under the global encoder gate. Optional software fallback records its reason. Batch jobs persist frozen settings and content-addressed LUT bytes, failure details and output paths; interrupted jobs reopen as retryable, successful jobs are not re-exported by default. FFmpeg progress, cancel and failed-only retry are available in the window.
+- Isolated video test build under `.artifacts/video-build`: 14 focused tests passed, including actual synthetic H.265 10-bit export, BT.709 tags and gray-patch measurement, concurrent destination preservation, cancellation cleanup, failed retry and LUT snapshot. Real Sony S-Log3 footage, GPU hardware encoders and interactive Light/Dark video window remain unverified. Full solution verification is owned by the integration pass.
+- Follow-up UI: added space-saving, high-quality and custom presets; source gamut and confirmation stay visible, while encoder, bit depth, quality, input range and matrix are in a scrollable advanced panel. Manual encoder/quality edits switch to custom. The selected preset is saved with video preferences.
+
+## 2026-10-27 — vNext intelligent collage workflow
+
+- Added pure deterministic Core geometry for grid, adaptive rows, hero magazine, and long layout; three candidate variants and regeneration preserve actual reading order. Hero magazine gives the selected hero the largest slot without moving its input position. Overflow, bounds, pixel and conservative memory budgets are validated before source decode.
+- Added dedicated CollageViewModel/CollageWindow workflow with explicit drag/reorder/swap, order lock, EXIF capture-time and filename sorting, manual/automatic hero provenance, aspect presets, margins/gaps/background, contain default and optional face-aware crop. Existing local face engine is reused; detector failures fall back to disclosed geometric choices. Preferences use the isolated ProcessingRoot and atomic unique temporary files.
+- Advanced JPG/PNG/TIFF composition and legacy CollageOptions both preflight metadata, decode one source/frame at a time, share a cancellable global allocation gate, retain originals, and publish unique output names atomically. Preview shares placement/ICC conversion with export and parameter changes invalidate stale plans.
+- Windows WIC converts each tagged RGB input to sRGB using in-memory ICC contexts; output is tagged with system sRGB. Untagged input is explicitly assumed sRGB; invalid conversions stop export. Single synchronous WIC conversion has cancellation checkpoints around it, not interruption inside its native pixel-copy call.
+- Verification: Core collage tests 9 passed; App advanced+legacy collage tests 13 passed. Includes three output formats, source-byte preservation/no overwrite, cancellation, real tagged/untyped mix, synthetic linear-RGB gray128→sRGB approximately188 vs sRGB gray128 unchanged, crop pixel result, face failure fallback, lock/swap, hero geometry and overflow/memory budget. Whole-solution regression and runtime visual acceptance are recorded by the coordinating agent separately.
+
+## 2026-10-27 vNext integration and verification
+
+- Added separate virtual session grouping, deterministic collage planner/editor, unified S-Log3 processing and durable video queue. Original database schemas and original media remain untouched; legacy collage remains independently reachable.
+- Bounded and serialized map thumbnail decoding/cache, limited animated decoding to first frame, avoided scanning the cache directory on every hit. Isolated app instances/data/theme/face-cache allow QA without interrupting the daily import instance.
+- Fixed one-way video progress binding, dark ComboBox selected text inheritance, source-probe minimum frame size (64x64 incorrectly rejected usable NVENC; 320x240 verified).
+- Final Release solution build: zero warnings/errors. Full suite: Core 196 + Infrastructure 71 + App 646 + InstallerShell 12 = 925 passed, zero failed/skipped. Includes three-window Light/Dark layout and real legacy collage entry activation.
+- Windows self-contained alpha.27 package published separately in releases/vnext-20261027, including FFmpeg/ffprobe. NVIDIA H.264 8-bit and HEVC 10-bit actual one-frame outputs verified; AMF unavailable (missing runtime). No user media processed.
+- Scope/remaining manual acceptance and exact evidence: [vNext delivery](vnext-delivery-20261027.md). No claim of real camera color calibration, full interactive end-to-end completion or full large-library benchmarking.
+
+## 2026-10-27 UI workspace refinement (alpha.28)
+
+- Shared PagePanel removes repeated outer frames; Sidebar/StatusBar use continuous shell surfaces and fine separators, titles use desktop typography, Inspector panels use restrained radius. Settings groups are flat sections and session inputs use shared styles.
+- Tool homepage retains all seven routes, grouped into images, video and independent recovery. Compact ActionTile extends the shared Button.Secondary template, retaining keyboard focus and disabled states. Video/recovery wrap side-by-side at the supported window size.
+- Six view binding/handler inventories unchanged. Only removed named element is old unused ToolCardButton template's internal Card; all code-behind names retained. New accessible names on tool buttons.
+- Release build zero warnings/errors; final full suite 925 passed (196 Core, 71 Infrastructure, 646 App, 12 Installer), zero failed/skipped. Independent self-contained alpha.28 publish at releases/ui-20261027, daily app unchanged.
+- Actual published screenshots at .artifacts/ui-20261027: Light/Dark tools, Light settings, Dark three-image gallery at 1440x900. Fixed statusbar help clipping found in first screenshot pass. Multiple physical DPI scales and every manual hover/keyboard state were not separately exercised.
+
+## 2026-10-27 — 左上角图标透明融合
+- 使用内置图片编辑工具提取现有像素插画的透明背景，新增 Assets/HanabeAppLogo.Transparent.png；保留旧素材。
+- 明暗主题共用透明资源，SidebarLogoSurface 去掉主题色底板，默认图标等比例显示；点击事件及自定义头像入口保留。
+- Release 编译 0 警告/错误，925 项测试通过。独立便携包 releases/logo-20261027，未覆盖日常 app 目录。
+- 图片提示词要点：仅移除底色，保留摄影女孩、相机、照片纸边与红色装饰，真实 alpha，适配明暗背景。原始图由内置工具保存后复制到 D 盘项目中。
+
+## 2026-10-27 — 导入确认与工作流整合
+- 导入主操作改为“分析并预览导入”，显示来源检查、目标确认、结果整理阶段；待确认分类/日期用页内提示替代反复弹窗。
+- 记录预览时的来源、图库、传输方式、选中对象、分类和日期。确认时拒绝过期方案；选择新来源清除列表与关系图预览。
+- 移动确认及新增的文件夹改名确认均在 ApplyRequiredRenames 前完成；未完成恢复任务也在任何改名前拦截。改名确认复用现有主题化安全窗口并显示完整路径清单，默认焦点为返回。
+- 场次整理入口放入结果区，仅成功导入过素材且当前空闲时可用。双视图继续共享同一决策对象、编辑模板与确认命令。
+- 新增 6 项回归（两种视图取消移动/改名、四种方案变更）。测试仅操作隔离临时文件；没有向用户真实图库执行导入。
+- 初次全量检查发现系统弹窗违反现有主题规范，已改为主题窗口后重跑。最终证据在 .artifacts/import-20261027/final-tests；Light/Dark 导入页截图位于同目录。
+- 独立候选包：releases/import-20261027，含透明图标、既有 vNext 功能与 FFmpeg 工具。日常 app 目录未覆盖。
+
+## 2026-10-27 — 导入操作顺序与状态衔接
+- 首次分析停留素材检查队列；下一步才预览日期目标。拖放入口同样停留检查，避免略过用户勾选与分类。
+- 主按钮根据当前队列与恢复记录切换文字；未完成导入优先恢复，不再被当前来源是否存在阻止。
+- 分析停止/失败不会继续进入确认，也不会被忙碌状态更新覆盖诊断提示；失败清空不完整队列，只有成功才显示分析完成。
+- 单选、多选与设备入口统一清除旧预览。保留双视图与已有转码、查重、安全确认。
+- 新增首次分析/二次确认、取消分析、提示保持回归；Release 0 警告/错误，全量 934 项通过。
+- 独立包 releases/import-logic-20261027 (alpha.31)，证据 .artifacts/import-logic-20261027。未执行用户真实图库的导入操作。
+
+## 2026-10-27 — 版本日志补齐
+- CHANGELOG.md 按新到旧补齐 alpha.27–alpha.31，移动原末尾 alpha.28 条目，保留历史记录；明确验证包性质、测试数量与验收边界。
+- 与 alpha.31 可执行文件 ProductVersion 核对，并同步日志至当前便携包。仅修改文档，未重新构建或重启应用。
+
+## 2026-10-28 — 多来源导入可视化与整理
+- 新增 ImportWorkspace 分部与 ImportOrganizationPanel：来源、队列、整理三栏；复用现有分类与导入方案；双日期视图保持原确认路径。
+- 多来源扫描限制并发 2，规范化重叠路径去重；同名跨设备素材与附属文件分别归组。分类/场次拖动与按钮操作共用方法，支持撤销及忙碌/预览冻结保护。
+- ImportSessionWriter 将成功目标写入现有独立场次文件；恢复记录新增可空场次字段，兼容旧记录，不迁移数据库。以批次区分同名场次，重复提交幂等。
+- 缩略图使用显式释放的共享读取流；传输前取消预览并等待解码完成。新增 7 项来源、筛选、撤销、断开、场次保存、续传字段与文件锁回归。
+- 独立包 releases/multi-source-20261028，alpha.32。保留 app 及旧包，不对真实用户媒体执行导入。
+- 参考 TagStudio 官方项目说明、Immich #8744 交互讨论与 Bilibili Eagle av206086491 视频介绍页；未声称观看完整视频或把讨论当成已发布特性。
+- 真实多卡并发、大量场次逐文件写入性能、真实鼠标多选拖动仍需专项验收。Windows 文件夹选择器的自动化焦点限制导致本轮未完成填充队列的鼠标端到端验收。
+- 验证结果：Release 构建 0 警告/错误；最终全套 941 项通过（196 Core、71 Infrastructure、662 App、12 Installer）。证据 .artifacts/multi-source-20261028/regression。
+- 已实机检查浅色/深色空队列三栏布局；自动启动 alpha.32，沿用用户图库设置并打开导入页。旧版空闲窗口正常退出，未执行用户素材传输。
+
+## 0.3.2-alpha.33 — 2026-10-28（界面文字优化）
+- 导入页简化为“选文件夹”“扫描所选”“全选当前”“自动分组”“整理场次”等短标题；补充悬停说明。
+- 命名方式使用明确的中文展示模板，避免显示选项类型名。分类、日期确认及文件操作逻辑保持原状。
+- Release 构建零警告零错误，662 项 App 测试通过；导入集成测试明确切到导入页，避免误入图库刷新流程。
+
+## 0.3.2-alpha.34 — 2026-10-28（导入页视觉优化）
+- 导入背景与外壳统一，取消白色大底板、来源及结果区装饰外框；次要操作使用轻量按钮。
+- 保留分类目标、输入框、主操作以及现有导入流程；沿用明暗主题资源。
+- Release 构建及 662 项 App 测试通过。
+
+## 0.3.2-alpha.35 — 2026-10-28（一体化界面）
+- 侧栏与底栏透出共同工作区背景，移除独立分隔线。
+- 导入页使用共享轻底按钮样式，减少硬边小框，保留悬停、焦点和禁用反馈。
+- 验证：Release 构建零警告零错误；662 项 App 测试通过。
+
+## 2026-10-28 — 图片切图与工具入口对比度
+- 图片工具新增独立“切图”入口，复用窗口激活模式；提供左右/上下中分、2×3/3×2 六分和 3×3 九宫格。
+- 原图比例或方形选区，大小与水平/垂直滑块、鼠标拖动、方向键定位；预览显示网格、顺序和像素尺寸。
+- PNG/JPEG 异步导出到 D 盘独立目录，不覆盖原件和以前结果；中途取消清理暂存输出，限制 6000 万像素。
+- 新增 Button.ImageToolTile，基于 ActionTile 提高图片工具入口的 Surface/Outline 对比，不改变其他入口样式。沿用全部明暗主题键。
+- Release solution build：0 警告、0 错误；952 项测试通过（Core 196 / Infrastructure 71 / App 673 / Installer 12）。包含新增 11 项用例，验证非整除分割覆盖、裁切像素、重名隔离、中途取消、D 盘限制及明暗窗口 PNG/JPEG 导出。
+- WPF 渲染检查：Light/Dark，1140×680 与 860×520 内容，证据 .artifacts/split-ui。实际鼠标拖动与多 DPI 的人工交互验收未执行。
+- 运行入口：src/HanabePhotoManager.App/bin/Release/net8.0-windows/HanabePhotoManager.App.exe；当前用户运行的 releases/unified-20261028 版本未被终止或覆盖。未生成安装包。
+
+## 2026-10-28 九页参考稿公共外观与人物扫描错误处理
+- 在当前未提交工作区增量调整共享侧栏为 248px 图标文字导航、30px 页面标题、浅色中性画布与细边框内容面板；保留主题偏好和现有导航命令。
+- 人物扫描仅捕获取消的缺口已用损坏索引复现：补充异常边界，页面显示扫描失败并恢复重试能力，不改写损坏索引。此证据不能认定为用户原始连环弹窗的根因。
+- Release 构建 0 警告/错误；全量 953 测试通过（196 Core / 71 Infrastructure / 674 App / 12 InstallerShell）。记录于 .artifacts/ui-reference-20261028。
+- 隔离数据启动运行检查：首页、导航正常显示。尚未完成九页逐页结构还原、最新深色参考稿适配、DPI/深色全状态验收和用户图库扫描复验。未替换 app 日常版本。
+
+## 2026-10-28 — 九页参考稿收尾（Claude）
+- 图库缩略图角标缩小为紧凑胶囊；无缩略图占位移到左上，不再与视频播放按钮重叠。
+- 自定义相册数量徽章、日期文件夹页头按钮靠右，修正被拉伸成整行的问题；侧栏签名改为 Keep memories 避免截断。
+- 验证：Release 构建 0 警告/错误；全量 954 项通过（196 Core / 71 Infrastructure / 675 App / 12 Installer）。构建输出 .artifacts/claude-build，未覆盖 bin 下正在运行的版本。
+- 截图验收：樱粉镜面深/浅两套 8 页，D:\HanabePhotoCL\shots。地图页未截图；多 DPI 与真实拖拽未人工验收。
+
+## 2026-10-28 — 主页概览、拍摄频率条形图与开关样式（Claude）
+- 主页新增四张概览统计卡（照片与视频 / 拍摄日期 / 自定义相册 / 已识别人物）和「拍摄频率」条形图：最近 21 个拍摄日，按日期文件夹统计 RAW/JPG 照片组；最新一天高亮，跨月显示 月/日，悬停显示数量。新增 MainWindowViewModel.ShootingFrequency.cs，日期刷新与统计完成后通知更新。
+- 全局开关（MainWindow 与 App 的隐式 CheckBox、Input.Switch）：44×24 轨道、白色带阴影滑块，开启时为粉色渐变加玻璃描边，补充悬停与键盘焦点反馈。修复樱粉深色下滑块与轨道同色、看不见的问题。
+- 验证：Release 构建 0 警告/错误，全量 954 项通过；深/浅色主页与设置截图见 D:\HanabePhotoCL\shots\v4-*。
+
+## 2026-10-28 — 主页单屏、通知铃铛、照片墙滚动条、页面过渡与设置交互（Claude）
+- 主页改为不滚动的单屏仪表盘：头部 / Hero+2×2 统计 / 中断导入横条 / 左侧拍摄频率+最近文件夹（一行 4 个）/ 右侧快速操作（两列）+设备列表（内部滚动，选中设备显示摘要，不再展开文件清单）。原 HomeSummary 行并入 Hero。
+- 拍摄频率：柱间距缩小，默认只显示月份起点与最新一天的日期；悬停时柱子放大并浮出“日期 · 数量”。
+- 标题栏「任务」改为通知铃铛，后台任务进行时显示粉色圆点；弹层改名“通知”。移除状态栏重复的“任务中心”按钮。
+- 照片墙滚动条：虚拟化面板由代码直接滚动，外层 ScrollViewer 拿不到 IScrollInfo，滚动条一直不可用。面板新增 ScrollInfoChanged 冒泡事件，叠加一条同步的可拖动 GalleryScrollBar；全局滚动条滑块改为主题强调色。
+- 页面切换：淡入 + 14px 上浮 + 0.985 微缩放，指数缓出约 270ms，动画期间 BitmapCache（地图页除外）。
+- 设置：记住上次查看的分组；搜索同时匹配说明文字；跳转后目标行短暂高亮；设置页内 Ctrl+F 聚焦搜索。
+- 验证：Release 构建 0 警告/错误；全量 954 项通过（一次全量运行中 3 个 WPF 窗口测试超时，单独重跑及再次全量均通过）。截图 D:\HanabePhotoCL\shots\v5-*、v6-*。
+
+## 2026-10-28 — 拍摄频率间距可调、主页小板块紧凑化、功能图标重绘（Claude）
+- 拍摄频率卡片右上角新增「间距」滑块（0–16px，整数步进），绑定 ShootingBarGap 并写入 settings.json（AppSettings.ShootingBarGap，默认 2）；条宽随间距自适应，最大 40px。
+- 拍摄频率与最近文件夹按内容高度显示，不再拉伸留白；设备列表最多 230px 内滚动。
+- 统一重绘 24px 线性图标（1.8 描边、圆角端点）：主页、导入（下载入盘）、照片图库（叠放照片）、自定义相册（书签相册）、人物查找（人像+放大镜）、地图（折页地图）、图片小工具（魔棒）、设置（调节滑杆），新增 Icon.Calendar 用于日期文件夹（此前侧栏缺图标）；快速操作的相册改用 Icon.Album。
+- 验证：Release 构建 0 警告/错误，全量 954 项通过；截图 D:\HanabePhotoCL\shots\v7-*。
+
+## 2026-10-28 — 主页独立小板块、日程安排、Hanabe 角色卡、视频第一帧封面（Claude）
+- 主页左下改为 2×2 独立小板块（固定 226px 高）：拍摄频率（间距滑块收进卡片右上角）、最近文件夹（2×2 封面拼图，点击打开日期）、日程安排、Hanabe 角色卡。
+- 日程安排：输入“11.2 漫展外拍”“明天 棚拍”“后天 …”回车添加，未写日期默认今天；圆圈切换完成，悬停显示删除；逾期日期标红；保存到应用数据目录 schedule.json（原子写入，损坏时不覆盖）。
+- Hanabe 角色卡：按时间问候，提示最近一次拍摄与下一个日程；可直接开关桌面助手，跳转形象设置。
+- 视频缩略图：同日期海报 JPG 之后、系统缩略图之前，新增 FFmpeg 第一帧抽取（缓存于应用数据 video-frames，按路径+大小+修改时间命名，最多 2 个并发，15 秒超时）；找不到 FFmpeg 时沿用原逻辑。
+- 验证：Release 构建 0 警告/错误，全量 954 项通过；截图 D:\HanabePhotoCL\shots\v8-*。
+
+## 2026-10-28 — 拍摄频率鱼眼悬停、角色卡图片、教学视频（Claude）
+- 拍摄频率：指针所在条宽度放大到 1.9 倍，相邻 1.2、隔一 0.85、其余 0.6，随指针移动 180ms 缓动流动；离开后 260ms 恢复。代码在 MainWindow.xaml.cs ShootingBars_MouseMove。
+- Hanabe 角色卡改用干净的 workspace-hero.png（上半身裁切），不再使用边缘未抠干净的 hanabe-assistant.png。
+- 教学视频：D:\HanabePhotoCL\video\Hanabe教学视频.mp4（1080p，70 秒，字幕+合成背景音乐），素材为当前构建的深/浅色截图。
+- 验证：Release 构建 0 警告/错误，全量 954 项通过。

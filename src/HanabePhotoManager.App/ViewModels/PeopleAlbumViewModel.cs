@@ -125,6 +125,7 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         if (IsScanning || IsEditing) return;
         _scanCancellation?.Dispose();
         _scanCancellation = new CancellationTokenSource();
+        var activeScan = _scanCancellation;
         IsScanning = true;
         ScanProgressValue = 0;
         _detectedFaceCount = 0;
@@ -135,6 +136,8 @@ public sealed class PeopleAlbumViewModel : ObservableObject
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
             var progress = new Progress<PeopleScanProgress>(report =>
             {
+                // Progress reports are queued on the UI context and may arrive after completion or retry.
+                if (!IsScanning || !ReferenceEquals(_scanCancellation, activeScan)) return;
                 ScanProgressValue = report.Total == 0 ? 100 : report.Processed * 100d / report.Total;
                 _detectedFaceCount = report.DetectedFaces;
                 ReconcileProgressAlbums(report.Albums);
@@ -149,6 +152,11 @@ public sealed class PeopleAlbumViewModel : ObservableObject
         catch (OperationCanceledException)
         {
             StatusText = "人物扫描已取消";
+        }
+        catch (Exception exception)
+        {
+            StatusText = $"人物扫描失败：{exception.Message}";
+            System.Diagnostics.Trace.TraceError($"People scan failed: {exception}");
         }
         finally
         {
@@ -451,3 +459,4 @@ public sealed class PersonPhotoViewModel : ObservableObject
         }
     }
 }
+

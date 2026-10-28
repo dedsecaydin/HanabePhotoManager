@@ -38,7 +38,7 @@ public sealed class LibraryDateSnapshotService
     private static readonly HashSet<string> SupportedExtensions = new(
         [
             ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif",
-            ".tif", ".tiff", ".webp", ".heic", ".mp4", ".mov", ".xml", ".aac"
+            ".tif", ".tiff", ".webp", ".heic", ".heif", ".hif", ".mp4", ".mov", ".xml", ".aac"
         ],
         StringComparer.OrdinalIgnoreCase);
 

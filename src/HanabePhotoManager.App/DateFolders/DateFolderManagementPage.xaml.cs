@@ -7,4 +7,9 @@ public partial class DateFolderManagementPage
     {
         InitializeComponent();
     }
+
+    private void DateFolderList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (DateFolderList.SelectedItem is { } item) DateFolderList.ScrollIntoView(item);
+    }
 }

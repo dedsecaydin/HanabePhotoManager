@@ -38,7 +38,7 @@ public sealed record CollageResult(
     string Message);
 
 /// <summary>按选定方向解码并合成为单张高分辨率拼图。</summary>
-public sealed class ImageCollageService
+public sealed partial class ImageCollageService
 {
     public async Task<CollageResult> ComposeAsync(
         IReadOnlyList<string> sourcePaths,
@@ -52,35 +52,30 @@ public sealed class ImageCollageService
             return new(false, null, 0, null, 0, 0, "请先添加至少一张图片");
 
         cancellationToken.ThrowIfCancellationRequested();
-        var images = new List<SixLabors.ImageSharp.Image<Rgba32>>(sourcePaths.Count);
+        using var work = await HanabePhotoManager.App.Collage.CollageWorkGate.EnterAsync(cancellationToken).ConfigureAwait(false);
+        var images = await ProbeAsync(sourcePaths, cancellationToken).ConfigureAwait(false);
         try
         {
-            for (var index = 0; index < sourcePaths.Count; index++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                var path = Path.GetFullPath(sourcePaths[index]);
-                var image = await SharpImage.LoadAsync<Rgba32>(path, cancellationToken).ConfigureAwait(false);
-                image.Mutate(context => context.AutoOrient());
-                images.Add(image);
-                progress?.Report(new(index + 1, sourcePaths.Count, Path.GetFileName(path)));
-            }
-
             var width64 = options.Orientation == CollageOrientation.Vertical
                 ? images.Max(image => (long)image.Width)
                 : images.Sum(image => (long)image.Width);
             var height64 = options.Orientation == CollageOrientation.Vertical
                 ? images.Sum(image => (long)image.Height)
                 : images.Max(image => (long)image.Height);
-            if (width64 > int.MaxValue || height64 > int.MaxValue || width64 * height64 > int.MaxValue)
+            if (width64 > int.MaxValue || height64 > int.MaxValue || width64 * height64 > HanabePhotoManager.Core.Collage.CollagePlanner.MaximumPixels || !HanabePhotoManager.Core.Collage.CollagePlanner.FitsMemoryBudget(width64 * height64, images.Max(image => (long)image.Width * image.Height), options.UseBlurredBackground))
                 return new(false, null, 0, null, 0, 0, "拼图像素尺寸过大，无法在本机安全分配画布");
 
             var width = (int)width64;
             var height = (int)height64;
             using var canvas = new SixLabors.ImageSharp.Image<Rgba32>(width, height, SharpColor.White);
             var offset = 0;
-            foreach (var image in images)
+            for (int imageIndex = 0; imageIndex < images.Count; imageIndex++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                using var source = await SharpImage.LoadAsync<Rgba32>(new SixLabors.ImageSharp.Formats.DecoderOptions { MaxFrames = 1 }, images[imageIndex].Id, cancellationToken).ConfigureAwait(false);
+                using var image = HanabePhotoManager.App.Collage.CollageColorConverter.ConvertToSrgb(source, Path.Combine(options.OutputDirectory, ".collage-tmp"));
+                image.Mutate(context => context.AutoOrient());
+                progress?.Report(new(imageIndex + 1, images.Count, Path.GetFileName(images[imageIndex].Id)));
                 var slot = options.Orientation == CollageOrientation.Vertical
                     ? new SixLabors.ImageSharp.Rectangle(0, offset, width, image.Height)
                     : new SixLabors.ImageSharp.Rectangle(offset, 0, image.Width, height);
@@ -109,6 +104,7 @@ public sealed class ImageCollageService
                 offset += options.Orientation == CollageOrientation.Vertical ? image.Height : image.Width;
             }
 
+            canvas.Metadata.IccProfile = HanabePhotoManager.App.Collage.CollageColorConverter.OutputProfile();
             var encoded = await EncodeAsync(canvas, options.TargetBytes, options.MinimumQuality, cancellationToken)
                 .ConfigureAwait(false);
             if (options.TargetBytes is { } target && encoded.Bytes.LongLength > target)
@@ -134,7 +130,7 @@ public sealed class ImageCollageService
         }
         finally
         {
-            foreach (var image in images) image.Dispose();
+            // Sources are disposed after each slot; no batch of decoded originals is retained.
         }
     }
 

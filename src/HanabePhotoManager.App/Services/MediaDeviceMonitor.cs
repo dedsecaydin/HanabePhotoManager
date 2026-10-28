@@ -7,7 +7,7 @@ internal sealed class MediaDeviceMonitor
 {
     private readonly HashSet<string> _offered = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> Extensions = new(StringComparer.OrdinalIgnoreCase)
-        { ".jpg", ".jpeg", ".png", ".heic", ".tif", ".tiff", ".arw", ".cr2", ".cr3", ".nef", ".dng", ".raf", ".orf", ".rw2", ".mp4", ".mov", ".m4v", ".mts", ".m2ts" };
+        { ".jpg", ".jpeg", ".png", ".heic", ".heif", ".hif", ".tif", ".tiff", ".arw", ".cr2", ".cr3", ".nef", ".dng", ".raf", ".orf", ".rw2", ".mp4", ".mov", ".m4v", ".mts", ".m2ts" };
 
     internal IReadOnlyList<string> Discover(CancellationToken token)
     {

@@ -14,11 +14,11 @@
       <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
     <Style x:Key="Settings.Group" TargetType="Border">
-      <Setter Property="Background" Value="{DynamicResource Brush.Surface.ContainerLow}" />
-      <Setter Property="CornerRadius" Value="{StaticResource Radius.Dialog}" />
-      <Setter Property="BorderBrush" Value="{DynamicResource Brush.OutlineVariant}" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="Padding" Value="16" />
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="CornerRadius" Value="{StaticResource Radius.None}"/>
+      <Setter Property="BorderBrush" Value="{DynamicResource Brush.Border.Subtle}"/>
+      <Setter Property="BorderThickness" Value="{StaticResource BorderThickness.Divider.Bottom}"/>
+      <Setter Property="Padding" Value="{StaticResource Spacing.Card}"/>
     </Style>
     <Style x:Key="Settings.RowTitle" TargetType="TextBlock">
       <Setter Property="Foreground" Value="{DynamicResource Brush.OnSurface}" />
@@ -49,6 +49,7 @@
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Interactive}" /></Trigger>
               <Trigger Property="IsSelected" Value="True"><Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Selected}" /><Setter Property="FontWeight" Value="SemiBold" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Focus}" /><Setter TargetName="Chrome" Property="BorderThickness" Value="2" /></Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
@@ -85,32 +86,64 @@
       </Setter>
     </Style>
   </UserControl.Resources>
-  <Grid Background="{DynamicResource Brush.Background.Canvas}">
+  <Grid Background="Transparent" Margin="{StaticResource Spacing.Card}">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="196" />
+      <ColumnDefinition Width="220" />
       <ColumnDefinition Width="16" />
       <ColumnDefinition Width="*" />
-      <ColumnDefinition Width="16" />
-      <ColumnDefinition Width="280" />
     </Grid.ColumnDefinitions>
 
     <!-- 左：设置分区导航 -->
-    <Border Grid.Column="0" Style="{StaticResource Inspector.Panel}">
-      <ListBox x:Name="SectionNavList" Style="{StaticResource List.Default}" ItemContainerStyle="{StaticResource Settings.SectionNavItem}" SelectionChanged="SectionNav_SelectionChanged">
-        <ListBoxItem Tag="appearance"><TextBlock Text="外观" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="sound"><TextBlock Text="音效" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="general"><TextBlock Text="常规" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="library"><TextBlock Text="照片库与导入" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="browse"><TextBlock Text="浏览" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="intelligence"><TextBlock Text="AI 与人物" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="tools"><TextBlock Text="工具默认值" FontWeight="SemiBold" /></ListBoxItem>
-        <ListBoxItem Tag="advanced"><TextBlock Text="高级" FontWeight="SemiBold" /></ListBoxItem>
-      </ListBox>
+    <Border Grid.Column="0" Style="{DynamicResource Layout.GlassPanel}">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+        <StackPanel Grid.Row="0" Margin="6,4,6,12">
+          <TextBlock Text="查找设置" Style="{StaticResource Settings.RowTitle}" Margin="4,0,0,6" />
+          <Grid>
+            <TextBox x:Name="SettingsSearchBox" Style="{StaticResource Input.TextBox}" TextChanged="SettingsSearch_TextChanged" KeyDown="SettingsSearch_KeyDown" ToolTip="输入设置名称；Enter 打开首项，Esc 清空" AutomationProperties.Name="查找设置" />
+            <TextBlock Text="搜索设置项" Foreground="{DynamicResource Brush.OnSurfaceVariant}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ElementName=SettingsSearchBox, Path=Text}" Value=""><Setter Property="Visibility" Value="Visible" /></DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </Grid>
+        </StackPanel>
+        <ListBox Grid.Row="1" x:Name="SectionNavList" Style="{StaticResource List.Default}" ItemContainerStyle="{StaticResource Settings.SectionNavItem}" SelectionChanged="SectionNav_SelectionChanged">
+          <ListBoxItem Tag="library"><TextBlock Text="导入与照片库" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="browse"><TextBlock Text="浏览与显示" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="intelligence"><TextBlock Text="AI 与人物" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="tools"><TextBlock Text="工具默认值" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="appearance"><TextBlock Text="外观与导航" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="sound"><TextBlock Text="音效" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="general"><TextBlock Text="应用常规" FontWeight="SemiBold" /></ListBoxItem>
+          <ListBoxItem Tag="advanced"><TextBlock Text="高级与帮助" FontWeight="SemiBold" /></ListBoxItem>
+        </ListBox>
+        <ScrollViewer Grid.Row="1" x:Name="SearchResultsScroll" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <TextBlock x:Name="SearchResultCount" Style="{StaticResource Settings.RowDesc}" Margin="8,0,8,8" />
+            <ItemsControl x:Name="SearchResultsList">
+              <ItemsControl.ItemTemplate><DataTemplate>
+                <Button Tag="{Binding}" Click="SettingsSearchResult_Click" Style="{StaticResource Button.Ghost}" HorizontalContentAlignment="Left" Margin="0,0,0,2">
+                  <StackPanel><TextBlock Text="{Binding Text}" FontWeight="SemiBold" TextWrapping="Wrap" /><TextBlock Text="{Binding SectionName}" Style="{StaticResource Settings.RowDesc}" /></StackPanel>
+                </Button>
+              </DataTemplate></ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
     </Border>
 
     <!-- 右：设置内容（分组列表） -->
     <ScrollViewer x:Name="SettingsScroll" Grid.Column="2" VerticalScrollBarVisibility="Auto" ScrollChanged="SettingsScroll_ScrollChanged">
       <StackPanel Margin="4,0,4,0">
+        <TextBlock Text="Settings" Style="{DynamicResource Layout.Eyebrow}" />
+        <TextBlock Text="设置" Style="{DynamicResource Layout.PageTitle}" />
+        <TextBlock Text="外观、导入、照片浏览和本地处理，按你的习惯调整。" Style="{DynamicResource Status.Description}" Margin="{StaticResource Spacing.Stack.16}" />
 
         <!-- ─────── 外观 ─────── -->
         <StackPanel x:Name="AppearanceSection">
@@ -241,8 +274,8 @@
                 <Grid>
                   <StackPanel>
                     <StackPanel Orientation="Horizontal"><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.Primary}" /><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.Secondary}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.Tertiary}" Margin="4,0,0,0" /></StackPanel>
-                    <TextBlock Text="绯夜蔷薇 · Hanabe" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
-                    <TextBlock Text="蔷薇象牙 · 浅色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
+                    <TextBlock Text="樱粉镜面 · Hanabe" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="樱粉玻璃 · 浅色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckHanabeLight" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed"><TextBlock Text="✓" Foreground="{DynamicResource Brush.OnPrimary}" FontSize="{StaticResource Typography.Caption}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
                 </Grid>
@@ -251,8 +284,8 @@
                 <Grid>
                   <StackPanel>
                     <StackPanel Orientation="Horizontal"><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.PrimaryContainer}" /><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.SecondaryContainer}" Margin="4,0,0,0" /><Border Width="16" Height="16" CornerRadius="8" Background="{DynamicResource Brush.Surface.ContainerHighest}" Margin="4,0,0,0" /></StackPanel>
-                    <TextBlock Text="绯夜蔷薇 · Hanabe" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
-                    <TextBlock Text="黑莓绯夜 · 深色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
+                    <TextBlock Text="樱粉镜面 · Hanabe" FontWeight="SemiBold" FontSize="{StaticResource Typography.BodySmall}" Margin="0,8,0,0" />
+                    <TextBlock Text="夜色镜面 · 深色" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" />
                   </StackPanel>
                   <Border x:Name="ThemeCheckHanabeDark" Width="18" Height="18" CornerRadius="9" Background="{DynamicResource Brush.Primary}" HorizontalAlignment="Right" VerticalAlignment="Top" Visibility="Collapsed"><TextBlock Text="✓" Foreground="{DynamicResource Brush.OnPrimary}" FontSize="{StaticResource Typography.Caption}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
                 </Grid>
@@ -625,45 +658,89 @@
             </StackPanel>
           </Border>
 
-          <Grid Margin="0,20,0,8">
+          <Grid x:Name="ImportRoutingOverviewSection" Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="功能说明位置" Style="{StaticResource Settings.GroupHeader}" />
+            <TextBlock Grid.Column="0" Text="导入规则" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
             <StackPanel>
-              <TextBlock Text="筛选字段标签位置" Style="{StaticResource Settings.RowTitle}" />
-              <TextBlock Text="照片图库筛选面板里「分类 / 修图状态 / 评分分类」等字段标签统一放在控件上方或左侧。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,10" />
-              <ComboBox Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding FeatureDescriptionPosition, Mode=TwoWay}">
-                <ComboBoxItem Content="标签在上" Tag="Top" />
-                <ComboBoxItem Content="标签在左" Tag="Left" />
-              </ComboBox>
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                  <TextBlock Text="分类与自动分流" Style="{StaticResource Settings.RowTitle}" />
+                  <TextBlock Text="{Binding ImportRoutingSummary}" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,0" />
+                </StackPanel>
+                <TextBlock Grid.Column="1" Text="规则按编号优先 · 首条命中生效" Style="{StaticResource Settings.RowDesc}" VerticalAlignment="Center" />
+              </Grid>
+              <TextBlock Text="新日期目录会创建下列文件夹。每行显示内置识别与自定义规则；视频配套文件跟随主文件。修改后重新分析来源，在导入队列核对结果。" Style="{StaticResource Settings.RowDesc}" Margin="0,8,0,12" />
+              <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="142" /><ColumnDefinition Width="175" /><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="目标文件夹" Style="{StaticResource Settings.GroupHeader}" />
+                <TextBlock Grid.Column="1" Text="内置识别" Style="{StaticResource Settings.GroupHeader}" />
+                <TextBlock Grid.Column="2" Text="自定义匹配" Style="{StaticResource Settings.GroupHeader}" />
+                <TextBlock Grid.Column="3" Text="操作" Style="{StaticResource Settings.GroupHeader}" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding ImportFolderOverviews}">
+                <ItemsControl.ItemTemplate><DataTemplate>
+                  <Border BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="0,1,0,0" Padding="0,8">
+                    <Grid>
+                      <Grid.ColumnDefinitions><ColumnDefinition Width="142" /><ColumnDefinition Width="175" /><ColumnDefinition Width="*" /><ColumnDefinition Width="112" /></Grid.ColumnDefinitions>
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" Style="{StaticResource Settings.RowTitle}" VerticalAlignment="Top" Margin="0,5,8,0" TextWrapping="Wrap" />
+                      <TextBlock Grid.Column="1" Text="{Binding BuiltInHint}" Style="{StaticResource Settings.RowDesc}" VerticalAlignment="Top" Margin="0,5,8,0" />
+                      <StackPanel Grid.Column="2">
+                        <TextBlock Text="尚无自定义规则" Style="{StaticResource Settings.RowDesc}" Visibility="{Binding HasNoRules, Converter={StaticResource BoolToVis}}" Margin="0,5,0,0" />
+                        <ItemsControl ItemsSource="{Binding Rules}">
+                          <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,0,0,2">
+                              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                              <TextBlock Grid.Column="0" Text="{Binding PriorityLabel}" Foreground="{DynamicResource Brush.Primary}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0" />
+                              <TextBlock Grid.Column="1" Text="{Binding ConditionLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding ConditionLabel}" />
+                              <Button Grid.Column="2" Content="↑" Tag="{Binding Rule}" Click="MoveImportRuleUp_Click" Style="{StaticResource Button.Ghost}" ToolTip="提高全局优先级" AutomationProperties.Name="提高分流规则优先级" />
+                              <Button Grid.Column="3" Content="↓" Tag="{Binding Rule}" Click="MoveImportRuleDown_Click" Style="{StaticResource Button.Ghost}" ToolTip="降低全局优先级" AutomationProperties.Name="降低分流规则优先级" />
+                              <Button Grid.Column="4" Content="×" Tag="{Binding Rule}" Click="RemoveImportRule_Click" Style="{StaticResource Button.Ghost}" ToolTip="删除这条规则" AutomationProperties.Name="删除分流规则" />
+                            </Grid>
+                          </DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                      <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Content="+规则" Tag="{Binding Name}" Click="PrepareImportRule_Click" Style="{StaticResource Button.Ghost}" AutomationProperties.Name="为此分类添加规则" />
+                        <Button Content="移除" Tag="{Binding Name}" Click="RemoveImportFolder_Click" Style="{StaticResource Button.Ghost}" AutomationProperties.Name="移除分类文件夹" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <TextBlock Text="添加匹配规则" Style="{StaticResource Settings.RowTitle}" />
+              <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="145" /><ColumnDefinition Width="*" /><ColumnDefinition Width="145" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding NewRoutingMatchKind, Mode=TwoWay}">
+                  <ComboBoxItem Content="扩展名" Tag="Extension" /><ComboBoxItem Content="文件名开头" Tag="NameStartsWith" /><ComboBoxItem Content="文件名包含" Tag="NameContains" /><ComboBoxItem Content="文件名结尾" Tag="NameEndsWith" />
+                </ComboBox>
+                <Grid Grid.Column="1" Margin="8,0,0,0">
+                  <TextBox x:Name="NewRoutingPatternInput" Style="{StaticResource Input.TextBox}" Text="{Binding NewRoutingPattern, UpdateSourceTrigger=PropertyChanged}" ToolTip="例如 CR3、DJI_、修后" AutomationProperties.Name="分流匹配内容" />
+                  <TextBlock Text="输入扩展名或文件名特征" Foreground="{DynamicResource Brush.OnSurfaceVariant}" Margin="12,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                    <TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding ElementName=NewRoutingPatternInput, Path=Text}" Value=""><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></TextBlock.Style>
+                  </TextBlock>
+                </Grid>
+                <ComboBox Grid.Column="2" Style="{StaticResource Input.SettingsComboBox}" ItemsSource="{Binding ImportCategoryFolders}" SelectedItem="{Binding NewRoutingTargetFolder, Mode=TwoWay}" Margin="8,0,0,0" AutomationProperties.Name="分流目标分类" />
+                <Button Grid.Column="3" Content="添加规则" Style="{StaticResource Button.Secondary}" Click="AddImportRule_Click" Margin="8,0,0,0" AutomationProperties.Name="添加自动分流规则" />
+              </Grid>
+              <TextBlock Text="{Binding ImportRoutingRuleError}" Foreground="{DynamicResource Brush.Status.Warning}" Style="{StaticResource Settings.RowDesc}" Margin="0,4,0,0" />
+              <TextBlock Text="新增目标文件夹" Style="{StaticResource Settings.RowTitle}" Margin="0,12,0,0" />
+              <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                <TextBox x:Name="NewImportFolderInput" Grid.Column="0" Style="{StaticResource Input.TextBox}" Text="{Binding NewImportCategoryFolderName, UpdateSourceTrigger=PropertyChanged}" KeyDown="NewImportFolderInput_KeyDown" AutomationProperties.Name="新分类文件夹名称" />
+                <Button Grid.Column="1" Content="创建文件夹" Style="{StaticResource Button.Secondary}" Click="AddImportFolder_Click" Margin="8,0,0,0" AutomationProperties.Name="添加分类文件夹" />
+              </Grid>
+              <TextBlock Text="{Binding ImportCategoryFolderError}" Foreground="{DynamicResource Brush.Status.Warning}" Style="{StaticResource Settings.RowDesc}" Margin="0,4,0,0" />
             </StackPanel>
           </Border>
 
           <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="图库分组标题" Style="{StaticResource Settings.GroupHeader}" />
-            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
-          </Grid>
-          <Border Style="{StaticResource Settings.Group}">
-            <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
-              <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="文件夹标题显示" Style="{StaticResource Settings.RowTitle}" />
-                <TextBlock Text="选择解析日期、磁盘文件夹名，或同时显示两者。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,20,0" />
-              </StackPanel>
-              <ComboBox Grid.Column="1" Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding GalleryGroupTitleMode, Mode=TwoWay}">
-                <ComboBoxItem Content="解析后的日期标题" Tag="ParsedDate" />
-                <ComboBoxItem Content="实际文件夹名称" Tag="FolderName" />
-                <ComboBoxItem Content="日期标题 + 文件夹名称" Tag="ParsedDateAndFolderName" />
-              </ComboBox>
-            </Grid>
-          </Border>
-
-          <Grid Margin="0,20,0,8">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-            <TextBlock Grid.Column="0" Text="自定义导入格式" Style="{StaticResource Settings.GroupHeader}" />
+            <TextBlock Grid.Column="0" Text="扩展格式与命名" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
           </Grid>
           <Border Style="{StaticResource Settings.Group}">
@@ -687,6 +764,30 @@
           <TextBlock Text="这里的默认值不会被当前浏览会话覆盖。" Style="{StaticResource Layout.SettingsHint}" />
 
           <Grid Margin="0,12,0,8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="浏览信息显示" Style="{StaticResource Settings.GroupHeader}" />
+            <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
+          </Grid>
+          <Border Style="{StaticResource Settings.Group}">
+            <StackPanel>
+              <TextBlock Text="筛选字段标签位置" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="照片图库筛选面板的字段标签放在控件上方或左侧。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,8" />
+              <ComboBox Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding FeatureDescriptionPosition, Mode=TwoWay}">
+                <ComboBoxItem Content="标签在上" Tag="Top" />
+                <ComboBoxItem Content="标签在左" Tag="Left" />
+              </ComboBox>
+              <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
+              <TextBlock Text="文件夹标题显示" Style="{StaticResource Settings.RowTitle}" />
+              <TextBlock Text="显示解析日期、磁盘文件夹名，或同时显示两者。" Style="{StaticResource Settings.RowDesc}" Margin="0,2,0,8" />
+              <ComboBox Style="{StaticResource Input.SettingsComboBox}" SelectedValuePath="Tag" SelectedValue="{Binding GalleryGroupTitleMode, Mode=TwoWay}">
+                <ComboBoxItem Content="解析后的日期标题" Tag="ParsedDate" />
+                <ComboBoxItem Content="实际文件夹名称" Tag="FolderName" />
+                <ComboBoxItem Content="日期标题 + 文件夹名称" Tag="ParsedDateAndFolderName" />
+              </ComboBox>
+            </StackPanel>
+          </Border>
+
+          <Grid Margin="0,20,0,8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="12" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="浏览默认值" Style="{StaticResource Settings.GroupHeader}" />
             <Border Grid.Column="2" Height="1" Background="{DynamicResource Brush.OutlineVariant}" Opacity="0.6" VerticalAlignment="Center" />
@@ -913,11 +1014,9 @@
           </Border>
         </StackPanel>
 
-      </StackPanel>
-    </ScrollViewer>
-
+        <Expander Header="主题预览、数据与关于" IsExpanded="True" Margin="{StaticResource Spacing.Stack.16}">
     <!-- 右：Inspector（主题实时预览 + 数据与存储 + 关于） -->
-    <Border Grid.Column="4" Style="{StaticResource Inspector.Panel}">
+    <Border Style="{DynamicResource Layout.GlassPanel}" Margin="{StaticResource Spacing.Stack.8}">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
           <TextBlock Text="本页目录" Style="{StaticResource Inspector.SectionLabel}" />
@@ -928,8 +1027,9 @@
               <Button Content="{Binding Text}" Tag="{Binding Target}" Click="SettingAnchor_Click" HorizontalContentAlignment="Left" Style="{StaticResource Button.Ghost}" />
             </DataTemplate></ItemsControl.ItemTemplate>
           </ItemsControl>
-          <TextBlock Text="当前主题" Style="{StaticResource Inspector.SectionLabel}" />
-          <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+          <TextBlock x:Name="SettingsContextHint" Style="{StaticResource Settings.RowDesc}" Margin="0,14,0,0" TextWrapping="Wrap" />
+          <TextBlock x:Name="ThemePreviewHeading" Text="当前主题" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
+          <Border x:Name="ThemePreviewCard" Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
             <StackPanel>
               <StackPanel Orientation="Horizontal">
                 <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource Brush.Primary}" />
@@ -972,8 +1072,8 @@
             </StackPanel>
           </Border>
 
-          <TextBlock Text="数据与存储" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
-          <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+          <TextBlock x:Name="StorageHeading" Text="数据与存储" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
+          <Border x:Name="StorageCard" Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -995,8 +1095,8 @@
             </StackPanel>
           </Border>
 
-          <TextBlock Text="关于" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
-          <Border Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
+          <TextBlock x:Name="AboutHeading" Text="关于" Style="{StaticResource Inspector.SectionLabel}" Margin="0,20,0,0" />
+          <Border x:Name="AboutCard" Margin="0,8,0,0" Padding="12" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLowest}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1">
             <StackPanel>
               <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
@@ -1019,8 +1119,8 @@
           </Border>
 
           <!-- 支持作者（微信赞赏码） -->
-          <Border Style="{StaticResource Settings.Divider}" Margin="0,12" />
-          <Grid>
+          <Border x:Name="SponsorDivider" Style="{StaticResource Settings.Divider}" Margin="0,12" />
+          <Grid x:Name="SponsorHeading">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <TextBlock Grid.Column="0" Text="支持作者" Foreground="{DynamicResource Brush.OnSurfaceVariant}" FontSize="{StaticResource Typography.Caption}" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="如果好用，请作者喝杯咖啡 ☕" Foreground="{DynamicResource Brush.Text.Primary}" FontSize="{StaticResource Typography.Caption}" TextAlignment="Right" Margin="10,0,0,0" />
@@ -1042,5 +1142,10 @@
         </StackPanel>
       </ScrollViewer>
     </Border>
+        </Expander>
+      </StackPanel>
+    </ScrollViewer>
+
+
   </Grid>
 </UserControl>

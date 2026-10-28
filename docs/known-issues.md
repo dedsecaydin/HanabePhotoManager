@@ -1,5 +1,26 @@
 # Known Issues
 
+## 2026-10-23 — HEIF 自动转 JPG 与导入查重缓慢
+
+- **Status:** Implemented and verified with real HEIF fixture and controlled performance test; actual NAS throughput and Sony HDR rendering remain unmeasured.
+- **Cause:** 导入前对每个来源重复读取整日期目录的 Windows 备注，且逐次创建 STA 线程；HEIF 先前仅归类和复制，没有生成 JPG。
+- **Fix:** 精确哈希优先；备注按目标目录建立索引并持久缓存；保留 HEIF 原件并用随包解码库生成 JPG，已有文件/计划路径不覆盖。转换回执与导入恢复协作。
+- **Verification:** 867 项通过。受控场景 800→40 次备注读取，约 12.18→0.63 秒；含旧跳过记录与部分移动后丢失原件计划映射的红/绿回归。
+
+## 2026-10-23 — 显示“全部跳过”但重复文件仍被导入
+
+- **Status:** Automated reproduction and fix verified; real-library reimport not performed.
+- **Root cause:** 导入页查重开关和单选项写死为选中/禁用，未绑定实际状态；实际设置关闭查重。另有续传不查重的问题，已用旧计划复现“成功 1、跳过 0”。
+- **Fix:** 真实开关和持久化策略绑定；默认开启/跳过；续传对未开始校验的项目应用当前查重策略。修复后测试得到“成功 0、跳过 1”，源文件与已有副本保留。
+- **Verification:** 854 项测试通过，含复制/移动、续传、明确仍导入、HEIF/HEIC/HIF 首次导入与二次跳过；Light/Dark 控件检查。已有用户照片未删除。
+
+## 2026-10-02 — 设备接入提示后未进入导入 / 便携包提示缺少 FFmpeg
+
+- **Status:** Fix Attempted; physical insertion and target-PC interactive acceptance remain pending.
+- **Evidence:** 旧提示使用系统 MessageBox；确认后的导航依赖刷新设备枚举的精确路径匹配，还会在未选图库时被二次选择框取消。便携包的 FFmpeg 在 `tools` 中，旧视频调用只查找 PATH。
+- **Fix:** 使用主题化提示和明确操作；按已检测的来源路径准备导入，无图库时在页面内选择；使用包内 FFmpeg 的绝对路径启动。
+- **Verification:** 新增 8 项来源路径、目标安全边界、提示按钮及 FFmpeg 定位回归；全量 840 项通过。浅色和深色截图已检查。
+
 ## 2026-08-29 中断导入续传无响应
 
 - **Status:** Resolved
@@ -178,3 +199,13 @@ For each issue marked "Fix Attempted", verify the following before marking "Reso
 5. No new crashes or hangs introduced
 6. Build: 0 errors, 0 warnings
 7. Test: all tests pass
+## 2026-10-03 — 恢复测试关闭连接时的收尾竞争
+
+- 远端读取测试在关闭会话后，`BinaryWriter.Dispose` 的最后一次 Flush 偶发收到 `Pipe is broken`；异常发生在原 catch 之外。
+- 将测试写入器的 using 生命周期移入原 IOException 处理范围，保留全部读取断言；不修改恢复生产逻辑。最终全量 842 项测试通过。
+
+## 2026-10-28 — 导入集成测试曾间歇等待（待观察）
+- 在新增 ImportedSession_UsesDestination_AndResumeSnapshotRetainsAssignment 测试中两次出现无进展；诊断转储未发现同步阻塞的业务线程，尚未确证根因。
+- 测试增加 20 秒传输等待上限，失败时输出进度和报告；其后 App 单独 662 项及全解决方案 941 项通过。不能据此宣称间歇问题根因已消除。
+- 证据保留于 .artifacts/multi-source-20261028/final-app、bounded 与 regression。真实多卡端到端仍待验收。
+- 2026-10-28 后续定位：超时报告显示导入成功后进入“正在可视化扫描媒体文件”；测试通过反射调用传输时未切到 Import 页。测试已补齐页面前置条件，662 项通过；未据此宣称图库刷新路径不存在其他等待问题。

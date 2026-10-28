@@ -7,7 +7,7 @@
       <TextBlock Text="{Binding}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Center" TextOptions.TextFormattingMode="Display" />
     </DataTemplate>
   </UserControl.Resources>
-  <Grid Background="{DynamicResource Brush.Background.Canvas}">
+  <Grid Background="{DynamicResource Brush.Background.Page}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />

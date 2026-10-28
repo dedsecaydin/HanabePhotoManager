@@ -78,18 +78,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private static readonly IReadOnlyList<string> ImportExtensions =
     [
-        ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".mp4", ".xml", ".lrf", ".aac"
+        ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".heif", ".heic", ".hif", ".mp4", ".xml", ".lrf", ".aac"
     ];
 
     private static readonly IReadOnlyList<string> LibraryPreviewExtensions =
     [
-        ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
+        ".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".heif", ".hif",
         ".mp4", ".mov", ".xml", ".aac"
     ];
 
     private static readonly HashSet<string> ContentScanExtensions = new(
         [".arw", ".cr2", ".cr3", ".nef", ".raf", ".rw2", ".orf", ".dng", ".raw",
-         ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic",
+         ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".heif", ".hif",
          ".mp4", ".mov", ".mxf", ".mts", ".m2ts", ".avi", ".mkv", ".wmv", ".m4v", ".webm"],
         StringComparer.OrdinalIgnoreCase);
 
@@ -110,7 +110,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         StringComparer.OrdinalIgnoreCase);
 
     private static readonly HashSet<string> ThumbnailCandidateExtensions = new(
-        [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".psd", ".psb", ".mp4", ".mov"],
+        [".arw", ".cr2", ".cr3", ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff", ".webp", ".heic", ".heif", ".hif", ".psd", ".psb", ".mp4", ".mov"],
         StringComparer.OrdinalIgnoreCase);
 
     // 视频缩略图来自容器首帧，必须由 Shell 提取；它不是图库中独立展示的媒体文件。
@@ -132,7 +132,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private readonly AppSettingsStore _settingsStore = new();
     private readonly IStartupRegistrationService _startupRegistrationService;
     private readonly CameraFolderDateResolver _dateResolver = new();
-    private readonly MediaGroupBuilder _groupBuilder;
     private readonly Sha256FileHasher _fileHasher = new();
     private readonly ImportPlanBuilder _planBuilder;
     private readonly LibraryDirectoryInitializer _directoryInitializer = new();
@@ -182,6 +181,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private string _importActionHint = "先选择照片库根目录，再选择设备或来源文件夹。";
     private IReadOnlyList<string> _sourceScanPaths = Array.Empty<string>();
     private int _importCompletionBatch;
+    public HashSet<string> LastImportedSessionPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
     private int _completedImportBatch = -1;
     private string _completedImportLibraryRoot = string.Empty;
     private readonly IImportSourcePicker _importSourcePicker = new WindowsImportSourcePicker();
@@ -193,6 +193,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private PreviewFileViewModel? _selectedPreviewFile;
     private CancellationTokenSource? _activeTaskCancellation;
     private CancellationTokenSource? _importThumbnailCancellation;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Task, byte> _importThumbnailDecodes = new();
     private CancellationTokenSource? _previewThumbnailCancellation;
     private int _treemapLoadActive; // 1 = loading in progress, 0 = idle
     private int _treemapLoadGeneration;
@@ -238,7 +239,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private bool _isBrowseConditionsExpanded;
     private bool _isAdvancedFiltersExpanded;
     private bool _isImportAdvancedExpanded;
-    private bool _checkDuplicatesOnImport;
+    private bool _checkDuplicatesOnImport = true;
     private bool _isInitialized;
     private bool _isOnboardingVisible;
     private int _onboardingStep;
@@ -266,7 +267,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LibraryDateSnapshotService? libraryDateSnapshotService = null)
     {
         _planBuilder = new ImportPlanBuilder(new DestinationProbe(_fileHasher));
-        _groupBuilder = new MediaGroupBuilder(new MediaClassifier(BuildRawExtensions(), BuildVideoExtensions()));
         _transfer = new VerifiedFileTransfer(_fileHasher);
         _duplicateHasher = new CachedFileHasher(_fileHasher, Path.Combine(AppDataPaths.Root, "duplicate-fingerprints-v1.jsonl"));
         _contentScanner = new LibraryContentScanner(_duplicateHasher);
@@ -522,7 +522,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         0 => "图库根目录是整理后照片的唯一存放位置。请在本步骤直接选择或更改目录，然后再继续。",
         1 => "来源文件夹是相机、存储卡或待整理照片所在的位置。请直接选择来源，应用会进入导入页面。",
-        2 => "现在直接操作导入页面。点「开始分析与导入」会先分析生成队列、再自动继续导入；先检查右侧队列，再执行导入。",
+        2 => "现在直接操作导入页面。点「分析并预览导入」会先分析生成队列、再自动继续导入；先检查右侧队列，再执行导入。",
         3 => "主页汇总照片库容量、日期和近期照片，是进入常用工作流的起点。",
         4 => "照片图库支持按日期、分类、评分、标签和已修状态筛选；双击照片可进入查看器。",
         5 => "人物查找使用清晰参考人脸搜索相似照片；人物相册在本机扫描聚类，不同模型向量不会混用。",
@@ -722,16 +722,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public IReadOnlyList<CategoryChoice> CategoryChoices { get; } =
-    [
-        new(MediaCategory.Unconfirmed, "待确认"),
-        new(MediaCategory.Raw, "RAW生图"),
-        new(MediaCategory.Jpeg, "JPG生图"),
-        new(MediaCategory.Video, "视频"),
-        new(MediaCategory.ActionVideo, "action视频"),
-        new(MediaCategory.Edited, "修后"),
-        new(MediaCategory.Material, "素材")
-    ];
+    private List<string> _importCategoryFolders = [.. CategoryFolderNames];
+    private IReadOnlyList<CategoryChoice> _categoryChoices = BuildCategoryChoices(CategoryFolderNames);
+    public IReadOnlyList<CategoryChoice> CategoryChoices => _categoryChoices;
 
     public IReadOnlyList<TransferModeChoice> TransferModes { get; } =
     [
@@ -1532,6 +1525,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(ImportSuccessCount));
         OnPropertyChanged(nameof(ImportSkippedCount));
         OnPropertyChanged(nameof(ImportFailedCount));
+        OnPropertyChanged(nameof(ImportWorkflowStage));
+        OnPropertyChanged(nameof(ImportWizardSteps));
+        OnPropertyChanged(nameof(CanOrganizeImportedSessions));
     }
 
     public string ProgressLabel
@@ -2110,7 +2106,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 导入时是否对来源文件做全库 SHA-256 哈希查重并弹窗确认（设置页可开关，默认关闭）。
+    /// 导入前检查目标日期目录与本批来源的重复内容，默认开启；与设置页共用同一状态。
     /// </summary>
     public bool CheckDuplicatesOnImport
     {
@@ -2451,6 +2447,20 @@ public sealed partial class MainWindowViewModel : ObservableObject
         LibraryRoot = settings.LibraryRoot ?? string.Empty;
         _customRawExtensions = settings.CustomRawExtensions ?? [];
         _customVideoExtensions = settings.CustomVideoExtensions ?? [];
+        _importCategoryFolders = settings.ImportCategoryFolders is { Count: > 0 }
+            ? NormalizeImportFolderNames(settings.ImportCategoryFolders)
+            : [.. CategoryFolderNames];
+        _categoryChoices = BuildCategoryChoices(_importCategoryFolders);
+        _importRoutingRules = (settings.ImportRoutingRules ?? [])
+            .Where(rule => rule is not null && Enum.IsDefined(rule.Kind) && !string.IsNullOrWhiteSpace(rule.Pattern) &&
+                _importCategoryFolders.Contains(rule.FolderName, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        _newRoutingTargetFolder = _importCategoryFolders[0];
+        OnPropertyChanged(nameof(ImportCategoryFolders));
+        NotifyImportRoutingOverview();
+        OnPropertyChanged(nameof(NewRoutingTargetFolder));
+        OnPropertyChanged(nameof(CategoryChoices));
+        OnPropertyChanged(nameof(ImportCategoryFoldersText));
         _importNamingTemplate = string.IsNullOrWhiteSpace(settings.ImportNamingTemplate)
             ? ImportNamingFormatter.DefaultTemplate
             : settings.ImportNamingTemplate;
@@ -2463,6 +2473,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _thumbnailSize = _defaultThumbnailSize;
         _zoomableGridTileSize = Math.Clamp(settings.ZoomableGridTileSize, 48, 512);
         _treemapZoom = Math.Clamp(settings.TreemapZoom, 0.02, 8.0);
+        _shootingBarGap = Math.Clamp(settings.ShootingBarGap, ShootingBarGapMin, ShootingBarGapMax);
+        OnPropertyChanged(nameof(ShootingBarGap));
+        OnPropertyChanged(nameof(ShootingBarMargin));
         OnPropertyChanged(nameof(DefaultThumbnailSize));
         OnPropertyChanged(nameof(ThumbnailSize));
         OnPropertyChanged(nameof(ZoomableGridTileSize));
@@ -2550,6 +2563,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _isAdvancedFiltersExpanded = settings.IsAdvancedFiltersExpanded is true;
         OnPropertyChanged(nameof(IsAdvancedFiltersExpanded));
         CheckDuplicatesOnImport = settings.CheckDuplicatesOnImport;
+        SetImportDuplicateHandling(Enum.TryParse<ImportDuplicateBatchDecision>(settings.ImportDuplicateHandling, out var duplicateHandling)
+            && Enum.IsDefined(duplicateHandling) ? duplicateHandling : ImportDuplicateBatchDecision.SkipAll);
         UseDuplicateHashCache = settings.UseDuplicateHashCache;
         DuplicateHashParallelism = settings.DuplicateHashParallelism;
         VisualDuplicateThreshold = settings.VisualDuplicateThreshold;
@@ -2756,6 +2771,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
             .ToArray();
     }
 
+    public async Task SearchFromWorkspaceAsync(string query)
+    {
+        await ShowPreviewAsync().ConfigureAwait(true);
+        UnifiedSearchText = query;
+    }
+
     private async Task ShowPreviewAsync()
     {
         CurrentPage = "Preview";
@@ -2857,7 +2878,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ++_previewScanVersion;
         SetProperty(ref _selectedDate, null, nameof(SelectedDate));
         LibraryDates.Clear();
-        OnPropertyChanged(nameof(DiscoveredDateCount));
+        OnPropertyChanged(nameof(DiscoveredDateCount)); NotifyShootingFrequencyChanged();
         CalendarDays.Clear();
         _calendarSelectedDate = null;
         CategorySummaries.Clear();
@@ -3136,6 +3157,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             node.TotalFiles = groups.Total?.Count ?? 0;
             node.RetouchedFiles = groups.Retouched?.Count ?? 0;
         }
+
+        NotifyShootingFrequencyChanged();
     }
 
     private static string? TryResolvePreviewDateDirectory(
@@ -3295,9 +3318,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         SourceFolder = ResolveDroppedSourceDisplayPath(droppedPaths);
-        StatusMessage = "已接收拖拽内容，开始自动分析并导入。";
+        SetImportSourcePaths(droppedPaths);
+        StatusMessage = "已接收拖拽内容，开始分析素材。";
 
         var sourceFiles = await AnalyzeSourcePathsAsync(droppedPaths, SourceFolder).ConfigureAwait(true);
+        if (!_importAnalysisSucceeded) return;
         if (sourceFiles.Length == 0)
         {
             ImportReport = "拖入内容里没有找到可导入的照片/视频文件。";
@@ -3318,7 +3343,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             return;
         }
 
-        await ImportSelectedAsync().ConfigureAwait(true);
+        ImportActionHint = "请检查素材勾选、分类与日期，再点击“下一步：确认日期与目标”。";
     }
 
     /// <summary>
@@ -3354,14 +3379,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
 
         SourceFolder = selected;
-        _sourceScanPaths = [selected];
+        SetImportSourcePaths([selected]);
         CancelImportThumbnailLoading();
         ImportItems.Clear();
         ImportSections.Clear();
         SetImportSummary(0, 0, 0);
         TargetDateText = "等待分析日期";
         ImportReport = "来源已选择，尚未开始分析。";
-        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与导入”。";
+        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“分析并预览导入”。";
         StatusMessage = "来源文件夹已选择，等待你开始分析。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
@@ -3383,11 +3408,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task AnalyzeAndImportAsync()
     {
+        if (HasPendingImportResume)
+        {
+            await ResumePendingImportAsync().ConfigureAwait(true);
+            return;
+        }
         // 队列已有分析结果（例如上次被“待确认项目”拦截）时直接继续导入，
         // 避免重复分析重置用户对队列的勾选/分类调整。
         if (ImportItems.Count == 0)
         {
             await AnalyzeSourceAsync().ConfigureAwait(true);
+            return;
         }
 
         await ImportSelectedAsync().ConfigureAwait(true);
@@ -3395,6 +3426,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private async Task<SourceMediaFile[]> AnalyzeSourcePathsAsync(IReadOnlyList<string> paths, string dateHintPath)
     {
+        ResetImportOrganization();
+        _importAnalysisSucceeded = false;
         ClearImportDateFolderPreflight();
         BeginImportCompletionBatch();
         CancelImportThumbnailLoading();
@@ -3424,9 +3457,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 ImportReport = $"正在扫描：{progress.CurrentFolder}";
             });
             var scanProgress = new ThrottledProgress<ImportFileScanProgress>(uiScanProgress, TimeSpan.FromMilliseconds(125));
-            var fileInfos = await Task.Run(
-                () => EnumerateImportFileInfos(paths, cancellationToken, scanProgress).ToArray(),
-                cancellationToken).ConfigureAwait(true);
+            var allowedExtensions = new HashSet<string>(ContentScanExtensions.Concat(ImportExtensions)
+                .Concat(BuildRawExtensions().Select(extension => $".{extension.TrimStart('.')}"))
+                .Concat(BuildVideoExtensions().Select(extension => $".{extension.TrimStart('.')}"))
+                .Concat(_importRoutingRules.Where(rule => rule.Kind == ImportRuleMatchKind.Extension)
+                    .Select(rule => $".{rule.Pattern.TrimStart('.')}")), StringComparer.OrdinalIgnoreCase);
+            var nameRules = _importRoutingRules.Where(rule => rule.Kind != ImportRuleMatchKind.Extension).ToArray();
+            var fileInfos = await ScanImportWorkspaceAsync(paths, cancellationToken, scanProgress, allowedExtensions, nameRules).ConfigureAwait(true);
             cancellationToken.ThrowIfCancellationRequested();
             ProgressValue = 35;
 
@@ -3441,7 +3478,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
             ProgressValue = 58;
             ProgressLabel = "正在自动分类…";
-            var groups = _groupBuilder.Build(sourceFiles);
+            var groups = new MediaGroupBuilder(new MediaClassifier(BuildRawExtensions(), BuildVideoExtensions())).Build(sourceFiles);
             IReadOnlyDictionary<string, string> personLabels = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             PersonClusteringResult? personResult = null;
             if (EnablePersonRecognition)
@@ -3468,9 +3505,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
             foreach (var group in groups)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var category = group.Category;
+                var matchingFolder = ImportRoutingRule.FirstMatchingFolder(_importRoutingRules, group.Primary.FullPath);
+                var routedChoice = matchingFolder is null ? null : CategoryChoices.FirstOrDefault(choice =>
+                    choice.FolderName is not null && choice.FolderName.Equals(matchingFolder, StringComparison.OrdinalIgnoreCase));
+                var category = routedChoice?.Category ?? group.Category;
                 var itemDate = ResolveGroupDate(group, resolution.Date);
-                var requiresConfirmation = group.Category == MediaCategory.Unconfirmed || itemDate is null;
+                var requiresConfirmation = category == MediaCategory.Unconfirmed || itemDate is null;
                 var item = new ImportPreviewItemViewModel(
                     group,
                     category,
@@ -3479,9 +3519,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     itemDate,
                     null,
                     personLabels.TryGetValue(group.Primary.FullPath, out var personLabel) ? personLabel : string.Empty,
-                    queueIndex++);
+                    queueIndex++, routedChoice);
                 item.SelectionChanged += () =>
                 {
+                    if (_updatingOrganization) return;
                     NotifyCommandStates();
                     RebuildImportSections();
                 };
@@ -3512,7 +3553,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             }
 
             StatusMessage = "来源分析完成。";
-            ImportActionHint = HasLibraryRoot ? "可以开始导入；复制/校验时进度条会实时显示。" : "导入按钮不可用：请先选择照片库根目录。";
+            _importAnalysisSucceeded = true;
+            ImportActionHint = ImportItems.Count == 0 ? "没有找到可导入素材，请检查来源或支持的文件格式。"
+                : "请检查素材勾选、分类与日期，再点击“下一步：确认日期与目标”。";
             NotifyCommandStates();
 
             return sourceFiles;
@@ -3535,6 +3578,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             SetAssistantState(HanabeAssistantState.Error, returnToIdle: true);
             ClearImportCompletionState();
+            ImportItems.Clear();
+            ImportSections.Clear();
+            ImportActionHint = "分析未完成，请检查来源是否可读取后重新分析。";
             ImportReport = "分析失败：" + ex.Message;
             StatusMessage = "分析来源时遇到问题。";
             return [];
@@ -3544,11 +3590,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
             EndCancelableTask(cancellation);
             IsProgressIndeterminate = false;
             ProgressValue = 0;
-            if (ProgressLabel != "已停止")
+            if (_importAnalysisSucceeded)
             {
                 ProgressLabel = "分析完成";
                 SetAssistantState(HanabeAssistantState.Completed, returnToIdle: true);
             }
+            else if (ProgressLabel != "已停止") ProgressLabel = "分析失败";
             IsBusy = false;
         }
     }
@@ -3574,17 +3621,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         if (unresolved.Length > 0)
         {
-            System.Windows.MessageBox.Show(
-                "还有待确认的项目，请先改成具体类别再导入：\n" + string.Join("\n", unresolved.Take(12)),
-                "Hanabe",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            ImportActionHint = $"还有 {unresolved.Length} 项需要确认分类或日期，请在队列中调整：" + string.Join("、", unresolved.Take(5));
+            StatusMessage = "等待批量确认素材，尚未导入文件。";
             return;
         }
 
         if (selectedItems.Length == 0)
         {
-            System.Windows.MessageBox.Show("没有勾选可导入的文件。", "Hanabe", MessageBoxButton.OK, MessageBoxImage.Information);
+            ImportActionHint = "请先在队列中勾选要导入的文件。";
             return;
         }
 
@@ -3621,7 +3665,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
-            // 重复检查默认关闭（设置页「导入时检查重复」开关）：关闭时直接导入（更快）；
+            // 导入页和设置页共享查重开关与处理策略；默认开启并跳过重复项。
+            await DrainImportThumbnailDecodesAsync().ConfigureAwait(true);
             // 开启后只检查每个文件「目标日期文件夹」里已有的照片与本次导入是否重复
             // （同大小同哈希比对，只扫 LibraryRoot/日期目录，不扫描整个图库）。
             IReadOnlyDictionary<string, ImportDuplicateMatch> duplicateMatches =
@@ -3644,10 +3689,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
                     if (!dateSizeMapCache.TryGetValue(date, out var sizeMap))
                     {
-                        sizeMap = await _contentScanner.BuildSizeMapAsync(
+                        sizeMap = await Task.Run(() => _contentScanner.BuildSizeMapAsync(
                             dateDirectories[date],
                             ContentScanExtensions,
-                            token).ConfigureAwait(true);
+                            token), token).ConfigureAwait(true);
                         dateSizeMapCache[date] = sizeMap;
                     }
 
@@ -3662,6 +3707,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 duplicateDecision = duplicateBatch.Decision;
                 SetAssistantState(HanabeAssistantState.Importing);
             }
+            LastImportedSessionPaths.Clear();
             var progress = ImportProgress.Create(items.Sum(item => 1 + item.ToMediaGroup().Sidecars.Count));
             void UpdateProgress(ImportPlanItem item, bool completed)
             {
@@ -3693,8 +3739,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     .ToList(),
             };
             foreach (var entry in resumeState.Entries)
+            {
+                entry.SessionLibraryRoot = LibraryRoot;
+                entry.SessionBatchId = _importSessionBatchId;
                 entry.SkipTransfer = duplicateMatches.TryGetValue(entry.PrimaryPath, out var match) &&
                     !ShouldTransferDuplicate(match, duplicateDecision);
+                entry.DuplicateExistingPath = match?.ExistingPath;
+            }
             _importResumeStore.Save(resumeState);
 
             foreach (var dateGroup in dateGroups)
@@ -3729,8 +3780,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SetAssistantState(failed > 0 ? HanabeAssistantState.CompletedWithIssues : HanabeAssistantState.Completed, returnToIdle: failed == 0);
             if (!HasPendingImportResume) MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
-            ImportReport = $"导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
-            ImportActionHint = HasPendingImportResume ? "未完成项目已保留。处理失败原因后点击“继续未完成导入”。" : "导入完成，可管理日期文件夹备注。";
+            ImportReport = FormatImportReport("导入完成", success, skipped, failed, lines, failureLines);
+            ImportActionHint = HasPendingImportResume ? "未完成项目已保留。处理失败原因后点击“继续未完成导入”。" : "导入完成。可管理日期文件夹备注，或点击“整理本次导入的拍摄场次”统一分组。";
             StatusMessage = "导入流程结束。";
             ShowImportFailureDetails(failureLines);
             EndCancelableTask(cancellation);
@@ -3761,7 +3812,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             ProgressValue = Math.Clamp(ProgressValue, 0, 100);
             ProgressLabel = "已停止";
             SetImportSummary(success, skipped, failed);
-            ImportReport = $"导入已停止：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
+            ImportReport = FormatImportReport("导入已停止", success, skipped, failed, lines, failureLines);
             StatusMessage = "传输已停止，已完成文件保留。点击“继续未完成导入”可继续。";
         }
         catch (Exception ex)
@@ -3820,6 +3871,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         try
         {
+            await DrainImportThumbnailDecodesAsync().ConfigureAwait(true);
             foreach (var resumeTargetGroup in state.Entries.GroupBy(entry => new
                      {
                          entry.Year,
@@ -3898,7 +3950,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                         failureLines.Add($"附属文件不可访问，整组保留重试：{entry.GroupKey}");
                         continue;
                     }
-                    groups.Add(new MediaGroup(entry.GroupKey, category, primary, sidecars));
+                    groups.Add(new MediaGroup(entry.GroupKey, category, primary, sidecars, entry.DestinationFolderName));
                 }
 
                 if (groups.Count > 0)
@@ -3916,6 +3968,43 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 return;
             }
 
+            // 旧恢复点可能来自未开启查重的批次；续传也必须执行当前真实选择。
+            // 已有校验凭据的部分传输继续按原计划处理，避免把自己的已发布主文件当作整组重复。
+            if (CheckDuplicatesOnImport)
+            {
+                ProgressLabel = "正在检查续传文件是否重复…";
+                SetAssistantState(HanabeAssistantState.Checking);
+                var entriesByPath = state.Entries.ToDictionary(entry => entry.PrimaryPath, StringComparer.OrdinalIgnoreCase);
+                var checkItems = pendingGroups.SelectMany(batch => batch.Groups
+                    .Where(group => (!entriesByPath[group.Primary.FullPath].SkipTransfer ||
+                                     (HeifJpegConverter.IsHeif(group.Primary.FullPath) &&
+                                      entriesByPath[group.Primary.FullPath].DuplicateExistingPath is null)) &&
+                                    entriesByPath[group.Primary.FullPath].VerifiedFiles.Count == 0)
+                    .Select(group => new ImportPreviewItemViewModel(group, group.Category, CategoryChoices,
+                        false, batch.Date, null, string.Empty, 0))).ToArray();
+                var maps = new Dictionary<string, IReadOnlyDictionary<long, List<string>>>(StringComparer.OrdinalIgnoreCase);
+                async Task<IReadOnlyDictionary<long, List<string>>?> ResolveResumeSizeMapAsync(
+                    ImportPreviewItemViewModel item, CancellationToken token)
+                {
+                    var directory = entriesByPath[item.Group.Primary.FullPath].TargetDateDirectory;
+                    if (!maps.TryGetValue(directory, out var map))
+                    {
+                        map = await Task.Run(() => _contentScanner.BuildSizeMapAsync(directory, ContentScanExtensions, token), token);
+                        maps[directory] = map;
+                    }
+                    return map;
+                }
+                var duplicateBatch = await PrepareDuplicateBatchAsync(checkItems, ResolveResumeSizeMapAsync, cancellationToken);
+                foreach (var (path, match) in duplicateBatch.Matches)
+                {
+                    entriesByPath[path].SkipTransfer |= !ShouldTransferDuplicate(match, duplicateBatch.Decision);
+                    entriesByPath[path].DuplicateExistingPath = match.ExistingPath;
+                }
+                _importResumeStore.Save(state);
+                SetAssistantState(HanabeAssistantState.Importing);
+            }
+
+            LastImportedSessionPaths.Clear();
             var progress = ImportProgress.Create(pendingGroups.Sum(group => group.Groups.Sum(gr => 1 + gr.Sidecars.Count)));
             void UpdateProgress(ImportPlanItem item, bool completed)
             {
@@ -3963,8 +4052,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             SetAssistantState(failed > 0 ? HanabeAssistantState.CompletedWithIssues : HanabeAssistantState.Completed, returnToIdle: failed == 0);
             if (!HasPendingImportResume) MarkImportCompletionForCurrentBatch();
             SetImportSummary(success, skipped, failed);
-            ImportReport = $"恢复导入完成：成功 {success}，跳过 {skipped}，失败 {failed}" + Environment.NewLine + string.Join(Environment.NewLine, lines.Take(100));
-            ImportActionHint = HasPendingImportResume ? "未完成项目已保留。处理失败原因后点击“继续未完成导入”。" : "导入完成，可管理日期文件夹备注。";
+            ImportReport = FormatImportReport("恢复导入完成", success, skipped, failed, lines, failureLines);
+            ImportActionHint = HasPendingImportResume ? "未完成项目已保留。处理失败原因后点击“继续未完成导入”。" : "导入完成。可管理日期文件夹备注，或点击“整理本次导入的拍摄场次”统一分组。";
             StatusMessage = HasPendingImportResume ? "本轮传输结束，仍有项目等待重试。" : "上次未完成的导入已继续完成。";
             ShowImportFailureDetails(failureLines);
         }
@@ -3998,7 +4087,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             GroupKey = group.GroupKey,
             Category = group.Category.ToString(),
+            DestinationFolderName = group.DestinationFolderName,
             PrimaryPath = group.Primary.FullPath,
+            SessionName = item.ImportSessionName,
             SidecarPaths = group.Sidecars.Select(sidecar => sidecar.FullPath).ToList(),
             Year = date.Year,
             Month = date.Month,
@@ -4042,6 +4133,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         var failureLines = new List<string>();
 
         Directory.CreateDirectory(targetDateDirectory);
+        foreach (var folder in _importCategoryFolders)
+            Directory.CreateDirectory(Path.Combine(targetDateDirectory, folder));
         var entries = resumeState.Entries.Where(entry =>
             entry.Year == date.Year && entry.Month == date.Month && entry.Day == date.Day &&
             string.Equals(entry.TargetDateDirectory, targetDateDirectory, StringComparison.OrdinalIgnoreCase) &&
@@ -4062,6 +4155,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             _importResumeStore.Save(resumeState);
         }
         var planItems = entries.Select(entry => entry.Plan!).ToArray();
+        var reservedPaths = planItems.SelectMany(item => item.Files).Select(file => file.DestinationPath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         for (var index = 0; index < planItems.Length; index++)
         {
@@ -4076,6 +4171,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 if (entry.SkipTransfer)
                 {
+                    var jpeg = await EnsureImportedHeifJpegAsync(entry, cancellationToken, reservedPaths);
+                    if (jpeg is not null) lines.Add($"HEIF 原件保留，JPG 已就绪：{Path.GetFileName(jpeg)}");
                     skipped++;
                     settled = true;
                     lines.Add($"按已确认决定跳过：{item.Group.GroupKey}");
@@ -4085,6 +4182,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 item = await ImportResumePlanVerifier.ReconcileAsync(entry, _fileHasher, cancellationToken);
                 if (item.Files.Count == 0)
                 {
+                    await EnsureImportedHeifJpegAsync(entry, cancellationToken, reservedPaths);
+                    await PersistImportedSessionAsync(entry, null, cancellationToken);
                     settled = true;
                     skipped++;
                     lines.Add($"已核实完成：{item.Group.GroupKey}");
@@ -4092,10 +4191,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 }
                 if (item.Conflict == ConflictKind.SameNameDifferentContent)
                 {
-                    failed++;
-                    failureLines.Add($"目标内容冲突，保留重试：{item.Group.GroupKey}");
-                    lines.Add($"未传输：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey} 已有同名但内容不同的文件。");
-                    continue;
+                    item = ImportConflictNameResolver.Resolve(item);
+                    entry.Plan = item;
+                    _importResumeStore.Save(resumeState);
+                    lines.Add($"保留原目标并换名：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
                 }
 
                 var primaryFile = item.Files.FirstOrDefault(file =>
@@ -4108,11 +4207,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
                             receipt.File.Source.FullPath, StringComparison.OrdinalIgnoreCase));
                         entry.VerifiedFiles.Add(receipt);
                         _duplicateHasher.RememberVerified(receipt.File.DestinationPath, receipt.Sha256);
+                        if (File.Exists(receipt.File.Source.FullPath))
+                            _duplicateHasher.RememberVerified(receipt.File.Source.FullPath, receipt.Sha256);
                     }
                     _importResumeStore.Save(resumeState);
                 }).ConfigureAwait(true);
                 if (result.Success)
                 {
+                    if (primaryFile is not null) LastImportedSessionPaths.Add(primaryFile.DestinationPath);
+                    var jpeg = await EnsureImportedHeifJpegAsync(entry, cancellationToken, reservedPaths);
+                    if (jpeg is not null) lines.Add($"HEIF 原件保留，JPG 已就绪：{Path.GetFileName(jpeg)}");
+                    await PersistImportedSessionAsync(entry, primaryFile?.DestinationPath, cancellationToken);
                     // 先确认传输完成并移除恢复项，再写可选备注，避免备注改变内容哈希影响重放。
                     resumeState.Entries.Remove(entry);
                     _importResumeStore.Save(resumeState);
@@ -4125,7 +4230,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                     {
                         success++;
                         lines.Add($"完成：{date.Month:00}.{date.Day:00} / {item.Group.GroupKey}");
-                        if (primaryFile is not null)
+                        if (primaryFile is not null && !HeifJpegConverter.IsHeif(primaryFile.DestinationPath))
                         {
                             var hash = result.VerifiedFiles.First(file => file.File == primaryFile).Sha256;
                             var originMetadata = new FileOriginMetadata(Path.GetFileName(primaryFile.Source.FullPath), primaryFile.Source.Length, hash);
@@ -4173,10 +4278,33 @@ public sealed partial class MainWindowViewModel : ObservableObject
         return new ImportRunResult(success, skipped, failed, lines, failureLines);
     }
 
+    private static string FormatImportReport(string title, int success, int skipped, int failed,
+        IReadOnlyList<string> lines, IReadOnlyList<string> failures)
+    {
+        var summary = $"{title}：成功 {success}，跳过 {skipped}，失败 {failed}";
+        var conflictCount = failures.Count(line => line.StartsWith("目标内容冲突，保留重试：", StringComparison.Ordinal));
+        var otherFailures = failures.Where(line => !line.StartsWith("目标内容冲突，保留重试：", StringComparison.Ordinal)).ToArray();
+        var details = new List<string>();
+        if (conflictCount > 0) details.Add($"目标内容冲突：{conflictCount} 组。源文件和目标文件均已保留，可换名后重试。");
+        if (otherFailures.Length > 0)
+        {
+            details.Add($"其他失败：{otherFailures.Length} 组。");
+            details.AddRange(otherFailures.Take(12));
+            if (otherFailures.Length > 12) details.Add($"另有 {otherFailures.Length - 12} 组未展开。");
+        }
+        var completed = lines.Where(line => !line.StartsWith("未传输：", StringComparison.Ordinal)).Take(12).ToArray();
+        if (completed.Length > 0) details.AddRange(completed);
+        return details.Count == 0 ? summary : summary + Environment.NewLine + string.Join(Environment.NewLine, details);
+    }
+
     private static void ShowImportFailureDetails(IReadOnlyList<string> failures)
     {
         if (failures.Count == 0) return;
-        var message = string.Join(Environment.NewLine, failures.Select((line, index) => $"{index + 1}. {line}"));
+        var conflictCount = failures.Count(line => line.StartsWith("目标内容冲突，保留重试：", StringComparison.Ordinal));
+        var others = failures.Where(line => !line.StartsWith("目标内容冲突，保留重试：", StringComparison.Ordinal)).ToArray();
+        var message = (conflictCount > 0 ? $"目标内容冲突：{conflictCount} 组，已保留恢复记录。" + Environment.NewLine : string.Empty) +
+            string.Join(Environment.NewLine, others.Take(12).Select((line, index) => $"{index + 1}. {line}"));
+        if (others.Length > 12) message += $"{Environment.NewLine}另有 {others.Length - 12} 组未展开。";
         System.Windows.MessageBox.Show(message, $"导入失败原因（{failures.Count:N0}）", MessageBoxButton.OK, MessageBoxImage.Error);
     }
 
@@ -4360,10 +4488,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void RebuildImportSections()
     {
+        OnPropertyChanged(nameof(ImportWorkspaceSummary));
         ImportSections.Clear();
         foreach (var group in ImportItems
-                     .Where(item => item.IsSelected)
-                     .GroupBy(item => new ImportSectionKey(item.NeedsAttention, item.SelectedCategory.Category))
+                     .Where(MatchesImportFilter)
+                     .GroupBy(item => new ImportSectionKey(item.NeedsAttention, item.SelectedCategory.Category, item.SelectedCategory.Display))
                      .OrderBy(group => group.Key.NeedsAttention ? 0 : 1)
                      .ThenBy(group => CategoryOrder(group.Key.Category)))
         {
@@ -4371,7 +4500,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             var statusText = group.Key.NeedsAttention ? "需要确认" : "已自动分类";
             var statusHint = group.Key.NeedsAttention ? "请检查分类/日期后再导入" : "可直接导入";
             ImportSections.Add(new ImportCategorySectionViewModel(
-                $"{statusText} · {CategoryDisplayName(group.Key.Category)}",
+                $"{statusText} · {group.Key.FolderName}",
                 group.Key.NeedsAttention ? "!" : CategoryIcon(group.Key.Category),
                 $"{statusHint} · {items.Length} 组 · {FormatBytes(items.Sum(item => item.TotalBytes))}",
                 group.Key.NeedsAttention ? "#D97706" : CategoryAccent(group.Key.Category),
@@ -4533,7 +4662,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 LibraryDates.Add(node);
             }
-            OnPropertyChanged(nameof(DiscoveredDateCount));
+            OnPropertyChanged(nameof(DiscoveredDateCount)); NotifyShootingFrequencyChanged();
             SyncCalendarWithLibrary();
             dateSw.Stop();
 
@@ -4578,7 +4707,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             LibraryDates.Clear();
-            OnPropertyChanged(nameof(DiscoveredDateCount));
+            OnPropertyChanged(nameof(DiscoveredDateCount)); NotifyShootingFrequencyChanged();
             CalendarDays.Clear();
             PreviewFiles.Clear();
             VisiblePreviewFiles.Clear();
@@ -5008,6 +5137,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 if (_isInitialized) _hanabeSoundService.PlayEvent(HanabeSoundEvent.FeatureOpened, CurrentHanabeSoundSettings);
                 OnPropertyChanged(nameof(IsHomePage));
                 OnPropertyChanged(nameof(IsImportPage));
+                if (IsImportPage && !IsBusy) UpdateImportDeviceChoices();
                 OnPropertyChanged(nameof(IsPreviewPage));
                 OnPropertyChanged(nameof(IsCustomAlbumsPage));
                 OnPropertyChanged(nameof(IsFaceSearchPage));
@@ -5999,6 +6129,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var loading = Task.Run(() => TryLoadThumbnail(item.PrimaryPath));
+                _importThumbnailDecodes.TryAdd(loading, 0);
+                _ = loading.ContinueWith(completed => _importThumbnailDecodes.TryRemove(completed, out _),
+                    CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
                 var thumbnail = await loading
                     .WaitAsync(TimeSpan.FromSeconds(2), cancellationToken)
                     .ConfigureAwait(true);
@@ -6027,6 +6160,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _importThumbnailCancellation?.Cancel();
         _importThumbnailCancellation?.Dispose();
         _importThumbnailCancellation = null;
+    }
+
+    private async Task DrainImportThumbnailDecodesAsync()
+    {
+        CancelImportThumbnailLoading();
+        try { await Task.WhenAll(_importThumbnailDecodes.Keys).WaitAsync(TimeSpan.FromSeconds(10)); }
+        catch (TimeoutException) { throw new IOException("缩略图仍在读取来源，请稍候重试；尚未开始传输。"); }
     }
 
     private static ImageSource? TryLoadThumbnail(string path, int decodeWidth = 260)
@@ -6102,6 +6242,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
         // generate a real first-frame thumbnail instead of returning the generic
         // file-type icon (gray film placeholder). Runs on a background thread and
         // is cached in memory, so the seek cost is paid once per file.
+        // 视频：优先用 FFmpeg 抽取的第一帧（磁盘缓存），系统缩略图常常只是播放器图标。
+        if (VideoExtensions.Contains(extension) && VideoFrameThumbnail.TryGetFirstFrameJpeg(path) is { } firstFrame)
+        {
+            var frameThumbnail = TryLoadWpfThumbnail(firstFrame, decodeWidth);
+            if (frameThumbnail is not null)
+            {
+                if (cacheKey is not null) CacheThumbnail(cacheKey, frameThumbnail);
+                return frameThumbnail;
+            }
+        }
+
         var shellThumbnail = ShellThumbnailProvider.TryGetThumbnail(path, decodeWidth, allowExtraction: VideoExtensions.Contains(extension));
         if (shellThumbnail is not null && cacheKey is not null)
         {
@@ -6200,12 +6351,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         try
         {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
             image.DecodePixelWidth = decodePixelWidth;
-            image.UriSource = new Uri(path, UriKind.Absolute);
+            image.StreamSource = stream;
             image.EndInit();
             image.Freeze();
             return image;
@@ -6503,11 +6655,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.LibraryRoot = LibraryRoot;
             settings.CustomRawExtensions = _customRawExtensions;
             settings.CustomVideoExtensions = _customVideoExtensions;
+            settings.ImportCategoryFolders = [.. _importCategoryFolders];
+            settings.ImportRoutingRules = [.. _importRoutingRules];
             settings.ImportNamingTemplate = _importNamingTemplate;
             settings.CustomAlbumsDirectory = _customAlbumsDirectory;
             settings.DefaultThumbnailSize = DefaultThumbnailSize;
             settings.ZoomableGridTileSize = ZoomableGridTileSize;
             settings.TreemapZoom = TreemapZoom;
+            settings.ShootingBarGap = ShootingBarGap;
             settings.GlassIntensity = GlassIntensity;
             settings.IsAcrylicEnabled = IsAcrylicEnabled;
             settings.ShowHanabeAssistant = ShowHanabeAssistant;
@@ -6554,6 +6709,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
             settings.SelectedFileTypeFilters = _selectedFileTypeFilters.ToList();
             settings.IsAdvancedFiltersExpanded = IsAdvancedFiltersExpanded;
             settings.CheckDuplicatesOnImport = CheckDuplicatesOnImport;
+            settings.ImportDuplicateHandling = _importDuplicateHandling.ToString();
             settings.UseDuplicateHashCache = UseDuplicateHashCache;
             settings.DuplicateHashParallelism = DuplicateHashParallelism;
             settings.VisualDuplicateThreshold = VisualDuplicateThreshold;
@@ -6700,7 +6856,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         CurrentPage = "Import";
         var importRoots = FindDeviceImportRoots(device.Path);
-        _sourceScanPaths = importRoots;
+        SetImportSourcePaths(importRoots);
         CancelImportThumbnailLoading();
         SourceFolder = importRoots.Length == 1 ? importRoots[0] : device.Path;
         ImportItems.Clear();
@@ -6710,7 +6866,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         ImportReport = importRoots.Length > 1
             ? $"已选择 {device.Name}，分析时会包含：{string.Join("、", importRoots.Select(Path.GetFileName))}。"
             : $"已选择 {device.Name}：{SourceFolder}";
-        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“开始分析与导入”。";
+        ImportActionHint = "先决定是否启用本地 AI 人物识别，然后点击“分析并预览导入”。";
         StatusMessage = $"已选择设备 {device.Name}，尚未开始扫描。";
         ProgressValue = 0;
         ProgressLabel = "等待开始";
@@ -7262,7 +7418,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private bool CanAnalyzeSource() => !IsBusy && Directory.Exists(SourceFolder);
 
-    private bool CanAnalyzeAndImport() => !IsBusy && HasLibraryRoot && Directory.Exists(SourceFolder);
+    private bool CanAnalyzeAndImport() => !IsBusy &&
+        (HasPendingImportResume || (HasLibraryRoot && (ImportItems.Count > 0 || Directory.Exists(SourceFolder))));
 
     private bool CanImportSelected() => !IsBusy && HasLibraryRoot && ImportItems.Any(item => item.IsSelected);
 
@@ -7270,6 +7427,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     private void NotifyCommandStates()
     {
+        OnPropertyChanged(nameof(ImportWorkflowStage));
+        OnPropertyChanged(nameof(ImportWizardSteps));
+        OnPropertyChanged(nameof(CanOrganizeImportedSessions));
+        OnPropertyChanged(nameof(ImportPrimaryActionText));
+        OnPropertyChanged(nameof(CanEditImportOrganization));
+        OnPropertyChanged(nameof(ImportWorkspaceSummary));
         BrowseLibraryCommand.NotifyCanExecuteChanged();
         BrowseSourceCommand.NotifyCanExecuteChanged();
         BrowseSourceFoldersCommand.NotifyCanExecuteChanged();
@@ -7278,11 +7441,6 @@ public sealed partial class MainWindowViewModel : ObservableObject
         AnalyzeAndImportCommand.NotifyCanExecuteChanged();
         RefreshLibraryCommand.NotifyCanExecuteChanged();
         ImportFromDeviceCommand.NotifyCanExecuteChanged();
-        ImportActionHint = !HasLibraryRoot
-            ? "导入按钮不可用：请先选择照片库根目录。"
-            : ImportItems.Any(item => item.IsSelected)
-                ? "可以导入；复制/校验时进度条会实时显示。"
-                : "请选择至少一个要导入的文件组。";
     }
 
     private static string? PickFolder(string description, string initialPath)
@@ -7386,6 +7544,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void RefreshImportResumeState()
     {
         OnPropertyChanged(nameof(HasPendingImportResume));
+        OnPropertyChanged(nameof(ImportPrimaryActionText));
+        AnalyzeAndImportCommand?.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(PendingImportResumeSummary));
         _clearDuplicateHashCacheCommand?.NotifyCanExecuteChanged();
         ContinueImportCommand?.NotifyCanExecuteChanged();
@@ -7519,7 +7679,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private static IEnumerable<FileInfo> EnumerateImportFileInfos(
         IEnumerable<string> paths,
         CancellationToken cancellationToken,
-        IProgress<ImportFileScanProgress>? progress)
+        IProgress<ImportFileScanProgress>? progress,
+        IReadOnlySet<string> allowedExtensions,
+        IReadOnlyList<ImportRoutingRule> nameRules)
     {
         var matched = 0;
         foreach (var path in paths)
@@ -7528,7 +7690,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
             if (File.Exists(path))
             {
-                if (ImportExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase))
+                if (ShouldScanImportFile(path, allowedExtensions, nameRules))
                 {
                     matched++;
                     progress?.Report(new ImportFileScanProgress(Path.GetDirectoryName(path) ?? path, matched));
@@ -7564,7 +7726,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 foreach (var file in files)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!ImportExtensions.Contains(Path.GetExtension(file), StringComparer.OrdinalIgnoreCase))
+                    if (!ShouldScanImportFile(file, allowedExtensions, nameRules))
                     {
                         continue;
                     }
@@ -7601,11 +7763,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
                 for (var index = directories.Length - 1; index >= 0; index--)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    try { if ((File.GetAttributes(directories[index]) & FileAttributes.ReparsePoint) != 0) continue; }
+                    catch (IOException) { continue; }
+                    catch (UnauthorizedAccessException) { continue; }
                     pending.Push(directories[index]);
                 }
             }
         }
     }
+
+    private static bool ShouldScanImportFile(string path, IReadOnlySet<string> allowedExtensions,
+        IReadOnlyList<ImportRoutingRule> nameRules) =>
+        allowedExtensions.Contains(Path.GetExtension(path)) || nameRules.Any(rule => rule.Matches(path));
 
     private static string ResolveCameraDateHintPath(string dateHintPath, IReadOnlyCollection<FileInfo> fileInfos)
     {
@@ -7838,7 +8007,7 @@ public sealed class LibraryDateNode
 }
 
 /// <summary>导入媒体类别的可展示选项。</summary>
-public sealed record CategoryChoice(MediaCategory Category, string Display)
+public sealed record CategoryChoice(MediaCategory Category, string Display, string? FolderName = null)
 {
     public override string ToString() => Display;
 }
@@ -7908,7 +8077,7 @@ public sealed record CategorySummaryViewModel(string Name, string FullPath, int 
 }
 
 /// <summary>导入队列按待确认状态和媒体类别分组的键。</summary>
-public sealed record ImportSectionKey(bool NeedsAttention, MediaCategory Category);
+public sealed record ImportSectionKey(bool NeedsAttention, MediaCategory Category, string FolderName);
 
 /// <summary>多文件夹导入扫描的当前目录和已匹配文件数。</summary>
 public sealed record ImportFileScanProgress(string CurrentFolder, int MatchedFiles);
@@ -8256,11 +8425,16 @@ public static class FileMetaStore
 /// <summary>导入预览队列中的源媒体组、分类、日期、缩略图和启用状态。</summary>
 public sealed class ImportPreviewItemViewModel : ObservableObject
 {
+    private bool _isOrganizeSelected;
+    private string _importSessionName = "";
+    public bool IsOrganizeSelected { get => _isOrganizeSelected; set => SetProperty(ref _isOrganizeSelected, value); }
+    public string ImportSessionName { get => _importSessionName; set => SetProperty(ref _importSessionName, value); }
+    public string SourceDirectory => Path.GetDirectoryName(PrimaryPath) ?? PrimaryPath;
     private bool _isSelected = true;
     private CategoryChoice _selectedCategory;
     private ImageSource? _thumbnail;
 
-    public ImportPreviewItemViewModel(MediaGroup group, MediaCategory category, IReadOnlyList<CategoryChoice> categoryChoices, bool requiresConfirmation, LibraryDate? targetDate, ImageSource? thumbnail, string personLabel, int queueIndex)
+    public ImportPreviewItemViewModel(MediaGroup group, MediaCategory category, IReadOnlyList<CategoryChoice> categoryChoices, bool requiresConfirmation, LibraryDate? targetDate, ImageSource? thumbnail, string personLabel, int queueIndex, CategoryChoice? routedChoice = null)
     {
         Group = group;
         CategoryChoices = categoryChoices;
@@ -8269,7 +8443,8 @@ public sealed class ImportPreviewItemViewModel : ObservableObject
         _thumbnail = thumbnail;
         PersonLabel = personLabel;
         QueueIndex = queueIndex;
-        _selectedCategory = categoryChoices.First(choice => choice.Category == category);
+        _selectedCategory = routedChoice ?? categoryChoices.FirstOrDefault(choice => choice.Category == category)
+            ?? categoryChoices.First(choice => choice.Category == MediaCategory.Unconfirmed);
     }
 
     public event Action? SelectionChanged;
@@ -8363,7 +8538,7 @@ public sealed class ImportPreviewItemViewModel : ObservableObject
 
     public MediaGroup ToMediaGroup()
     {
-        return new MediaGroup(Group.GroupKey, SelectedCategory.Category, Group.Primary, Group.Sidecars);
+        return new MediaGroup(Group.GroupKey, SelectedCategory.Category, Group.Primary, Group.Sidecars, SelectedCategory.FolderName);
     }
 
     private static string FormatBytes(long bytes)

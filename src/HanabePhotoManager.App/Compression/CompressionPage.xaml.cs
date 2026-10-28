@@ -41,10 +41,25 @@ public partial class CompressionPage : System.Windows.Controls.UserControl
         {
             case "Compression": ShowTool(ImageToolMode.Compression); break;
             case "Collage": ShowTool(ImageToolMode.Collage); break;
+            case "IntelligentCollage":
+                var collageWindow = System.Windows.Application.Current.Windows.OfType<Collage.CollageWindow>().FirstOrDefault();
+                if (collageWindow is null) new Collage.CollageWindow { Owner = System.Windows.Window.GetWindow(this) }.Show();
+                else { collageWindow.WindowState = WindowState.Normal; collageWindow.Activate(); }
+                break;
+            case "Split":
+                var splitWindow = System.Windows.Application.Current.Windows.OfType<Splitting.ImageSplitWindow>().FirstOrDefault();
+                if (splitWindow is null) new Splitting.ImageSplitWindow { Owner = System.Windows.Window.GetWindow(this) }.Show();
+                else { splitWindow.WindowState = WindowState.Normal; splitWindow.Activate(); }
+                break;
             case "Watermark": ShowTool(ImageToolMode.Watermark); break;
             case "PixelArt": ShowTool(ImageToolMode.PixelArt); break;
             case "Recovery":
                 if (System.Windows.Window.GetWindow(this)?.DataContext is MainWindowViewModel main) main.ShowRecoveryCommand.Execute(null);
+                break;
+            case "SLog3":
+                var videoWindow = System.Windows.Application.Current.Windows.OfType<Video.SLog3Window>().FirstOrDefault();
+                if (videoWindow is null) new Video.SLog3Window { Owner = System.Windows.Window.GetWindow(this) }.Show();
+                else { videoWindow.WindowState = WindowState.Normal; videoWindow.Activate(); }
                 break;
         }
     }

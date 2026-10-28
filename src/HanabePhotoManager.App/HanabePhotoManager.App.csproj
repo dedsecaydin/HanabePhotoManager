@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <StartupObject>HanabePhotoManager.App.Program</StartupObject>
@@ -77,10 +77,13 @@
 
   <ItemGroup>
     <Resource Include="Assets\HanabeApp.ico" />
+    <Content Include="tools\libheif\**\*" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Resource Include="Assets\HanabeAppLogo.png" />
     <Resource Include="Assets\HanabeAppLogo.Light.png" />
+    <Resource Include="Assets\HanabeAppLogo.Transparent.png" />
     <Resource Include="Assets\wechat-sponsor-qr.jpg" />
     <Resource Include="Assets\Hanabe\hanabe-assistant.png" />
+    <Resource Include="Assets\Hanabe\workspace-hero.png" />
     <Resource Include="Assets\Hanabe\Animated\**\*.gif" />
     <Content Include="Assets\Hanabe\Sounds\**\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -1,5 +1,40 @@
 # Agent Handoff — Current Project State
 
+## 2026-10-23 HEIF paired JPEG and duplicate lookup performance
+
+- Supersedes the prior same-day no-conversion behavior below: HEIF/HEIC/HIF originals now remain byte-identical and receive a quality-95 primary-image JPEG. libheif 1.23.2 DLLs and dependency licenses are included under `tools/libheif`; no system HEVC codec dependency. Existing/reserved camera JPEG names are preserved. Color ICC profiles are copied; HDR appearance on actual Sony camera files is not calibrated.
+- Conversion hashes/adjacent receipts support retry without duplicate JPEG output, missing-output regeneration, and user-edited JPEG preservation. Copy/move recovery entries remain until conversion completes. Skipped old originals gain JPEGs; legacy skip records resolve their target and partial-move records fall back to verified receipts. No JPGs are written to source-card paths.
+- Duplicate checks now try exact hashes first, lazily build one metadata index per target map, persist metadata cache with file stamps, revalidate candidate existence/stamps, reuse verified source hashes, and avoid rechecking already matched sources. Target enumeration runs off the UI thread with per-source progress.
+- Controlled fixture benchmark (not actual NAS): 20 queries × 40 targets with simulated 1ms metadata delay, 800 reads reduced to 40; approximately 12.18s to 0.63s. Evidence: `.artifacts/heif-speed-20261023/metadata-benchmark.json`.
+- Final Release build zero warnings/errors; 867 tests passed (Core 177, Infrastructure 64, App 614, InstallerShell 12), including real public HEIF fixture, collisions, cancellation, corruption, old skipped recovery and moved-source recovery. Two independently reviewed missing-conversion cases were reproduced with failing tests and fixed.
+- Daily published runtime is now `D:\HanabePhoto\app\HanabePhotoManager.App.exe`; source remains in D:\HanabePhoto. Settings/pending records backed up in `.artifacts/heif-speed-20261023/before-update`. No real-library import or duplicate cleanup was run.
+
+## 2026-10-23 Import duplicate controls, resume, HEIF, and project location
+
+- Active project is now `D:\HanabePhoto`, per the user's latest instruction. Copied the full current C-drive source and Git history, preserving pre-existing modified/untracked source. Historical location notes below are superseded.
+- Root cause verified in the actual window: import-page exact-check and duplicate radio controls were hardcoded checked/disabled, while the real persisted check flag was false. Bound them to the actual shared flag and persisted SkipAll/ImportAll/DecideIndividually choice. Defaults now enable checking and skip duplicates. No batch dialog overrides the page choice; individual review still prompts.
+- Reproduced resume bypass using a frozen plan with a new JK destination and an existing identical copy. Resume now checks unverified pending entries with the active duplicate policy; existing skip decisions and partial-transfer receipts remain protected.
+- HEIF/HEIC/HIF are recognized as Jpeg category and copied into JPG生图 with original extensions and bytes; import scanning, device discovery, library listing/snapshot and exact duplicate scan include them. No conversion or decoder claim.
+- Verification: Release solution build (framework-dependent installer build, NuGet audit off, cached dependencies, `/m:1`) zero warnings/errors; 854 tests passed: Core 177, Infrastructure 64, App 601, InstallerShell 12. Regression tests cover skip in copy/move modes, resume recheck, explicit keep, mutually exclusive options, and HEIF first/second import with byte preservation. Light and Dark import control windows inspected.
+- User's active transfer was safely stopped, pending record retained. Settings/resume backups and TRX evidence are under `.artifacts/duplicate-fix-20261023`. No existing duplicate photos were removed. Real-library reimport after the fix was not run.
+
+## 2026-10-11 Project location
+
+- Active project location: `C:\HanabePhoto`. The previous `D:\HanabePhoto` directory is a retained copy because Windows currently holds the directory open; do not continue development there.
+- The C-drive copy contains Git history and pre-existing uncommitted/untracked work. Release build and 842 tests passed with NuGet audit disabled for the existing ImageSharp advisories.
+
+## 2026-10-02 Device import prompt and portable FFmpeg follow-up
+
+- Device insertion prompt now uses shared Dialog and Button resources, shows source and destination, and restores a minimized main window. Confirmation prepares the detected root without requiring a cached device entry or a preselected library.
+- FFmpeg resolution now prefers the executable under the application's `tools` directory, then alongside the application, then PATH; the portable package can be launched directly.
+- Release solution build, 840 tests, and Light/Dark prompt screenshots passed. Physical device insertion and target-PC interactive playback remain unverified.
+
+## 2026-10-02 Import sources and S-Log3 video conversion
+
+- Import page now lists actual selected source folders for single/multiple picker, drag-drop, and device import.
+- Image tools now include an S-Log3 batch workspace with selected `.cube` LUT, 10-second converted preview, and Rec.709 MP4 export. Supports bundled FFmpeg with PATH fallback; the camera gamut and LUT must be chosen by the user.
+- Release build and 832 automated tests pass, including a synthetic FFmpeg conversion; isolated publish is at `.artifacts/slog3-publish`. Real S-Log3 footage and interactive visual QA remain to be checked. Existing uncommitted settings/import work was preserved.
+
 ## 2026-09-12 Direct removable-volume recovery
 
 - Added a restricted elevated read helper, seekable stream reuse for the image parsers, and removable drive selection. D: output is automatically dated and unique; the helper rejects system disks and same-physical-disk output.
@@ -39,7 +74,7 @@
 > **Last Updated:** 2026-08-14  
 > **Current Version:** `0.3.2-alpha.25`（2026-09-07）
 > **Current Branch:** `codex/photo-treemap-browser`  
-> **Project Path:** `D:\HanabePhoto`
+> **Project Path:** `C:\HanabePhoto`
 
 ## 2026-08-14 Current State — Master Guide 80% 进行中
 
@@ -408,3 +443,43 @@ After any code change:
 - JPEG 按段长度、帧、扫描和结束标记确定范围，避免 EXIF 缩略图结束标记截断主照片；单候选上限 128 MiB。
 - 照片沿用只读来源、导出前结构复核、隔离输出、取消清理和 SHA-256 报告。界面明确暂不支持相机 RAW、碎片重组；结构完整不代表全部像素可解码，真实损坏卡效果未验证。
 - Release 构建通过，796 项测试通过，包含真实编码 JPEG 原样导出、截断拒绝、缩略图标记与照片时间筛选。
+## 2026-10-03 Import dual-view maintenance
+
+- Original preflight list remains the default. The “关系图” switch enables month-grouped date circles, two media samples with overflow selection, and existing viewer previews.
+- Both presentations share the same ImportDateFolderDecision objects and one DateFolderEditor in Imports/ImportDateFolderViews.xaml. Preserve and verify both when dates, strategies, remarks, destinations, validation or previews change; see AGENTS.md.
+
+## vNext verification candidate — 2026-10-27
+
+Current additive implementation: EXIF virtual sessions with preview/edit/undo; four deterministic collage layouts and ICC-managed JPG/PNG/TIFF; S-Log3 Rec.709/H.264/H.265 pipeline and resumable batch queue. Legacy collage retained. Release build and 925 tests pass. Independent alpha.27 package available under releases/vnext-20261027; existing app directory untouched. This is a verification candidate, not a claim that all real-camera/manual/performance acceptance has passed. See [delivery and limitations](docs/vnext-delivery-20261027.md).
+
+
+2026-10-27 alpha.28 UI candidate: shared shell/layout refinements, seven tools preserved and grouped; 925 tests passed. New package releases/ui-20261027; screenshots .artifacts/ui-20261027; see docs/ui-workspace-20261027.md. Do not overwrite daily app without preserving active work. No ViewModel/business changes in this UI pass.
+
+## 2026-10-27 导入确认整合候选包
+- Active candidate: D:\HanabePhoto\releases\import-20261027 (alpha.30), daily app unchanged.
+- Preview snapshot rejects changes to source/library/selection/category/date/transfer mode. Move and rename confirmations precede folder mutation; pending recovery blocks mutation.
+- Themed rename review reuses ImportMoveSafetyConfirmationWindow. Dual views retain shared decisions and editor. Session organization follows import results.
+- Verification: Release build clean; final test evidence .artifacts/import-20261027/final-tests; Light/Dark import screenshots. Real-library end-to-end acceptance not claimed.
+
+## 2026-10-27 alpha.31 操作衔接
+- Current candidate: releases/import-logic-20261027, 934 tests passed.
+- Analysis and date confirmation are separate explicit steps; drag-and-drop stops at queue review too. Cancellation/failure text survives busy-state changes; failed analysis cannot feed a partial queue into confirmation.
+- Resume-aware primary action, common source-selection preview invalidation. User requested automatically opening the completed app.
+
+## 2026-10-28 — 多来源导入可视化与整理
+- 新增 ImportWorkspace 分部与 ImportOrganizationPanel：来源、队列、整理三栏；复用现有分类与导入方案；双日期视图保持原确认路径。
+- 多来源扫描限制并发 2，规范化重叠路径去重；同名跨设备素材与附属文件分别归组。分类/场次拖动与按钮操作共用方法，支持撤销及忙碌/预览冻结保护。
+- ImportSessionWriter 将成功目标写入现有独立场次文件；恢复记录新增可空场次字段，兼容旧记录，不迁移数据库。以批次区分同名场次，重复提交幂等。
+- 缩略图使用显式释放的共享读取流；传输前取消预览并等待解码完成。新增 7 项来源、筛选、撤销、断开、场次保存、续传字段与文件锁回归。
+- 独立包 releases/multi-source-20261028，alpha.32。保留 app 及旧包，不对真实用户媒体执行导入。
+- 参考 TagStudio 官方项目说明、Immich #8744 交互讨论与 Bilibili Eagle av206086491 视频介绍页；未声称观看完整视频或把讨论当成已发布特性。
+- 真实多卡并发、大量场次逐文件写入性能、真实鼠标多选拖动仍需专项验收。Windows 文件夹选择器的自动化焦点限制导致本轮未完成填充队列的鼠标端到端验收。
+
+## 2026-10-28 — 图片切图与工具入口对比度
+- 图片工具新增独立“切图”入口，复用窗口激活模式；提供左右/上下中分、2×3/3×2 六分和 3×3 九宫格。
+- 原图比例或方形选区，大小与水平/垂直滑块、鼠标拖动、方向键定位；预览显示网格、顺序和像素尺寸。
+- PNG/JPEG 异步导出到 D 盘独立目录，不覆盖原件和以前结果；中途取消清理暂存输出，限制 6000 万像素。
+- 新增 Button.ImageToolTile，基于 ActionTile 提高图片工具入口的 Surface/Outline 对比，不改变其他入口样式。沿用全部明暗主题键。
+- Release solution build：0 警告、0 错误；952 项测试通过（Core 196 / Infrastructure 71 / App 673 / Installer 12）。包含新增 11 项用例，验证非整除分割覆盖、裁切像素、重名隔离、中途取消、D 盘限制及明暗窗口 PNG/JPEG 导出。
+- WPF 渲染检查：Light/Dark，1140×680 与 860×520 内容，证据 .artifacts/split-ui。实际鼠标拖动与多 DPI 的人工交互验收未执行。
+- 运行入口：src/HanabePhotoManager.App/bin/Release/net8.0-windows/HanabePhotoManager.App.exe；当前用户运行的 releases/unified-20261028 版本未被终止或覆盖。未生成安装包。

@@ -17,9 +17,7 @@ public sealed class FaceSearchService
         [".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"],
         StringComparer.OrdinalIgnoreCase);
 
-    private readonly string _cachePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "HanabePhotoManager", "FaceSearch", "face-features.json");
+    private readonly string _cachePath = Path.Combine(AppDataPaths.Root, "FaceSearch", "face-features.json");
 
     public async Task<FaceReference> CreateReferenceAsync(string imagePath, CancellationToken cancellationToken)
     {

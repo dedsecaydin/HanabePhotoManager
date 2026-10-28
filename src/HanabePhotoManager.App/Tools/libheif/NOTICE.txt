@@ -1,0 +1,15 @@
+HEIF decoding runtime (Windows x64)
+
+libheif 1.23.2 and libde265 are dynamically loaded, unmodified libraries from
+the installed native runtime dependency bundle. Original copyright and license
+notices are retained in the accompanying COPYING files. Source projects:
+https://github.com/strukturag/libheif (corresponding release: v1.23.2)
+https://github.com/strukturag/libde265
+
+JPEG, PNG and compression dependencies: libjpeg-turbo, libpng and zlib.
+Their license texts accompany this file. Microsoft C/C++ runtime DLLs retain
+Microsoft's distribution terms; they are supplied for native runtime support.
+
+The libraries are separate DLLs. Replacing compatible DLLs does not require
+relinking HanabePhoto. Native decoding is read-only; JPEG encoding is performed
+by the application's existing ImageSharp dependency.

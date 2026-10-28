@@ -55,9 +55,9 @@ public sealed class DesignSystemResourceTests
     }
 
     [Fact]
-    public void App_LoadsTheLightThemeEntryPoint()
+    public void App_LoadsTheApprovedWorkspaceThemeEntryPoint()
     {
-        Read("App.xaml").Should().Contain("Themes/Themes/Violet.Light.xaml");
+        Read("App.xaml").Should().Contain("Themes/Themes/Hanabe.Dark.xaml");
     }
 
     [Fact]

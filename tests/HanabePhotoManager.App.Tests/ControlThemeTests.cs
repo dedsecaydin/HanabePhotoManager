@@ -278,7 +278,7 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        mainXaml.Should().Contain("<ColumnDefinition Width=\"112\" />");
+        mainXaml.Should().Contain("<ColumnDefinition Width=\"{Binding Source={StaticResource Size.Sidebar.Width}}\" />");
         mainXaml.Should().Contain("Style=\"{StaticResource Sidebar.Container}\"");
         mainXaml.Should().Contain("ItemsSource=\"{Binding NavigationItems}\"");
         mainXaml.Should().Contain("Style=\"{StaticResource Navigation.RailItem}\"");
@@ -529,7 +529,7 @@ public sealed class ControlThemeTests
     }
 
     [Fact]
-    public void ShellChrome_UsesRoundedM3ContainersAndSettingsWorkspaceResetsPadding()
+    public void ShellChrome_UsesContinuousWorkspaceAndSettingsWorkspaceResetsPadding()
     {
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
@@ -542,7 +542,7 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("Style=\"{StaticResource Layout.StatusBar}\"");
         layoutXaml.Should().Contain("x:Key=\"Layout.TopBar\"");
         layoutXaml.Should().Contain("Radius.Container");
-        layoutXaml.Should().Contain("Property=\"Height\" Value=\"44\"");
+        layoutXaml.Should().Contain("Property=\"Height\" Value=\"{StaticResource Size.Control.Default}\"");
     }
 
     [Fact]
@@ -559,7 +559,7 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("IsOnboardingVisible");
         mainXaml.Should().Contain("PreviousOnboardingStepCommand");
         mainXaml.Should().Contain("NextOnboardingStepCommand");
-        mainXaml.Should().Contain("开始分析与导入");
+        mainXaml.Should().Contain("分析并预览导入");
         mainXaml.Should().Contain("AnalyzeAndImportCommand");
         mainXaml.Should().NotContain("OnboardingAnalyzeButton");
         mainXaml.Should().NotContain("OnboardingImportButton");

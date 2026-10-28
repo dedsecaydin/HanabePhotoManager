@@ -1,5 +1,11 @@
 # Hanabe Photo Manager Component Inventory
 
+## 2026-10-03 新增导入呈现组件
+
+- `Input.Switch`：由 `Themes/Controls/Inputs.xaml` 管理的主题开关，尺寸与滑块位置由共用 Token 管理。
+- `Imports/ImportDateFolderViews`：原列表与日期关系图的呈现容器；一份 `DateFolderEditor` 模板用于两种视图，不复制路由规则或确认逻辑。
+- `ImportDateGraphGroupViewModel`：持有现有决策与媒体引用的轻量投影；初始两项缩略图、余量入口、按月分组及所选日期虚拟化媒体清单。
+
 日期：2026-07-23  
 范围：`src/HanabePhotoManager.App/**/*.xaml`  
 依据：12 个 XAML、2,681 行、52 个 Style 声明。
@@ -169,3 +175,10 @@
 ## 新增组件门槛
 
 只有同时满足以下条件才允许新增公共组件：具有稳定语义；至少三个页面复用；现有 Style/ControlTemplate 无法表达；包含完整状态；使用既有 Token。否则使用布局组合或扩展现有组件。
+
+
+2026-10-27: 新增共享 Button.ActionTile（Buttons.xaml），复用 Button.Secondary 的交互模板；工具首页七个入口共同消费。共享 Layout.PagePanel/StatusBar/PageTitle、Sidebar.Container、Inspector.Panel 调整为连续桌面工作区。
+
+## 2026-10-28 图片切图
+- Splitting/ImageSplitWindow + ImageSplitViewModel + ImageSplitService：独立裁切预览与导出。
+- Button.ImageToolTile：基于 ActionTile，图片工具专用较清晰背景/轮廓。

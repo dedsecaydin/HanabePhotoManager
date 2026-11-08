@@ -1,0 +1,371 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:HanabePhotoManager.Mac.ViewModels"
+        x:Class="HanabePhotoManager.Mac.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="Hanabe 照片工作台" Width="1360" Height="880" MinWidth="1024" MinHeight="680"
+        Icon="avares://HanabePhotoManager/Assets/HanabeApp.ico"
+        Background="{DynamicResource Hb.BgGradient}">
+  <Grid ColumnDefinitions="232,*">
+    <!-- 侧栏 -->
+    <Border Grid.Column="0" Margin="12,12,0,12" Classes="glass" Padding="12,16">
+      <DockPanel>
+        <!-- macOS：窗口左上角的红绿灯按钮让出位置 -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,0,6,22" x:Name="SidebarHeader">
+          <Border Width="40" Height="40" CornerRadius="12" ClipToBounds="True" Margin="0,0,12,0">
+            <Image Source="avares://HanabePhotoManager/Assets/HanabeAppLogo.png" Stretch="UniformToFill" />
+          </Border>
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="Hanabe" FontSize="17" FontWeight="Bold" />
+            <TextBlock Text="照片工作台" Classes="tertiary" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom">
+          <Button Classes="nav" Content="设置" Command="{Binding NavigateCommand}" CommandParameter="Settings" Classes.selected="{Binding IsSettings}" />
+          <TextBlock Text="{Binding PlatformText}" Classes="tertiary" Margin="16,10,0,0" />
+        </StackPanel>
+        <StackPanel>
+          <Button Classes="nav" Content="主页" Command="{Binding NavigateCommand}" CommandParameter="Home" Classes.selected="{Binding IsHome}" />
+          <Button Classes="nav" Content="导入照片" Command="{Binding NavigateCommand}" CommandParameter="Import" Classes.selected="{Binding IsImport}" />
+          <Button Classes="nav" Content="照片图库" Command="{Binding NavigateCommand}" CommandParameter="Library" Classes.selected="{Binding IsLibrary}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
+    <Grid Grid.Column="1" Margin="24,20,24,16">
+      <!-- ===== 主页 ===== -->
+      <ScrollViewer IsVisible="{Binding IsHome}">
+        <StackPanel Spacing="16">
+          <TextBlock Text="Your photo story" Classes="eyebrow" />
+          <Border Classes="glass" Padding="28,24">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="8" VerticalAlignment="Center">
+                <TextBlock Classes="eyebrow" Text="Keep Your Memories" />
+                <TextBlock FontSize="32" FontWeight="Bold"><Run Text="{Binding Greeting}" /><Run Text="，记录生活的每一帧" FontSize="18" Foreground="{DynamicResource Hb.TextSecondary}" /></TextBlock>
+                <TextBlock Classes="secondary" Text="{Binding LibraryRootText}" />
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+                  <Button Classes="primary" Content="导入照片" Command="{Binding NavigateCommand}" CommandParameter="Import" />
+                  <Button Content="打开图库" Command="{Binding NavigateCommand}" CommandParameter="Library" />
+                </StackPanel>
+              </StackPanel>
+              <Image Grid.Column="1" Source="avares://HanabePhotoManager/Assets/workspace-hero.png" Height="220" Margin="16,0,0,0" />
+            </Grid>
+          </Border>
+          <WrapPanel>
+            <Border Classes="glass" Width="220" Margin="0,0,14,14">
+              <StackPanel><TextBlock Text="{Binding Library.Folders.Count}" FontSize="30" FontWeight="Bold" /><TextBlock Text="拍摄日" Classes="secondary" /></StackPanel>
+            </Border>
+            <Border Classes="glass" Width="220" Margin="0,0,14,14">
+              <StackPanel><TextBlock Text="{Binding Import.Devices.Count}" FontSize="30" FontWeight="Bold" /><TextBlock Text="已连接的存储卡" Classes="secondary" /></StackPanel>
+            </Border>
+          </WrapPanel>
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- ===== 导入 ===== -->
+      <DockPanel IsVisible="{Binding IsImport}">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12">
+          <TextBlock Text="Bring memories home" Classes="eyebrow" />
+          <TextBlock Text="导入" Classes="title" />
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+            <Border CornerRadius="999" Padding="14,6" Classes="glass" Classes.step-active="{Binding Import.IsSourceStage}"><TextBlock><Run Text="1 " Foreground="{DynamicResource Hb.Accent}" FontWeight="Bold" /><Run Text="选择来源" /></TextBlock></Border>
+            <Border CornerRadius="999" Padding="14,6" Classes="glass"><TextBlock><Run Text="2 " Foreground="{DynamicResource Hb.Accent}" FontWeight="Bold" /><Run Text="检查确认" /></TextBlock></Border>
+            <Border CornerRadius="999" Padding="14,6" Classes="glass"><TextBlock><Run Text="3 " Foreground="{DynamicResource Hb.Accent}" FontWeight="Bold" /><Run Text="导入" /></TextBlock></Border>
+          </StackPanel>
+          <TextBlock Text="{Binding Import.Hint}" Classes="accent" TextWrapping="Wrap" Margin="2,6,0,0" />
+        </StackPanel>
+
+        <Grid>
+          <!-- 1 选择来源 -->
+          <ScrollViewer IsVisible="{Binding Import.IsSourceStage}">
+            <StackPanel Spacing="14">
+              <Border Classes="glass" IsVisible="{Binding Import.IsAnalyzing}">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Classes="ghost" Content="停止" Command="{Binding Import.CancelCommand}" VerticalAlignment="Center" />
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="{Binding Import.ProgressText}" FontWeight="SemiBold" />
+                    <ProgressBar IsIndeterminate="True" Height="6" />
+                    <TextBlock Text="正在读取拍摄日期并分类，只读，不会复制任何文件。" Classes="tertiary" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Classes="ghost" Content="刷新" Command="{Binding Import.RefreshDevicesCommand}" />
+                <TextBlock Text="存储卡与设备" Classes="h2" VerticalAlignment="Center" />
+              </DockPanel>
+              <TextBlock Text="没有检测到存储卡。插卡后点「刷新」，或者直接在下面选择文件夹。" Classes="secondary" IsVisible="{Binding Import.HasNoDevices}" />
+              <ItemsControl ItemsSource="{Binding Import.Devices}">
+                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="glass" Width="290" Margin="0,0,14,14">
+                      <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Detail}" Classes="tertiary" TextTrimming="CharacterEllipsis" />
+                        <Button Classes="primary" Content="导入这个设备" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,10,0,0"
+                                Command="{Binding $parent[Window].DataContext.Import.ImportDeviceCommand}" CommandParameter="{Binding Path}" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Border x:Name="DropZone" DragDrop.AllowDrop="True" Padding="24,26" CornerRadius="16" BorderThickness="1.5" BorderBrush="{DynamicResource Hb.Stroke}" Background="{DynamicResource Hb.Glass}">
+                <DockPanel>
+                  <Button DockPanel.Dock="Right" Content="选择文件夹" Command="{Binding Import.ChooseFoldersCommand}" VerticalAlignment="Center" />
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="把相机文件夹拖到这里" FontWeight="SemiBold" FontSize="16" />
+                    <TextBlock Text="可以一次拖多个 · 选好就自动按日期和类型分析，不会复制任何文件" Classes="secondary" />
+                  </StackPanel>
+                </DockPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+
+          <!-- 2 检查确认（图形化） -->
+          <DockPanel IsVisible="{Binding Import.IsReviewStage}">
+            <Border DockPanel.Dock="Bottom" Classes="glass" Margin="0,12,0,0" Padding="16,12">
+              <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                  <Button Classes="ghost" Content="重新选择来源" Command="{Binding Import.StartOverCommand}" />
+                  <Button Classes="primary" Content="开始导入  →" Command="{Binding Import.StartImportCommand}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="18" VerticalAlignment="Center">
+                  <TextBlock><Run Text="来源 " Foreground="{DynamicResource Hb.TextTertiary}" /><Run Text="{Binding Import.SourcesText}" /></TextBlock>
+                  <CheckBox Content="校验后移动（删除卡上原文件）" IsChecked="{Binding Import.MoveAfterVerify}" />
+                  <CheckBox Content="跳过重复" IsChecked="{Binding Import.SkipDuplicates}" />
+                </StackPanel>
+              </DockPanel>
+            </Border>
+            <ScrollViewer>
+              <StackPanel Spacing="14">
+                <WrapPanel>
+                  <Border Classes="glass" Width="170" Margin="0,0,12,12"><StackPanel><TextBlock Text="{Binding Import.SelectedCount}" FontSize="26" FontWeight="Bold" /><TextBlock Text="组待导入" Classes="tertiary" /></StackPanel></Border>
+                  <Border Classes="glass" Width="170" Margin="0,0,12,12"><StackPanel><TextBlock Text="{Binding Import.TotalSize}" FontSize="26" FontWeight="Bold" /><TextBlock Text="总大小" Classes="tertiary" /></StackPanel></Border>
+                  <Border Classes="glass" Width="170" Margin="0,0,12,12"><StackPanel><TextBlock Text="{Binding Import.DateCount}" FontSize="26" FontWeight="Bold" /><TextBlock Text="个拍摄日" Classes="tertiary" /></StackPanel></Border>
+                  <Border Classes="glass" Width="170" Margin="0,0,12,12"><StackPanel><TextBlock Text="{Binding Import.DuplicateCountText}" FontSize="26" FontWeight="Bold" Classes="accent" /><TextBlock Text="个重复（SHA-256）" Classes="tertiary" /></StackPanel></Border>
+                </WrapPanel>
+                <ItemsControl ItemsSource="{Binding Import.DateCards}">
+                  <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DateCardViewModel">
+                      <Border Classes="glass" Width="384" Margin="0,0,14,14">
+                        <StackPanel Spacing="10">
+                          <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="{Binding DuplicateText}" Classes="accent" FontSize="12" FontWeight="SemiBold" />
+                            <StackPanel>
+                              <TextBlock><Run Text="{Binding Decision.DateText}" FontSize="24" FontWeight="Bold" /><Run Text="  " /><Run Text="{Binding Weekday}" FontSize="12" Foreground="{DynamicResource Hb.TextSecondary}" /></TextBlock>
+                              <TextBlock Text="{Binding Summary}" Classes="tertiary" />
+                            </StackPanel>
+                          </DockPanel>
+                          <!-- 同一天分段（HANABE-IMPORT-DAY-SPLIT） -->
+                          <Border IsVisible="{Binding IsSegmented}" CornerRadius="10" Padding="10,8" Background="#14FFFFFF">
+                            <StackPanel Spacing="4">
+                              <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse Width="10" Height="10" Fill="{Binding SegmentFill}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding SegmentTitle}" FontWeight="SemiBold" />
+                              </StackPanel>
+                              <TextBlock Text="{Binding SegmentGapText}" Classes="tertiary" Margin="18,0,0,0" />
+                              <StackPanel Orientation="Horizontal" Spacing="8" Margin="18,4,0,0">
+                                <Button Classes="ghost" Content="和上一段放一起" IsVisible="{Binding CanMergeWithPrevious}"
+                                        Command="{Binding $parent[Window].DataContext.Import.MergeWithPreviousCommand}" CommandParameter="{Binding}" />
+                                <Button Classes="ghost" Content="这一天都放进一个文件夹"
+                                        Command="{Binding $parent[Window].DataContext.Import.KeepDayTogetherCommand}" CommandParameter="{Binding}" />
+                              </StackPanel>
+                            </StackPanel>
+                          </Border>
+                          <DockPanel IsVisible="{Binding IsDayKeptTogether}">
+                            <Button DockPanel.Dock="Right" Classes="ghost" Content="分开放"
+                                    Command="{Binding $parent[Window].DataContext.Import.SplitDayCommand}" CommandParameter="{Binding}" />
+                            <TextBlock Text="{Binding DaySplitHint}" Classes="tertiary" VerticalAlignment="Center" TextWrapping="Wrap" />
+                          </DockPanel>
+                          <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ItemsControl ItemsSource="{Binding Strip}">
+                              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ThumbViewModel">
+                                  <Border Width="52" Height="52" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource Hb.GlassStrong}" ToolTip.Tip="{Binding Name}">
+                                    <Panel>
+                                      <TextBlock Text="{Binding Badge}" FontSize="11" FontWeight="Bold" Classes="accent" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                      <Image Source="{Binding Image}" Stretch="UniformToFill" />
+                                    </Panel>
+                                  </Border>
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Border Width="52" Height="52" CornerRadius="10" Background="{DynamicResource Hb.GlassStrong}" IsVisible="{Binding HasOverflow}">
+                              <TextBlock Text="{Binding OverflowText}" HorizontalAlignment="Center" VerticalAlignment="Center" Classes="secondary" FontSize="12" />
+                            </Border>
+                          </StackPanel>
+                          <Border Height="8" Width="336" HorizontalAlignment="Left" CornerRadius="4" ClipToBounds="True" Background="{DynamicResource Hb.GlassStrong}">
+                            <ItemsControl ItemsSource="{Binding Breakdown}">
+                              <ItemsControl.ItemsPanel><ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="1" /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate><DataTemplate x:DataType="vm:CategoryShare"><Border Width="{Binding BarWidth}" Height="8" Background="{Binding Brush}" /></DataTemplate></ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                          </Border>
+                          <ItemsControl ItemsSource="{Binding Breakdown}">
+                            <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="vm:CategoryShare">
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,14,0">
+                                  <Ellipse Width="8" Height="8" Fill="{Binding Brush}" VerticalAlignment="Center" />
+                                  <TextBlock Text="{Binding Label}" Classes="tertiary" />
+                                </StackPanel>
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                          <Border Height="1" Background="{DynamicResource Hb.Stroke}" />
+                          <TextBlock Text="放到" Classes="tertiary" />
+                          <TextBlock Text="{Binding Decision.FinalDirectoryName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                          <ComboBox ItemsSource="{Binding Decision.AvailableStrategies}" SelectedValueBinding="{Binding Value}" SelectedValue="{Binding Decision.Strategy}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" /></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <ComboBox ItemsSource="{Binding Decision.ExistingFolders}" SelectedItem="{Binding Decision.SelectedExistingFolder}" IsVisible="{Binding Decision.HasExistingFolders}" HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <TextBox Text="{Binding Decision.Remark}" Watermark="备注（可选），例如 婚礼、漫展外拍" />
+                          <TextBlock Text="{Binding Decision.ValidationMessage}" Foreground="{DynamicResource Hb.Warning}" FontSize="12" TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Expander Header="查看全部素材">
+                  <ItemsControl ItemsSource="{Binding Import.AllItems}">
+                    <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:ThumbViewModel">
+                        <Border Width="120" Height="120" Margin="0,0,8,8" CornerRadius="10" ClipToBounds="True" Background="{DynamicResource Hb.GlassStrong}" ToolTip.Tip="{Binding Name}">
+                          <Panel>
+                            <TextBlock Text="{Binding Badge}" Classes="accent" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Image Source="{Binding Image}" Stretch="UniformToFill" />
+                          </Panel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </Expander>
+              </StackPanel>
+            </ScrollViewer>
+          </DockPanel>
+
+          <!-- 3 导入中 -->
+          <Border Classes="glass" IsVisible="{Binding Import.IsRunningStage}" VerticalAlignment="Center" MaxWidth="760" Padding="28,24">
+            <StackPanel Spacing="12">
+              <TextBlock Text="正在导入" FontSize="22" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Import.ProgressText}" Classes="secondary" TextTrimming="CharacterEllipsis" />
+              <ProgressBar Value="{Binding Import.ProgressValue}" Maximum="100" Height="8" />
+              <DockPanel Margin="0,8,0,0">
+                <Button DockPanel.Dock="Right" Content="安全停止 · 保留已完成" Command="{Binding Import.CancelCommand}" />
+                <TextBlock Text="先写临时文件、校验 SHA-256，一致后才落盘；「修后」文件夹永不写入。" Classes="tertiary" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </DockPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 3 完成 -->
+          <ScrollViewer IsVisible="{Binding Import.IsDoneStage}">
+            <Border Classes="glass" HorizontalAlignment="Left" VerticalAlignment="Top" MinWidth="620" Padding="28,24">
+              <StackPanel Spacing="14">
+                <TextBlock Text="导入完成" FontSize="22" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="44">
+                  <StackPanel><TextBlock Text="{Binding Import.SuccessCount}" FontSize="36" FontWeight="Bold" Classes="accent" /><TextBlock Text="成功" Classes="tertiary" /></StackPanel>
+                  <StackPanel><TextBlock Text="{Binding Import.SkippedCount}" FontSize="36" FontWeight="Bold" /><TextBlock Text="跳过（重复）" Classes="tertiary" /></StackPanel>
+                  <StackPanel><TextBlock Text="{Binding Import.FailedCount}" FontSize="36" FontWeight="Bold" Foreground="{DynamicResource Hb.Danger}" /><TextBlock Text="失败" Classes="tertiary" /></StackPanel>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Button Classes="primary" Content="继续导入其它素材" Command="{Binding Import.StartOverCommand}" />
+                  <Button Content="在图库中查看" Command="{Binding NavigateCommand}" CommandParameter="Library" />
+                </StackPanel>
+                <Expander Header="详细记录">
+                  <TextBlock Text="{Binding Import.ReportDetails}" FontFamily="Menlo, Consolas" FontSize="12" TextWrapping="Wrap" Classes="secondary" />
+                </Expander>
+              </StackPanel>
+            </Border>
+          </ScrollViewer>
+        </Grid>
+      </DockPanel>
+
+      <!-- ===== 图库 ===== -->
+      <DockPanel IsVisible="{Binding IsLibrary}">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12">
+          <TextBlock Text="Every frame matters" Classes="eyebrow" />
+          <TextBlock Text="照片图库" Classes="title" />
+          <TextBlock Text="{Binding Library.Status}" Classes="secondary" />
+        </StackPanel>
+        <Grid ColumnDefinitions="260,16,*">
+          <Border Classes="glass" Padding="8">
+            <ListBox ItemsSource="{Binding Library.Folders}" SelectedItem="{Binding Library.SelectedFolder}" Background="Transparent">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:DateFolderItem">
+                  <StackPanel Margin="4,2">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Subtitle}" Classes="tertiary" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+          <ScrollViewer Grid.Column="2">
+            <ItemsControl ItemsSource="{Binding Library.Photos}">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ThumbViewModel">
+                  <Border Width="172" Height="172" Margin="0,0,10,10" CornerRadius="12" ClipToBounds="True" Background="{DynamicResource Hb.Glass}" ToolTip.Tip="{Binding Name}">
+                    <Panel>
+                      <TextBlock Text="{Binding Badge}" Classes="accent" FontWeight="Bold" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <Image Source="{Binding Image}" Stretch="UniformToFill" />
+                    </Panel>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </DockPanel>
+
+      <!-- ===== 设置 ===== -->
+      <ScrollViewer IsVisible="{Binding IsSettings}">
+        <StackPanel Spacing="14" MaxWidth="760" HorizontalAlignment="Left">
+          <TextBlock Text="设置" Classes="title" />
+          <Border Classes="glass">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="选择…" Command="{Binding ChooseLibraryRootCommand}" VerticalAlignment="Center" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="照片库位置" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding LibraryRootText}" Classes="secondary" TextWrapping="Wrap" />
+                <TextBlock Text="按“月/日期_备注/分类”整理，与 Windows 版同一套结构，两个平台可以用同一个照片库（例如 NAS 共享）。" Classes="tertiary" TextWrapping="Wrap" />
+              </StackPanel>
+            </DockPanel>
+          </Border>
+          <Border Classes="glass">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="{Binding ThemeButtonText}" Command="{Binding ToggleThemeCommand}" />
+              <TextBlock Text="外观" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+          </Border>
+          <Border Classes="glass">
+            <StackPanel Spacing="10">
+              <TextBlock Text="导入默认选项" FontWeight="SemiBold" />
+              <CheckBox Content="跳过重复文件" IsChecked="{Binding Import.SkipDuplicates}" />
+              <CheckBox Content="校验后移动原文件" IsChecked="{Binding Import.MoveAfterVerify}" />
+              <TextBlock Text="移动会在每个文件复制并通过 SHA-256 校验后删除源文件；开始导入前会再次确认。" Classes="tertiary" TextWrapping="Wrap" />
+              <CheckBox Content="同一天有间隔时自动分文件夹" IsChecked="{Binding Import.AutoSplitImportDays}" />
+              <StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding Import.AutoSplitImportDays}">
+                <TextBlock Text="相隔多久算另一段（小时）" Classes="tertiary" VerticalAlignment="Center" />
+                <ComboBox ItemsSource="{Binding Import.DaySplitHourOptions}" SelectedItem="{Binding Import.ImportDaySplitHours}" MinWidth="80" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+          <Border Classes="glass" IsVisible="{Binding IsStartupAvailable}">
+            <DockPanel>
+              <Button DockPanel.Dock="Right" Content="{Binding StartupButtonText}" Command="{Binding ToggleStartupCommand}" />
+              <StackPanel Spacing="4">
+                <TextBlock Text="登录时启动" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding StartupStatus}" Classes="secondary" TextWrapping="Wrap" />
+              </StackPanel>
+            </DockPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</Window>

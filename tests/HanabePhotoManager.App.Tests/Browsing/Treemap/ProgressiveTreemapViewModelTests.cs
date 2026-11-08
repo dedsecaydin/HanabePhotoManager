@@ -181,7 +181,7 @@ public sealed class ProgressiveTreemapViewModelTests
     [Fact]
     public void UpdateThumbnail_UsesItsDimensionsWhenNoHeaderDimensionsWereRead()
     {
-        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero);
+        using var viewModel = new ProgressiveTreemapViewModel(TimeSpan.Zero, new HanabePhotoManager.App.Platform.WpfImageFactory().GetSize);
         var generation = viewModel.BeginScan(@"\\Hanabe\拍照");
         var path = @"\\Hanabe\拍照\7月\07.16\JPG生图\wide.jpg";
         viewModel.ApplyBatch(generation, Batch(Item(path, "JPG生图", 10)));

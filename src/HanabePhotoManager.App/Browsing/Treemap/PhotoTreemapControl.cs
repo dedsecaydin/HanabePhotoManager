@@ -757,9 +757,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
         if (!item.IsContainer && (IsBorderless || isPanorama))
         {
             // 仅绘制图片与扩展名徽标，不额外铺底。
-            if (item.Thumbnail is not null && CanDrawThumbnail(rect, isPanorama))
+            if (item.Thumbnail is ImageSource panoramaThumbnail && CanDrawThumbnail(rect, isPanorama))
             {
-                DrawThumbnail(drawingContext, item.Thumbnail, rect, 0);
+                DrawThumbnail(drawingContext, panoramaThumbnail, rect, 0);
             }
 
             if (isSelected)
@@ -851,9 +851,9 @@ public sealed class PhotoTreemapControl : FrameworkElement
             return; // Container tiles don't need extension badges
         }
 
-        if (!item.IsContainer && item.Thumbnail is not null && CanDrawThumbnail(rect, isPanorama))
+        if (!item.IsContainer && item.Thumbnail is ImageSource thumbnail && CanDrawThumbnail(rect, isPanorama))
         {
-            DrawThumbnail(drawingContext, item.Thumbnail, rect, radius);
+            DrawThumbnail(drawingContext, thumbnail, rect, radius);
         }
 
         if (item.IsContainer || rect.Width < 40 || rect.Height < 20)

@@ -71,7 +71,7 @@ public sealed class ImportDuplicateExecutionTests : IDisposable
     {
         var library = Path.Combine(_root, "library");
         var target = Path.Combine(library, _date.RelativePath);
-        var viewModel = new MainWindowViewModel { LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
+        var viewModel = new MainWindowViewModel { HeifDecoder = HanabePhotoManager.App.Imports.HeifImageDecoder.Decode, LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
         var path = Path.Combine(_root, $"PHOTO{extension}");
         File.Copy(Path.Combine(AppContext.BaseDirectory, "Assets", "example.heic"), path);
         var original = File.ReadAllBytes(path);
@@ -133,7 +133,7 @@ public sealed class ImportDuplicateExecutionTests : IDisposable
             }]
         };
         new ImportResumeStore().Save(state);
-        var viewModel = new MainWindowViewModel { LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
+        var viewModel = new MainWindowViewModel { HeifDecoder = HanabePhotoManager.App.Imports.HeifImageDecoder.Decode, LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
 
         await viewModel.ResumePendingImportAsync();
 
@@ -167,12 +167,77 @@ public sealed class ImportDuplicateExecutionTests : IDisposable
                     [new PlannedFile(source, unused, unused + ".hanabe-part", ConflictKind.None)], ConflictKind.None, ImportItemState.Planned)
             }]
         });
-        var viewModel = new MainWindowViewModel { LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
+        var viewModel = new MainWindowViewModel { HeifDecoder = HanabePhotoManager.App.Imports.HeifImageDecoder.Decode, LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
         await viewModel.ResumePendingImportAsync();
         Assert.True(File.Exists(Path.ChangeExtension(original, ".JPG")));
         Assert.False(File.Exists(unused));
         Assert.True(File.Exists(sourcePath));
         Assert.Contains("成功 0，跳过 1，失败 0", viewModel.ImportReport);
+    }
+
+    [Fact]
+    public async Task SkipAll_DetectsCopyInSameDayFolderWithDifferentRemark()
+    {
+        // 同一天已有“10.18_返图”，这次新建“10.18_第二批”：旧逻辑只查新文件夹会漏掉，现在同日文件夹一起查。
+        var library = Path.Combine(_root, "library");
+        var existingDay = Path.Combine(library, "10月", "10.18_返图", "视频");
+        Directory.CreateDirectory(existingDay);
+        var source = Path.Combine(_root, "C3001.MP4");
+        File.WriteAllBytes(source, [2, 4, 6, 8, 10, 12]);
+        File.Copy(source, Path.Combine(existingDay, "JK0001.MP4"));
+        var newTarget = Path.Combine(library, "10月", "10.18_第二批");
+        var group = new MediaGroup("C3001", MediaCategory.Video, new SourceMediaFile(source, 6, DateTimeOffset.UtcNow), []);
+        var viewModel = new MainWindowViewModel { HeifDecoder = HanabePhotoManager.App.Imports.HeifImageDecoder.Decode, LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
+        var preview = new ImportPreviewItemViewModel(group, group.Category, viewModel.CategoryChoices, false, _date, null, "", 1);
+        var method = typeof(MainWindowViewModel).GetMethod("RunImportAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        await (Task)method.Invoke(viewModel, new object[]
+        {
+            new[] { preview }, false, new Dictionary<LibraryDate, string> { [_date] = newTarget }
+        })!;
+
+        Assert.Contains("成功 0，跳过 1，失败 0", viewModel.ImportReport);
+        Assert.False(Directory.Exists(newTarget) && Directory.EnumerateFiles(newTarget, "*.MP4", SearchOption.AllDirectories).Any());
+        Assert.True(File.Exists(source));
+    }
+
+    [Fact]
+    public async Task DateConfirmationStep_PreviewsDuplicatesPerDateAndFollowsHandlingChoice()
+    {
+        var (viewModel, group, _) = CreateFixture();
+        var preview = new ImportPreviewItemViewModel(group, group.Category, viewModel.CategoryChoices, false, _date, null, "", 1);
+        var prepare = typeof(MainWindowViewModel).GetMethod("PrepareImportDateFolderPreflight", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        prepare.Invoke(viewModel, new object[] { new[] { preview } });
+        for (var i = 0; i < 100 && !viewModel.ImportDuplicatePreviewText.StartsWith("查重完成", StringComparison.Ordinal); i++)
+            await Task.Delay(50);
+
+        Assert.True(viewModel.IsImportDateFolderPreflightVisible);
+        Assert.StartsWith("查重完成：1 个文件", viewModel.ImportDuplicatePreviewText);
+        var decision = Assert.Single(viewModel.ImportDateFolderDecisions);
+        Assert.Equal("1 个重复 · 将跳过", decision.DuplicateSummary);
+
+        viewModel.KeepImportDuplicates = true;
+        Assert.Equal("1 个重复 · 将仍然导入", decision.DuplicateSummary);
+        Assert.True(File.Exists(group.Primary.FullPath));
+    }
+
+    [Fact]
+    public async Task SameSizeButDifferentContent_InSameDay_IsStillImported()
+    {
+        var (viewModel, _, target) = CreateFixture();
+        var source = Path.Combine(_root, "C2418.MP4");
+        File.WriteAllBytes(source, [1, 3, 5, 7, 8]);
+        var group = new MediaGroup("C2418", MediaCategory.Video, new SourceMediaFile(source, 5, DateTimeOffset.UtcNow), []);
+        var preview = new ImportPreviewItemViewModel(group, group.Category, viewModel.CategoryChoices, false, _date, null, "", 1);
+        var method = typeof(MainWindowViewModel).GetMethod("RunImportAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        await (Task)method.Invoke(viewModel, new object[]
+        {
+            new[] { preview }, false, new Dictionary<LibraryDate, string> { [_date] = target }
+        })!;
+
+        Assert.Contains("成功 1，跳过 0，失败 0", viewModel.ImportReport);
     }
 
     [Fact]
@@ -216,7 +281,7 @@ public sealed class ImportDuplicateExecutionTests : IDisposable
         File.Copy(source, Path.Combine(category.FullName, "JK0001.MP4"));
         var group = new MediaGroup("C2417", MediaCategory.Video,
             new SourceMediaFile(source, 5, DateTimeOffset.UtcNow), []);
-        var vm = new MainWindowViewModel { LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
+        var vm = new MainWindowViewModel { HeifDecoder = HanabePhotoManager.App.Imports.HeifImageDecoder.Decode, LibraryRoot = library, CurrentPage = "Import", HanabeSoundEnabled = false };
         return (vm, group, target);
     }
 

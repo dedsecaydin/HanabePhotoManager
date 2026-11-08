@@ -1,0 +1,47 @@
+using System.IO;
+using CommunityToolkit.Mvvm.ComponentModel;
+using HanabePhotoManager.App.Platform;
+using HanabePhotoManager.Core.Search;
+
+namespace HanabePhotoManager.App.Search;
+
+/// <summary>语义搜索结果的缩略图、路径和相关度显示模型。</summary>
+public sealed class SearchResultItemViewModel : ObservableObject
+{
+    private object? _thumbnail;
+
+    public SearchResultItemViewModel(SemanticSearchResult result)
+    {
+        FilePath = result.FileKey;
+        Score = result.Score;
+    }
+
+    public string FilePath { get; }
+    public string Name => Path.GetFileName(FilePath);
+    public string Folder => Path.GetDirectoryName(FilePath) ?? string.Empty;
+    public double Score { get; }
+    public string ScoreText => $"相关度 {Score:P0}";
+    public object? Thumbnail { get => _thumbnail; set => SetProperty(ref _thumbnail, value); }
+
+    public void Open()
+    {
+        if (File.Exists(FilePath)) PlatformServices.Search.Open(FilePath);
+    }
+
+    public void OpenFolder()
+    {
+        if (File.Exists(FilePath)) PlatformServices.Search.Reveal(FilePath);
+    }
+
+    public async Task LoadThumbnailAsync(CancellationToken cancellationToken)
+    {
+        if (!File.Exists(FilePath)) return;
+        try
+        {
+            var thumbnail = await PlatformServices.Search.LoadThumbnailAsync(FilePath, 320, cancellationToken).ConfigureAwait(false);
+            await PlatformServices.Dispatcher.InvokeAsync(() => { Thumbnail = thumbnail; return 0; });
+        }
+        catch (OperationCanceledException) { }
+        catch (NotSupportedException) { }
+    }
+}

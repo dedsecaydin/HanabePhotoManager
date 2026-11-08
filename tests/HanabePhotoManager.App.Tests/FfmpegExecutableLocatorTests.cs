@@ -41,5 +41,14 @@ public sealed class FfmpegExecutableLocatorTests : IDisposable
         Assert.Null(FfmpegExecutableLocator.Find(_fixture, string.Empty));
     }
 
+    [Fact]
+    public void MacExecutableAndCompanionProbe_UseNamesWithoutWindowsExtension()
+    {
+        var executable = Path.Combine(_fixture, "ffmpeg");
+        File.WriteAllBytes(executable, [1]);
+        Assert.Equal(executable, FfmpegExecutableLocator.Find(_fixture, null, windows: false));
+        Assert.Equal(Path.Combine(_fixture, "ffprobe"), FfmpegExecutableLocator.ProbePath(executable, windows: false));
+    }
+
     public void Dispose() => Directory.Delete(_fixture, recursive: true);
 }

@@ -141,7 +141,7 @@ public partial class WatermarkPage : System.Windows.Controls.UserControl
 
     private Rect CalculateImageViewport()
     {
-        var image = ViewModel?.PreviewImage;
+        var image = ViewModel?.PreviewImage as System.Windows.Media.Imaging.BitmapSource;
         if (image is null || image.PixelWidth <= 0 || image.PixelHeight <= 0 ||
             PreviewSurface.ActualWidth <= 0 || PreviewSurface.ActualHeight <= 0)
             return Rect.Empty;
@@ -161,7 +161,7 @@ public partial class WatermarkPage : System.Windows.Controls.UserControl
     private void UpdateSignaturePreviewPosition()
     {
         var viewModel = ViewModel;
-        var watermark = viewModel?.WatermarkPreviewImage;
+        var watermark = viewModel?.WatermarkPreviewImage as System.Windows.Media.Imaging.BitmapSource;
         var viewport = CalculateImageViewport();
         if (viewModel is null || watermark is null || viewport.IsEmpty || watermark.PixelWidth <= 0)
             return;

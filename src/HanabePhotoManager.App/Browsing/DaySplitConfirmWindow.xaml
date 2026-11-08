@@ -1,0 +1,146 @@
+<Window x:Class="HanabePhotoManager.App.Browsing.DaySplitConfirmWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:b="clr-namespace:HanabePhotoManager.App.Browsing;assembly=HanabePhotoManager.Shared"
+        Title="按场次拆分到文件夹" Width="600" SizeToContent="Height" ResizeMode="NoResize"
+        Style="{StaticResource Dialog.Window}" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterOwner" FocusManager.FocusedElement="{Binding ElementName=ThresholdSlider}">
+  <!-- 无边独立卡片：只有这一张卡浮在桌面上（不再套系统标题栏 + 深色底）。
+       Dialog.Surface 是半透明玻璃，窗口透明后会透出桌面，所以垫一层不透明的画布底色。 -->
+  <Border Margin="24" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Background.Canvas}" Effect="{StaticResource Shadow.Dialog}">
+  <Border Style="{StaticResource Dialog.Surface}" Padding="0" Effect="{x:Null}">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <!-- ① 标题（可拖动） -->
+      <Grid Margin="24,22,16,0" MouseLeftButtonDown="Header_MouseLeftButtonDown" Background="Transparent">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Border Width="44" Height="44" CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Primary.Fill}" VerticalAlignment="Center" Margin="0,0,14,0">
+          <Path Data="{StaticResource Icon.Folder}" Stroke="{DynamicResource Brush.Primary}" StrokeThickness="1.8" StrokeLineJoin="Round" Width="20" Height="20" Stretch="Uniform" />
+        </Border>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock Text="按场次拆分到文件夹" Style="{StaticResource Dialog.Title}" />
+          <TextBlock Text="{Binding Subtitle}" Margin="0,3,0,0" FontSize="{StaticResource Typography.BodySmall}" Foreground="{DynamicResource Brush.Text.Secondary}" TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+        <Button Grid.Column="2" Content="✕" Width="36" Height="36" ToolTip="取消 (Esc)" Style="{StaticResource Button.Ghost}" Click="Cancel_Click" VerticalAlignment="Top" />
+      </Grid>
+
+      <!-- ② 分场间隔：独立一块，拖动实时重新分场 -->
+      <Border Grid.Row="1" Margin="24,20,24,0" Padding="18,14,18,12" Style="{StaticResource Card.Subtle}">
+        <StackPanel>
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Right" Text="{Binding ThresholdText}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Primary}" VerticalAlignment="Center" />
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Text="分场间隔" FontSize="{StaticResource Typography.Body}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" />
+              <TextBlock Text="两张照片间隔超过这个时长，就算新的一场" Margin="0,2,0,0" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+            </StackPanel>
+          </DockPanel>
+          <Slider x:Name="ThresholdSlider" Margin="0,12,0,0" Minimum="0.5" Maximum="8" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                  SmallChange="0.5" LargeChange="1" Value="{Binding ThresholdHours, Mode=TwoWay}"
+                  AutomationProperties.Name="分场间隔（小时）" ToolTip="{Binding ThresholdText}" />
+          <DockPanel Margin="0,2,0,0">
+            <TextBlock DockPanel.Dock="Right" Text="8 小时" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+            <TextBlock Text="30 分钟" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+          </DockPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- ③ 预览：每一场一张卡，场与场之间标出间隔 -->
+      <DockPanel Grid.Row="2" Margin="24,20,24,0">
+        <DockPanel DockPanel.Dock="Top" Margin="2,0,2,10">
+          <TextBlock DockPanel.Dock="Right" Text="{Binding SummaryText}" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Secondary}" VerticalAlignment="Center" />
+          <TextBlock Text="预览" FontSize="{StaticResource Typography.Body}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" />
+        </DockPanel>
+        <ScrollViewer MaxHeight="330" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding Sessions}" Focusable="False">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="{x:Type b:DaySplitPreviewSession}">
+                <StackPanel>
+                  <DockPanel x:Name="Gap" Margin="18,0,0,0" Height="28" Visibility="Collapsed">
+                    <Border Width="2" Background="{DynamicResource Brush.Border.Subtle}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding GapText}" VerticalAlignment="Center" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                  </DockPanel>
+                  <Border CornerRadius="{StaticResource Radius.Control}" BorderThickness="1" BorderBrush="{DynamicResource Brush.Border.Subtle}" Background="{DynamicResource Brush.Surface.Subtle}" Padding="16,12">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                      </Grid.ColumnDefinitions>
+                      <Border Width="4" CornerRadius="2" Background="{Binding AccentColor}" Margin="0,2,14,2" />
+                      <StackPanel Grid.Column="1">
+                        <TextBlock>
+                          <Run Text="{Binding Remark, Mode=OneWay}" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Primary}" />
+                          <Run Text="   " />
+                          <Run Text="{Binding TimeText, Mode=OneWay}" FontSize="{StaticResource Typography.BodySmall}" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                        </TextBlock>
+                        <StackPanel x:Name="KeepRow" Orientation="Horizontal" Margin="0,8,0,0">
+                          <TextBlock Text="留在原文件夹" VerticalAlignment="Center" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,8,0" />
+                          <Border CornerRadius="{StaticResource Radius.Control}" Background="{DynamicResource Brush.Surface.ContainerHigh}" Padding="10,3">
+                            <TextBlock Text="{Binding TargetFolderName}" FontSize="{StaticResource Typography.BodySmall}" Foreground="{DynamicResource Brush.Text.Primary}" />
+                          </Border>
+                        </StackPanel>
+                        <StackPanel x:Name="NewRow" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+                          <TextBlock Text="新建文件夹" VerticalAlignment="Center" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" Margin="0,0,8,0" />
+                          <TextBlock Text="{Binding DatePart, StringFormat={}{0}_}" VerticalAlignment="Center" FontSize="{StaticResource Typography.BodySmall}" Foreground="{DynamicResource Brush.Text.Primary}" />
+                          <TextBox Text="{Binding Remark, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Input.TextBox}" Width="170" MinHeight="0" Height="32" Padding="8,0" VerticalContentAlignment="Center" Margin="2,0,0,0"
+                                   ToolTip="新文件夹的备注，可以改成拍摄内容，比如「灵妙之音」" AutomationProperties.Name="{Binding Label, StringFormat={}{0}的文件夹备注}" />
+                        </StackPanel>
+                      </StackPanel>
+                      <StackPanel Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding Label}" HorizontalAlignment="Right" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}" />
+                        <TextBlock Text="{Binding CountText}" HorizontalAlignment="Right" Margin="0,2,0,0" FontSize="{StaticResource Typography.BodySmall}" FontWeight="SemiBold" Foreground="{DynamicResource Brush.Text.Secondary}" />
+                      </StackPanel>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding HasGap}" Value="True">
+                    <Setter TargetName="Gap" Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsNew}" Value="True">
+                    <Setter TargetName="KeepRow" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="NewRow" Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </DockPanel>
+
+      <!-- ④ 说明 -->
+      <StackPanel Grid.Row="3" Margin="26,14,24,18">
+        <TextBlock TextWrapping="Wrap" FontSize="{StaticResource Typography.Caption}" Foreground="{DynamicResource Brush.Text.Tertiary}"
+                   Text="RAW / JPG / 视频 / XML 等同名文件一起移动；「修后」文件夹不动；评分和标签跟着文件走，人物识别需要重新扫描；移动清单会记录在日志里。" />
+        <TextBlock x:Name="ErrorText" Margin="0,8,0,0" Foreground="{DynamicResource Brush.Status.Danger}" FontSize="{StaticResource Typography.BodySmall}" TextWrapping="Wrap" Visibility="Collapsed" />
+      </StackPanel>
+
+      <!-- ⑤ 底部操作条 -->
+      <Border Grid.Row="4" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Brush.Border.Subtle}" Padding="24,14,24,18">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Text="Esc 取消" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Caption}" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Content="取消" IsCancel="True" MinWidth="108" Margin="0,0,8,0" Style="{StaticResource Button.Secondary}" Click="Cancel_Click" />
+          <Button x:Name="ConfirmButton" Grid.Column="2" Content="{Binding ConfirmText}" ContentTemplate="{StaticResource Button.PrimaryTextTemplate}" MinWidth="160"
+                  Style="{StaticResource Button.Primary}" IsEnabled="{Binding CanSplit}" Click="Confirm_Click" />
+        </Grid>
+      </Border>
+    </Grid>
+  </Border>
+  </Border>
+</Window>

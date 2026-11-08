@@ -27,9 +27,9 @@ public sealed class ImportDuplicateControlsTests
         Assert.NotEqual("False", (string?)check.Attribute("IsEnabled"));
         foreach (var (label, property) in new[]
                  {
-                     ("全部跳过（推荐）", "SkipImportDuplicates"),
-                     ("全部仍导入", "KeepImportDuplicates"),
-                     ("逐个选择", "ReviewImportDuplicates")
+                     ("跳过（推荐）", "SkipImportDuplicates"),
+                     ("仍然导入", "KeepImportDuplicates"),
+                     ("逐个询问", "ReviewImportDuplicates")
                  })
         {
             var radio = document.Descendants().Single(element =>

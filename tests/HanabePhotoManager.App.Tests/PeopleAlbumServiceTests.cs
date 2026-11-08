@@ -47,7 +47,9 @@ public sealed class PeopleAlbumServiceTests : IDisposable
 
         result.Albums.Should().ContainSingle();
         result.Albums[0].PhotoPaths.Should().HaveCount(2);
-        result.Albums[0].MatchCentroids.Should().HaveCount(2);
+        // 侧脸（相似度 0.50）仍归入同一个人，但勉强匹配的脸不再成为参考脸：
+        // 否则参考脸会一路漂移，把越来越不像的人吸进同一个相册（实际出现过一个人 426 张的情况）。
+        result.Albums[0].MatchCentroids.Should().HaveCount(1);
     }
 
     [Fact]
@@ -273,7 +275,7 @@ public sealed class PeopleAlbumServiceTests : IDisposable
         {
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<DetectedFace> result = embeddings.TryGetValue(path, out var embedding)
-                ? [new DetectedFace(path, embedding, 0, 0, 10, 10)]
+                ? [new DetectedFace(path, embedding, 0, 0, 200, 200)]
                 : [];
             return Task.FromResult(result);
         }

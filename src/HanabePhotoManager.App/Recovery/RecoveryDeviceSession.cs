@@ -6,7 +6,7 @@ using HanabePhotoManager.Infrastructure.Files;
 namespace HanabePhotoManager.App.Recovery;
 
 /// <summary>The elevated process can only read a validated removable volume; the ordinary app writes exports.</summary>
-internal sealed class RecoveryDeviceSession : IDisposable
+internal sealed class RecoveryDeviceSession : IRecoveryDeviceSession
 {
     private readonly NamedPipeServerStream _pipe;
     private readonly BinaryReader _reader;

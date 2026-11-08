@@ -1,0 +1,132 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="HanabePhotoManager.Mac.App"
+             RequestedThemeVariant="Dark">
+  <Application.Resources>
+    <ResourceDictionary>
+      <!-- Hanabe 视觉语言：深色樱粉玻璃。深浅两套主题共用同一组键名。 -->
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="Hb.Bg" Color="#120B14" />
+          <LinearGradientBrush x:Key="Hb.BgGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#140C16" Offset="0" />
+            <GradientStop Color="#2A1222" Offset="0.55" />
+            <GradientStop Color="#170C1C" Offset="1" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="Hb.Glass" Color="#1EFFFFFF" />
+          <SolidColorBrush x:Key="Hb.GlassStrong" Color="#2BFFFFFF" />
+          <SolidColorBrush x:Key="Hb.Stroke" Color="#26FFFFFF" />
+          <SolidColorBrush x:Key="Hb.Text" Color="#F7EEF3" />
+          <SolidColorBrush x:Key="Hb.TextSecondary" Color="#BFAFBA" />
+          <SolidColorBrush x:Key="Hb.TextTertiary" Color="#8C7C88" />
+          <SolidColorBrush x:Key="Hb.Accent" Color="#FF6FA5" />
+          <SolidColorBrush x:Key="Hb.AccentContainer" Color="#4DFF6FA5" />
+          <SolidColorBrush x:Key="Hb.Warning" Color="#FFC266" />
+          <SolidColorBrush x:Key="Hb.Danger" Color="#FF6B7D" />
+          <!-- Fluent 默认的展开器头是纯黑块：换成玻璃色 -->
+          <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#1EFFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#2BFFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#33FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#26FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+          <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="Hb.Bg" Color="#FBF3F6" />
+          <LinearGradientBrush x:Key="Hb.BgGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#FFF7FA" Offset="0" />
+            <GradientStop Color="#FBE3EC" Offset="0.6" />
+            <GradientStop Color="#F6EEF8" Offset="1" />
+          </LinearGradientBrush>
+          <SolidColorBrush x:Key="Hb.Glass" Color="#B3FFFFFF" />
+          <SolidColorBrush x:Key="Hb.GlassStrong" Color="#E6FFFFFF" />
+          <SolidColorBrush x:Key="Hb.Stroke" Color="#1F6B2D4B" />
+          <SolidColorBrush x:Key="Hb.Text" Color="#2B1622" />
+          <SolidColorBrush x:Key="Hb.TextSecondary" Color="#6E5664" />
+          <SolidColorBrush x:Key="Hb.TextTertiary" Color="#9A8592" />
+          <SolidColorBrush x:Key="Hb.Accent" Color="#E2477F" />
+          <SolidColorBrush x:Key="Hb.AccentContainer" Color="#33E2477F" />
+          <SolidColorBrush x:Key="Hb.Warning" Color="#B8741A" />
+          <SolidColorBrush x:Key="Hb.Danger" Color="#D33A4E" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#B3FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#E6FFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#FFFFFFFF" />
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#1F6B2D4B" />
+          <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+          <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+    <!-- 玻璃面板 -->
+    <Style Selector="Border.glass">
+      <Setter Property="Background" Value="{DynamicResource Hb.Glass}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Hb.Stroke}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="16" />
+      <Setter Property="Padding" Value="18,16" />
+    </Style>
+    <Style Selector="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Hb.Text}" />
+    </Style>
+    <Style Selector="TextBlock.secondary"><Setter Property="Foreground" Value="{DynamicResource Hb.TextSecondary}" /></Style>
+    <Style Selector="TextBlock.tertiary"><Setter Property="Foreground" Value="{DynamicResource Hb.TextTertiary}" /><Setter Property="FontSize" Value="12" /></Style>
+    <Style Selector="TextBlock.title"><Setter Property="FontSize" Value="28" /><Setter Property="FontWeight" Value="Bold" /></Style>
+    <Style Selector="TextBlock.h2"><Setter Property="FontSize" Value="18" /><Setter Property="FontWeight" Value="SemiBold" /></Style>
+    <Style Selector="TextBlock.eyebrow"><Setter Property="Foreground" Value="{DynamicResource Hb.Accent}" /><Setter Property="FontStyle" Value="Italic" /><Setter Property="FontSize" Value="18" /></Style>
+    <Style Selector="TextBlock.accent"><Setter Property="Foreground" Value="{DynamicResource Hb.Accent}" /></Style>
+
+    <!-- 按钮：主按钮粉色胶囊，次按钮玻璃描边，幽灵按钮只有文字 -->
+    <Style Selector="Button">
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="16,8" />
+      <Setter Property="Background" Value="{DynamicResource Hb.Glass}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Hb.Stroke}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Foreground" Value="{DynamicResource Hb.Accent}" />
+    </Style>
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource Hb.Accent}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#FF86B4" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+
+    <!-- 侧栏导航 -->
+    <Style Selector="Button.nav">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Foreground" Value="{DynamicResource Hb.TextSecondary}" />
+      <Setter Property="Padding" Value="16,11" />
+      <Setter Property="Margin" Value="0,2" />
+      <Setter Property="FontSize" Value="15" />
+    </Style>
+    <Style Selector="Button.nav.selected">
+      <Setter Property="Background" Value="{DynamicResource Hb.Accent}" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- 页面切换：内容淡入上浮 -->
+    <Style Selector="ContentControl.page">
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.22" />
+        </Transitions>
+      </Setter>
+    </Style>
+  </Application.Styles>
+</Application>

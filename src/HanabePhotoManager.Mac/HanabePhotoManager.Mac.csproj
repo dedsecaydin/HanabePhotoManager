@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Hanabe PhotoManager · macOS 版（Avalonia，跨平台；同一份代码也能在 Windows 上运行用于调试）。
+    与 Windows 版共用 Core / Infrastructure（导入引擎、校验复制、查重、元数据），
+    并直接链接 App 中与界面无关的日期文件夹规则文件，保证两个平台的规则完全一致。
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>HanabePhotoManager</AssemblyName>
+    <RootNamespace>HanabePhotoManager.Mac</RootNamespace>
+    <Version>0.4.0</Version>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationIcon>Assets\HanabeApp.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.2.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="LibVLCSharp.Avalonia" Version="3.9.4" />
+    <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.23.1" Condition="'$(RuntimeIdentifier)' == ''" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HanabePhotoManager.Core\HanabePhotoManager.Core.csproj" />
+    <ProjectReference Include="..\HanabePhotoManager.Infrastructure\HanabePhotoManager.Infrastructure.csproj" />
+    <ProjectReference Include="..\HanabePhotoManager.Shared\HanabePhotoManager.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+    <Content Include="..\HanabePhotoManager.App\Assets\Hanabe\Sounds\**\*.wav"
+             Link="Assets\Hanabe\Sounds\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\HanabePhotoManager.App\Models\Face\face_detection_yunet_2023mar.onnx;..\HanabePhotoManager.App\Models\Face\face_recognition_sface_2021dec.onnx"
+             Link="Models\Face\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\HanabePhotoManager.App\Models\Classification\*" Link="Models\Classification\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="..\HanabePhotoManager.App\Models\MobileCLIP\*" Link="Models\MobileCLIP\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -108,7 +108,7 @@ public partial class CollageWindow : Window
                     previewToken.ThrowIfCancellationRequested();
                     await ImageCollageService.ProbeAsync([slot.Id],previewToken);
                     using var source=SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(new SixLabors.ImageSharp.Formats.DecoderOptions {MaxFrames=1,TargetSize=new SixLabors.ImageSharp.Size(480,480)},slot.Id);
-                    using var image=CollageColorConverter.ConvertToSrgb(source,Path.Combine(HanabePhotoManager.App.Services.AppDataPaths.ProcessingRoot,"collage-preview"));
+                    using var image=new CollageColorConverter().ConvertToSrgb(source,Path.Combine(HanabePhotoManager.App.Services.AppDataPaths.ProcessingRoot,"collage-preview"));
                     CollageImagePlacement.Resize(image,width,height,crop,slot);
                     using var bgra=image.CloneAs<SixLabors.ImageSharp.PixelFormats.Bgra32>();var bytes=new byte[bgra.Width*bgra.Height*4];bgra.CopyPixelDataTo(bytes);
                     var result=BitmapSource.Create(bgra.Width,bgra.Height,96,96,System.Windows.Media.PixelFormats.Bgra32,null,bytes,bgra.Width*4);result.Freeze();return result;

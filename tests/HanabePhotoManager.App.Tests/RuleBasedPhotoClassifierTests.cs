@@ -8,7 +8,7 @@ namespace HanabePhotoManager.App.Tests;
 
 public sealed class RuleBasedPhotoClassifierTests : IDisposable
 {
-    private readonly string _directory = Path.Combine(Path.GetTempPath(), $"hanabe-rules-{Guid.NewGuid():N}");
+    private readonly string _directory = Path.Combine(@"D:\HanabePhoto\.artifacts", $"hanabe-rules-{Guid.NewGuid():N}");
 
     [Fact]
     public async Task ClassifyAsync_DarkImageProducesNightLabel()
@@ -72,6 +72,6 @@ public sealed class RuleBasedPhotoClassifierTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_directory)) Directory.Delete(_directory, recursive: true);
+        TemporaryDirectoryCleanup.Delete(_directory);
     }
 }

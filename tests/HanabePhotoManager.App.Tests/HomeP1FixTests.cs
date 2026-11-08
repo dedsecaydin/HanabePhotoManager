@@ -68,7 +68,7 @@ public sealed class HomeP1FixTests
         // P1-3 root cause: the app boots on Preview, so the Home preview tiles
         // never received thumbnails until the CurrentPage setter routed Home to
         // the same thumbnail loader.
-        var vm = Read("ViewModels", "MainWindowViewModel.cs");
+        var vm = File.ReadAllText(Path.Combine(SourceRoot(), "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         vm.Should().Contain("else if (IsHomePage)");
         vm.Should().Contain("StartPreviewThumbnailLoading(HomePreviewFiles)");
     }

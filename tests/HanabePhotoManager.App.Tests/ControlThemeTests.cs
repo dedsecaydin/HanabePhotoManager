@@ -14,16 +14,20 @@ public sealed class ControlThemeTests
     {
         var root = FindSourceRoot();
         var settings = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "SettingsCenterPage.xaml"));
-        var preflight = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.ImportDatePreflight.cs"));
+        var preflight = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.ImportDatePreflight.cs"));
+        var app = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "App.xaml.cs"));
         var dialog = Path.Combine(root, "src", "HanabePhotoManager.App", "Imports", "ImportMoveSafetyConfirmationWindow.xaml");
 
-        settings.Should().Contain("Tag=\"sound\"")
+        // 设置重设计：音效并入「Hanabe 桌宠」分区，作为其中的 SoundSection 分组。
+        settings.Should().Contain("Tag=\"pet\"")
             .And.Contain("x:Name=\"SoundSection\"")
-            .And.Contain("Text=\"音效\" Style=\"{StaticResource Layout.PageTitle}\"")
+            .And.Contain("Text=\"Hanabe 桌宠\" Style=\"{StaticResource Layout.PageTitle}\"")
+            .And.Contain("Text=\"音效\" Style=\"{StaticResource Settings.GroupHeader}\"")
             .And.Contain("Style=\"{StaticResource Selection.Slider}\"")
             .And.NotContain("Input.Slider");
-        preflight.Should().Contain("ImportMoveSafetyConfirmationWindow")
+        preflight.Should().Contain("PlatformServices.ConfirmImportMove")
             .And.NotContain("MessageBox.Show");
+        app.Should().Contain("ImportMoveSafetyConfirmationWindow");
         File.Exists(dialog).Should().BeTrue();
     }
 
@@ -40,7 +44,7 @@ public sealed class ControlThemeTests
             .And.Contain("SelectedValue=\"{Binding HanabeSoundStyle, Mode=TwoWay}\"")
             .And.Contain("Value=\"{Binding HanabeSoundVolume, Mode=TwoWay}\"")
             .And.Contain("IsChecked=\"{Binding RestoreWindowAfterDuplicateDetection, Mode=TwoWay}\"");
-        xaml.Should().Contain("Content=\"扫描重复内容\"")
+        xaml.Should().Contain("Header=\"扫描重复内容\"")
             .And.Contain("Command=\"{Binding ScanLibraryDuplicatesCommand}\"")
             .And.Contain("AutomationProperties.Name=\"扫描图库重复内容\"");
     }
@@ -56,47 +60,43 @@ public sealed class ControlThemeTests
         var xaml = File.ReadAllText(xamlPath);
         var code = File.ReadAllText(codePath);
 
+        // 桌宠 v2「显影」：置顶、不抢焦点、不进任务栏的透明工具窗；信息融合在角色手里的拍立得上。
         xaml.Should().Contain("Title=\"Hanabe 任务助手\"")
-            .And.Contain("BooleanToVisibilityConverter x:Key=\"BoolToVis\"")
             .And.Contain("Topmost=\"True\"")
             .And.Contain("ShowInTaskbar=\"False\"")
-            .And.Contain("Text=\"{Binding AssistantSnapshot.Detail}\"")
-            .And.Contain("Value=\"{Binding AssistantSnapshot.ProgressValue}\"")
-            .And.Contain("IsIndeterminate=\"{Binding AssistantSnapshot.IsProgressIndeterminate}\"")
-            .And.Contain("Content=\"停止\"")
-            .And.Contain("Content=\"继续\"")
-            .And.Contain("Content=\"查看\"")
-            .And.Contain("BorderThickness=\"0\"")
-            .And.NotContain("BorderBrush=\"{DynamicResource Brush.Border.Default}\"")
-            .And.Contain("Text=\"{Binding EstimatedTimeRemaining}\"")
-            .And.Contain("Assets/Hanabe/hanabe-assistant.png")
-            .And.Contain("AnimatedGifImage")
-            .And.Contain("AnimationSource=\"{Binding AssistantAnimationSource}\"")
-            .And.Contain("x:Name=\"IdleSpeechBubble\"")
-            .And.Contain("x:Name=\"ActiveTaskPanel\"")
-            .And.Contain("x:Name=\"AvatarTranslation\"")
-            .And.Contain("Width=\"96\" Height=\"112\"")
-            .And.Contain("PreviewMouseLeftButtonDown=\"AssistantAvatar_PreviewMouseLeftButtonDown\"")
-            .And.Contain("PreviewMouseMove=\"AssistantAvatar_PreviewMouseMove\"")
-            .And.Contain("PreviewMouseLeftButtonUp=\"AssistantAvatar_PreviewMouseLeftButtonUp\"")
-            .And.Contain("单击切换动作，双击打开 Hanabe；拖动可移动悬浮窗")
-            .And.Contain("Text=\"{Binding ImportSuccessCount, Mode=OneWay}\"")
-            .And.Contain("Text=\"{Binding ImportFailedCount, Mode=OneWay}\"")
-            .And.Contain("Text=\"{Binding ImportSkippedCount, Mode=OneWay}\"")
-            .And.Contain("PreviewMouseLeftButtonDown=\"Surface_PreviewMouseLeftButtonDown\"");
-        project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"");
-        code.Should().Contain("_hasUserPosition = true")
-            .And.Contain("if (_hasUserPosition) return;");
+            .And.Contain("ShowActivated=\"False\"")
+            .And.Contain("AllowsTransparency=\"True\"")
+            .And.Contain("x:Name=\"Polaroid\"")
+            .And.Contain("x:Name=\"PolBack\"")
+            .And.Contain("x:Name=\"Bubble\"")
+            .And.Contain("x:Name=\"Peek\"")
+            .And.Contain("MouseLeftButtonDown=\"Char_MouseLeftButtonDown\"")
+            .And.Contain("Click=\"HideButton_Click\"");
+        project.Should().Contain("Resource Include=\"Assets\\Hanabe\\hanabe-assistant.png\"")
+            .And.Contain("Resource Include=\"Assets\\Hanabe\\Outfits\\*.png\"");
+        code.Should().Contain("AssistantSnapshot")
+            .And.Contain("CancelCurrentTaskCommand.Execute")
+            .And.Contain("ResumePendingImportAsync")
+            .And.Contain("ImportSuccessCount")
+            .And.Contain("EstimatedTimeRemaining")
+            .And.Contain("_hasUserPosition = true")
+            .And.Contain("if (_hasUserPosition || _peek) return;");
+        foreach (var outfit in new[] { "street", "idol", "rainy", "holy", "encore" })
+        {
+            File.Exists(Path.Combine(root, "src", "HanabePhotoManager.App", "Assets", "Hanabe", "Outfits", outfit + ".png")).Should().BeTrue();
+        }
     }
 
     [Fact]
     public void ImportFlow_UsesOriginCommentsBeforeLegacyHashFallbackAndWritesVerifiedMetadata()
     {
         var root = FindSourceRoot();
-        var importCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.Import.cs"));
-        var mainCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        // 导入查重的比对逻辑在 MainWindowViewModel.ImportDuplicates.cs（并行 + 同日范围 + 第 2 步预查共用）。
+        var importCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.ImportDuplicates.cs"));
+        var mainCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
-        importCode.Should().Contain("_originDuplicateMatcher.FindMatchAsync")
+        importCode.Should().Contain("matcher = _originDuplicateMatcher")
+            .And.Contain("matcher.FindMatchAsync")
             .And.Contain("_contentScanner.FindContentDuplicateAsync");
         mainCode.Should().Contain("WriteAndVerifyAsync")
             .And.Contain("new FileOriginMetadata(")
@@ -278,7 +278,9 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        mainXaml.Should().Contain("<ColumnDefinition Width=\"{Binding Source={StaticResource Size.Sidebar.Width}}\" />");
+        // 侧栏列宽跟随 SidebarClip，由 VM 的 SidebarColumnWidth 驱动平滑动画（完整 / 只显示图标 / 收起）。
+        mainXaml.Should().Contain("<Border x:Name=\"SidebarClip\" Grid.Column=\"0\" ClipToBounds=\"True\"");
+        mainXaml.Should().Contain("Width=\"{Binding SidebarContentWidth}\"");
         mainXaml.Should().Contain("Style=\"{StaticResource Sidebar.Container}\"");
         mainXaml.Should().Contain("ItemsSource=\"{Binding NavigationItems}\"");
         mainXaml.Should().Contain("Style=\"{StaticResource Navigation.RailItem}\"");
@@ -313,7 +315,7 @@ public sealed class ControlThemeTests
     {
         var root = FindSourceRoot();
         var viewModelSource = File.ReadAllText(Path.Combine(
-            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         var mainXaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
         viewModelSource.Should().NotContain("AskForDateRemarksAsync")
@@ -401,7 +403,10 @@ public sealed class ControlThemeTests
         transitionCode.Should().Contain("FrameworkElement sourceElement");
         transitionCode.Should().Contain("sourceElement.TranslatePoint");
         transitionCode.Should().NotContain("Apply(Window window, WpfPoint origin");
-        transitionCode.Should().Contain("Clip = outsideCircle");
+        // 柔边扩散：径向渐变遮罩（硬件加速），并等新主题渲染首帧后才开始；仍禁止昂贵的 DrawingBrush 遮罩。
+        transitionCode.Should().Contain("OpacityMask = mask");
+        transitionCode.Should().Contain("new RadialGradientBrush");
+        transitionCode.Should().Contain("CompositionTarget.Rendering");
         transitionCode.Should().NotContain("OpacityMask = new DrawingBrush");
     }
 
@@ -443,9 +448,10 @@ public sealed class ControlThemeTests
         var main = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
         var duplicateCode = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Duplicates", "DuplicateReviewWindow.xaml.cs"));
 
+        // 图库工具栏：多选开关与智能识别展开按钮在同一行，不再有各自的小标题。
         main.Should().Contain("<CheckBox Content=\"多选\"");
-        main.Should().Contain("<TextBlock Text=\"选择模式\"");
-        main.Should().Contain("<Button Grid.Row=\"1\" Height=\"36\" HorizontalAlignment=\"Left\" Style=\"{StaticResource Button.Disclosure}\"");
+        main.Should().NotContain("<TextBlock Text=\"选择模式\"");
+        main.Should().Contain("Style=\"{StaticResource Button.Disclosure}\" Command=\"{Binding ToggleAdvancedFiltersCommand}\"");
         main.Should().NotContain("Orientation=\"Horizontal\" HorizontalAlignment=\"Right\" VerticalAlignment=\"Bottom\" Margin=\"12,0,0,10\"");
         main.Should().Contain("IsChecked=\"{Binding IsMultiSelectMode, Mode=TwoWay}\"");
         main.Should().NotContain("<ToggleButton Style=\"{StaticResource Toggle.ModeButton}\"\n                                        IsChecked=\"{Binding IsMultiSelectMode, Mode=TwoWay}\"");
@@ -459,14 +465,14 @@ public sealed class ControlThemeTests
     {
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "Duplicates", "DuplicateMergeScopeWindow.xaml"));
-        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var code = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         xaml.Should().Contain("仅合并 SHA-256 值相同的");
         xaml.Should().Contain("仅合并视觉相似的");
         xaml.Should().Contain("两者都合并").And.Contain("IsChecked=\"True\"");
         xaml.Should().Contain("不会自动删除");
-        code.Should().Contain("DuplicateMergeScopePolicy.IncludesExact(scope)");
-        code.Should().Contain("DuplicateMergeScopePolicy.IncludesVisual(scope)");
+        code.Should().Contain("DuplicateMergeScopePolicy.IncludesExact(scope.Value)");
+        code.Should().Contain("DuplicateMergeScopePolicy.IncludesVisual(scope.Value)");
     }
 
     [Fact]
@@ -517,11 +523,13 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
+        // 搜索与类型分段都在照片墙所在的工作区里，类型只出现一次（分段按钮，不再是下拉框）。
         mainXaml.Should().Contain("x:Name=\"BrowseUnifiedWorkspace\"");
         mainXaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
-        mainXaml.Split("ItemsSource=\"{Binding PreviewCategoryFilters}\"").Should().HaveCount(2);
+        mainXaml.Split("ItemsSource=\"{Binding PreviewCategoryChips}\"").Should().HaveCount(2);
+        mainXaml.Should().NotContain("ItemsSource=\"{Binding PreviewCategoryFilters}\"");
         mainXaml.IndexOf("x:Name=\"BrowseUnifiedWorkspace\"", StringComparison.Ordinal)
-            .Should().BeLessThan(mainXaml.IndexOf("ItemsSource=\"{Binding PreviewCategoryFilters}\"", StringComparison.Ordinal));
+            .Should().BeLessThan(mainXaml.IndexOf("ItemsSource=\"{Binding PreviewCategoryChips}\"", StringComparison.Ordinal));
         mainXaml.Should().NotContain("BorderThickness=\"1,0,1,0\"");
         mainXaml.Should().NotContain("Text=\"{Binding NewCustomTagName");
         mainXaml.Should().NotContain("Command=\"{Binding CreateCustomTagCommand}");
@@ -559,8 +567,9 @@ public sealed class ControlThemeTests
         mainXaml.Should().Contain("IsOnboardingVisible");
         mainXaml.Should().Contain("PreviousOnboardingStepCommand");
         mainXaml.Should().Contain("NextOnboardingStepCommand");
-        mainXaml.Should().Contain("分析并预览导入");
-        mainXaml.Should().Contain("AnalyzeAndImportCommand");
+        // 新导入页：选来源即自动分析，检查确认后点“开始导入”。
+        mainXaml.Should().Contain("导入这个设备").And.Contain("开始导入");
+        mainXaml.Should().Contain("StartImportFromReviewCommand");
         mainXaml.Should().NotContain("OnboardingAnalyzeButton");
         mainXaml.Should().NotContain("OnboardingImportButton");
         mainXaml.Should().Contain("选择图库根目录");
@@ -608,7 +617,7 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
         var vm = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            FindSourceRoot(), "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         vm.Should().Contain("public bool HasNoPreviewItems => !HasPreviewItems;");
         mainXaml.Should().Contain("HasNoPreviewItems, Converter={StaticResource BoolToVis}");
@@ -640,7 +649,7 @@ public sealed class ControlThemeTests
         var mainXaml = File.ReadAllText(Path.Combine(
             FindSourceRoot(), "src", "HanabePhotoManager.App", "MainWindow.xaml"));
         var vm = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            FindSourceRoot(), "src", "HanabePhotoManager.Shared", "ViewModels", "PreviewFileViewModel.cs"));
 
         vm.Should().Contain("public bool HasNoThumbnail => !HasThumbnail;");
         mainXaml.Should().Contain("HasNoThumbnail, Converter={StaticResource BoolToVis}");

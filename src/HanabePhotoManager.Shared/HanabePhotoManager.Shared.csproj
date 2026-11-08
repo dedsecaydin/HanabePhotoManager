@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Windows（WPF）和 macOS（Avalonia）共用的逻辑层：服务、导入 / 查重 / 人物 / 水印 / 压缩 / 恢复等业务逻辑，
+    以及去掉界面依赖后的视图模型。这里不允许引用 WPF、WinForms 或 Win32；平台相关的能力通过接口由各平台提供。
+    命名空间保持原样（HanabePhotoManager.App.*），从 App 迁过来的代码无需改调用方。
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>HanabePhotoManager.App</RootNamespace>
+    <AssemblyName>HanabePhotoManager.Shared</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.20.1" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+    <PackageReference Include="MetadataExtractor" Version="2.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HanabePhotoManager.Core\HanabePhotoManager.Core.csproj" />
+    <ProjectReference Include="..\HanabePhotoManager.Infrastructure\HanabePhotoManager.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HanabePhotoManager.App" />
+    <InternalsVisibleTo Include="HanabePhotoManager.App.Tests" />
+    <InternalsVisibleTo Include="HanabePhotoManager" />
+  </ItemGroup>
+</Project>

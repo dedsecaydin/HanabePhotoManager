@@ -49,7 +49,7 @@ public sealed class AdvancedCollageTests : IDisposable
             await image.SaveAsPngAsync(tagged);
         }
         var plan = new CollagePlan(80, 40, [new(tagged, 0, 0, 40, 40), new(untagged, 40, 0, 40, 40)]);
-        var result = await new ImageCollageService().ComposeAsync(plan, new(root, CollageFileFormat.Png), null, CancellationToken.None);
+        var result = await new ImageCollageService(new HanabePhotoManager.App.Collage.CollageColorConverter()).ComposeAsync(plan, new(root, CollageFileFormat.Png), null, CancellationToken.None);
         result.IsSuccess.Should().BeTrue(result.Message);
         using var output = await Image.LoadAsync<Rgba32>(result.OutputPath!);
         output.Metadata.IccProfile.Should().NotBeNull();
@@ -82,7 +82,7 @@ public sealed class AdvancedCollageTests : IDisposable
             image.Metadata.IccProfile = new SixLabors.ImageSharp.Metadata.Profiles.Icc.IccProfile(bytes); await image.SaveAsPngAsync(linear);
             image.Metadata.IccProfile = new SixLabors.ImageSharp.Metadata.Profiles.Icc.IccProfile(await File.ReadAllBytesAsync(systemProfile)); await image.SaveAsPngAsync(srgb);
         }
-        var result = await new ImageCollageService().ComposeAsync(new CollagePlan(40, 20, [new(linear, 0, 0, 20, 20), new(srgb, 20, 0, 20, 20)]), new(root, CollageFileFormat.Png), null, CancellationToken.None);
+        var result = await new ImageCollageService(new HanabePhotoManager.App.Collage.CollageColorConverter()).ComposeAsync(new CollagePlan(40, 20, [new(linear, 0, 0, 20, 20), new(srgb, 20, 0, 20, 20)]), new(root, CollageFileFormat.Png), null, CancellationToken.None);
         using var output = await Image.LoadAsync<Rgba32>(result.OutputPath!);
         output[10, 10].R.Should().BeInRange(183, 193); output[30, 10].R.Should().BeInRange(125, 131);
         output.Metadata.IccProfile.Should().NotBeNull();

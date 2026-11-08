@@ -10,7 +10,7 @@ public sealed class DateOpenPipelineTests
     public void SelectedDatePipeline_UsesSnapshotCancellationAndRangeUpdates()
     {
         var source = File.ReadAllText(SourcePath(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("LibraryDateSnapshotService");
         source.Should().Contain("_dateLoadCancellation");
@@ -26,7 +26,7 @@ public sealed class DateOpenPipelineTests
     public void SelectedDatePipeline_DoesNotAwaitCapacityBeforeShowingContent()
     {
         var source = File.ReadAllText(SourcePath(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         var start = source.IndexOf(
             "private async Task SelectDateAsync",
             StringComparison.Ordinal);
@@ -47,7 +47,7 @@ public sealed class DateOpenPipelineTests
     public void AllDatesRefresh_InvalidatesPendingSingleDateBatchesFirst()
     {
         var source = File.ReadAllText(SourcePath(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         var start = source.IndexOf("private async Task RefreshLibraryAsync", StringComparison.Ordinal);
         var end = source.IndexOf("private async Task SelectDateAsync", start, StringComparison.Ordinal);
 

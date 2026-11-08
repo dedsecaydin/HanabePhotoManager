@@ -121,6 +121,89 @@ public sealed class LibraryContentScannerTests : IDisposable
         duplicate.Should().BeNull();
     }
 
+    private static byte[] LargeBytes(int seed, int length = 400 * 1024)
+    {
+        var data = new byte[length];
+        new Random(seed).NextBytes(data);
+        return data;
+    }
+
+    [Fact]
+    public async Task FindContentDuplicateAsync_SameHeadAndTailButDifferentMiddle_IsNotDuplicate()
+    {
+        // 快速指纹只看头尾：相同时必须再用完整 SHA-256 确认，不能误判。
+        var existing = LargeBytes(1);
+        var incoming = (byte[])existing.Clone();
+        incoming[200 * 1024] ^= 0xFF;
+        var existingPath = Path.Combine(_root, "existing.jpg");
+        var sourcePath = Path.Combine(_root, "incoming.mp4");
+        await File.WriteAllBytesAsync(existingPath, existing);
+        await File.WriteAllBytesAsync(sourcePath, incoming);
+
+        (await _scanner.ComputeQuickFingerprintAsync(existingPath, default))
+            .Should().Be(await _scanner.ComputeQuickFingerprintAsync(sourcePath, default));
+        var map = await _scanner.BuildSizeMapAsync(_root, Extensions, default);
+        (await _scanner.FindContentDuplicateAsync(sourcePath, map, default)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FindContentDuplicateAsync_DifferentTail_RejectedByQuickFingerprint()
+    {
+        var existing = LargeBytes(2);
+        var incoming = (byte[])existing.Clone();
+        incoming[^1] ^= 0x01;
+        var existingPath = Path.Combine(_root, "existing.jpg");
+        var sourcePath = Path.Combine(_root, "incoming.mp4");
+        await File.WriteAllBytesAsync(existingPath, existing);
+        await File.WriteAllBytesAsync(sourcePath, incoming);
+
+        (await _scanner.ComputeQuickFingerprintAsync(existingPath, default))
+            .Should().NotBe(await _scanner.ComputeQuickFingerprintAsync(sourcePath, default));
+        var map = await _scanner.BuildSizeMapAsync(_root, Extensions, default);
+        (await _scanner.FindContentDuplicateAsync(sourcePath, map, default)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task FindContentDuplicateAsync_IdenticalLargeFile_IsDuplicate()
+    {
+        var data = LargeBytes(3);
+        var existingPath = Path.Combine(_root, "existing.jpg");
+        var sourcePath = Path.Combine(_root, "incoming.mp4");
+        await File.WriteAllBytesAsync(existingPath, data);
+        await File.WriteAllBytesAsync(sourcePath, data);
+
+        var map = await _scanner.BuildSizeMapAsync(_root, Extensions, default);
+        (await _scanner.FindContentDuplicateAsync(sourcePath, map, default)).Should().Be(existingPath);
+    }
+
+    [Fact]
+    public async Task FindAllDuplicatesAsync_SameSizeDifferentContent_OnlyHashesQuickMatches()
+    {
+        var hasher = new CountingHasher(_hasher);
+        var scanner = new LibraryContentScanner(hasher);
+        var shared = LargeBytes(4);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "a.jpg"), shared);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "b.jpg"), shared);
+        await File.WriteAllBytesAsync(Path.Combine(_root, "c.jpg"), LargeBytes(5));
+        await File.WriteAllBytesAsync(Path.Combine(_root, "d.jpg"), LargeBytes(6));
+
+        var groups = await scanner.FindAllDuplicatesAsync(_root, Extensions, default);
+
+        groups.Should().ContainSingle().Which.Should().HaveCount(2);
+        hasher.Calls.Should().Be(2, "c/d 与 a/b 尺寸相同但头尾不同，不应读完整文件");
+    }
+
+    private sealed class CountingHasher(IFileHasher inner) : IFileHasher
+    {
+        private int _calls;
+        public int Calls => _calls;
+        public Task<string> ComputeSha256Async(string path, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _calls);
+            return inner.ComputeSha256Async(path, cancellationToken);
+        }
+    }
+
     [Fact]
     public async Task FindAllDuplicatesAsync_ReturnsGroupsOfDuplicates()
     {

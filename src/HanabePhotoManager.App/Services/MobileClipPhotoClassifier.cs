@@ -7,14 +7,6 @@ using CvSize = OpenCvSharp.Size;
 
 namespace HanabePhotoManager.App.Services;
 
-/// <summary>控制 MobileCLIP 本地运行时的模型路径和性能参数。</summary>
-public static class MobileClipRuntimeOptions
-{
-    public static int MaximumLabels { get; set; } = 3;
-    public static double SimilarityWindow { get; set; } = .10;
-    public static string DevicePreference { get; set; } = "自动（NVIDIA 优先）";
-}
-
 /// <summary>使用 MobileCLIP 图像编码器和预计算标签向量执行多标签分类。</summary>
 public sealed class MobileClipPhotoClassifier : IPhotoClassifier, IDisposable
 {
@@ -86,22 +78,8 @@ public sealed class MobileClipPhotoClassifier : IPhotoClassifier, IDisposable
         finally { foreach (var channel in channels) channel.Dispose(); }
     }
 
-    public static IReadOnlyList<PhotoLabelScore> RankLabels(IReadOnlyList<float> image, IReadOnlyDictionary<string, float[]> labels)
-    {
-        var imageNorm = Math.Sqrt(image.Sum(value => value * value));
-        if (imageNorm <= double.Epsilon) return [];
-        var ranked = labels.Select(pair =>
-        {
-            var count = Math.Min(image.Count, pair.Value.Length);
-            var dot = Enumerable.Range(0, count).Sum(i => image[i] * pair.Value[i]);
-            var norm = Math.Sqrt(pair.Value.Take(count).Sum(value => value * value));
-            return (pair.Key, Score: norm <= double.Epsilon ? -1d : dot / (imageNorm * norm));
-        }).OrderByDescending(item => item.Score).ToArray();
-        if (ranked.Length == 0) return [];
-        var cutoff = ranked[0].Score - Math.Clamp(MobileClipRuntimeOptions.SimilarityWindow, .02, .30);
-        return ranked.Where(item => item.Score >= cutoff).Take(Math.Clamp(MobileClipRuntimeOptions.MaximumLabels, 1, 5))
-            .Select(item => new PhotoLabelScore(item.Key, Math.Round(Math.Clamp((item.Score + 1) / 2, 0, 1), 3))).ToArray();
-    }
+    public static IReadOnlyList<PhotoLabelScore> RankLabels(IReadOnlyList<float> image, IReadOnlyDictionary<string, float[]> labels) =>
+        PortableClassificationPostprocessing.RankLabels(image, labels);
 
     public void Dispose() { _network?.Dispose(); _gate.Dispose(); }
 }

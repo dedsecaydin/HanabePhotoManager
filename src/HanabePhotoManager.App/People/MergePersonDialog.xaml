@@ -1,7 +1,7 @@
 <Window x:Class="HanabePhotoManager.App.People.MergePersonDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels"
+        xmlns:vm="clr-namespace:HanabePhotoManager.App.ViewModels;assembly=HanabePhotoManager.Shared"
         Title="合并到人物"
         Width="480"
         Height="540"

@@ -31,7 +31,7 @@ public sealed class BrowseTreemapIntegrationTests
     public void SwitchingToTreemap_RehydratesAlreadyLoadedPreviewFiles()
     {
         var source = File.ReadAllText(ProjectFile(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("EnsureTreemapPopulatedFromPreviewFiles()");
         source.Should().Contain("TreemapBrowser.Items.Count > 0");
@@ -44,7 +44,7 @@ public sealed class BrowseTreemapIntegrationTests
         // which never routes through RepopulateTreemapFrom. The viewport queue
         // must still be seeded so the initial photo wall loads thumbnails.
         var source = File.ReadAllText(ProjectFile(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("EnsureTreemapSourceLookup");
         source.Should().Contain("StartTreemapThumbnailLoading(_filteredCache.ToArray())");
@@ -66,7 +66,7 @@ public sealed class BrowseTreemapIntegrationTests
     public void DateScan_ForwardsBatchesAndCompletionToTreemapModule()
     {
         var source = File.ReadAllText(ProjectFile(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("TreemapBrowser.BeginScan(node.FullPath)");
         source.Should().Contain("TreemapBrowser.ApplyBatch(treemapGeneration, batch)");
@@ -77,7 +77,7 @@ public sealed class BrowseTreemapIntegrationTests
     public void RootLibraryScan_AlsoStreamsBatchesToTreemapModule()
     {
         var source = File.ReadAllText(ProjectFile(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("TreemapBrowser.BeginScan(root)");
         source.Should().Contain("AddPreviewMetadataBatch(ready, scanned, scanVersion, treemapGeneration)");
@@ -97,7 +97,7 @@ public sealed class BrowseTreemapIntegrationTests
     public void Startup_EntersPreviewWithNeutralAllLibraryFiltersBeforeRootScan()
     {
         var source = File.ReadAllText(ProjectFile(
-            "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("private string _currentPage = \"Preview\"");
         source.Should().Contain("BrowseDisplayMode = BrowseDisplayMode.Grid;");

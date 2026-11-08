@@ -44,7 +44,8 @@ public sealed class NavigationMotionTests
         xaml.Should().NotContain("x:Name=\"PrimaryNavigationSelectionTransform\"");
         xaml.Should().NotContain("x:Name=\"NavSelectionSurface\"");
         xaml.Should().NotContain("x:Name=\"NavIconSurface\"");
-        xaml.Should().Contain("MinWidth=\"1440\" MinHeight=\"900\"");
+        // 最小尺寸需能放进 150% 缩放的 1440p 屏（工作区约 1707×928）和半屏贴靠，否则内容会被裁掉。
+        xaml.Should().Contain("MinWidth=\"1024\" MinHeight=\"680\"");
         xaml.Should().Contain("Source=\"{DynamicResource Image.AppLogo}\"");
         xaml.Should().Contain("Motion.Duration.Normal");
         xaml.Should().Contain("KeyboardNavigation.DirectionalNavigation=\"Cycle\"");

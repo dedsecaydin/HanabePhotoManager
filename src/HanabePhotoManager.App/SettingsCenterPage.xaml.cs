@@ -1,6 +1,10 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using HanabePhotoManager.App.Navigation;
 using HanabePhotoManager.App.Services;
@@ -10,15 +14,35 @@ using HanabePhotoManager.Core.Imports;
 namespace HanabePhotoManager.App;
 
 /// <summary>
-/// 设置中心视图适配层，负责二级导航、主题预览和需要读取视觉树的交互同步。
+/// 设置中心视图适配层：11 个分区的切换、全局搜索定位、主题色卡和需要读取视觉树的交互。
 /// </summary>
 public partial class SettingsCenterPage : System.Windows.Controls.UserControl
 {
     private static string? _lastSectionKey;
+    private readonly (string Key, string Name, FrameworkElement Element)[] _sections;
+
+    /// <summary>搜索同义词：用户常用说法 → 设置里的叫法。</summary>
+    private static readonly Dictionary<string, string[]> SearchSynonyms = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["声音"] = ["音效", "提示音"], ["音量"] = ["提示音量"], ["缓存"] = ["指纹", "缓存"], ["开机"] = ["自启动"],
+        ["壁纸"] = ["背景"], ["皮肤"] = ["主题", "服装"], ["换肤"] = ["主题"], ["人脸"] = ["人物", "人脸"],
+        ["桌宠"] = ["Hanabe", "角色"], ["角色"] = ["服装", "角色"], ["重复"] = ["重复", "查重"], ["查重"] = ["重复", "指纹"],
+        ["快捷"] = ["快捷键", "Ctrl"], ["版本"] = ["版本", "更新"], ["数据"] = ["数据目录", "缓存"], ["隐私"] = ["隐私", "本机"],
+        ["命名"] = ["命名", "模板"], ["后缀"] = ["后缀", "扩展名"], ["格式"] = ["后缀", "格式"], ["深色"] = ["主题"], ["浅色"] = ["主题"]
+    };
 
     public SettingsCenterPage()
     {
         InitializeComponent();
+        _sections =
+        [
+            ("general", "常规", GeneralSection), ("appearance", "外观", AppearanceSection),
+            ("pet", "Hanabe 桌宠", PetSection), ("import", "导入", ImportSection),
+            ("library", "照片库", LibrarySection), ("browse", "浏览", BrowseSection),
+            ("intelligence", "AI 与人物", IntelligenceSection), ("tools", "工具", ToolsSection),
+            ("storage", "存储与隐私", StorageSection), ("shortcuts", "快捷键", ShortcutsSection),
+            ("about", "关于", AboutSection)
+        ];
         PreviewKeyDown += SettingsCenterPage_PreviewKeyDown;
     }
 
@@ -33,11 +57,8 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
 
         if (SectionNavList.SelectedItem is null && SectionNavList.Items.Count > 0)
         {
-            // 回到设置页时停留在上次查看的分组，而不是每次都回到第一组。
-            var remembered = SectionNavList.Items.OfType<ListBoxItem>()
-                .FirstOrDefault(item => string.Equals(item.Tag as string, _lastSectionKey, StringComparison.Ordinal));
-            if (remembered is not null) SectionNavList.SelectedItem = remembered;
-            else SectionNavList.SelectedIndex = 0;
+            // 回到设置页时停留在上次查看的分区，而不是每次都回到第一组。
+            if (!SelectSection(_lastSectionKey)) SectionNavList.SelectedIndex = 0;
         }
 
         UpdateThemeIndicators();
@@ -78,54 +99,24 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         UpdateThemeIndicators();
     }
 
+    private bool SelectSection(string? key)
+    {
+        var item = SectionNavList.Items.OfType<ListBoxItem>()
+            .FirstOrDefault(entry => string.Equals(entry.Tag as string, key, StringComparison.Ordinal));
+        if (item is null) return false;
+        SectionNavList.SelectedItem = item;
+        return true;
+    }
+
     private void SectionNav_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (SectionNavList.SelectedItem is not ListBoxItem { Tag: string key })
             return;
         _lastSectionKey = key;
-
-        AppearanceSection.Visibility = key == "appearance" ? Visibility.Visible : Visibility.Collapsed;
-        SoundSection.Visibility = key == "sound" ? Visibility.Visible : Visibility.Collapsed;
-        GeneralSection.Visibility = key == "general" ? Visibility.Visible : Visibility.Collapsed;
-        LibrarySection.Visibility = key == "library" ? Visibility.Visible : Visibility.Collapsed;
-        BrowseSection.Visibility = key == "browse" ? Visibility.Visible : Visibility.Collapsed;
-        AdvancedSection.Visibility = key == "advanced" ? Visibility.Visible : Visibility.Collapsed;
-        IntelligenceSection.Visibility = key == "intelligence" ? Visibility.Visible : Visibility.Collapsed;
-        ToolsSection.Visibility = key == "tools" ? Visibility.Visible : Visibility.Collapsed;
-        var section = key switch
-        {
-            "appearance" => AppearanceSection, "sound" => SoundSection,
-            "general" => GeneralSection, "library" => LibrarySection,
-            "browse" => BrowseSection, "intelligence" => IntelligenceSection,
-            "tools" => ToolsSection, _ => AdvancedSection
-        };
-        AnchorList.ItemsSource = FindHeaders(section).Select(header => new SettingAnchor(header.Text, header)).ToArray();
+        foreach (var (sectionKey, _, element) in _sections)
+            element.Visibility = sectionKey == key ? Visibility.Visible : Visibility.Collapsed;
+        if (SettingsSearchBox.Text.Length > 0) SettingsSearchBox.Clear();
         SettingsScroll.ScrollToTop();
-        CurrentAnchorText.Text = "当前分组：顶部";
-        SettingsContextHint.Text = key switch
-        {
-            "library" => "先确认照片库位置与导入分类，再调整扫描和去重选项。所有更改自动保存。",
-            "browse" => "这里设置进入图库时的默认状态，不影响当前正在浏览的内容。",
-            "appearance" => "主题立即生效；右侧预览会跟随选择变化。",
-            "sound" => "先设置总开关与音量，再逐个试听事件提示。",
-            "intelligence" => "AI 与人物识别的偏好集中在此；处理仍在本机进行。",
-            "tools" => "常用图片工具的默认值集中在此。",
-            "advanced" => "诊断、快捷键和关于信息放在最后，避免干扰日常设置。",
-            _ => "应用启动与窗口行为集中在此。"
-        };
-        var showTheme = key == "appearance" ? Visibility.Visible : Visibility.Collapsed;
-        ThemePreviewHeading.Visibility = showTheme;
-        ThemePreviewCard.Visibility = showTheme;
-        var showStorage = key == "library" ? Visibility.Visible : Visibility.Collapsed;
-        StorageHeading.Visibility = showStorage;
-        StorageCard.Visibility = showStorage;
-        var showAbout = key == "advanced" ? Visibility.Visible : Visibility.Collapsed;
-        AboutHeading.Visibility = showAbout;
-        AboutCard.Visibility = showAbout;
-        SponsorDivider.Visibility = showAbout;
-        SponsorHeading.Visibility = showAbout;
-        SponsorQrCard.Visibility = showAbout;
-        AfdianLinkCard.Visibility = showAbout;
     }
 
     private void AddImportFolder_Click(object sender, RoutedEventArgs e)
@@ -173,69 +164,105 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         else viewModel.RemoveImportRoutingRule(index);
     }
 
-    private sealed record SettingAnchor(string Text, FrameworkElement Target);
-    private sealed record SettingSearchResult(string Text, string SectionName, string SectionKey, FrameworkElement Target);
+    /// <summary>一条搜索结果：面包屑（分区 › 分组）、设置名，以及命中说明时的说明原文。</summary>
+    private sealed record SettingSearchResult(string Text, string Breadcrumb, string Detail, string SectionKey, FrameworkElement Target)
+    {
+        public bool HasDetail => Detail.Length > 0;
+    }
 
     private void SettingsSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (SectionNavList is null || SearchResultsScroll is null || LibrarySection is null) return;
+        if (SearchResultsScroll is null || SettingsScroll is null) return;
         var query = SettingsSearchBox.Text.Trim();
         var searching = query.Length > 0;
-        SectionNavList.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
+        SettingsScroll.Visibility = searching ? Visibility.Collapsed : Visibility.Visible;
         SearchResultsScroll.Visibility = searching ? Visibility.Visible : Visibility.Collapsed;
         if (!searching) return;
 
-        var sections = new (string Key, string Name, FrameworkElement Element)[]
-        {
-            ("library", "导入与照片库", LibrarySection), ("browse", "浏览与显示", BrowseSection),
-            ("intelligence", "AI 与人物", IntelligenceSection), ("tools", "工具默认值", ToolsSection),
-            ("appearance", "外观与导航", AppearanceSection), ("sound", "音效", SoundSection),
-            ("general", "应用常规", GeneralSection), ("advanced", "高级与帮助", AdvancedSection)
-        };
+        var terms = new List<string> { query };
+        if (SearchSynonyms.TryGetValue(query, out var extra)) terms.AddRange(extra);
+        bool Matches(string text) => terms.Any(term => text.Contains(term, StringComparison.OrdinalIgnoreCase));
+
         var results = new List<SettingSearchResult>();
-        foreach (var (key, name, section) in sections)
+        var seen = new HashSet<FrameworkElement>();
+        foreach (var (key, name, section) in _sections)
         {
-            if (name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                results.Add(new SettingSearchResult(name, name, key, section));
-            results.AddRange(FindSearchableLabels(section)
-                .Where(label => label.Text.Contains(query, StringComparison.OrdinalIgnoreCase))
-                .Select(label => new SettingSearchResult(label.Text, name, key, label)));
+            var group = "";
+            TextBlock? lastTitle = null;
+            foreach (var (label, kind) in FindSearchableLabels(section))
+            {
+                if (kind == LabelKind.Group) { group = label.Text; lastTitle = null; }
+                else if (kind == LabelKind.Title) lastTitle = label;
+
+                var crumb = group.Length > 0 ? $"{name}  ›  {group}" : name;
+                if (kind == LabelKind.Group)
+                {
+                    if (Matches(label.Text) && seen.Add(label)) results.Add(new SettingSearchResult(label.Text, name, "", key, label));
+                }
+                else if (kind == LabelKind.Title)
+                {
+                    if (Matches(label.Text) && seen.Add(label)) results.Add(new SettingSearchResult(label.Text, crumb, "", key, label));
+                }
+                else if (Matches(label.Text) && lastTitle is not null && seen.Add(lastTitle))
+                {
+                    results.Add(new SettingSearchResult(lastTitle.Text, crumb, label.Text, key, lastTitle));
+                }
+            }
         }
+
         SearchResultsList.ItemsSource = results.Take(40).ToArray();
-        SearchResultCount.Text = results.Count == 0 ? "没有找到匹配的设置" : $"找到 {results.Count} 项 · 点击直接定位";
+        SearchResultHeading.Text = $"“{query}”的结果";
+        var sectionCount = results.Select(result => result.SectionKey).Distinct().Count();
+        SearchResultCount.Text = results.Count == 0
+            ? "没有找到匹配的设置。换个说法试试，比如下面这些。"
+            : $"{results.Count} 项 · 在 {sectionCount} 个分区 · 点一项直接跳过去";
+        SearchSuggestions.Visibility = results.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         SearchResultsScroll.ScrollToTop();
     }
 
-    private IEnumerable<TextBlock> FindSearchableLabels(DependencyObject parent)
+    private enum LabelKind { Group, Title, Description }
+
+    private IEnumerable<(TextBlock Label, LabelKind Kind)> FindSearchableLabels(DependencyObject parent)
     {
-        var headingStyle = FindResource("Settings.GroupHeader");
+        var groupStyle = FindResource("Settings.GroupHeader");
         var titleStyle = FindResource("Settings.RowTitle");
-        var descStyle = TryFindResource("Settings.RowDesc");
-        return FindSearchableLabels(parent, headingStyle, titleStyle, descStyle);
+        var descStyle = FindResource("Settings.RowDesc");
+        return FindSearchableLabels(parent, groupStyle, titleStyle, descStyle);
     }
 
-    // 搜索同时匹配分组标题、设置名与说明文字（说明命中时仍定位到该设置行）。
-    private static IEnumerable<TextBlock> FindSearchableLabels(DependencyObject parent, object headingStyle, object titleStyle, object? descStyle)
+    // 按文档顺序遍历：分组标题、设置名与说明文字都可被搜索（说明命中时定位到所属设置行）。
+    private static IEnumerable<(TextBlock, LabelKind)> FindSearchableLabels(DependencyObject parent, object groupStyle, object titleStyle, object descStyle)
     {
         foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
         {
-            if (child is TextBlock text && !string.IsNullOrWhiteSpace(text.Text) &&
-                (ReferenceEquals(text.Style, headingStyle) || ReferenceEquals(text.Style, titleStyle) ||
-                 (descStyle is not null && ReferenceEquals(text.Style, descStyle))))
-                yield return text;
-            foreach (var label in FindSearchableLabels(child, headingStyle, titleStyle, descStyle)) yield return label;
+            if (child is TextBlock text && !string.IsNullOrWhiteSpace(text.Text))
+            {
+                if (ReferenceEquals(text.Style, groupStyle)) yield return (text, LabelKind.Group);
+                else if (ReferenceEquals(text.Style, titleStyle)) yield return (text, LabelKind.Title);
+                else if (ReferenceEquals(text.Style, descStyle)) yield return (text, LabelKind.Description);
+            }
+            foreach (var label in FindSearchableLabels(child, groupStyle, titleStyle, descStyle)) yield return label;
         }
     }
 
     private void SettingsSearchResult_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is not System.Windows.Controls.Button { Tag: SettingSearchResult result }) return;
-        var navigationItem = SectionNavList.Items.OfType<ListBoxItem>()
-            .FirstOrDefault(item => string.Equals(item.Tag as string, result.SectionKey, StringComparison.Ordinal));
-        if (navigationItem is null) return;
-        SectionNavList.SelectedItem = navigationItem;
+        if (sender is System.Windows.Controls.Button { Tag: SettingSearchResult result }) OpenSearchResult(result);
+    }
+
+    private void OpenSearchResult(SettingSearchResult result)
+    {
+        if (!SelectSection(result.SectionKey)) return;
         SettingsSearchBox.Clear();
         Dispatcher.BeginInvoke(new Action(() => ScrollToSettingTarget(result.Target)), DispatcherPriority.Loaded);
+    }
+
+    private void SearchSuggestion_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Content: string text }) return;
+        SettingsSearchBox.Text = text;
+        SettingsSearchBox.CaretIndex = text.Length;
+        SettingsSearchBox.Focus();
     }
 
     private void SettingsSearch_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
@@ -248,22 +275,28 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         else if (e.Key == Key.Enter && SearchResultsList.ItemsSource is IEnumerable<SettingSearchResult> results &&
                  results.FirstOrDefault() is { } first)
         {
-            var item = SectionNavList.Items.OfType<ListBoxItem>()
-                .FirstOrDefault(entry => string.Equals(entry.Tag as string, first.SectionKey, StringComparison.Ordinal));
-            if (item is not null)
-            {
-                SectionNavList.SelectedItem = item;
-                SettingsSearchBox.Clear();
-                Dispatcher.BeginInvoke(new Action(() => ScrollToSettingTarget(first.Target)), DispatcherPriority.Loaded);
-                e.Handled = true;
-            }
+            OpenSearchResult(first);
+            e.Handled = true;
         }
     }
 
     private void ScrollToSettingTarget(FrameworkElement target)
     {
+        // 目标藏在「高级」折叠里时先展开，再计算位置。
+        var expanded = false;
+        for (DependencyObject? current = target; current is not null; current = LogicalTreeHelper.GetParent(current) ?? System.Windows.Media.VisualTreeHelper.GetParent(current))
+        {
+            if (current is FrameworkElement { Tag: ToggleButton { IsChecked: not true } toggle })
+            {
+                toggle.IsChecked = true;
+                expanded = true;
+            }
+            if (ReferenceEquals(current, SettingsScroll)) break;
+        }
+        if (expanded) SettingsScroll.UpdateLayout();
+
         var offset = target.TranslatePoint(new System.Windows.Point(), SettingsScroll).Y + SettingsScroll.VerticalOffset;
-        SettingsScroll.ScrollToVerticalOffset(Math.Max(0, offset - 12));
+        SettingsScroll.ScrollToVerticalOffset(Math.Max(0, offset - 24));
         FlashSettingRow(target);
     }
 
@@ -275,7 +308,7 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         for (var depth = 0; current is not null && depth < 4; depth++)
         {
             current = LogicalTreeHelper.GetParent(current) ?? System.Windows.Media.VisualTreeHelper.GetParent(current);
-            if (current is System.Windows.Controls.Grid grid) { row = grid; break; }
+            if (current is System.Windows.Controls.DockPanel or System.Windows.Controls.Grid) { row = (System.Windows.Controls.Panel)current; break; }
         }
         if (row is null || row.ActualHeight > 160 || TryFindResource("Brush.Primary") is not System.Windows.Media.SolidColorBrush primary) return;
 
@@ -301,41 +334,23 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
         }
     }
 
-    internal void ShowImportRoutingOverview() => ScrollToSettingTarget(ImportRoutingOverviewSection);
-
-    private IEnumerable<TextBlock> FindHeaders(DependencyObject parent)
+    internal void ShowImportRoutingOverview()
     {
-        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
-        {
-            if (child is TextBlock text && ReferenceEquals(text.Style, FindResource("Settings.GroupHeader"))) yield return text;
-            foreach (var header in FindHeaders(child)) yield return header;
-        }
+        SelectSection("import");
+        Dispatcher.BeginInvoke(new Action(() => ScrollToSettingTarget(ImportRoutingOverviewSection)), DispatcherPriority.Loaded);
     }
 
-    private void SettingAnchor_Click(object sender, RoutedEventArgs e)
+    private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.Button { Tag: FrameworkElement target })
+        try
         {
-            ScrollToSettingTarget(target);
+            System.IO.Directory.CreateDirectory(AppDataPaths.Root);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"\"{AppDataPaths.Root}\"") { UseShellExecute = true });
         }
-    }
-
-    private void SettingsScroll_ScrollChanged(object sender, ScrollChangedEventArgs e)
-    {
-        if (AnchorList.ItemsSource is not IEnumerable<SettingAnchor> anchors)
-            return;
-
-        var visible = anchors
-            .Select(anchor => new
-            {
-                anchor.Text,
-                Offset = anchor.Target.TranslatePoint(new System.Windows.Point(0, 0), SettingsScroll).Y
-            })
-            .Where(item => item.Offset <= 96)
-            .OrderByDescending(item => item.Offset)
-            .FirstOrDefault();
-
-        CurrentAnchorText.Text = visible is null ? "当前分组：顶部" : $"当前分组：{visible.Text}";
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or System.IO.IOException or UnauthorizedAccessException)
+        {
+            // 打不开资源管理器时路径仍显示在卡片里，可手动复制。
+        }
     }
 
     private void UpdateThemeIndicators()
@@ -417,4 +432,51 @@ public partial class SettingsCenterPage : System.Windows.Controls.UserControl
             // No default browser registered.
         }
     }
+}
+
+/// <summary>把桌宠服装枚举映射到设置页服装卡片的预览图。</summary>
+public sealed class AssistantOutfitPreviewConverter : IValueConverter
+{
+    private static readonly Dictionary<HanabeAssistantVisualStyle, BitmapImage?> Cache = [];
+
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is not HanabeAssistantVisualStyle style) return null;
+        if (Cache.TryGetValue(style, out var cached)) return cached;
+        var file = style switch
+        {
+            HanabeAssistantVisualStyle.ChibiAnimated => "Outfits/street.png",
+            HanabeAssistantVisualStyle.PixelAnimated => "Outfits/street.png",
+            HanabeAssistantVisualStyle.IdolAnimated => "Outfits/idol.png",
+            HanabeAssistantVisualStyle.RainyAnimated => "Outfits/rainy.png",
+            HanabeAssistantVisualStyle.WinterAnimated => "Outfits/rainy.png",
+            HanabeAssistantVisualStyle.OldMoneyAnimated => "Outfits/holy.png",
+            HanabeAssistantVisualStyle.EncoreAnimated => "Outfits/encore.png",
+            HanabeAssistantVisualStyle.Static => "hanabe-assistant.png",
+            _ => null
+        };
+        BitmapImage? image = null;
+        if (file is not null)
+        {
+            image = new BitmapImage();
+            image.BeginInit();
+            image.UriSource = new Uri($"pack://application:,,,/Assets/Hanabe/{file}", UriKind.Absolute);
+            // 像素风：先缩到很小再用最近邻放大，卡片上就是像素颗粒。
+            image.DecodePixelWidth = style == HanabeAssistantVisualStyle.PixelAnimated ? 64 : 200;
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.EndInit();
+            image.Freeze();
+        }
+        Cache[style] = image;
+        return image;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => System.Windows.Data.Binding.DoNothing;
+}
+
+/// <summary>把枚举值转成名称字符串，供只接受字符串参数的命令使用（例如声音风格试听）。</summary>
+public sealed class EnumNameConverter : IValueConverter
+{
+    public object? Convert(object value, Type targetType, object parameter, CultureInfo culture) => value?.ToString();
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => System.Windows.Data.Binding.DoNothing;
 }

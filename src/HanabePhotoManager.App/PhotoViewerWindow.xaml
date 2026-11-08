@@ -4,7 +4,7 @@
         xmlns:local="clr-namespace:HanabePhotoManager.App"
         xmlns:vlc="clr-namespace:LibVLCSharp.WPF;assembly=LibVLCSharp.WPF"
         Title="照片查看器" Width="1500" Height="920" MinWidth="980" MinHeight="640"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="Manual"
         WindowStyle="None" ResizeMode="NoResize"
         Background="{DynamicResource Brush.Viewer.Canvas}"
         Foreground="{DynamicResource Brush.Viewer.Text}"
@@ -12,6 +12,7 @@
         PreviewKeyDown="Window_PreviewKeyDown"
         MouseLeftButtonDown="Window_MouseLeftButtonDown"
         MouseMove="Window_MouseMove"
+        SourceInitialized="Window_SourceInitialized"
         Loaded="Window_Loaded"
         SizeChanged="Window_SizeChanged"
         Closing="Window_Closing">
@@ -26,21 +27,25 @@
     <!-- M3 状态层：半透明主色叠加（颜色取自语义 Token，不写死色值） -->
     <SolidColorBrush x:Key="Viewer.StateHover" Color="{DynamicResource Color.Primary}" Opacity="0.22"/>
     <SolidColorBrush x:Key="Viewer.StatePressed" Color="{DynamicResource Color.Primary}" Opacity="0.34"/>
-    <!-- 悬浮工具栏胶囊：半透明 Viewer.Chrome 底色 + 下层亚克力模糊（AcrylicLayer 由代码
-         按媒体区实时截取 + BlurEffect 提供），照片透过来呈玻璃质感。颜色全部取自语义 Token。 -->
+    <local:RatingAtLeastConverter x:Key="RatingAtLeast"/>
+    <SolidColorBrush x:Key="Viewer.StateLight" Color="{DynamicResource Color.Viewer.Text}" Opacity="0.14"/>
+    <SolidColorBrush x:Key="Viewer.Stroke" Color="{DynamicResource Color.Viewer.Text}" Opacity="0.14"/>
+    <SolidColorBrush x:Key="Viewer.DangerHover" Color="{DynamicResource Color.Status.Danger}" Opacity="0.24"/>
+    <!-- 悬浮工具栏：深色玻璃（Viewer.Chrome + 下层亚克力模糊，见 RefreshAcrylic）+ 1px 细描边。
+         圆角用 Radius.Container，与 RefreshAcrylic 的裁剪几何一致。 -->
     <Style x:Key="Viewer.Toolbar" TargetType="Border">
       <Setter Property="Background" Value="{DynamicResource Brush.Viewer.Chrome}"/>
-      <!-- 正常药丸形状（2026-08-14 用户反馈全圆头丑）：Radius.Container=28 ≈ 工具栏高度一半，
-           宽扁底栏上视觉协调；IconButton 仍是 Radius.Dialog 圆形按钮 -->
+      <Setter Property="BorderBrush" Value="{StaticResource Viewer.Stroke}"/>
+      <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="CornerRadius" Value="{StaticResource Radius.Container}"/>
-      <Setter Property="Padding" Value="10,8"/>
-      <Setter Property="Opacity" Value="0.62"/>
+      <Setter Property="Padding" Value="6"/>
       <Setter Property="Effect" Value="{StaticResource Shadow.Dialog}"/>
     </Style>
-    <!-- 工具栏图标按钮：透明底 + Viewer 文字色 + 彩色状态层 -->
+    <!-- 工具栏图标按钮：40×40 圆形；悬停时浅白底，按下时粉色状态层；图标统一 18px、2px 线宽 -->
     <Style x:Key="Viewer.IconButton" TargetType="Button">
       <Setter Property="Width" Value="40"/>
       <Setter Property="Height" Value="40"/>
+      <Setter Property="Margin" Value="1,0"/>
       <Setter Property="Background" Value="Transparent"/>
       <Setter Property="BorderBrush" Value="Transparent"/>
       <Setter Property="BorderThickness" Value="0"/>
@@ -50,12 +55,12 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Chrome" CornerRadius="{StaticResource Radius.Dialog}" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+            <Border x:Name="Chrome" CornerRadius="20" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
               <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
             <ControlTemplate.Triggers>
               <Trigger Property="IsMouseOver" Value="True">
-                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Viewer.StateHover}"/>
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Viewer.StateLight}"/>
               </Trigger>
               <Trigger Property="IsPressed" Value="True">
                 <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Viewer.StatePressed}"/>
@@ -65,14 +70,75 @@
                 <Setter TargetName="Chrome" Property="BorderThickness" Value="2"/>
               </Trigger>
               <Trigger Property="IsEnabled" Value="False">
-                <Setter Property="Foreground" Value="{DynamicResource Brush.Text.Tertiary}"/>
-                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Surface.Disabled}"/>
-                <Setter TargetName="Chrome" Property="BorderBrush" Value="{DynamicResource Brush.Border.Disabled}"/>
+                <Setter Property="Opacity" Value="0.3"/>
               </Trigger>
             </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
+    </Style>
+    <!-- 危险操作（移到回收站）：悬停时变红 -->
+    <Style x:Key="Viewer.DangerButton" TargetType="Button" BasedOn="{StaticResource Viewer.IconButton}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Background" Value="{StaticResource Viewer.DangerHover}"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <!-- 左右翻页：屏幕两侧居中的 52px 圆形玻璃按钮 -->
+    <Style x:Key="Viewer.NavButton" TargetType="Button" BasedOn="{StaticResource Viewer.IconButton}">
+      <Setter Property="Width" Value="52"/>
+      <Setter Property="Height" Value="52"/>
+      <Setter Property="Margin" Value="0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Chrome" CornerRadius="26" Background="{TemplateBinding Background}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Viewer.StateLight}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{StaticResource Viewer.StatePressed}"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.25"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- 视频播放 / 暂停：48px 粉色渐变实心圆，是底栏唯一的主按钮 -->
+    <Style x:Key="Viewer.PlayButton" TargetType="Button" BasedOn="{StaticResource Viewer.IconButton}">
+      <Setter Property="Width" Value="48"/>
+      <Setter Property="Height" Value="48"/>
+      <Setter Property="Margin" Value="4,0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Chrome" CornerRadius="24" Background="{DynamicResource Brush.Primary.Fill}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Accent.Hover}"/>
+              </Trigger>
+              <Trigger Property="IsPressed" Value="True">
+                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Brush.Accent.Pressed}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+    <!-- 评分星：32px，已评到的星为粉色实心，其余为描边 -->
+    <Style x:Key="Viewer.StarButton" TargetType="Button" BasedOn="{StaticResource Viewer.IconButton}">
+      <Setter Property="Width" Value="32"/>
+      <Setter Property="Height" Value="40"/>
+      <Setter Property="Margin" Value="0"/>
     </Style>
     <!-- M3 滑块：圆角轨道 + Primary 进度 + Primary 圆点 -->
     <Style x:Key="Viewer.Slider" TargetType="Slider">
@@ -125,12 +191,27 @@
     </Style>
   </Window.Resources>
 
-  <Grid>
-    <!-- 媒体区：照片 / 视频共用 -->
+  <!-- ViewerRoot：打开 / 关闭过渡动画作用在这里（见 PhotoViewerWindow.Transitions.cs） -->
+  <Grid x:Name="ViewerRoot">
+    <!-- 媒体区：照片 / 视频共用。照片背后是同一张图的大半径模糊（压暗），铺满整屏 -->
     <Grid x:Name="MediaRoot">
-      <ScrollViewer x:Name="PhotoViewport" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Cursor="Hand" PreviewMouseWheel="PhotoViewport_PreviewMouseWheel" PreviewMouseLeftButtonDown="PhotoViewport_PreviewMouseLeftButtonDown" PreviewMouseMove="PhotoViewport_PreviewMouseMove" PreviewMouseLeftButtonUp="PhotoViewport_PreviewMouseLeftButtonUp" LostMouseCapture="PhotoViewport_LostMouseCapture">
-        <Image x:Name="PhotoImage" Source="{Binding Image}" Stretch="Uniform" Margin="28" Width="{Binding ActualWidth, ElementName=PhotoViewport}" Height="{Binding ActualHeight, ElementName=PhotoViewport}"><Image.LayoutTransform><ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/></Image.LayoutTransform></Image>
+      <!-- 氛围背景：32px 小图直接放大（双线性插值本身就是柔和的大模糊），不用 BlurEffect——
+           亚克力层用 RenderTargetBitmap 软件渲染 MediaRoot，大半径模糊会把 UI 线程拖死。 -->
+      <Image x:Name="AmbientImage" Stretch="UniformToFill" Opacity="0.32" IsHitTestVisible="False" RenderOptions.BitmapScalingMode="Linear"/>
+      <!-- 四周压暗：画布色 + 径向透明度遮罩，中间透出模糊背景 -->
+      <Border IsHitTestVisible="False" Background="{DynamicResource Brush.Viewer.Canvas}" Opacity="0.82">
+        <Border.OpacityMask>
+          <RadialGradientBrush RadiusX="0.8" RadiusY="0.8">
+            <GradientStop Color="Transparent" Offset="0"/>
+            <GradientStop Color="Black" Offset="1"/>
+          </RadialGradientBrush>
+        </Border.OpacityMask>
+      </Border>
+      <ScrollViewer x:Name="PhotoViewport" Margin="24" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" Cursor="Hand" PreviewMouseWheel="PhotoViewport_PreviewMouseWheel" PreviewMouseLeftButtonDown="PhotoViewport_PreviewMouseLeftButtonDown" PreviewMouseMove="PhotoViewport_PreviewMouseMove" PreviewMouseLeftButtonUp="PhotoViewport_PreviewMouseLeftButtonUp" LostMouseCapture="PhotoViewport_LostMouseCapture">
+        <Image x:Name="PhotoImage" Source="{Binding Image}" Stretch="Uniform" Width="{Binding ActualWidth, ElementName=PhotoViewport}" Height="{Binding ActualHeight, ElementName=PhotoViewport}"><Image.LayoutTransform><ScaleTransform ScaleX="{Binding ZoomScale}" ScaleY="{Binding ZoomScale}"/></Image.LayoutTransform></Image>
       </ScrollViewer>
+      <!-- 视频快捷封面：相机自带封面 / 首帧缩略图，VLC 出第一帧前先顶上，出画面后隐藏 -->
+      <Image x:Name="VideoCover" Stretch="Uniform" Margin="24" Visibility="Collapsed" IsHitTestVisible="False"/>
       <vlc:VideoView x:Name="VideoHost" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
     </Grid>
 
@@ -142,85 +223,188 @@
       </Border.Effect>
     </Border>
 
-    <!-- 顶栏（默认隐藏，鼠标移动调出）：返回 + 文件名 + 位置 -->
-    <Border x:Name="TopBar" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
+    <!-- 左上：返回 + 文件名 / 第几张 · 拍摄时间 · 尺寸 -->
+    <Border x:Name="TopBar" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="20" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
       <StackPanel Orientation="Horizontal">
-        <Button Style="{StaticResource Viewer.IconButton}" Click="Close_Click" ToolTip="返回图库 (Esc)">
+        <Button Style="{StaticResource Viewer.IconButton}" Click="Close_Click" ToolTip="返回图库 (Esc)" AutomationProperties.Name="返回图库">
           <Path Data="{StaticResource Icon.ArrowLeft}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
         </Button>
-        <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Body}" FontWeight="{StaticResource Typography.FontWeight.Medium}" VerticalAlignment="Center" Margin="8,0,6,0" MaxWidth="420" TextTrimming="CharacterEllipsis"/>
-        <TextBlock Text="{Binding PositionText}" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Caption}" Opacity="0.7" VerticalAlignment="Center" Margin="0,0,6,0"/>
+        <StackPanel VerticalAlignment="Center" Margin="8,0,14,0">
+          <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Body}" FontWeight="{StaticResource Typography.FontWeight.SemiBold}" MaxWidth="460" TextTrimming="CharacterEllipsis"/>
+          <TextBlock Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Caption}" Opacity="0.66" Margin="0,1,0,0" MaxWidth="460" TextTrimming="CharacterEllipsis">
+            <Run Text="{Binding PositionText, Mode=OneWay}"/><Run Text="   "/><Run Text="{Binding Metadata.TakenAt, Mode=OneWay}"/><Run Text="   "/><Run Text="{Binding Metadata.Dimensions, Mode=OneWay}"/>
+          </TextBlock>
+        </StackPanel>
       </StackPanel>
     </Border>
-    <Border x:Name="TopBarRight" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
+
+    <!-- 右上：评分 | 信息 · 打开所在文件夹 · 移到回收站 | 关闭 -->
+    <Border x:Name="TopBarRight" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="20" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
       <StackPanel Orientation="Horizontal">
-        <Button Style="{StaticResource Viewer.IconButton}" Click="ToggleFullscreen_Click" ToolTip="全屏 (F11)">
-          <Grid>
-            <Path x:Name="FullscreenGlyph" Data="{StaticResource Icon.Maximize}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform"/>
-            <Path x:Name="RestoreGlyph" Data="{StaticResource Icon.Minimize}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform" Visibility="Collapsed"/>
-          </Grid>
+        <StackPanel Orientation="Horizontal" Margin="4,0,0,0" AutomationProperties.Name="评分">
+            <Button Style="{StaticResource Viewer.StarButton}" Command="{Binding SetRatingCommand}" CommandParameter="1" ToolTip="评 1 星（按 1）" AutomationProperties.Name="评 1 星">
+              <Path Data="{StaticResource Icon.Star}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8" StrokeLineJoin="Round">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Stroke" Value="{DynamicResource Brush.Viewer.Text}"/>
+                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Rating, Converter={StaticResource RatingAtLeast}, ConverterParameter=1}" Value="True">
+                        <Setter Property="Stroke" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Fill" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+            <Button Style="{StaticResource Viewer.StarButton}" Command="{Binding SetRatingCommand}" CommandParameter="2" ToolTip="评 2 星（按 2）" AutomationProperties.Name="评 2 星">
+              <Path Data="{StaticResource Icon.Star}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8" StrokeLineJoin="Round">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Stroke" Value="{DynamicResource Brush.Viewer.Text}"/>
+                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Rating, Converter={StaticResource RatingAtLeast}, ConverterParameter=2}" Value="True">
+                        <Setter Property="Stroke" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Fill" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+            <Button Style="{StaticResource Viewer.StarButton}" Command="{Binding SetRatingCommand}" CommandParameter="3" ToolTip="评 3 星（按 3）" AutomationProperties.Name="评 3 星">
+              <Path Data="{StaticResource Icon.Star}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8" StrokeLineJoin="Round">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Stroke" Value="{DynamicResource Brush.Viewer.Text}"/>
+                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Rating, Converter={StaticResource RatingAtLeast}, ConverterParameter=3}" Value="True">
+                        <Setter Property="Stroke" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Fill" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+            <Button Style="{StaticResource Viewer.StarButton}" Command="{Binding SetRatingCommand}" CommandParameter="4" ToolTip="评 4 星（按 4）" AutomationProperties.Name="评 4 星">
+              <Path Data="{StaticResource Icon.Star}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8" StrokeLineJoin="Round">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Stroke" Value="{DynamicResource Brush.Viewer.Text}"/>
+                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Rating, Converter={StaticResource RatingAtLeast}, ConverterParameter=4}" Value="True">
+                        <Setter Property="Stroke" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Fill" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+            <Button Style="{StaticResource Viewer.StarButton}" Command="{Binding SetRatingCommand}" CommandParameter="5" ToolTip="评 5 星（按 5）" AutomationProperties.Name="评 5 星">
+              <Path Data="{StaticResource Icon.Star}" Width="18" Height="18" Stretch="Uniform" StrokeThickness="1.8" StrokeLineJoin="Round">
+                <Path.Style>
+                  <Style TargetType="Path">
+                    <Setter Property="Stroke" Value="{DynamicResource Brush.Viewer.Text}"/>
+                    <Setter Property="Fill" Value="Transparent"/>
+                    <Setter Property="Opacity" Value="0.7"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding Rating, Converter={StaticResource RatingAtLeast}, ConverterParameter=5}" Value="True">
+                        <Setter Property="Stroke" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Fill" Value="{DynamicResource Brush.Primary}"/>
+                        <Setter Property="Opacity" Value="1"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Path.Style>
+              </Path>
+            </Button>
+        </StackPanel>
+        <Border Width="1" Height="22" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.16" Margin="6,0"/>
+        <Button Style="{StaticResource Viewer.IconButton}" Click="ToggleInfo_Click" ToolTip="详细信息 (I)" AutomationProperties.Name="详细信息">
+          <Path Data="{StaticResource Icon.Info}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
         </Button>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="Close_Click" ToolTip="关闭 (Esc)">
-          <Path Data="{StaticResource Icon.X}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform"/>
+        <Button Style="{StaticResource Viewer.IconButton}" Click="OpenSourceFolder_Click" ToolTip="在文件资源管理器中显示" AutomationProperties.Name="在文件资源管理器中显示">
+          <Path Data="{StaticResource Icon.FolderOpen}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
+        </Button>
+        <Button Style="{StaticResource Viewer.DangerButton}" Click="Delete_Click" ToolTip="移到回收站 (Delete)" AutomationProperties.Name="移到回收站">
+          <Path Data="{StaticResource Icon.Trash}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
+        </Button>
+        <Border Width="1" Height="22" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.16" Margin="6,0"/>
+        <Button Style="{StaticResource Viewer.IconButton}" Click="Close_Click" ToolTip="关闭 (Esc)" AutomationProperties.Name="关闭">
+          <Path Data="{StaticResource Icon.X}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
         </Button>
       </StackPanel>
     </Border>
 
-    <!-- 底栏（默认隐藏）：照片导航/缩放/信息 + 视频播放控制 -->
-    <Border x:Name="BottomBar" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,16" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
-      <StackPanel Orientation="Horizontal">
-        <Button Style="{StaticResource Viewer.IconButton}" Click="Previous_Click" ToolTip="上一张 (←)">
-          <Path Data="{StaticResource Icon.ChevronLeft}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="Next_Click" ToolTip="下一张 (→)">
-          <Path Data="{StaticResource Icon.ChevronRight}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-        <Border Width="1" Height="20" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.18" Margin="4,0"/>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="ZoomOut_Click" ToolTip="缩小 (滚轮)">
-          <Path Data="{StaticResource Icon.ZoomOut}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="ZoomIn_Click" ToolTip="放大 (滚轮)">
-          <Path Data="{StaticResource Icon.ZoomIn}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="ResetZoom_Click" ToolTip="适应窗口 (双击)">
-          <TextBlock Text="适应" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.BodySmall}" VerticalAlignment="Center"/>
-        </Button>
-        <Border Width="1" Height="20" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.18" Margin="4,0"/>
-        <!-- 视频控制组：仅视频文件时显示（布局：后退 + 播放/暂停 + 快进 + 进度条 + 倍速 + 音量） -->
+    <!-- 左右翻页：屏幕两侧居中 -->
+    <Border x:Name="PrevNavBar" Style="{StaticResource Viewer.Toolbar}" CornerRadius="30" Padding="3" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="24,0,0,0" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
+      <Button Style="{StaticResource Viewer.NavButton}" Click="Previous_Click" IsEnabled="{Binding CanPrevious}" ToolTip="上一张 (←)" AutomationProperties.Name="上一张">
+        <Path Data="{StaticResource Icon.ChevronLeft}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="22" Height="22" Stretch="Uniform"/>
+      </Button>
+    </Border>
+    <Border x:Name="NextNavBar" Style="{StaticResource Viewer.Toolbar}" CornerRadius="30" Padding="3" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,24,0" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
+      <Button Style="{StaticResource Viewer.NavButton}" Click="Next_Click" IsEnabled="{Binding CanNext}" ToolTip="下一张 (→)" AutomationProperties.Name="下一张">
+        <Path Data="{StaticResource Icon.ChevronRight}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="22" Height="22" Stretch="Uniform"/>
+      </Button>
+    </Border>
+
+    <!-- 底部：照片是缩放条；视频是播放条（主按钮粉色，进度条拉长） -->
+    <Border x:Name="BottomBar" Style="{StaticResource Viewer.Toolbar}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,24" Visibility="Visible" Opacity="0" IsHitTestVisible="False">
+      <Grid>
+        <StackPanel x:Name="PhotoGroup" Orientation="Horizontal">
+          <Button Style="{StaticResource Viewer.IconButton}" Click="ZoomOut_Click" ToolTip="缩小（滚轮）" AutomationProperties.Name="缩小">
+            <Path Data="{StaticResource Icon.ZoomOut}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
+          </Button>
+          <Button Style="{StaticResource Viewer.IconButton}" Width="64" Click="ResetZoom_Click" ToolTip="适应屏幕（双击照片）" AutomationProperties.Name="适应屏幕">
+            <TextBlock Text="{Binding ZoomScale, StringFormat={}{0:P0}}" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.BodySmall}" FontWeight="{StaticResource Typography.FontWeight.SemiBold}" VerticalAlignment="Center"/>
+          </Button>
+          <Button Style="{StaticResource Viewer.IconButton}" Click="ZoomIn_Click" ToolTip="放大（滚轮）" AutomationProperties.Name="放大">
+            <Path Data="{StaticResource Icon.ZoomIn}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
+          </Button>
+        </StackPanel>
+        <!-- 视频控制组：仅视频文件时显示 -->
         <StackPanel x:Name="VideoGroup" Orientation="Horizontal" Visibility="Collapsed">
-          <Button Style="{StaticResource Viewer.IconButton}" Click="SeekBack_Click" ToolTip="后退 10 秒 (Shift+←)">
+          <Button Style="{StaticResource Viewer.IconButton}" Click="SeekBack_Click" ToolTip="后退 10 秒 (Shift+←)" AutomationProperties.Name="后退 10 秒">
             <Path Data="{StaticResource Icon.SkipBack}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
           </Button>
-          <Button x:Name="PlayPauseButton" Style="{StaticResource Viewer.IconButton}" Click="PlayPause_Click" ToolTip="播放 / 暂停 (空格)">
+          <Button x:Name="PlayPauseButton" Style="{StaticResource Viewer.PlayButton}" Click="PlayPause_Click" ToolTip="播放 / 暂停 (空格)" AutomationProperties.Name="播放或暂停">
             <Grid>
-              <Path x:Name="PlayGlyph" Data="{StaticResource Icon.Play}" Fill="{DynamicResource Brush.Viewer.Text}" Width="18" Height="18" Stretch="Uniform"/>
-              <Path x:Name="PauseGlyph" Data="{StaticResource Icon.Pause}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2.4" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform" Visibility="Collapsed"/>
+              <Path x:Name="PlayGlyph" Data="{StaticResource Icon.Play}" Fill="{DynamicResource Brush.OnPrimary}" Width="18" Height="18" Stretch="Uniform" Margin="2,0,0,0"/>
+              <Path x:Name="PauseGlyph" Data="{StaticResource Icon.Pause}" Stroke="{DynamicResource Brush.OnPrimary}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform" Visibility="Collapsed"/>
             </Grid>
           </Button>
-          <Button Style="{StaticResource Viewer.IconButton}" Click="SeekForward_Click" ToolTip="快进 10 秒 (Shift+→)">
+          <Button Style="{StaticResource Viewer.IconButton}" Click="SeekForward_Click" ToolTip="快进 10 秒 (Shift+→)" AutomationProperties.Name="快进 10 秒">
             <Path Data="{StaticResource Icon.SkipForward}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
           </Button>
-          <Slider x:Name="PositionSlider" Style="{StaticResource Viewer.Slider}" Width="260" Minimum="0" Maximum="1" Value="0" VerticalAlignment="Center" Margin="6,0" ValueChanged="PositionSlider_ValueChanged"/>
-          <TextBlock x:Name="TimeText" Text="00:00 / 00:00" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Caption}" Opacity="0.85" VerticalAlignment="Center" Margin="10,0"/>
-          <Button x:Name="SpeedButton" Style="{StaticResource Viewer.IconButton}" Click="Speed_Click" ToolTip="倍速：0.5x / 1x / 1.25x / 1.5x / 2x（[ / ] 切换）">
+          <TextBlock x:Name="TimeText" Text="00:00 / 00:00" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.Caption}" Opacity="0.85" VerticalAlignment="Center" Margin="12,0,10,0" MinWidth="86"/>
+          <Slider x:Name="PositionSlider" Style="{StaticResource Viewer.Slider}" Width="460" Minimum="0" Maximum="1" Value="0" VerticalAlignment="Center" Margin="0,0,12,0" ValueChanged="PositionSlider_ValueChanged" AutomationProperties.Name="播放进度"/>
+          <Border Width="1" Height="22" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.16" Margin="6,0"/>
+          <Button x:Name="SpeedButton" Style="{StaticResource Viewer.IconButton}" Width="48" Click="Speed_Click" ToolTip="倍速：0.5x / 1x / 1.25x / 1.5x / 2x（[ / ] 切换）" AutomationProperties.Name="倍速">
             <TextBlock x:Name="SpeedText" Text="1x" Foreground="{DynamicResource Brush.Viewer.Text}" FontSize="{StaticResource Typography.BodySmall}" FontWeight="{StaticResource Typography.FontWeight.SemiBold}" VerticalAlignment="Center"/>
           </Button>
-          <Button x:Name="MuteButton" Style="{StaticResource Viewer.IconButton}" Click="Mute_Click" ToolTip="静音">
+          <Button x:Name="MuteButton" Style="{StaticResource Viewer.IconButton}" Click="Mute_Click" ToolTip="静音" AutomationProperties.Name="静音">
             <Grid>
               <Path x:Name="VolumeGlyph" Data="{StaticResource Icon.Volume2}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
               <Path x:Name="MutedGlyph" Data="{StaticResource Icon.VolumeX}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform" Visibility="Collapsed"/>
             </Grid>
           </Button>
-          <Slider x:Name="VolumeSlider" Style="{StaticResource Viewer.Slider}" Width="100" Minimum="0" Maximum="100" Value="80" VerticalAlignment="Center" Margin="2,0,8,0" ValueChanged="VolumeSlider_ValueChanged"/>
+          <Slider x:Name="VolumeSlider" Style="{StaticResource Viewer.Slider}" Width="96" Minimum="0" Maximum="100" Value="80" VerticalAlignment="Center" Margin="2,0,10,0" ValueChanged="VolumeSlider_ValueChanged" AutomationProperties.Name="音量"/>
         </StackPanel>
-        <Border Width="1" Height="20" Background="{DynamicResource Brush.Viewer.Text}" Opacity="0.18" Margin="4,0"/>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="ToggleInfo_Click" ToolTip="详细信息">
-          <Path Data="{StaticResource Icon.Info}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-        <Button Style="{StaticResource Viewer.IconButton}" Click="OpenSourceFolder_Click" ToolTip="打开源文件">
-          <Path Data="{StaticResource Icon.FolderOpen}" Stroke="{DynamicResource Brush.Viewer.Text}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Width="18" Height="18" Stretch="Uniform"/>
-        </Button>
-      </StackPanel>
+      </Grid>
     </Border>
 
     <!-- 右侧详细信息面板（默认隐藏，按钮调出） -->
@@ -236,12 +420,11 @@
           <StackPanel>
             <TextBlock Text="{Binding Metadata.Name}" FontSize="{StaticResource Typography.Title}" FontWeight="{StaticResource Typography.FontWeight.SemiBold}" TextWrapping="Wrap"/>
             <TextBlock Text="{Binding Metadata.Extension}" Margin="0,5,0,18" Foreground="{DynamicResource Brush.Text.Secondary}"/>
-            <TextBlock Text="评分" Foreground="{DynamicResource Brush.Text.Secondary}" Margin="0,0,0,8"/><StackPanel Orientation="Horizontal" Margin="0,0,0,16"><Button Content="1" Style="{StaticResource Button.Toolbar}" Command="{Binding SetRatingCommand}" CommandParameter="1"/><Button Content="2" Style="{StaticResource Button.Toolbar}" Command="{Binding SetRatingCommand}" CommandParameter="2"/><Button Content="3" Style="{StaticResource Button.Toolbar}" Command="{Binding SetRatingCommand}" CommandParameter="3"/><Button Content="4" Style="{StaticResource Button.Toolbar}" Command="{Binding SetRatingCommand}" CommandParameter="4"/><Button Content="5" Style="{StaticResource Button.Toolbar}" Command="{Binding SetRatingCommand}" CommandParameter="5"/></StackPanel>
-            <TextBlock Text="{Binding Rating, StringFormat=当前评分 {0} / 5}" Margin="0,0,0,12"/><Button Content="移入回收站  Delete" Style="{StaticResource Button.Danger}" Click="Delete_Click" Margin="0,0,0,12"/><TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource Brush.Status.Danger}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+            <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource Brush.Status.Danger}" TextWrapping="Wrap" Margin="0,0,0,12"/>
             <TextBlock Text="文件信息" Style="{StaticResource Layout.SectionTitle}" Margin="0,0,0,8"/><TextBlock Text="{Binding Metadata.FileSize, StringFormat=大小  {0}}" Margin="0,5"/><TextBlock Text="{Binding Metadata.Dimensions, StringFormat=分辨率  {0}}" Margin="0,5"/><TextBlock Text="{Binding Metadata.TakenAt, StringFormat=拍摄时间  {0}}" Margin="0,5" TextWrapping="Wrap"/><Separator Margin="0,15"/>
             <TextBlock Text="拍摄参数" Style="{StaticResource Layout.SectionTitle}" Margin="0,0,0,8"/><TextBlock Text="{Binding Metadata.Iso, StringFormat=ISO  {0}}" Margin="0,5"/><TextBlock Text="{Binding Metadata.Aperture, StringFormat=光圈  {0}}" Margin="0,5"/><TextBlock Text="{Binding Metadata.Shutter, StringFormat=快门  {0}}" Margin="0,5"/><TextBlock Text="{Binding Metadata.FocalLength, StringFormat=焦距  {0}}" Margin="0,5"/><Separator Margin="0,15"/>
             <TextBlock Text="设备与位置" Style="{StaticResource Layout.SectionTitle}" Margin="0,0,0,8"/><TextBlock Text="{Binding Metadata.Camera, StringFormat=相机  {0}}" Margin="0,5" TextWrapping="Wrap"/><TextBlock Text="{Binding Metadata.Lens, StringFormat=镜头  {0}}" Margin="0,5" TextWrapping="Wrap"/><TextBlock Text="{Binding Metadata.Location, StringFormat=位置  {0}}" Margin="0,5" TextWrapping="Wrap"/>
-            <TextBlock Margin="0,20,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Caption}" Text="方向键切换 · Shift+←/→ 快进/后退 10 秒 · 空格 播放/暂停 · [ / ] 倍速 · F11 全屏 · Delete 移入回收站" TextWrapping="Wrap"/>
+            <TextBlock Margin="0,20,0,0" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Caption}" Text="← / → 切换 · 1–5 评分 · 滚轮缩放、双击适应 · 空格 播放/暂停 · Shift+← / → 后退/快进 10 秒 · [ / ] 倍速 · Delete 移到回收站 · Esc 关闭" TextWrapping="Wrap"/>
           </StackPanel>
         </ScrollViewer>
       </DockPanel>

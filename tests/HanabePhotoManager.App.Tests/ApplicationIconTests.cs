@@ -41,7 +41,7 @@ public sealed class ApplicationIconTests
         windowXaml.Should().Contain("Icon=\"Assets/HanabeApp.ico\"");
 
         var codeBehind = File.ReadAllText(Path.Combine(projectDirectory, "MainWindow.xaml.cs"));
-        codeBehind.Should().Contain("_viewModel.AppIconImage ?? DefaultAppIcon");
+        codeBehind.Should().Contain("_viewModel.AppIconImage as System.Windows.Media.ImageSource ?? DefaultAppIcon");
     }
 
     private static string FindSourceRoot()

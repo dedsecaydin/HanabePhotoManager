@@ -1,0 +1,77 @@
+<Window x:Class="HanabePhotoManager.App.Agents.AgentSettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="AI 与 Agent 接口" Width="720" Height="760" WindowStartupLocation="CenterOwner"
+        Style="{DynamicResource Dialog.Window}">
+  <Border Margin="16" Style="{DynamicResource Dialog.Surface}">
+    <DockPanel>
+      <Grid DockPanel.Dock="Bottom" Margin="0,16,0,0">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <TextBlock VerticalAlignment="Center" Text="修改即时保存。API Key 和令牌用 Windows 账户加密保存在本机。" Foreground="{DynamicResource Brush.Text.Tertiary}" FontSize="{StaticResource Typography.Caption}" TextWrapping="Wrap"/>
+        <Button Grid.Column="1" Content="完成" Style="{DynamicResource Button.Primary}" IsDefault="True" IsCancel="True" Click="Close_Click" Padding="22,7"/>
+      </Grid>
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Text="AI 与 Agent 接口" Style="{DynamicResource Dialog.Title}"/>
+          <TextBlock Margin="0,6,0,0" Style="{DynamicResource Dialog.Body}" TextWrapping="Wrap"
+                     Text="搜索栏 AI 和外部 agent 用的是同一套功能：查照片库、搜照片、打开日期和人物、看导入状态、准备导入。改文件夹备注、给人物改名会先弹窗问你；导入的复制必须你在导入页亲自确认。"/>
+
+          <!-- 搜索栏 AI -->
+          <TextBlock Margin="0,22,0,8" Text="✦ 搜索栏 AI 助手" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"/>
+          <Border Padding="16" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+            <StackPanel>
+              <TextBlock Text="接口地址（OpenAI 兼容）" FontWeight="SemiBold"/>
+              <TextBox Margin="0,6,0,0" Height="36" VerticalContentAlignment="Center" Style="{DynamicResource Input.TextBox}" Text="{Binding AgentBaseUrl, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="模型接口地址"/>
+              <WrapPanel Margin="0,6,0,0">
+                <Button Content="DeepSeek" Style="{DynamicResource Button.Ghost}" Padding="8,3" Tag="https://api.deepseek.com/v1|deepseek-chat" Click="Preset_Click"/>
+                <Button Content="通义千问" Style="{DynamicResource Button.Ghost}" Padding="8,3" Tag="https://dashscope.aliyuncs.com/compatible-mode/v1|qwen-plus" Click="Preset_Click"/>
+                <Button Content="Claude" Style="{DynamicResource Button.Ghost}" Padding="8,3" Tag="https://api.anthropic.com/v1|claude-sonnet-5-5" Click="Preset_Click"/>
+                <Button Content="OpenAI" Style="{DynamicResource Button.Ghost}" Padding="8,3" Tag="https://api.openai.com/v1|gpt-4o-mini" Click="Preset_Click"/>
+                <Button Content="本机 Ollama" Style="{DynamicResource Button.Ghost}" Padding="8,3" Tag="http://localhost:11434/v1|qwen2.5:7b" Click="Preset_Click"/>
+              </WrapPanel>
+              <TextBlock Margin="0,12,0,0" Text="模型名" FontWeight="SemiBold"/>
+              <TextBox Margin="0,6,0,0" Height="36" VerticalContentAlignment="Center" Style="{DynamicResource Input.TextBox}" Text="{Binding AgentModelName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="模型名"/>
+              <TextBlock Margin="0,12,0,0" Text="API Key（本机 Ollama 可留空）" FontWeight="SemiBold"/>
+              <PasswordBox x:Name="ApiKeyBox" Margin="0,6,0,0" Height="36" VerticalContentAlignment="Center" PasswordChanged="ApiKeyBox_PasswordChanged" AutomationProperties.Name="API Key"/>
+              <TextBlock Margin="0,10,0,0" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}"
+                         Text="模型需要支持“工具调用（function calling）”。预设里的模型名只是示例，按你账号里实际可用的填写。照片本身不会上传给模型，只发送文件名、数量、路径等文字信息。"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 外部 agent -->
+          <TextBlock Margin="0,22,0,8" Text="外部 Agent 接口（MCP）" FontSize="{StaticResource Typography.TitleSmall}" FontWeight="SemiBold"/>
+          <Border Padding="16" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.ContainerHigh}">
+            <StackPanel>
+              <DockPanel>
+                <CheckBox DockPanel.Dock="Right" Style="{DynamicResource Input.Switch}" IsChecked="{Binding AgentServerEnabled}" AutomationProperties.Name="开启本机 Agent 接口"/>
+                <StackPanel>
+                  <TextBlock Text="让 Claude Code、Codex、Cursor 等 agent 调用 Hanabe" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding AgentServerStatus}" Margin="0,3,0,0" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}" TextWrapping="Wrap"/>
+                </StackPanel>
+              </DockPanel>
+              <TextBlock Margin="0,12,0,0" Text="只在本机 localhost 监听，其它电脑访问不到；每个请求都要带下面的令牌；改文件的操作仍会在软件里弹窗确认。" TextWrapping="Wrap" Foreground="{DynamicResource Brush.Text.Secondary}" FontSize="{StaticResource Typography.Caption}"/>
+              <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <TextBlock Text="端口" VerticalAlignment="Center" Margin="0,0,10,0" FontWeight="SemiBold"/>
+                <TextBox Grid.Column="1" Height="34" VerticalContentAlignment="Center" Style="{DynamicResource Input.TextBox}" Text="{Binding AgentServerPort, UpdateSourceTrigger=LostFocus}" AutomationProperties.Name="接口端口"/>
+                <TextBlock Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center" Text="{Binding AgentServerEndpoint}" FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
+              </Grid>
+              <DockPanel Margin="0,10,0,0">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                  <Button Content="复制令牌" Style="{DynamicResource Button.Secondary}" Padding="10,5" Margin="8,0,0,0" Click="CopyToken_Click"/>
+                  <Button Content="重新生成" Style="{DynamicResource Button.Ghost}" Padding="10,5" Margin="4,0,0,0" Command="{Binding RegenerateAgentServerTokenCommand}" ToolTip="旧令牌立即失效，已接入的 agent 需要换成新令牌"/>
+                </StackPanel>
+                <TextBlock Text="访问令牌" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              </DockPanel>
+              <DockPanel Margin="0,14,0,6">
+                <Button DockPanel.Dock="Right" Content="复制接入配置" Style="{DynamicResource Button.Secondary}" Padding="10,5" Click="CopySnippets_Click"/>
+                <TextBlock Text="接入方法" FontWeight="SemiBold" VerticalAlignment="Center"/>
+              </DockPanel>
+              <TextBox Text="{Binding AgentClientSnippets, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="{StaticResource Typography.Caption}" MinHeight="150" Padding="10" Style="{DynamicResource Input.TextBox}" VerticalContentAlignment="Top" AutomationProperties.Name="接入配置"/>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</Window>

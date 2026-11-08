@@ -8,11 +8,11 @@ using SixLabors.ImageSharp.PixelFormats;
 using SharpImage = SixLabors.ImageSharp.Image;
 namespace HanabePhotoManager.App.Collage;
 /// <summary>Windows Imaging Component converts each tagged source into the same sRGB destination.</summary>
-internal static class CollageColorConverter
+public sealed class CollageColorConverter : ICollageColorConverter
 {
     internal static string SrgbProfilePath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "spool", "drivers", "color", "sRGB Color Space Profile.icm");
-    internal static IccProfile? OutputProfile() => File.Exists(SrgbProfilePath) ? new IccProfile(File.ReadAllBytes(SrgbProfilePath)) : null;
-    internal static Image<Rgba32> ConvertToSrgb(Image<Rgba32> image, string temporaryDirectory)
+    public IccProfile? OutputProfile() => File.Exists(SrgbProfilePath) ? new IccProfile(File.ReadAllBytes(SrgbProfilePath)) : null;
+    public Image<Rgba32> ConvertToSrgb(Image<Rgba32> image, string temporaryDirectory)
     {
         image.Mutate(c => c.AutoOrient());
         if (image.Metadata.IccProfile is null) return image.Clone();

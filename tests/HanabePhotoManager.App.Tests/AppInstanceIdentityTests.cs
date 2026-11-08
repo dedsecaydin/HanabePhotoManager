@@ -1,4 +1,5 @@
 using HanabePhotoManager.App.Services;
+using System.IO;
 using Xunit;
 
 namespace HanabePhotoManager.App.Tests;
@@ -10,6 +11,15 @@ public sealed class AppInstanceIdentityTests
     {
         Assert.Equal(@"D:\HanabePhoto\data", AppDataPaths.ResolveProcessingRoot(null));
         Assert.Equal(@"D:\HanabePhoto\.artifacts\qa\processing", AppDataPaths.ResolveProcessingRoot(@"D:\HanabePhoto\.artifacts\qa"));
+    }
+
+    [Fact]
+    public void PlatformRootKeepsProcessingUnderConfiguredDataDirectory()
+    {
+        var root = Path.Combine(@"D:\HanabePhoto\.artifacts", "mac-root");
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "processing"), AppDataPaths.ResolveProcessingRoot(null, root));
+        var isolated = Path.Combine(root, "isolated");
+        Assert.Equal(Path.Combine(Path.GetFullPath(isolated), "processing"), AppDataPaths.ResolveProcessingRoot(isolated, root));
     }
 
     [Fact]

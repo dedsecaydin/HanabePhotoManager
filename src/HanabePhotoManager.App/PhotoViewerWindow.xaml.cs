@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using HanabePhotoManager.App.Platform;
 using HanabePhotoManager.App.Services;
 using HanabePhotoManager.App.ViewModels;
 using LibVLCSharp.Shared;
@@ -43,6 +44,8 @@ public partial class PhotoViewerWindow : Window
     private int _mediaRequestVersion;
     private bool _isClosing;
     private bool _videoActive;
+    // VLC 出第一帧之前视频窗口缩成 1px，让 WPF 里的快捷封面先顶上（HwndHost 会盖住 WPF 内容）
+    private bool _videoSurfaceReady;
     private bool _updatingSlider;
 
     // 倍速循环：0.5x → 1x → 1.25x → 1.5x → 2x（LibVLC MediaPlayer.Rate）
@@ -50,6 +53,7 @@ public partial class PhotoViewerWindow : Window
     private int _speedIndex = 1;
 
     // 真全屏（无边框最大化）状态；Esc 在全屏时先退出全屏再关闭
+    // 默认是恰当大小的无边窗口（见 PhotoViewerWindow.Sizing.cs）；F11 / 双击空白切到铺满屏幕。
     private bool _isFullscreen;
 
     // 亚克力层刷新节流（RTB 截取 MediaRoot 较贵，鼠标移动期间最多每 300ms 一次）
@@ -63,8 +67,9 @@ public partial class PhotoViewerWindow : Window
     // 在 nuget.org 不存在（2026-08-14 实测 BlobNotFound），故采用布局外置方案：视频播放且
     // 工具栏可见时给 VideoHost 预留顶/底工具栏带 + 右侧信息面板带，让视频窗口物理上不覆盖
     // 任何 WPF 功能栏（工具栏永远可点）；工具栏隐藏（沉浸态）时视频恢复全窗口。
-    private const double VideoBarReserveTop = 76;     // 顶栏 Margin16 + 高 56 + 4 安全余量
-    private const double VideoBarReserveBottom = 76;  // 底栏同上
+    private const double VideoBarReserveSide = 96;    // 左右翻页按钮 Margin24 + 58 + 安全余量
+    private const double VideoBarReserveTop = 84;     // 顶栏 Margin16 + 高 56 + 4 安全余量
+    private const double VideoBarReserveBottom = 92;  // 底栏同上
     private const double VideoBarReserveRight = 348;  // InfoPanel 340 宽 + 8 间隙
 
     private void UpdateVideoHostLayout()
@@ -74,13 +79,88 @@ public partial class PhotoViewerWindow : Window
         {
             // 工具栏「已调出」以 IsHitTestVisible 为准（ShowBar/HideBar 同步置位，无动画时序竞态）
             var barsVisible = TopBar.IsHitTestVisible || TopBarRight.IsHitTestVisible || BottomBar.IsHitTestVisible;
+            var side = barsVisible ? VideoBarReserveSide : 0;
             target = new Thickness(
-                0,
+                side,
                 barsVisible ? VideoBarReserveTop : 0,
-                InfoPanel.Visibility == Visibility.Visible ? VideoBarReserveRight : 0,
+                Math.Max(side, InfoPanel.Visibility == Visibility.Visible ? VideoBarReserveRight : 0),
                 barsVisible ? VideoBarReserveBottom : 0);
         }
         if (VideoHost.Margin != target) VideoHost.Margin = target;
+
+        // 第一帧出来之前：视频子窗口缩成左上角 1px（VLC 仍有窗口可渲染），露出下面的快捷封面
+        var hidden = _videoActive && !_videoSurfaceReady;
+        VideoHost.Width = hidden ? 1 : double.NaN;
+        VideoHost.Height = hidden ? 1 : double.NaN;
+        VideoHost.HorizontalAlignment = hidden ? System.Windows.HorizontalAlignment.Left : System.Windows.HorizontalAlignment.Stretch;
+        VideoHost.VerticalAlignment = hidden ? VerticalAlignment.Top : VerticalAlignment.Stretch;
+    }
+
+    // ---------- 氛围背景 + 视频快捷封面 ----------
+
+    /// <summary>
+    /// 照片：把已加载的大图缩成 32px 作氛围背景。视频：相机自带封面（Sony T01 等）或图库已缓存的
+    /// 首帧缩略图作为快捷封面，VLC 出画面前先显示；同一张图缩小后作氛围背景。全部在后台线程解码。
+    /// </summary>
+    private async void LoadMediaBackdrop(string? path, bool isVideo, int version)
+    {
+        if (!isVideo) VideoCover.Visibility = Visibility.Collapsed;
+        if (path is null) { AmbientImage.Source = null; return; }
+        var photo = isVideo ? null : _viewModel.Image as BitmapSource;
+        if (photo is { IsFrozen: false }) photo = null;
+        try
+        {
+            var (cover, ambient) = await Task.Run(() =>
+            {
+                BitmapSource? coverImage = null;
+                if (isVideo)
+                {
+                    var file = ThumbnailResolver.FindVideoPoster(path) ?? VideoFrameThumbnail.TryGetFirstFrameJpeg(path);
+                    coverImage = file is null ? null : DecodeBitmap(file, 1280);
+                    coverImage ??= PlatformServices.Thumbnails.Load(path, 640) as BitmapSource;
+                }
+                var source = isVideo ? coverImage : photo;
+                return (coverImage, source is null ? null : Shrink(source, 32));
+            });
+            if (version != _mediaRequestVersion || _isClosing) return;
+            AmbientImage.Source = ambient;
+            if (isVideo)
+            {
+                VideoCover.Source = cover;
+                VideoCover.Visibility = cover is not null && !_videoSurfaceReady ? Visibility.Visible : Visibility.Collapsed;
+            }
+        }
+        catch (Exception)
+        {
+            // 封面 / 氛围背景只是装饰，失败不影响查看
+        }
+    }
+
+    private static BitmapSource? DecodeBitmap(string file, int width)
+    {
+        try
+        {
+            using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            image.DecodePixelWidth = width;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return image;
+        }
+        catch (Exception) { return null; }
+    }
+
+    private static BitmapSource? Shrink(BitmapSource source, int width)
+    {
+        if (source.PixelWidth <= 0) return null;
+        var scale = Math.Min(1, (double)width / source.PixelWidth);
+        var small = new CachedBitmap(new TransformedBitmap(source, new ScaleTransform(scale, scale)), BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        small.Freeze();
+        return small;
     }
 
 
@@ -131,16 +211,22 @@ public partial class PhotoViewerWindow : Window
         // 构造完成前直接 return（Window_Loaded 会重新调用；防止 StopVideo 访问未初始化字段）
         if (!_initialized) return;
         var requestVersion = ++_mediaRequestVersion;
+        LoadMediaBackdrop(_viewModel.CurrentPath, _viewModel.IsVideo, requestVersion);
         if (_viewModel.IsVideo && _viewModel.CurrentPath is { } videoPath)
             await PlayVideoAsync(videoPath, requestVersion);
         else
+        {
             StopVideo();
+            PlayPhotoSwapTransition();
+        }
     }
 
     private async Task PlayVideoAsync(string path, int requestVersion)
     {
         await EnsureVideoEngineAsync();
-        if (_libVlc is null) return;
+        // 打开动画期间先显示快捷封面；最多等 450ms 就开始播放，不让动画卡住视频。
+        await Task.WhenAny(OpenTransitionCompleted, Task.Delay(450));
+        if (_libVlc is null || _isClosing || _exitTransitionRunning) return;
         if (requestVersion != _mediaRequestVersion ||
             !string.Equals(path, _viewModel.CurrentPath, StringComparison.OrdinalIgnoreCase))
             return;
@@ -149,6 +235,7 @@ public partial class PhotoViewerWindow : Window
 
         _mediaPlayer ??= CreateMediaPlayer(_libVlc);
 
+        _videoSurfaceReady = false;
         VideoHost.Visibility = Visibility.Visible;
         VideoHost.MediaPlayer = _mediaPlayer;
         _currentMedia = new Media(_libVlc, path, FromType.FromPath);
@@ -159,6 +246,7 @@ public partial class PhotoViewerWindow : Window
 
         PhotoViewport.Visibility = Visibility.Collapsed;
         VideoGroup.Visibility = Visibility.Visible;
+        PhotoGroup.Visibility = Visibility.Collapsed;
         VideoHost.Visibility = Visibility.Visible;
         _videoActive = true;
         _updatingSlider = true;
@@ -176,6 +264,7 @@ public partial class PhotoViewerWindow : Window
     {
         _positionTimer?.Stop();
         _videoActive = false;
+        _videoSurfaceReady = false;
         if (_mediaPlayer is not null)
         {
             _mediaPlayer.Stop();
@@ -185,6 +274,7 @@ public partial class PhotoViewerWindow : Window
         VideoHost.MediaPlayer = null;
         VideoHost.Visibility = Visibility.Collapsed;
         VideoGroup.Visibility = Visibility.Collapsed;
+        PhotoGroup.Visibility = Visibility.Visible;
         PhotoViewport.Visibility = Visibility.Visible;
         // 停止视频后恢复全窗口布局（margin 归零，照片/沉浸态不受影响）
         UpdateVideoHostLayout();
@@ -223,6 +313,7 @@ public partial class PhotoViewerWindow : Window
         player.Paused += OnMediaPaused;
         player.Stopped += OnMediaStopped;
         player.EndReached += OnMediaEndReached;
+        player.Vout += OnMediaVout;
         return player;
     }
 
@@ -234,8 +325,26 @@ public partial class PhotoViewerWindow : Window
         else Dispatcher.BeginInvoke(action);
     }
 
+    // VLC 建好视频输出 = 第一帧马上到：稍等一下再把视频窗口放大、收起封面，避免闪黑
+    private void OnMediaVout(object? sender, MediaPlayerVoutEventArgs e)
+    {
+        if (e.Count > 0) OnUiThread(() => RevealVideoSurface(delayMs: 60));
+    }
+
+    private async void RevealVideoSurface(int delayMs)
+    {
+        var version = _mediaRequestVersion;
+        if (delayMs > 0) await Task.Delay(delayMs);
+        if (_isClosing || !_videoActive || _videoSurfaceReady || version != _mediaRequestVersion) return;
+        _videoSurfaceReady = true;
+        VideoCover.Visibility = Visibility.Collapsed;
+        UpdateVideoHostLayout();
+    }
+
     private void OnMediaPlaying(object? sender, EventArgs e) => OnUiThread(() =>
     {
+        // 兜底：纯音频 / 没有 Vout 事件时，开始播放 1.2s 后也放出视频窗口
+        RevealVideoSurface(delayMs: 1200);
         UpdatePlayGlyph(isPlaying: true);
         // VLC 在切媒体/重新播放时可能重置 Rate，Playing 事件里按当前选择重放
         ApplySpeed();
@@ -365,7 +474,8 @@ public partial class PhotoViewerWindow : Window
             _hideTimer?.Start();
             return;
         }
-        if (IsOverlayHot(TopBar) || IsOverlayHot(TopBarRight) || IsOverlayHot(BottomBar))
+        if (IsOverlayHot(TopBar) || IsOverlayHot(TopBarRight) || IsOverlayHot(BottomBar) ||
+            IsOverlayHot(PrevNavBar) || IsOverlayHot(NextNavBar))
         {
             _hideTimer?.Start();
             return;
@@ -381,6 +491,8 @@ public partial class PhotoViewerWindow : Window
         ShowBar(TopBar);
         ShowBar(TopBarRight);
         ShowBar(BottomBar);
+        ShowBar(PrevNavBar);
+        ShowBar(NextNavBar);
         RefreshAcrylic();
         AnimateOpacity(AcrylicLayer, 1);
         // 工具栏调出 → 视频让出工具栏带，保证功能栏可见可点（airspace 布局外置）
@@ -392,6 +504,8 @@ public partial class PhotoViewerWindow : Window
         HideBar(TopBar);
         HideBar(TopBarRight);
         HideBar(BottomBar);
+        HideBar(PrevNavBar);
+        HideBar(NextNavBar);
         AnimateOpacity(AcrylicLayer, 0);
         // 工具栏隐藏 → 沉浸态，视频恢复全窗口
         UpdateVideoHostLayout();
@@ -429,7 +543,7 @@ public partial class PhotoViewerWindow : Window
 
             // 胶囊几何（窗口绝对坐标，与 ImageBrush 1:1 对应）
             var geometry = new GeometryGroup();
-            foreach (var bar in new[] { TopBar, TopBarRight, BottomBar })
+            foreach (var bar in new[] { TopBar, TopBarRight, BottomBar, PrevNavBar, NextNavBar })
             {
                 if (bar.Visibility != Visibility.Visible || bar.ActualWidth <= 0 || bar.ActualHeight <= 0) continue;
                 var topLeft = bar.TranslatePoint(new System.Windows.Point(0, 0), this);
@@ -439,6 +553,7 @@ public partial class PhotoViewerWindow : Window
                 {
                     pillRadius = tokenRadius.TopLeft;
                 }
+                if (bar.CornerRadius.TopLeft > 0) pillRadius = bar.CornerRadius.TopLeft;
                 var radius = Math.Min(pillRadius, bar.ActualHeight / 2);
                 geometry.Children.Add(new RectangleGeometry(
                     new Rect(topLeft.X, topLeft.Y, bar.ActualWidth, bar.ActualHeight), radius, radius));
@@ -471,8 +586,6 @@ public partial class PhotoViewerWindow : Window
     {
         _isFullscreen = !_isFullscreen;
         WindowState = _isFullscreen ? WindowState.Maximized : WindowState.Normal;
-        FullscreenGlyph.Visibility = _isFullscreen ? Visibility.Collapsed : Visibility.Visible;
-        RestoreGlyph.Visibility = _isFullscreen ? Visibility.Visible : Visibility.Collapsed;
         ShowOverlays();
         _hideTimer?.Stop();
         _hideTimer?.Start();
@@ -612,12 +725,13 @@ public partial class PhotoViewerWindow : Window
         else if (e.Key == Key.Delete) { ConfirmDeleteCurrent(); e.Handled = true; }
         else if (e.Key == Key.Escape)
         {
-            // 全屏时 Esc 先退出全屏，再按一次才关闭
+            // 铺满屏幕时 Esc 先回到窗口，再按一次关闭
             if (_isFullscreen) ToggleFullscreen();
             else Close();
             e.Handled = true;
         }
         else if (e.Key == Key.F11) { ToggleFullscreen(); e.Handled = true; }
+        else if (e.Key == Key.I && Keyboard.Modifiers == ModifierKeys.None) { ToggleInfo_Click(this, new RoutedEventArgs()); e.Handled = true; }
         else if (e.Key == Key.Space && _videoActive)
         {
             PlayPause_Click(this, new RoutedEventArgs());
@@ -699,12 +813,13 @@ public partial class PhotoViewerWindow : Window
         if (e.OriginalSource is System.Windows.Controls.Button) return;
         var position = e.GetPosition(this);
         if (IsPointOver(InfoPanel, position) || IsPointOver(TopBar, position) ||
-            IsPointOver(TopBarRight, position) || IsPointOver(BottomBar, position))
+            IsPointOver(TopBarRight, position) || IsPointOver(BottomBar, position) ||
+            IsPointOver(PrevNavBar, position) || IsPointOver(NextNavBar, position))
             return;
         if (e.ClickCount == 2)
             // 双击空白区 = 全屏切换（照片区双击 = 适应窗口，已在 PhotoViewport 预览事件短路）
             ToggleFullscreen();
-        else if (e.LeftButton == MouseButtonState.Pressed)
+        else if (e.LeftButton == MouseButtonState.Pressed && !_isFullscreen)
             DragMove();
     }
 
@@ -722,6 +837,7 @@ public partial class PhotoViewerWindow : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+        PlayOpenTransition();
         RefreshMediaDisplay();
         // 初始为沉浸态：零标识，仅当鼠标移动才调出工具栏
     }
@@ -735,6 +851,8 @@ public partial class PhotoViewerWindow : Window
 
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
+        // 先播放退出动画，动画结束后再次 Close 才真正释放资源。
+        if (InterceptCloseForTransition(e)) return;
         _isClosing = true;
         _mediaRequestVersion++;
         _positionTimer?.Stop();
@@ -746,6 +864,7 @@ public partial class PhotoViewerWindow : Window
             _mediaPlayer.Paused -= OnMediaPaused;
             _mediaPlayer.Stopped -= OnMediaStopped;
             _mediaPlayer.EndReached -= OnMediaEndReached;
+            _mediaPlayer.Vout -= OnMediaVout;
             _mediaPlayer.Dispose();
             _mediaPlayer = null;
         }
@@ -852,4 +971,14 @@ public sealed class ViewerSliderWidthConverter : IMultiValueConverter
 
     public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
+}
+
+/// <summary>评分星：当前评分 ≥ 参数（1–5）时这颗星点亮。</summary>
+public sealed class RatingAtLeastConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        value is int rating && int.TryParse(parameter?.ToString(), out var threshold) && rating >= threshold;
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        System.Windows.Data.Binding.DoNothing;
 }

@@ -80,7 +80,7 @@ public sealed class OnnxPhotoClassifier : IPhotoClassifier, IDisposable
         using var flat = output.Reshape(1, 1);
         var raw = new double[flat.Cols];
         for (var index = 0; index < raw.Length; index++) raw[index] = flat.At<float>(0, index);
-        var probabilities = Softmax(raw);
+        var probabilities = PortableClassificationPostprocessing.Softmax(raw);
         var labelOffset = probabilities.Length == labels.Length + 1 ? 1 : 0;
         var ranked = probabilities
             .Select((score, index) => (Index: index, Score: score))
@@ -136,56 +136,8 @@ public sealed class OnnxPhotoClassifier : IPhotoClassifier, IDisposable
         }
     }
 
-    public static IReadOnlyList<PhotoLabelScore> MapImageNetLabels(
-        IEnumerable<(string Label, double Score)> predictions)
-    {
-        var scores = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (label, score) in predictions)
-        {
-            AddMapped(label, score, scores, "动物",
-                "dog", "cat", "terrier", "retriever", "spaniel", "hound", "shepherd", "bird", "eagle", "owl", "fish", "shark", "whale", "monkey", "panda", "bear", "horse", "cow", "ox", "sheep", "goat", "rabbit", "hamster", "turtle", "lizard", "snake", "insect", "butterfly");
-            AddMapped(label, score, scores, "美食",
-                "food", "dish", "pizza", "burger", "cheeseburger", "hotdog", "bread", "cake", "ice cream", "fruit", "orange", "lemon", "apple", "banana", "strawberry", "pineapple", "wine", "espresso", "soup", "salad");
-            AddMapped(label, score, scores, "交通",
-                "car", "cab", "taxi", "truck", "bus", "train", "airliner", "aircraft", "bicycle", "motor scooter", "motorcycle", "boat", "ship", "van", "tractor");
-            AddMapped(label, score, scores, "建筑",
-                "church", "castle", "palace", "monastery", "mosque", "lighthouse", "library", "cinema", "barn", "boathouse", "yurt", "dome");
-            AddMapped(label, score, scores, "自然风景",
-                "cliff", "valley", "volcano", "lakeside", "seashore", "coral reef", "geyser", "promontory", "sandbar");
-            AddMapped(label, score, scores, "植物",
-                "flower", "daisy", "rose", "sunflower", "orchid", "corn", "acorn", "mushroom", "buckeye", "rapeseed");
-            AddMapped(label, score, scores, "室内",
-                "sofa", "chair", "table", "bed", "wardrobe", "bookcase", "refrigerator", "television", "desktop computer", "lamp");
-            AddMapped(label, score, scores, "人像",
-                "bride", "groom", "ballplayer", "scuba diver");
-        }
-
-        return scores.Select(pair => new PhotoLabelScore(pair.Key, Math.Round(Math.Clamp(pair.Value, 0, 1), 3)))
-            .OrderByDescending(label => label.Score)
-            .ThenBy(label => label.Label, StringComparer.CurrentCulture)
-            .ToArray();
-    }
-
-    private static void AddMapped(
-        string sourceLabel,
-        double score,
-        IDictionary<string, double> destination,
-        string category,
-        params string[] terms)
-    {
-        if (!terms.Any(term => sourceLabel.Contains(term, StringComparison.OrdinalIgnoreCase))) return;
-        destination.TryGetValue(category, out var current);
-        destination[category] = Math.Min(1, current + score);
-    }
-
-    private static double[] Softmax(IReadOnlyList<double> values)
-    {
-        if (values.Count == 0) return [];
-        var maximum = values.Max();
-        var exponentials = values.Select(value => Math.Exp(value - maximum)).ToArray();
-        var sum = exponentials.Sum();
-        return sum <= double.Epsilon ? new double[values.Count] : exponentials.Select(value => value / sum).ToArray();
-    }
+    public static IReadOnlyList<PhotoLabelScore> MapImageNetLabels(IEnumerable<(string Label, double Score)> predictions) =>
+        PortableClassificationPostprocessing.MapImageNetLabels(predictions);
 
     private bool AssetsAreUsable()
     {

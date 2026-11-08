@@ -253,6 +253,11 @@ public partial class MainWindow : Window
             mmi.MaxSize.Y = target.Height;
             mmi.MaxTrackSize.X = target.Width;
             mmi.MaxTrackSize.Y = target.Height;
+            // 拦截此消息后 WPF 不再替我们设置最小拖拽尺寸：按当前 DPI 把 MinWidth/MinHeight 换算成像素，
+            // 且不超过工作区。否则窗口能被拖 / 贴靠得比布局最小值还小，右侧和底部内容会被裁掉。
+            var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
+            mmi.MinTrackSize.X = Math.Min(target.Width, (int)Math.Ceiling(MinWidth * dpi.DpiScaleX));
+            mmi.MinTrackSize.Y = Math.Min(target.Height, (int)Math.Ceiling(MinHeight * dpi.DpiScaleY));
             System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
             handled = true;
         }
@@ -374,6 +379,7 @@ public partial class MainWindow : Window
         StateChanged += MainWindow_StateChanged;
         _viewModel.PropertyChanged += MainWindowViewModel_PropertyChanged;
         _viewModel.OpenIndependentViewerRequested += OpenIndependentViewer;
+        _viewModel.GallerySectionScrollRequested += ScrollGalleryToSection;
         _viewModel.DuplicateActionRequired += OnDuplicateActionRequired;
         _viewModel.PeopleAlbums.PropertyChanged += (_, args) =>
         {
@@ -382,6 +388,10 @@ public partial class MainWindow : Window
         };
         _viewModel.TreemapRepopulated += OnTreemapRepopulated;
         ThemeManager.ThemeChanged += OnThemeChanged;
+        Closed += (_, _) => _viewModel.StopAgentServer();
+        HookImportPage();
+        _viewModel.AgentConversation.CollectionChanged += (_, _) =>
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () => AgentConversationScroller?.ScrollToEnd());
     }
 
     private void OnThemeChanged(object? sender, AppTheme theme)
@@ -654,6 +664,12 @@ public partial class MainWindow : Window
 
     private void MainWindowViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(MainWindowViewModel.SidebarColumnWidth))
+        {
+            AnimateSidebar();
+            return;
+        }
+
         if (e.PropertyName == nameof(MainWindowViewModel.CurrentPage))
         {
             Dispatcher.BeginInvoke(AnimateVisiblePage);
@@ -755,7 +771,7 @@ public partial class MainWindow : Window
 
     private void ApplyCustomWindowIcon()
     {
-        Icon = _viewModel.AppIconImage ?? DefaultAppIcon;
+        Icon = _viewModel.AppIconImage as System.Windows.Media.ImageSource ?? DefaultAppIcon;
     }
 
     private void AnimateVisiblePage()
@@ -1387,15 +1403,19 @@ public partial class MainWindow : Window
     private void RestoreSafeWindowState()
     {
         var area = SystemParameters.WorkArea;
-        var width = Math.Clamp(_viewModel.WindowWidth, MinWidth, area.Width);
-        var height = Math.Clamp(_viewModel.WindowHeight, MinHeight, area.Height);
+        // 小屏或高缩放时工作区可能小于最小尺寸：先保证不超出屏幕（Math.Clamp 在 min>max 时会抛异常）。
+        var width = Math.Min(Math.Max(_viewModel.WindowWidth, MinWidth), area.Width);
+        var height = Math.Min(Math.Max(_viewModel.WindowHeight, MinHeight), area.Height);
         var left = _viewModel.RestoreWindowState && _viewModel.WindowLeft is { } savedLeft ? savedLeft : area.Left + (area.Width - width) / 2;
         var top = _viewModel.RestoreWindowState && _viewModel.WindowTop is { } savedTop ? savedTop : area.Top + (area.Height - height) / 2;
         Left = Math.Clamp(left, area.Left, Math.Max(area.Left, area.Right - width));
         Top = Math.Clamp(top, area.Top, Math.Max(area.Top, area.Bottom - height));
         Width = width;
         Height = height;
-        if (_viewModel.RestoreWindowState && _viewModel.SavedWindowState == nameof(WindowState.Maximized)) WindowState = WindowState.Maximized;
+        var savedMaximized = _viewModel.RestoreWindowState && _viewModel.SavedWindowState == nameof(WindowState.Maximized);
+        // 上次的普通窗口已经几乎占满屏幕（≥92%）时直接最大化：内容铺满窗口，也不会有一截压在任务栏下面。
+        var nearlyFull = width >= area.Width * 0.92 && height >= area.Height * 0.92;
+        if (savedMaximized || nearlyFull) WindowState = WindowState.Maximized;
     }
 
     private async void EditedDropTarget_Drop(object sender, System.Windows.DragEventArgs e)
@@ -1435,6 +1455,16 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>图库工具栏“⋯”：在按钮下方弹出扫描重复内容 / 安全隔离区。</summary>
+    private void GalleryMoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { ContextMenu: { } menu } button) return;
+        menu.DataContext = button.DataContext;
+        menu.PlacementTarget = button;
+        menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
     private void CloseExifPanel_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         _viewModel.SelectedPreviewFile = null;
@@ -1468,10 +1498,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Inspector_Delete(object sender, RoutedEventArgs e)
+    private async void Inspector_Delete(object sender, RoutedEventArgs e)
     {
         var file = _viewModel.SelectedPreviewFile;
-        if (file is not null) _viewModel.DeletePreviewFile(file);
+        if (file is not null) await _viewModel.DeletePreviewFileAsync(file);
     }
 
     private void Inspector_BatchCopy(object sender, RoutedEventArgs e) => BatchCopySelected();
@@ -1518,10 +1548,10 @@ public partial class MainWindow : Window
         }
     }
 
-    private void PreviewContextMenu_Delete(object sender, RoutedEventArgs e)
+    private async void PreviewContextMenu_Delete(object sender, RoutedEventArgs e)
     {
         var file = _viewModel.SelectedPreviewFile;
-        if (file is not null) _viewModel.DeletePreviewFile(file);
+        if (file is not null) await _viewModel.DeletePreviewFileAsync(file);
     }
 
     private void PreviewSelection_Changed(object sender, RoutedEventArgs e) =>
@@ -1700,7 +1730,36 @@ public partial class MainWindow : Window
             GalleryScrollBar.Value = Math.Clamp(panel.VerticalOffset, 0, scrollable);
             GalleryScrollBar.Visibility = scrollable > 1 ? Visibility.Visible : Visibility.Collapsed;
             _gallerySyncingScrollBar = false;
+            // 可见区域的格子按需加载缩略图（不再一次解码整个图库）。
+            // 滚动时这里先于重新布局触发，所以排到 Loaded 优先级（布局完成后）再取已实例化的格子。
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (GetGalleryPanel() is not { } realizedPanel) return;
+                _viewModel.RequestGalleryViewportThumbnails(realizedPanel.Children
+                    .OfType<FrameworkElement>()
+                    .Select(child => child.DataContext)
+                    .OfType<PreviewFileViewModel>()
+                    .ToList());
+            }, DispatcherPriority.Loaded);
         }, DispatcherPriority.Render);
+    }
+
+    /// <summary>日期导航里点场次：照片墙滚到那一场的分组标题。</summary>
+    private void ScrollGalleryToSection(string sectionKey)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            var index = -1;
+            for (var i = 0; i < _viewModel.PreviewWallItems.Count; i++)
+            {
+                if (_viewModel.PreviewWallItems[i] is PreviewDateSectionViewModel section && section.Key == sectionKey)
+                {
+                    index = i;
+                    break;
+                }
+            }
+            if (index >= 0) GetGalleryPanel()?.ScrollToItemIndex(index);
+        }, DispatcherPriority.Loaded);
     }
 
     private void GalleryScrollBar_Scroll(object sender, System.Windows.Controls.Primitives.ScrollEventArgs e)
@@ -1716,6 +1775,11 @@ public partial class MainWindow : Window
     {
         if (e.Key != Key.Enter) return;
         e.Handled = true;
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            await AskAgentFromSearchBoxAsync();
+            return;
+        }
         await _viewModel.SearchFromWorkspaceAsync(WorkspaceSearchBox.Text);
         BrowseSmartSearchBox.Focus();
         BrowseSmartSearchBox.SelectAll();
@@ -1759,9 +1823,23 @@ public partial class MainWindow : Window
 
     private void MainWindow_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
+        if (TryHandleShellShortcut(e))
+        {
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.K && Keyboard.Modifiers == ModifierKeys.Control)
         {
             FocusGallerySearch();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+I：图库右侧信息面板开 / 关
+        if (e.Key == Key.I && Keyboard.Modifiers == ModifierKeys.Control && _viewModel.IsPreviewPage && !IsTextInputFocused())
+        {
+            _viewModel.ToggleBrowseInspectorCommand.Execute(null);
             e.Handled = true;
             return;
         }

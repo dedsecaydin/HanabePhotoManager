@@ -12,7 +12,7 @@ namespace HanabePhotoManager.App.Splitting;
 
 public partial class ImageSplitWindow : Window
 {
-    private readonly ImageSplitViewModel _model = new();
+    private readonly ImageSplitViewModel _model = new(new HanabePhotoManager.App.Platform.WpfImageFactory());
     private Point? _drag;
     public ImageSplitWindow() : this(null) { }
     internal ImageSplitWindow(ResourceDictionary? resources)
@@ -45,7 +45,7 @@ public partial class ImageSplitWindow : Window
     private void DrawPreview()
     {
         PreviewCanvas.Children.Clear();
-        if (_model.Preview is not { } bitmap) return;
+        if (_model.Preview is not System.Windows.Media.Imaging.BitmapSource bitmap) return;
         double w = bitmap.PixelWidth, h = bitmap.PixelHeight;
         PreviewCanvas.Width = w; PreviewCanvas.Height = h;
         PreviewCanvas.Children.Add(new System.Windows.Controls.Image { Source = bitmap, Width = w, Height = h });

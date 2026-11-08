@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\HanabePhotoManager.Core\HanabePhotoManager.Core.csproj" />
+    <ProjectReference Include="..\HanabePhotoManager.Shared\HanabePhotoManager.Shared.csproj" />
     <ProjectReference Include="..\HanabePhotoManager.Infrastructure\HanabePhotoManager.Infrastructure.csproj" />
   </ItemGroup>
 
@@ -85,6 +86,7 @@
     <Resource Include="Assets\Hanabe\hanabe-assistant.png" />
     <Resource Include="Assets\Hanabe\workspace-hero.png" />
     <Resource Include="Assets\Hanabe\Animated\**\*.gif" />
+    <Resource Include="Assets\Hanabe\Outfits\*.png" />
     <Content Include="Assets\Hanabe\Sounds\**\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>

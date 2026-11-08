@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:albums="clr-namespace:HanabePhotoManager.App.Albums"
+         xmlns:albumss="clr-namespace:HanabePhotoManager.App.Albums;assembly=HanabePhotoManager.Shared"
              xmlns:app="clr-namespace:HanabePhotoManager.App">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -70,7 +71,7 @@
             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
           </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="{x:Type albums:CustomAlbumItemViewModel}">
+            <DataTemplate DataType="{x:Type albumss:CustomAlbumItemViewModel}">
               <Button Width="232" Margin="0,0,16,16" Style="{StaticResource AlbumCardButton}" Click="AlbumCard_Click" AutomationProperties.Name="打开相册">
                 <Button.ContextMenu>
                   <ContextMenu Style="{DynamicResource Menu.Context}" FontFamily="{StaticResource Typography.FontFamily.UI}" FontSize="{StaticResource Typography.Body}">
@@ -227,7 +228,7 @@
                   <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate DataType="{x:Type albums:CustomAlbumPhoto}">
+                  <DataTemplate DataType="{x:Type albumss:CustomAlbumPhoto}">
                     <Border Width="168" Height="192" Margin="0,0,12,12" Padding="6" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Surface.ContainerLow}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Cursor="Hand" MouseLeftButtonDown="AlbumPhoto_Click">
                       <StackPanel>
                         <Border Height="146" CornerRadius="{StaticResource Radius.Small}" Background="{DynamicResource Brush.Surface.Container}" ClipToBounds="True">
@@ -247,7 +248,7 @@
             <ScrollViewer x:Name="AlbumPhotoListPanel" VerticalScrollBarVisibility="Auto" Visibility="Collapsed">
               <ItemsControl ItemsSource="{Binding Photos}">
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate DataType="{x:Type albums:CustomAlbumPhoto}">
+                  <DataTemplate DataType="{x:Type albumss:CustomAlbumPhoto}">
                     <Border Margin="0,0,0,8" Padding="8,8,14,8" CornerRadius="{StaticResource Radius.Dialog}" Background="{DynamicResource Brush.Surface.ContainerLow}" BorderBrush="{DynamicResource Brush.OutlineVariant}" BorderThickness="1" Cursor="Hand" MouseLeftButtonDown="AlbumPhoto_Click">
                       <Grid>
                         <Grid.ColumnDefinitions>

@@ -93,14 +93,26 @@ public sealed class LibraryContentScanner
         if (!sizeMap.TryGetValue(sourceSize, out var candidates) || candidates.Count == 0)
             return null;
 
-        var sourceHash = await _fileHasher.ComputeSha256Async(sourcePath, cancellationToken)
-            .ConfigureAwait(false);
-
+        // 先比头尾快速指纹：不同内容几乎总在这里被排除，只有快速指纹相同才读完整文件算 SHA-256。
+        // 对存储卡上的大视频 / 无压缩 RAW（同机型尺寸完全相同）可省掉绝大部分整文件读取。
+        string? sourceQuick = null;
+        string? sourceHash = null;
         foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
             if (string.Equals(candidate, sourcePath, OperatingSystem.IsWindows()
                     ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal))
+                continue;
+
+            string candidateQuick;
+            try { candidateQuick = await ComputeQuickFingerprintAsync(candidate, cancellationToken).ConfigureAwait(false); }
+            catch (FileNotFoundException) { continue; }
+            catch (IOException) { continue; }
+            catch (UnauthorizedAccessException) { continue; }
+
+            // 来源读取失败照常抛出，交给导入流程报告，而不是当作“没有重复”。
+            sourceQuick ??= await ComputeQuickFingerprintAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+            if (!string.Equals(sourceQuick, candidateQuick, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             string candidateHash;
@@ -112,11 +124,62 @@ public sealed class LibraryContentScanner
             catch (FileNotFoundException) { continue; }
             catch (IOException) { continue; }
 
+            sourceHash ??= await _fileHasher.ComputeSha256Async(sourcePath, cancellationToken)
+                .ConfigureAwait(false);
             if (string.Equals(sourceHash, candidateHash, StringComparison.OrdinalIgnoreCase))
                 return candidate;
         }
 
         return null;
+    }
+
+    /// <summary>快速指纹读取的头部 / 尾部字节数。</summary>
+    public const int QuickFingerprintChunkBytes = 64 * 1024;
+
+    /// <summary>
+    /// 文件长度 + 前 64KB + 后 64KB 的 SHA-256。只用于排除“肯定不同”的文件：
+    /// 快速指纹不同则内容必然不同；相同时仍需完整 SHA-256 确认。
+    /// </summary>
+    public Task<string> ComputeQuickFingerprintAsync(string path, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        return _fileHasher is CachedFileHasher cache
+            ? cache.GetOrComputeAsync(path, "quick-head-tail-64k-v1", token => ComputeQuickFingerprintCoreAsync(path, token), cancellationToken)
+            : ComputeQuickFingerprintCoreAsync(path, cancellationToken);
+    }
+
+    private static async Task<string> ComputeQuickFingerprintCoreAsync(string path, CancellationToken token)
+    {
+        await using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read,
+            bufferSize: 1, FileOptions.Asynchronous);
+        var length = stream.Length;
+        using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        sha.AppendData(BitConverter.GetBytes(length));
+        var buffer = new byte[QuickFingerprintChunkBytes];
+
+        var headCount = (int)Math.Min(length, QuickFingerprintChunkBytes);
+        sha.AppendData(buffer, 0, await ReadFullyAsync(stream, buffer, headCount, token).ConfigureAwait(false));
+        if (length > QuickFingerprintChunkBytes)
+        {
+            var tailStart = Math.Max(QuickFingerprintChunkBytes, length - QuickFingerprintChunkBytes);
+            stream.Seek(tailStart, SeekOrigin.Begin);
+            var tailCount = (int)(length - tailStart);
+            sha.AppendData(buffer, 0, await ReadFullyAsync(stream, buffer, tailCount, token).ConfigureAwait(false));
+        }
+
+        return Convert.ToHexString(sha.GetHashAndReset());
+    }
+
+    private static async Task<int> ReadFullyAsync(Stream stream, byte[] buffer, int count, CancellationToken token)
+    {
+        var total = 0;
+        while (total < count)
+        {
+            var read = await stream.ReadAsync(buffer.AsMemory(total, count - total), token).ConfigureAwait(false);
+            if (read == 0) break;
+            total += read;
+        }
+        return total;
     }
 
     /// <summary>
@@ -135,21 +198,47 @@ public sealed class LibraryContentScanner
         var sizeMap = await BuildSizeMapAsync(libraryRoot, extensions, cancellationToken, progress, detailProgress)
             .ConfigureAwait(false);
 
-        var hashTasks = sizeMap
+        var sizeCandidates = sizeMap
             .Where(pair => pair.Value.Count >= 2)
             .SelectMany(pair => pair.Value.Select(path => (Size: pair.Key, Path: path)))
             .DistinctBy(item => item.Path, OperatingSystem.IsWindows()
                 ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
             .ToArray();
-        var totalCandidates = Math.Max(1, hashTasks.Length);
-        var hashedIndex = 0;
-        var hashedFiles = new ConcurrentBag<(long Size, string Path, string Hash)>();
         var parallelOptions = new ParallelOptions
         {
             CancellationToken = cancellationToken,
             // 少量并行可显著利用 SSD 和 SHA 硬件加速，同时避免大量并发读拖慢机械盘。
             MaxDegreeOfParallelism = Math.Clamp(HashParallelism, 1, 4)
         };
+
+        // 第 1 轮：只读头尾 64KB 的快速指纹，同尺寸但内容不同的文件在这里就被排除。
+        var quickTotal = Math.Max(1, sizeCandidates.Length);
+        var quickIndex = 0;
+        var quickFiles = new ConcurrentBag<(long Size, string Path, string Quick)>();
+        await Parallel.ForEachAsync(sizeCandidates, parallelOptions, async (item, token) =>
+        {
+            try { quickFiles.Add((item.Size, item.Path, await ComputeQuickFingerprintAsync(item.Path, token).ConfigureAwait(false))); }
+            catch (FileNotFoundException) { }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            finally
+            {
+                var completed = Interlocked.Increment(ref quickIndex);
+                progress?.Report(40d + completed * 15d / quickTotal);
+                detailProgress?.Report(new("快速指纹预筛", completed, quickTotal, item.Path, 0));
+            }
+        }).ConfigureAwait(false);
+
+        // 第 2 轮：快速指纹仍相同的才读完整文件计算 SHA-256。
+        var hashTasks = quickFiles
+            .GroupBy(item => (item.Size, item.Quick))
+            .Where(group => group.Count() >= 2)
+            .SelectMany(group => group.Select(item => (item.Size, item.Path)))
+            .OrderBy(item => item.Path, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var totalCandidates = Math.Max(1, hashTasks.Length);
+        var hashedIndex = 0;
+        var hashedFiles = new ConcurrentBag<(long Size, string Path, string Hash)>();
         await Parallel.ForEachAsync(hashTasks, parallelOptions, async (item, token) =>
         {
             try
@@ -162,7 +251,7 @@ public sealed class LibraryContentScanner
             finally
             {
                 var completed = Interlocked.Increment(ref hashedIndex);
-                progress?.Report(40d + completed * 60d / totalCandidates);
+                progress?.Report(55d + completed * 45d / totalCandidates);
                 detailProgress?.Report(new(_fileHasher is CachedFileHasher cache ? $"SHA-256 增量比对 · 复用 {cache.Hits} · 新算 {cache.Computed}" : "SHA-256 并行比对", completed, totalCandidates, item.Path, 0));
             }
         }).ConfigureAwait(false);
@@ -214,14 +303,19 @@ public sealed class LibraryContentScanner
         if (paths.Count < 2)
             return new List<List<string>>();
 
-        var hashes = new List<(string Path, ulong Hash)>(paths.Count);
-        for (var index = 0; index < paths.Count; index++)
+        // 并行生成视觉指纹（缩小解码，见 ComputeAverageHash）；结果按原路径顺序收集，分组结果保持稳定。
+        var slots = new ulong?[paths.Count];
+        var finished = 0;
+        await Parallel.ForEachAsync(Enumerable.Range(0, paths.Count), new ParallelOptions
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 6)
+        }, async (index, token) =>
+        {
             var path = paths[index];
             try
             {
-                hashes.Add((path, await GetAverageHashAsync(path, cancellationToken).ConfigureAwait(false)));
+                slots[index] = await GetAverageHashAsync(path, token).ConfigureAwait(false);
             }
             catch (FileNotFoundException) { }
             catch (IOException) { }
@@ -230,14 +324,21 @@ public sealed class LibraryContentScanner
             catch (NotSupportedException) { }
             catch (InvalidImageContentException) { }
             catch (ImageFormatException) { }
+            catch (OutOfMemoryException) { }
+            finally
+            {
+                // 视觉指纹检测阶段：0% → 100%（VM 层会缩放到 80% → 100%）
+                var completed = Interlocked.Increment(ref finished);
+                progress?.Report(completed * 100d / paths.Count);
+                detailProgress?.Report(new("视觉指纹生成", completed, paths.Count, path, 0));
+            }
+        }).ConfigureAwait(false);
 
-            // 视觉指纹检测阶段：0% → 100%（VM 层会缩放到 80% → 100%）
-            progress?.Report(index * 100d / paths.Count);
-            detailProgress?.Report(new("视觉指纹生成", index + 1, paths.Count, path, 0));
-
-            // 周期性让出执行权，防止大图库视觉扫描长期占满调用线程。
-            if ((hashes.Count & 31) == 0)
-                await Task.Yield();
+        var hashes = new List<(string Path, ulong Hash)>(paths.Count);
+        for (var index = 0; index < paths.Count; index++)
+        {
+            if (slots[index] is { } value)
+                hashes.Add((paths[index], value));
         }
 
         // 64 位分为 9 段：距离 <= 8 必然至少有一段完全相同，避免旧高位邻桶漏检。
@@ -297,7 +398,7 @@ public sealed class LibraryContentScanner
     {
         if (_fileHasher is CachedFileHasher cache)
         {
-            var value = await cache.GetOrComputeAsync(path, "average-hash-8x8-box-v1",
+            var value = await cache.GetOrComputeAsync(path, "average-hash-8x8-box-v2",
                 ct => Task.Run(() => ComputeAverageHash(path).ToString("X16"), ct), token).ConfigureAwait(false);
             return ulong.Parse(value, System.Globalization.NumberStyles.HexNumber);
         }
@@ -311,7 +412,12 @@ public sealed class LibraryContentScanner
     /// </summary>
     private static ulong ComputeAverageHash(string path)
     {
-        using var image = Image.Load<Rgba32>(path);
+        // 只需要 8×8 灰度：让解码器直接按约 256px 缩小解码（JPEG 走 DCT 缩放），
+        // 比整张 2400 万像素解码快一个数量级，内存也小得多。
+        using var image = Image.Load<Rgba32>(new SixLabors.ImageSharp.Formats.DecoderOptions
+        {
+            TargetSize = new Size(256, 256),
+        }, path);
         image.Mutate(ctx => ctx.Resize(8, 8, KnownResamplers.Box).Grayscale());
 
         var values = new byte[64];

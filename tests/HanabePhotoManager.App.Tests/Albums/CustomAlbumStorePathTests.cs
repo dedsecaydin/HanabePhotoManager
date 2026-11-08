@@ -26,7 +26,7 @@ public sealed class CustomAlbumStorePathTests
     public void MainWindowViewModel_WiresCustomAlbumStoreToTheAppDataFile()
     {
         var source = File.ReadAllText(Path.Combine(
-            SourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            SourceRoot(), "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
 
         source.Should().Contain("new JsonCustomAlbumStore(AppDataPaths.CustomAlbumsFile)");
         source.Should().NotContain("new JsonCustomAlbumStore(Path.Combine(AppDataPaths.Root, \"custom-albums.json\"))");

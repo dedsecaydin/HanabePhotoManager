@@ -18,7 +18,7 @@ public sealed class HeifJpegConverterTests : IDisposable
     public async Task PlannedCameraJpegName_IsReservedBeforeItExists()
     {
         var reserved = Path.ChangeExtension(Original, ".JPG");
-        var generated = await new HeifJpegConverter().EnsureJpegAsync(Original, default,
+        var generated = await new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default,
             new HashSet<string>(StringComparer.OrdinalIgnoreCase) { reserved });
         Assert.NotEqual(reserved, generated);
         Assert.False(File.Exists(reserved));
@@ -30,20 +30,20 @@ public sealed class HeifJpegConverterTests : IDisposable
         var collision = Path.ChangeExtension(Original, ".JPG");
         File.WriteAllBytes(collision, [42, 43]);
         var original = File.ReadAllBytes(Original);
-        var generated = await new HeifJpegConverter().EnsureJpegAsync(Original, default);
+        var generated = await new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default);
         Assert.NotEqual(collision, generated);
         Assert.Equal(new byte[] { 42, 43 }, File.ReadAllBytes(collision));
         Assert.Equal(original, File.ReadAllBytes(Original));
-        Assert.Equal(generated, await new HeifJpegConverter().EnsureJpegAsync(Original, default));
+        Assert.Equal(generated, await new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default));
         Assert.Equal(2, Directory.GetFiles(_root, "*.JPG").Length);
     }
 
     [Fact]
     public async Task UserModifiedGeneratedJpeg_IsKeptAndANewCopyIsCreated()
     {
-        var first = await new HeifJpegConverter().EnsureJpegAsync(Original, default);
+        var first = await new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default);
         File.WriteAllBytes(first, [44, 45]);
-        var second = await new HeifJpegConverter().EnsureJpegAsync(Original, default);
+        var second = await new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default);
         Assert.NotEqual(first, second);
         Assert.Equal(new byte[] { 44, 45 }, File.ReadAllBytes(first));
         using var valid = SixLabors.ImageSharp.Image.Load(second);
@@ -55,7 +55,7 @@ public sealed class HeifJpegConverterTests : IDisposable
     public async Task CorruptHeif_ReportsFailureAndKeepsOriginalWithoutPublishingJpeg()
     {
         File.WriteAllBytes(Original, [1, 2, 3]);
-        await Assert.ThrowsAsync<IOException>(() => new HeifJpegConverter().EnsureJpegAsync(Original, default));
+        await Assert.ThrowsAsync<IOException>(() => new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, default));
         Assert.Equal(new byte[] { 1, 2, 3 }, File.ReadAllBytes(Original));
         Assert.Single(Directory.GetFiles(_root));
     }
@@ -66,9 +66,9 @@ public sealed class HeifJpegConverterTests : IDisposable
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-            new HeifJpegConverter().EnsureJpegAsync(Original, cancellation.Token));
+            new HeifJpegConverter(HeifImageDecoder.Decode).EnsureJpegAsync(Original, cancellation.Token));
         Assert.Single(Directory.GetFiles(_root));
     }
 
-    public void Dispose() => Directory.Delete(_root, true);
+    public void Dispose() => TemporaryDirectoryCleanup.Delete(_root);
 }

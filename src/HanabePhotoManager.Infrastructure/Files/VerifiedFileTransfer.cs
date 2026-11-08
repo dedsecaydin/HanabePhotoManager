@@ -261,7 +261,7 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
                 var stream = OpenSourceLeaseStream(sourcePath);
                 try
                 {
-                    sourceLeases.Add(new SourceLease(stream, GetFileIdentity(stream.SafeFileHandle), sourcePath));
+                    sourceLeases.Add(new SourceLease(stream, GetFileIdentity(stream.SafeFileHandle, sourcePath), sourcePath));
                 }
                 catch
                 {
@@ -328,6 +328,12 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
 
     private static FileStream OpenSourceLeaseStream(string sourcePath)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            // macOS / Linux：保持读句柄打开即可；删除前再核对身份（见 DeleteSourceLeases）。
+            return new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 64, FileOptions.SequentialScan);
+        }
+
         var handle = CreateFile(
             sourcePath,
             GenericRead | DeleteAccess,
@@ -349,6 +355,16 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
         foreach (var lease in sourceLeases)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (!OperatingSystem.IsWindows())
+            {
+                // Unix 没有“按句柄删除”：删除前确认路径仍指向刚才校验过的同一个文件（大小 + 创建 + 修改时间），
+                // 再按路径删除。内容在上一步已用 SHA-256 重新比对过。
+                if (GetUnixFileIdentity(lease.Path) != lease.Identity)
+                    throw new IOException($"校验后源文件被替换或修改，已停止删除：{lease.Path}");
+                File.Delete(lease.Path);
+                continue;
+            }
+
             var disposition = new FileDispositionInformation { DeleteFile = true };
             if (!SetFileInformationByHandle(
                     lease.Stream.SafeFileHandle,
@@ -361,8 +377,16 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
         }
     }
 
-    private static SourceFileIdentity GetFileIdentity(SafeFileHandle handle)
+    private static SourceFileIdentity GetUnixFileIdentity(string path)
     {
+        var info = new FileInfo(path);
+        if (!info.Exists) throw new IOException($"源文件不存在：{path}");
+        return new SourceFileIdentity((ulong)info.Length, (ulong)info.CreationTimeUtc.Ticks, (ulong)info.LastWriteTimeUtc.Ticks);
+    }
+
+    private static SourceFileIdentity GetFileIdentity(SafeFileHandle handle, string path)
+    {
+        if (!OperatingSystem.IsWindows()) return GetUnixFileIdentity(path);
         if (!GetFileInformationByHandle(handle, out var information))
         {
             throw new IOException($"无法读取文件信息（Win32 错误 {Marshal.GetLastWin32Error()}）。");
@@ -390,7 +414,8 @@ public sealed class VerifiedFileTransfer(IFileHasher hasher)
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private readonly record struct SourceFileIdentity(uint VolumeSerialNumber, uint FileIndexHigh, uint FileIndexLow);
+    /// <summary>Windows：卷序列号 + 文件索引；Unix：大小 + 创建时间 + 修改时间。</summary>
+    private readonly record struct SourceFileIdentity(ulong A, ulong B, ulong C);
 
     private sealed record SourceLease(FileStream Stream, SourceFileIdentity Identity, string Path);
 

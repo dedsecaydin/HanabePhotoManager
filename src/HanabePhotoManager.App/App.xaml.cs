@@ -71,6 +71,51 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(System.Windows.StartupEventArgs e)
     {
+        Platform.PlatformServices.AppVersion = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0";
+        Platform.PlatformServices.Dispatcher = new Platform.WpfUiDispatcher(Dispatcher);
+        Platform.PlatformServices.Images = new Platform.WpfImageFactory();
+        Platform.PlatformServices.ReadClusterPixels = Platform.WpfClusterPixelReader.Read;
+        Platform.PlatformServices.DecodeHeif = Imports.HeifImageDecoder.Decode;
+        Platform.PlatformServices.PixelArtRenderer = new PixelArt.WpfPixelArtRenderer();
+        Platform.PlatformServices.Thumbnails = new Services.ThumbnailResolver(new Platform.WpfThumbnailBackend());
+        Platform.PlatformServices.Dialogs = new Platform.WpfDialogService();
+        Platform.PlatformServices.DuplicateDialogs = new Platform.WpfDuplicateDialogs();
+        Platform.PlatformServices.Secrets = new Platform.WpfSecretProtector();
+        Platform.PlatformServices.PickMergeTarget = candidates =>
+        {
+            var dialog = new People.MergePersonDialog(candidates) { Owner = Current?.MainWindow };
+            return dialog.ShowDialog() == true ? dialog.SelectedTarget : null;
+        };
+        Platform.PlatformServices.ConfirmImportMove = () =>
+            new Imports.ImportMoveSafetyConfirmationWindow { Owner = Current?.MainWindow }.ShowDialog() == true;
+        Platform.PlatformServices.ConfirmImportRenames = message =>
+            new Imports.ImportMoveSafetyConfirmationWindow(message) { Owner = Current?.MainWindow }.ShowDialog() == true;
+        Platform.PlatformServices.ShowQuarantine = root =>
+        {
+            var window = new Duplicates.QuarantineWindow(root) { Owner = Current?.MainWindow };
+            window.ShowDialog();
+            return window.RestoredFiles;
+        };
+        Platform.PlatformServices.ConfirmDaySplit = preview =>
+            Browsing.DaySplitConfirmWindow.Confirm(Current?.MainWindow, preview);
+        Platform.PlatformServices.ConfirmDelete = (message, groups, files) =>
+            Task.FromResult(DeleteConfirmationWindow.Confirm(Current?.MainWindow, message, groups, files));
+        Platform.PlatformServices.Search = new Platform.WpfSearchPlatform();
+        Platform.PlatformServices.PlayWave = Platform.WpfWavePlayer.Play;
+        Platform.PlatformServices.AnimatePhotoWallLayout = () => Controls.VirtualizingWrapPanel.AnimateLayoutTransition = true;
+        Platform.PlatformServices.RecycleBin = new Services.RecycleBinFileService();
+        Platform.PlatformServices.Recovery = new Recovery.WindowsRecoveryPlatform();
+        Platform.PlatformServices.ImportSourcePicker = new Imports.WindowsImportSourcePicker();
+        Platform.PlatformServices.Startup = new Services.WindowsStartupRegistrationService();
+        Platform.PlatformServices.Wallpaper = new Services.WindowsWallpaperService();
+        Platform.PlatformServices.StorageCapacity = new Platform.WindowsStorageCapacityProvider();
+        Platform.PlatformServices.ImageHealthDecoder = new Services.WpfImageHealthDecoder();
+        Platform.PlatformServices.OriginMetadata = new Imports.WindowsFileOriginMetadataStore();
+        Platform.PlatformServices.CollageColorConverter = () => new Collage.CollageColorConverter();
+        Services.PhotoClassifierFactory.PlatformFactory = Services.WindowsPhotoClassifierFactory.Create;
+        Services.FaceEmbeddingProvider.PlatformFactory = () => new Services.LocalFaceEmbeddingService();
+        Services.FaceSearchProvider.PlatformFactory = () => new Services.FaceSearchService(
+            () => new Services.PortableFaceSearchEngine(Services.FaceEmbeddingProvider.Create()));
         var args = e.Args;
         for (var index = 0; index < args.Length; index++)
         {

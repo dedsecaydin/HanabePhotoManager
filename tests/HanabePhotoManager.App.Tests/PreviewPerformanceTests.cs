@@ -41,6 +41,8 @@ public sealed class PreviewPerformanceTests
     [Theory]
     [InlineData("JK0001", "JK0001")]
     [InlineData("C9400", "C9400T01")]
+    [InlineData("JK0166（C3858）", "JK0166（C3858T01）")]
+    [InlineData("JK0167(C3859)", "JK0167(C3859T01)")]
     public void PreviewWall_HidesVideoPosterJpegButKeepsItsVideo(string videoStem, string posterStem)
     {
         var viewModel = new MainWindowViewModel();
@@ -84,6 +86,10 @@ public sealed class PreviewPerformanceTests
             File.WriteAllBytes(poster, [1]);
             var method = typeof(MainWindowViewModel).GetMethod("TryFindVideoPosterJpeg", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!;
             method.Invoke(null, [Path.Combine(root, "视频", "C9400.MP4")]).Should().Be(poster);
+
+            var renamedPoster = Path.Combine(Path.GetDirectoryName(poster)!, "JK0166（C3858T01）.JPG");
+            File.WriteAllBytes(renamedPoster, [1]);
+            method.Invoke(null, [Path.Combine(root, Path.GetFileName(Path.GetDirectoryName(Path.Combine(root, "视频", "x"))!), "JK0166（C3858）.MP4")]).Should().Be(renamedPoster);
         }
         finally { Directory.Delete(root, true); }
     }
@@ -134,7 +140,7 @@ public sealed class PreviewPerformanceTests
     {
         var root = FindSourceRoot();
         var source = File.ReadAllText(Path.Combine(
-            root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         var methodStart = source.IndexOf("private void RecalcDateNodeStats()", StringComparison.Ordinal);
         var nextMethod = source.IndexOf("private ", methodStart + 1, StringComparison.Ordinal);
         var method = source[methodStart..nextMethod];
@@ -205,12 +211,14 @@ public sealed class PreviewPerformanceTests
     {
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "DeleteConfirmationWindow.xaml"));
-        var viewModel = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+        var viewModel = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
+        var app = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "App.xaml.cs"));
 
         xaml.Should().Contain("Style=\"{StaticResource Dialog.Surface}\"");
         xaml.Should().Contain("x:Name=\"CancelButton\"");
         xaml.Should().Contain("移入回收站");
-        viewModel.Should().Contain("DeleteConfirmationWindow.Confirm");
+        viewModel.Should().Contain("PlatformServices.ConfirmDelete");
+        app.Should().Contain("DeleteConfirmationWindow.Confirm");
     }
 
     [Fact]
@@ -363,7 +371,7 @@ public sealed class PreviewPerformanceTests
     public void PreviewGrouping_DoesNotApplyLegacyVisiblePageLimit()
     {
         var source = File.ReadAllText(Path.Combine(
-            FindSourceRoot(), "src", "HanabePhotoManager.App", "ViewModels", "MainWindowViewModel.cs"));
+            FindSourceRoot(), "src", "HanabePhotoManager.Shared", "ViewModels", "MainWindowViewModel.cs"));
         var start = source.IndexOf("private void RebuildVisiblePreviewSections()", StringComparison.Ordinal);
         var end = source.IndexOf("private static bool IsVideoPosterJpeg", start, StringComparison.Ordinal);
         var method = source[start..end];
@@ -388,13 +396,11 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("x:Name=\"BrowseSummaryCard\"");
-        xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
-        xaml.Should().Contain("DockPanel.Dock=\"Bottom\"");
-        xaml.Should().Contain("Text=\"{Binding ZoomableGridTileSize, StringFormat={}{0:N0}px}\"");
-        xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\"");
-        xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Margin=\"0,10,14,4\" Visibility=");
-        xaml.Should().NotContain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Bottom\" Width=\"250\" Padding=\"12,9\" Margin=\"0,10,14,0\" CornerRadius");
+        // 缩略图大小控件移到工具栏右侧（靠近照片墙），信息面板可开关。
+        xaml.Should().Contain("x:Name=\"BrowseSidebarThumbnailControls\" DockPanel.Dock=\"Right\"");
+        xaml.Should().NotContain("x:Name=\"BrowseSummaryCard\"");
+        xaml.Should().Contain("Visibility=\"{Binding IsBrowseInspectorOpen, Converter={StaticResource BoolToVis}}\"");
+        xaml.Should().Contain("Command=\"{Binding ToggleBrowseInspectorCommand}\"");
     }
 
     [Fact]
@@ -490,9 +496,12 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("ItemsSource=\"{Binding CalendarDays}\"");
-        xaml.Should().Contain("IsEnabled=\"{Binding IsAvailable}\"");
-        xaml.Should().Contain("SelectCalendarDayCommand");
+        // 图库左栏是按年 / 月分组的拍摄日列表（取代日历卡片）：点一天只看这一天，“全部日期”回到全部。
+        xaml.Should().Contain("x:Name=\"GalleryDateNavigator\"");
+        xaml.Should().Contain("ItemsControl ItemsSource=\"{Binding LibraryDates}\"");
+        xaml.Should().Contain("SelectLibraryDateCommand");
+        xaml.Should().Contain("Command=\"{Binding ShowAllDatesCommand}\"");
+        xaml.Should().Contain("DataContext.GalleryCurrentDatePath");
     }
 
     [Fact]
@@ -588,11 +597,13 @@ public sealed class PreviewPerformanceTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
-        xaml.Should().Contain("x:Name=\"BrowseConditionsPanel\"");
-        xaml.Should().Contain("Header=\"浏览条件\"");
-        xaml.Should().Contain("IsExpanded=\"{Binding IsBrowseConditionsExpanded, Mode=TwoWay}\"");
-        xaml.Should().Contain("Content=\"重置\"");
+        // 筛选常驻在照片墙上方的工具栏里，不再藏在“浏览条件”折叠面板中；有筛选时才出现“清除筛选”。
+        xaml.Should().Contain("x:Name=\"GalleryToolbar\"");
+        xaml.Should().NotContain("x:Name=\"BrowseConditionsPanel\"");
+        xaml.Should().NotContain("Header=\"浏览条件\"");
+        xaml.Should().Contain("Content=\"清除筛选\"");
         xaml.Should().Contain("ResetBrowseConditionsCommand");
+        xaml.Should().Contain("Visibility=\"{Binding HasActiveBrowseFilters, Converter={StaticResource BoolToVis}}\"");
         xaml.Should().Contain("BrowseConditionsSummary");
         xaml.Should().Contain("x:Name=\"BrowseSmartSearchBox\"");
         xaml.Should().Contain("Text=\"{Binding UnifiedSearchText, UpdateSourceTrigger=PropertyChanged}\"");

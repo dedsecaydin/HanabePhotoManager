@@ -11,17 +11,6 @@ using Point = System.Windows.Point;
 namespace HanabePhotoManager.App.Controls;
 
 /// <summary>
-/// Marks an item that should occupy an entire row in a
-/// <see cref="VirtualizingWrapPanel"/> (e.g. a date-section header between
-/// rows of photo tiles). Such items are laid out at full panel width with a
-/// fixed <see cref="VirtualizingWrapPanel.HeaderHeight"/> while every other
-/// item keeps the uniform tile size.
-/// </summary>
-public interface IWallSectionHeader
-{
-}
-
-/// <summary>
 /// A virtualizing WrapPanel that lays out uniformly-sized items left-to-right
 /// and top-to-bottom while only realizing the containers that intersect the
 /// current viewport. It implements <see cref="IScrollInfo"/> so the owning
@@ -232,6 +221,9 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     public void MouseWheelDown() => SetVerticalOffset(VerticalOffset + 3 * ScrollLineAmount);
     public void MouseWheelLeft() => SetHorizontalOffset(HorizontalOffset - 3 * ScrollLineAmount);
     public void MouseWheelRight() => SetHorizontalOffset(HorizontalOffset + 3 * ScrollLineAmount);
+    /// <summary>滚到某一项所在的行（分组标题跳转用）。</summary>
+    public void ScrollToItemIndex(int itemIndex) => SetVerticalOffset(GetRowTopForItem(itemIndex));
+
     public void PageUp() => SetVerticalOffset(VerticalOffset - ViewportHeight);
     public void PageDown() => SetVerticalOffset(VerticalOffset + ViewportHeight);
     public void PageLeft() => SetHorizontalOffset(HorizontalOffset - ViewportWidth);
@@ -393,8 +385,19 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         UpdateScrollInfo(availableSize);
         EnsureRowTable();
 
+        // WPF 的已知行为：必须先访问 InternalChildren，面板才会连上容器生成器；
+        // 反过来先读 ItemContainerGenerator，新创建的面板第一次布局时拿到的是 null。
+        _ = InternalChildren;
         var generator = ItemContainerGenerator;
         var itemCount = ItemCount;
+        // 兜底：列表切换数据源 / 所在页面被收起的瞬间，面板可能暂时没有容器生成器。
+        // 这时不能生成子项；直接返回，等下一次布局。以前这里会空引用，
+        // 布局失败后又立刻重试，最终栈溢出导致整个程序闪退（例如点人物头像时）。
+        if (generator is null)
+        {
+            return _viewport;
+        }
+
         if (itemCount == 0)
         {
             CleanUpItems(0, -1);
@@ -787,14 +790,16 @@ public sealed class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     private void CleanUpItems(int firstChildIndex, int lastChildIndex)
     {
+        var generator = ItemContainerGenerator;
+        if (generator is null) return;
         var children = InternalChildren;
         for (var i = children.Count - 1; i >= 0; i--)
         {
             var childGeneratorPosition = new GeneratorPosition(i, 0);
-            var itemIndex = ItemContainerGenerator.IndexFromGeneratorPosition(childGeneratorPosition);
+            var itemIndex = generator.IndexFromGeneratorPosition(childGeneratorPosition);
             if (itemIndex < firstChildIndex || itemIndex > lastChildIndex)
             {
-                ItemContainerGenerator.Remove(childGeneratorPosition, 1);
+                generator.Remove(childGeneratorPosition, 1);
                 RemoveInternalChildRange(i, 1);
             }
         }

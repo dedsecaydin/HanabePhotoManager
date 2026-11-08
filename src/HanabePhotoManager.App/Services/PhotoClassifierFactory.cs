@@ -3,24 +3,19 @@ using System.IO;
 namespace HanabePhotoManager.App.Services;
 
 /// <summary>按设置、模型可用性和运行环境选择照片分类器实现。</summary>
-public static class PhotoClassifierFactory
+internal static class WindowsPhotoClassifierFactory
 {
-    public const string RulesMode = "轻量规则识别";
-    public const string OnnxMode = "本地 ONNX 多标签识别";
-
-    public const string MobileClipMode = "本地 MobileCLIP 高精度语义识别（推荐）";
-
     public static IPhotoClassifier Create(string? mode)
     {
         var rules = new RuleBasedPhotoClassifier();
-        if (string.Equals(mode, MobileClipMode, StringComparison.Ordinal))
+        if (string.Equals(mode, PhotoClassifierFactory.MobileClipMode, StringComparison.Ordinal))
         {
             var mobileClip = Path.Combine(AppContext.BaseDirectory, "Models", "MobileCLIP");
             return new MobileClipPhotoClassifier(
                 Path.Combine(mobileClip, "mobileclip_s2_visual.onnx"),
                 Path.Combine(mobileClip, "label_embeddings.json"), rules);
         }
-        if (!string.Equals(mode, OnnxMode, StringComparison.Ordinal)) return rules;
+        if (!string.Equals(mode, PhotoClassifierFactory.OnnxMode, StringComparison.Ordinal)) return rules;
 
         var directory = Path.Combine(AppContext.BaseDirectory, "Models", "Classification");
         return new OnnxPhotoClassifier(

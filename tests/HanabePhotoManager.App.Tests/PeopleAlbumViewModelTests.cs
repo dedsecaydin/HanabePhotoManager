@@ -41,13 +41,15 @@ public sealed class PeopleAlbumViewModelTests
         var root = FindSourceRoot();
         var xaml = File.ReadAllText(Path.Combine(root, "src", "HanabePhotoManager.App", "MainWindow.xaml"));
 
+        // 图库左栏底部的人物筛选：扫描、进度、取消、摘要，点“按人物筛选…”弹出头像。
         xaml.Should().Contain("PeopleAlbums.ScanCommand");
         xaml.Should().Contain("PeopleAlbums.ScanProgressValue");
         xaml.Should().Contain("PeopleAlbums.CancelScanCommand");
         xaml.Should().Contain("PeopleAlbums.SummaryText");
         xaml.Should().Contain("PeopleAlbums.ToggleBubblesCommand");
+        xaml.Should().Contain("IsOpen=\"{Binding PeopleAlbums.AreBubblesOpen, Mode=TwoWay}\"");
         xaml.Should().NotContain("<Ellipse Width=\"62\" Height=\"62\"");
-        xaml.Should().Contain("Content=\"返回全部照片\"");
+        xaml.Should().Contain("Content=\"清除人物筛选\"");
         xaml.Should().NotContain("PeopleRecognitionModelPanel");
     }
 
@@ -167,7 +169,7 @@ public sealed class PeopleAlbumViewModelTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<DetectedFace> result = embeddings.TryGetValue(path, out var embedding)
-                ? [new DetectedFace(path, embedding, 0, 0, 10, 10)]
+                ? [new DetectedFace(path, embedding, 0, 0, 200, 200)]
                 : [];
             return Task.FromResult(result);
         }

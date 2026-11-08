@@ -1,5 +1,12 @@
 # Agent Change Log
 
+## 2026-11-05 — macOS 版第一阶段 + 共享逻辑层
+
+- 新增 `HanabePhotoManager.Shared`（net8.0）：从 App 移入 83 个与界面无关的文件，命名空间不变；App 与新的 `HanabePhotoManager.Mac`（Avalonia）都引用它。WPF XAML 对 Shared 类型使用带 assembly 的前缀。
+- Mac 版第一阶段：主页、三步导入（图形化检查确认）、照片图库、设置；导入结果与 Windows 版一致（沙盒 35 个文件）。`VerifiedFileTransfer` 增加 Unix 分支。打包脚本产出 arm64 / x64 的 `Hanabe.app`。
+- Windows 版：右键菜单统一样式、导入页三步重设计、人物页闪退修复（VirtualizingWrapPanel 先访问 InternalChildren）、AI 搜索栏与本机 MCP 接口。全量 987 项测试通过。
+- 后续全功能移植见根目录 `AGENT_HANDOFF_MACOS.md`（接手关键词 `HANABE-MACOS-FULL-PORT`），macOS 界面设计见 `docs/macos-port/design.md`。
+
 ## 2026-10-11 — 项目迁移到 C 盘
 
 - 完整复制项目到 `C:\HanabePhoto`，包括 Git 历史、未提交改动、未跟踪文件和构建产物；迁移前后 Robocopy 清单显示 46,223 个文件、29,903,496,636 字节且无差异。
@@ -1480,3 +1487,589 @@ See [`docs/known-issues.md`](known-issues.md) — 14 tracked items.
 - Hanabe 角色卡改用干净的 workspace-hero.png（上半身裁切），不再使用边缘未抠干净的 hanabe-assistant.png。
 - 教学视频：D:\HanabePhotoCL\video\Hanabe教学视频.mp4（1080p，70 秒，字幕+合成背景音乐），素材为当前构建的深/浅色截图。
 - 验证：Release 构建 0 警告/错误，全量 954 项通过。
+
+## 2026-11-05 macOS port dispatcher foundation
+- Added the shared IUiDispatcher contract and an inline implementation for tests; platform registration and view-model migration remain pending.
+- Validation: solution build succeeded with zero warnings/errors; 988 tests passed. No real photo library was accessed.
+
+## 2026-11-05 macOS port platform dispatcher batch
+- Registered WPF and Avalonia dispatcher adapters at startup with a shared inline default. No view model has been migrated by this batch.
+- Build succeeded with zero warnings/errors; 989 tests passed. Isolated Windows startup screenshot captured; first-run guide visible. Real library was not used.
+
+## 2026-11-05 portable import category palette
+- Moved category color selection into Shared as ARGB strings; graph shares retain the original color values and WPF binding conversion was tested. Existing decisions and both import presentations remain shared.
+- Solution build: zero warnings/errors. Full test run: 997 passed. No real photo library used.
+
+## 2026-11-05 shared import presentation models
+- Moved import preview, category choice and date graph projection to Shared. Thumbnail is now platform-neutral object; WPF XAML references the shared assembly. List and graph continue to use the same decision objects.
+- Solution build succeeded with zero warnings/errors; 998 tests passed. No real library accessed.
+
+## 2026-11-05 portable viewer model
+- Moved photo viewer and legacy rating/tag metadata store into Shared; platform startup supplies image loading. Existing viewer behavior and deletion injection remain in place. Mac viewer UI and macOS trash implementation are still pending.
+- Build succeeded with zero warnings/errors; 999 tests passed. No real library accessed.
+
+## 2026-11-05 shared agent protocol
+- Moved AgentToolbox, OpenAiCompatibleAgent, and LocalMcpServer to Shared without changing their namespace or protocol. Platform UI and secret storage remain in Windows; macOS integration remains pending.
+- Solution build succeeded with zero warnings/errors; 1000 tests passed. No real photo library used.
+
+## 2026-11-05 shared semantic search
+- Moved search view model, result model and ranking into Shared. Search open/reveal and thumbnails are supplied by platform adapters; WPF XAML references the Shared type. macOS page integration remains pending.
+- Build succeeded, zero warnings/errors. Initial full run had one transient classifier-test temporary-directory cleanup failure; isolated classifier tests passed and a fresh full run passed 1001 tests. No real photo library used.
+
+## 2026-11-05 shared compression and collage
+- Moved CompressionViewModel and ImageCollageService to Shared; introduced color-conversion contract. Windows registers its existing WIC converter; the fallback rejects ICC-tagged input rather than producing unverified color. macOS ICC conversion remains pending.
+- Build succeeded with zero warnings/errors; 1002 tests passed, including Windows ICC conversion. No real library used.
+
+## 2026-11-05 shared photo analysis orchestration
+- Moved PhotoAnalysisViewModel and classifier selection contract into Shared; Windows registers its existing classifier implementation at startup. macOS classifier implementation is still pending; absent registration fails explicitly.
+- Build succeeded with zero warnings/errors; 1003 tests passed. No real photo library accessed.
+
+## 2026-11-05 shared HEIF conversion workflow
+- Moved verified/idempotent HEIF-to-JPEG workflow into Shared and injected decoding; Windows continues to use its existing libheif decoder. macOS decoder and integration remain pending.
+- Build succeeded with zero warnings/errors; 1004 tests passed, including HEIF collision, retry, corruption and cancellation cases. No real library accessed.
+
+## 2026-11-05 shared sound scheduling
+- Moved sound event scheduling into Shared; Windows uses existing SoundPlayer behavior, macOS has an afplay adapter and bundled sound files. macOS audio playback remains unverified on a real Mac.
+- Build succeeded with zero warnings/errors; 1005 tests passed. No real photo library used.
+
+## 2026-11-05 shared people and collage orchestration
+- Moved people album service, face embedding contract, collage view model, hero scoring and subject hints into Shared. Windows registers the existing face engine; missing platform engine fails explicitly. macOS engine remains pending.
+- Build succeeded with zero warnings/errors; 1006 tests passed. No real photo library accessed.
+
+## 2026-11-05 shared settings storage
+- Moved AppSettingsStore and BrowseDisplayMode into Shared while preserving Windows settings format and behavior. Mac settings integration and platform data-root configuration remain pending.
+- Build succeeded with zero warnings/errors; 1007 tests passed. No real library accessed.
+
+## 2026-11-05 macOS shared data root
+- Configured Shared application data and processing paths from the macOS app data directory while retaining Windows defaults and test isolation precedence. Existing Mac and shared settings schemas still require explicit integration; no automatic settings migration was performed.
+- Build succeeded with zero warnings/errors; 1008 tests passed. No real library accessed.
+
+## 2026-11-05 platform image factory
+- Added the shared image factory contract and Windows/Avalonia implementations for files, encoded data, BGRA pixels, and thumbnails; viewer uses the registered factory. Windows BGRA output is tested. Mac implementation has not yet been verified on a real Mac.
+- Build succeeded with zero warnings/errors; 1009 tests passed. No real library accessed.
+
+## 2026-11-05 view-model dispatcher migration
+- Routed browse thumbnail, metadata batch and settings-error UI updates through the shared dispatcher; added an awaitable action helper. Windows retains dispatcher priorities and threading behavior for these paths.
+- Build succeeded with zero warnings/errors; 1010 tests passed. No real library accessed.
+
+## 2026-11-05 platform dialogs
+- Added shared dialog contract with safe cancel defaults and Windows/Avalonia implementations for confirmation, information and file/folder selection. No existing view-model dialog has been replaced yet; native interaction on macOS remains unverified.
+- Build succeeded with zero warnings/errors; 1011 tests passed. No real library accessed.
+
+## 2026-11-05 shared face search presentation
+- Moved face-search presentation and result contracts to Shared; file selection, image loading and open/reveal use platform adapters. Windows keeps its existing OpenCV search implementation; macOS search engine remains pending.
+- Build succeeded with zero warnings/errors; 1012 tests passed. No real photo library accessed.
+
+## 2026-11-05 shared people presentation
+- Moved people album and photo view models to Shared; selection and oriented thumbnail decoding are platform-provided. Windows retains its merge dialog and EXIF orientation logic; macOS merge picker remains pending.
+- Build succeeded with zero warnings/errors; 1014 tests passed, including an EXIF rotation check. No real library accessed.
+
+## 2026-11-05 agent confirmation platform boundary
+- Routed agent UI dispatch and confirmation through shared services. Windows confirmation retains owner activation and default rejection; Avalonia confirmation defaults to cancel. No change to tool authorization policy.
+- Build succeeded with zero warnings/errors; 1014 tests passed. No real library accessed.
+
+## 2026-11-05 import safety confirmation boundary
+- Moved import move/rename confirmation wiring to Windows startup; missing platform confirmation rejects the operation. Both import presentations retain the same confirmation path and decisions; macOS-specific confirmation remains pending.
+- Build succeeded with zero warnings/errors; 1015 tests passed, including dual-view safety checks. No real library accessed.
+
+## 2026-11-05 portable shooting chart margin
+- Replaced a WPF Thickness value in the main view model with an invariant portable margin string; verified actual WPF binding conversion.
+- Build succeeded with zero warnings/errors; 1016 tests passed. No real library accessed.
+
+## 2026-11-05 portable sidebar width
+- Replaced WPF GridLength in the main view model with a numeric width and updated Windows animation consumers; existing collapse, compact and restore tests pass.
+- Build succeeded with zero warnings/errors; 1016 tests passed. No real library accessed.
+
+## 2026-11-05 quarantine window boundary
+- Routed quarantine window opening through a platform callback; Windows retains the existing window and refreshes after restoration. The macOS window remains pending.
+- Build succeeded with zero warnings/errors; 1017 tests passed. No real photo library accessed.
+
+## 2026-11-05 import date refresh dispatcher
+- Routed inline date plan refresh through the shared dispatcher while preserving the headless-test behavior and background priority. Both import presentations continue to share the same plan.
+- Build succeeded with zero warnings/errors; 1017 tests passed. No real photo library accessed.
+
+## 2026-11-05 shared gallery item model
+- Moved PreviewFileViewModel into Shared and made its thumbnail platform-neutral. Windows treemap receives its existing image type at the rendering boundary; XAML template and placeholder checks were updated.
+- Build succeeded with zero warnings/errors; 1018 tests passed. No real library accessed.
+
+## 2026-11-05 portable background and icon values
+- Routed background and app-icon image creation through platform image factory; replaced view-model WPF alignment/stretch values with platform-neutral values and kept centering in WPF view. Verified WPF stretch binding conversion.
+- Build succeeded with zero warnings/errors; 1020 tests passed. No real library accessed.
+
+## 2026-11-05 trash service boundary
+- Moved Windows recycle-bin implementation out of Shared and registered it at Windows startup. Unconfigured platforms explicitly reject trash operations without deleting files; macOS trash implementation remains pending.
+- Build succeeded with zero warnings/errors; 1021 tests passed, including a D-drive fixture proving the fallback preserves the file. No real library accessed.
+
+## 2026-11-05 shared platform capability contracts
+- Moved import source picker, startup registration, and wallpaper service interfaces to Shared; Windows implementations remain unchanged. Main-window default construction still needs platform injection and macOS counterparts.
+- Build succeeded with zero warnings/errors; 1022 tests passed. No real photo library accessed.
+
+## 2026-11-05 injected Windows platform defaults
+- Main-window defaults for source picking, startup registration and wallpaper are supplied at Windows startup rather than constructed directly. Unconfigured platforms perform no source selection and reject startup changes; Mac implementations remain pending.
+- Build succeeded with zero warnings/errors; 1023 tests passed. No real photo library accessed.
+
+## 2026-11-05 file origin platform boundary
+- Main-window origin metadata store is now platform-injected; Windows registers the existing Property Store implementation. The unconfigured fallback does not write metadata and reports failure; macOS xattr support remains pending.
+- Build succeeded with zero warnings/errors; 1024 tests passed. No real photo library accessed.
+
+## 2026-11-05 secret protection boundary
+- Agent settings now use a platform secret protector; Windows retains DPAPI. The unconfigured fallback refuses nonempty secret reads/writes rather than storing plaintext or silently discarding an existing secret. macOS Keychain integration remains pending.
+- Build succeeded with zero warnings/errors; 1025 tests passed. No real library accessed.
+
+## 2026-11-05 shared thumbnail resolution
+- Moved thumbnail cache, invalidation, RAW companion and video poster selection to Shared with platform decoder backends. Windows retains WIC/Shell and FFmpeg fallback; Mac uses its existing ImageSharp/sips thumbnail service. Cache invalidation and invalid-file lock tests pass.
+- Build succeeded with zero warnings/errors; 1026 tests passed. Windows isolated gallery loaded all 35 sandbox media and displayed thumbnails; screenshot .artifacts/macos-port-gallery.png. Mac runtime behavior remains unverified on real hardware.
+
+## 2026-11-05 shared treemap presentation
+- Moved progressive treemap and item models into Shared. Image dimensions are supplied by the platform image factory; Windows casts images only in the rendering control. Existing progressive publication and aspect-ratio tests pass.
+- Build succeeded with zero warnings/errors; 1027 tests passed. No real photo library accessed.
+
+## 2026-11-05 gallery delete platform boundary
+- Routed gallery deletion confirmation and trash operation through platform services. Windows retains the existing themed confirmation and recycle-bin implementation; unconfigured platforms reject confirmation and cannot directly delete files. Mac confirmation and trash remain pending.
+- Build succeeded with zero warnings/errors; 1028 tests passed. No real photo library accessed.
+
+## 2026-11-05 portable file and folder selection
+- Replaced main-window WinForms file/folder pickers with asynchronous platform dialog service for library/source folders, custom album storage, background and icon selection. Existing settings and asset import logic is retained.
+- Build succeeded with zero warnings/errors; 1028 tests passed. Dialog interaction on macOS remains unverified; no real photo library accessed.
+
+## 2026-11-05 portable import and duplicate notifications
+- Routed import failure and duplicate-scan notifications through the platform dialog service. Windows preserves information/warning/error icons; Mac dialog presentation needs visual validation.
+- Build succeeded with zero warnings/errors; 1028 tests passed. No real photo library accessed.
+
+## 2026-11-05 remove obsolete Windows startup helpers
+- Removed unused registry helper methods from the main view model after startup registration moved to the existing platform service; active Windows startup implementation is unchanged.
+- Build succeeded with zero warnings/errors; 1028 tests passed. No real photo library accessed.
+
+## 2026-11-05 duplicate review platform boundary
+- Routed duplicate scan scope, review, individual import decision and cleanup report through a platform interface. Windows retains existing themed windows; unconfigured implementation cancels or skips by default. Mac dialogs remain pending.
+- Build succeeded with zero warnings/errors; 1029 tests passed. No real photo library accessed.
+
+## 2026-11-05 asynchronous gallery deletion
+- Routed gallery delete failure messages through the platform dialog service and made deletion commands await completion; Windows event handlers now await the same workflow. Existing confirmation and recycle-bin safeguards remain in place.
+- Solution build succeeded with zero warnings/errors; full test run passed 1029 tests. No real photo library accessed.
+
+## 2026-11-05 shared watermark presentation
+- Moved watermark queue and view model to Shared, replaced WPF image and geometry properties with platform-neutral values, and routed file/folder selection through platform dialogs. Windows preview casts image types at its view boundary; WPF tile viewport binding conversion is verified.
+- Build succeeded with zero warnings/errors; 1031 tests passed. Mac watermark page and real-Mac dialog verification remain pending; no real library accessed.
+
+## 2026-11-05 shared pixel-art orchestration
+- Moved pixel-art view model to Shared behind an image-renderer contract. Windows registers its existing renderer; missing platform renderer fails explicitly. The Mac renderer remains pending and must share the processing policy.
+- Build succeeded with zero warnings/errors; 1032 tests passed, including an injected renderer workflow test. No real photo library accessed.
+
+## 2026-11-05 recovery platform boundary
+- Moved recovery view model into Shared and isolated Windows device session, D-drive output validation and WPF preview behind a platform contract. Windows retains its read-only helper and destination checks; an unconfigured platform rejects recovery rather than opening a device or creating output. Mac recovery implementation remains pending.
+- Build succeeded with zero warnings/errors; 1034 tests passed, including fallback safety and existing read-only recovery tests. No physical card or real photo library was accessed.
+
+## 2026-11-05 storage capacity platform boundary
+- Moved Windows disk-capacity API usage out of the main view model into a platform provider; Windows network-share behavior remains unchanged. Unconfigured platforms report unknown capacity; macOS provider remains pending.
+- Build succeeded with zero warnings/errors; 1035 tests passed. No real photo library accessed.
+
+## 2026-11-05 shared recognition runtime options
+- Moved face-recognition and MobileCLIP runtime configuration into Shared; Windows engines continue consuming the same options and identities. Mac engines remain pending.
+- Build succeeded with zero warnings/errors; 1036 tests passed. No real photo library accessed.
+
+## 2026-11-05 HEIF decoder injection
+- Main import orchestration now receives HEIF decoding through the platform boundary; Windows registers its existing libheif decoder. Unconfigured platforms fail explicitly and preserve the pending import. The macOS decoder remains pending.
+- Build succeeded with zero warnings/errors; 1038 tests passed, including HEIF import/retry fixtures. No real photo library accessed.
+
+## 2026-11-05 shared import grouping heuristic
+- Moved existing local color-histogram grouping logic to Shared and isolated pixel decoding behind a platform callback. Windows retains the same WPF decode path. This heuristic is not face recognition; Mac pixel decoding remains pending.
+- Build succeeded with zero warnings/errors; 1039 tests passed, including deterministic synthetic-color grouping. No real photo library accessed.
+
+## 2026-11-05 shared main-window orchestration
+- Moved all MainWindowViewModel partials and their presentation records into Shared, with XAML assembly references updated. Platform entry points provide application version and existing Windows integrations. Updated source-location regression checks without changing their asserted behavior.
+- Build succeeded with zero warnings/errors; 1040 tests passed. Windows started in an isolated profile and displayed all 35 sandbox media with thumbnails; screenshot .artifacts/macos-port-gallery-shared-vm.png. macOS platform implementations and pages are still incomplete.
+
+## 2026-11-05 shared image-split presentation
+- Moved image-split view model to Shared and moved preview image creation to the platform image factory. Windows split window still uses WPF images and was exercised in both themes by its existing render/export test.
+- Build succeeded with zero warnings/errors; 1041 tests passed. Mac split window remains pending; no real photo library accessed.
+
+## 2026-11-05 shared library health workflow
+- Moved read-only library health workflow into Shared and isolated WPF raster decoding behind a platform contract. Windows retains full pixel decode and 32 MP limit; unconfigured platforms report decoding unsupported. Added sandbox test verifying inspection does not change files.
+- Build succeeded with zero warnings/errors; 1042 tests passed. Mac decoder remains pending; no real photo library accessed.
+
+## 2026-11-05 — macOS port: FFmpeg executable names
+
+- Shared video processing now resolves ffmpeg and ffprobe using platform-appropriate executable names while preserving Windows search order. Added a macOS-name regression test using isolated D-drive fixtures.
+- Full solution build succeeded; full test suite passed 1043 tests (196 Core, 75 Infrastructure, 760 App, 12 InstallerShell). Windows sandbox home screenshot: .artifacts/macos-port-windows-pages/Home.png; actual macOS execution remains unverified.
+
+
+## 2026-11-05 — macOS port: portable colour-grouping pixels
+
+- Added an ImageSharp BGRA reader in Shared and registered it for the Mac colour-histogram grouping workflow. This is not a face detector or face recognition implementation. Windows continues to use its existing pixel reader.
+- Synthetic image regression and full solution build/test passed: 1044 tests (196 Core, 75 Infrastructure, 761 App, 12 InstallerShell). Actual macOS execution remains unverified.
+
+
+## 2026-11-05 — macOS port: image health decoding
+
+- Added a Shared ImageSharp health decoder and registered it for Mac. It identifies frame count and dimensions, fully decodes the first frame when within the existing 32-megapixel limit, and reports invalid images through the established error path. Windows keeps its existing WIC decoder.
+- A synthetic PNG and invalid-data regression passed; full solution build and 1045 tests passed (196 Core, 75 Infrastructure, 762 App, 12 InstallerShell). Actual macOS execution remains unverified.
+
+
+## 2026-11-05 — macOS port: HEIF decoder adapter
+
+- Registered a macOS sips-based HEIF decoder for the Shared conversion workflow. It writes a unique temporary PNG inside application data, observes cancellation and a timeout, and removes its own temporary output. The existing Mac first-stage import still needs to be connected to the Shared workflow.
+- An isolated D-drive test verifies decoded dimensions, preservation of the source, and temporary cleanup using an injected converter. Full solution build and 1046 tests passed (196 Core, 75 Infrastructure, 763 App, 12 InstallerShell). The actual macOS sips invocation has not been tested on a Mac.
+
+
+## 2026-11-05 — Windows sandbox navigation smoke
+
+- Started the Windows build with the isolated .artifacts profile and used UI Automation to invoke Import, Gallery, Custom Albums, Face Search, Map, Tools, Date Folders, Settings and Home in sequence. All nine navigation controls responded; this does not establish full interaction coverage within each page. The sandbox home screenshot shows 35 media items.
+
+
+## 2026-11-05 — macOS port: protect settings schemas
+
+- The first-stage Mac settings and Shared settings previously pointed to the same settings.json despite incompatible schemas. Shared Mac data now uses a separate subdirectory so writing either store cannot overwrite the other. This is a temporary data-protection measure; the settings must be unified and migrated when the Mac pages adopt the Shared view models.
+- A D-drive regression writes Shared settings and confirms existing Mac settings remain unchanged. Full solution build and 1047 tests passed (196 Core, 75 Infrastructure, 764 App, 12 InstallerShell).
+
+
+## 2026-11-05 — macOS port: origin metadata adapter
+
+- Added a Mac xattr implementation for the existing Shared origin metadata contract. It uses a dedicated attribute, reads back and verifies writes, and invokes xattr without a shell. The current first-stage Mac import is still separate from the Shared coordinator.
+- Isolated regression uses an injected xattr runner to check metadata round-trip and unchanged file contents; full solution build and 1048 tests passed (196 Core, 75 Infrastructure, 765 App, 12 InstallerShell). Real xattr behavior on macOS remains unverified.
+
+
+## 2026-11-05 — macOS port: startup registration
+
+- Added a macOS LaunchAgent implementation behind the Shared startup interface. It atomically writes only the Hanabe plist and removes only that plist when disabled; registration is enabled only on macOS, not during Windows debugging.
+- An isolated D-drive regression checks plist content, enable/disable, and preservation of an unrelated file. Full solution build and 1049 tests passed (196 Core, 75 Infrastructure, 766 App, 12 InstallerShell). Actual macOS login behavior remains unverified, and Mac settings UI is not yet wired to the Shared coordinator.
+
+
+## 2026-11-05 — macOS port: storage capacity
+
+- Added a Shared storage-capacity provider that selects the most specific mounted filesystem containing the requested directory; registered it for the Mac host. Windows retains its existing provider.
+- A D-drive regression checks capacity and missing directories. Full solution build and 1050 tests passed (196 Core, 75 Infrastructure, 767 App, 12 InstallerShell). macOS mounted and network-volume behavior is not yet verified.
+- The Mac host also launched successfully in Windows with an isolated profile; screenshot: .artifacts/macos-port-mac-windows-debug.png. This is not Mac runtime verification.
+
+
+## 2026-11-05 — macOS port: Keychain adapter
+
+- Added a purpose-aware secret interface while keeping the Windows DPAPI implementation and existing stored values compatible. Mac uses the Security framework directly and stores only references in settings; separate accounts distinguish the API key from the server token and avoid accumulating a new item on each save.
+- An in-memory backend regression verifies separation, updates and reference-only settings; full solution build and 1051 tests passed (196 Core, 75 Infrastructure, 768 App, 12 InstallerShell). Native Security framework calls, access prompts and persistence have not been verified on macOS. The Mac settings UI is not yet wired to the Shared coordinator.
+
+
+## 2026-11-05 — macOS port: trash adapter
+
+- Added a macOS trash adapter using NSFileManager trashItemAtURL rather than deleting paths directly. Missing paths fail before invoking the adapter; Windows retains its existing recycle-bin service. Registration is restricted to macOS.
+- An isolated D-drive test checks delegation and confirms the adapter does not directly delete the test file when using the injected backend. Full solution build and 1052 tests passed (196 Core, 75 Infrastructure, 769 App, 12 InstallerShell). Native Objective-C invocation and actual trash behavior require real Mac verification; the Mac gallery has not yet been wired to the Shared deletion workflow.
+
+
+## 2026-11-05 — macOS port: asynchronous delete confirmation
+
+- The Shared deletion workflow now awaits platform confirmation. Windows retains its existing confirmation window; Mac uses its Avalonia confirmation dialog with cancellation as the default. The unconfigured platform still rejects deletion.
+- Full solution build and 1052 tests passed (196 Core, 75 Infrastructure, 769 App, 12 InstallerShell), including the default-reject regression. Mac gallery integration and real Mac trash behavior remain unverified.
+
+
+## 2026-11-05 — macOS port: pixel art raster adapter
+
+- Moved pixel-art grid and block-size rules into Shared and kept Windows consuming those rules. Added Shared ImageSharp downscaling/nearest-neighbour PNG export and an Avalonia bitmap adapter for Mac.
+- A synthetic red image regression verifies the grid, aspect ratio and exported dimensions; full solution build and 1053 tests passed (196 Core, 75 Infrastructure, 770 App, 12 InstallerShell). Mac pixel-art window and native runtime remain unverified; Windows and ImageSharp resampling are not asserted pixel-identical.
+
+
+## 2026-11-05 — macOS port: shared YuNet postprocessing
+
+- Moved YuNet ONNX output decoding and nonmaximum suppression into Shared, replacing the OpenCV point type with System.Numerics.Vector2. The Windows engine continues to consume the same decoder; this does not yet replace its OpenCV image preprocessing or alignment.
+- An overlapping-box regression verifies score ordering and suppression. Full solution build and 1054 tests passed (196 Core, 75 Infrastructure, 771 App, 12 InstallerShell). Cross-platform face detection/recognition remains incomplete.
+
+
+## 2026-11-05 — macOS port: shared face-alignment geometry
+
+- Moved the five-landmark similarity-transform calculation into Shared and updated the Windows ONNX engine to use it; the raster warp remains Windows OpenCV for now.
+- Regression checks identity landmarks and rejection of degenerate landmarks. Full solution build and 1055 tests passed (196 Core, 75 Infrastructure, 772 App, 12 InstallerShell). Portable image preprocessing, warp, inference wiring and macOS validation remain unfinished.
+
+
+## 2026-11-05 — macOS port: portable face preprocessing
+
+- Added Shared RGB tensor preparation and bilinear face alignment using the shared five-point geometry. These helpers are not yet wired into an inference engine and do not replace Windows OpenCV yet.
+- Synthetic identity-alignment and channel-order regression passed; full solution build and 1056 tests passed (196 Core, 75 Infrastructure, 773 App, 12 InstallerShell). Comparison with the existing OpenCV implementation and actual macOS inference remains pending.
+
+
+## 2026-11-05 — macOS port: portable ONNX face engine
+
+- Added a Shared ONNX Runtime YuNet/SFace (and configured ArcFace) engine using ImageSharp preprocessing and shared decoding/alignment; registered it with the Mac host and included the bundled YuNet/SFace models in Mac output. Windows retains its existing OpenCV engine pending broader equivalence coverage; Mac face-search UI/provider is not yet connected.
+- Compared legacy and portable engines on the repository face fixture and two brightness variants: identical face/album counts in this small sample, and matching fixture embedding cosine greater than 0.90. Full solution build and 1058 tests passed (196 Core, 75 Infrastructure, 775 App, 12 InstallerShell). No real Mac or diverse-library validation has been performed.
+
+
+## 2026-11-05 — macOS port: shared face search
+
+- Moved face-search scanning, scoring, progress and cache logic to Shared behind an embedding-engine interface. Windows keeps its existing Haar/SFace extractor, while Mac uses the shared portable ONNX engine. Cache fingerprints now include the engine identity to prevent incompatible embeddings from being reused.
+- Existing Windows identical-photo search and a D-drive portable-engine search both passed; full solution build and 1059 tests passed (196 Core, 75 Infrastructure, 776 App, 12 InstallerShell). Mac face-search UI and actual macOS inference remain unverified; Windows still uses OpenCV.
+
+
+## 2026-11-05 — macOS port: shared rule-classification policy
+
+- Extracted category thresholds, ranking, explanations and metadata hints from the Windows OpenCV classifier into Shared. The Windows extractor still supplies its existing measurements and face detector, preserving its classification path.
+- Existing Windows rule-classifier tests and a shared-policy regression passed; full solution build and 1060 tests passed (196 Core, 75 Infrastructure, 777 App, 12 InstallerShell). A Mac pixel-measurement adapter and classifier factory remain to be implemented.
+
+
+## 2026-11-05 — macOS port: portable rule-classification measurements
+
+- Added Shared ImageSharp colour, luminance and edge measurements with optional portable face detection, feeding the existing shared classification policy. The Mac classifier factory has not yet been connected, and Windows continues to use OpenCV measurements.
+- Dark and green synthetic samples produced the same category labels as the Windows classifier. Full solution build and 1062 tests passed (196 Core, 75 Infrastructure, 779 App, 12 InstallerShell). Natural-image and borderline-threshold equivalence is not yet established.
+
+
+## 2026-11-05 — macOS port: shared model classification postprocessing
+
+- Moved ImageNet category mapping, softmax and MobileCLIP label ranking into Shared. Windows classifier entry points continue to delegate to the same algorithms.
+- Existing Windows classifier regressions and shared ranking/mapping tests passed; full solution build and 1063 tests passed (196 Core, 75 Infrastructure, 780 App, 12 InstallerShell). Portable ONNX inference and Mac factory registration remain in progress.
+
+
+## 2026-11-05 — macOS port: portable photo classification models
+
+- Added Shared ONNX Runtime implementations for MobileNet and MobileCLIP, ImageSharp preprocessing, the Shared rule fallback, and Mac factory registration. Mac output now includes the classification model assets and their existing notices. Windows retains its existing OpenCV implementations pending broader equivalence validation.
+- Regression compares both portable classifiers against the Windows top category on the repository face fixture. MobileCLIP initially differed; matching OpenCV cubic resize corrected the top category. Its average normalized pixel difference is below 0.015 (about one 8-bit level), not pixel-identical. Full solution build and 1066 tests passed (196 Core, 75 Infrastructure, 783 App, 12 InstallerShell). Mac runtime and diverse-image classification equivalence remain unverified.
+
+
+## 2026-11-05 — sandbox face-engine comparison and Windows album switch
+
+- On 30 sandbox JPGs, the legacy and Shared YuNet/SFace engines each detected 29 faces, produced two albums, and produced identical photo membership per album. Windows people-album inference now uses the Shared engine; legacy OpenCV code is retained only in tests for comparison. Full solution build and 1067 tests passed (196 Core, 75 Infrastructure, 784 App, 12 InstallerShell).
+- A separate face-search comparison with sandbox reference JK0024 and threshold 0.42 returned 17 paths from the existing Windows Haar/SFace engine versus 15 from the portable YuNet/SFace engine; JK0008 and JK0019 differed. Their correctness has not been established. Windows face search therefore intentionally retains its existing engine pending investigation. Evidence is under .artifacts/face-port-qa/results and .artifacts/face-search-qa/results; no real library was accessed.
+
+
+## 2026-11-05 — shared face-search engine on Windows and Mac
+
+- Switched Windows face search to the same Shared YuNet/SFace engine as Mac; the legacy Haar implementation is retained in tests only. Existing cached Haar vectors are invalidated by engine identity and rebuilt rather than mixed with new vectors.
+- Sandbox investigation found the old engine matched JK0008 (a road scene with no visible person) at 0.976, while the new engine found no face. JK0019 still differs: legacy similarity 0.982 versus portable 0.249; whether this image is a true match to the selected reference is unresolved. This is a documented search-behavior change, not proof that all recall is preserved.
+- Full solution build and 1067 tests passed (196 Core, 75 Infrastructure, 784 App, 12 InstallerShell). Actual macOS runtime and broader face-search accuracy remain unverified.
+
+
+## 2026-11-08 — shared face-search reference selection
+
+- Shared face search now orders detected faces by area before choosing the reference, matching the previous Windows largest-face selection. Added a regression for multiple detected faces.
+- Full solution build and 1068 tests passed (196 Core, 75 Infrastructure, 785 App, 12 InstallerShell). Mac runtime and broader search accuracy remain unverified.
+
+
+## 2026-11-08 — macOS collage ICC adapter
+
+- Added a macOS ColorSync adapter using sips to convert tagged collage images to the system sRGB profile. Source and output are unique temporary PNGs, dimensions and embedded output profile are verified, and temporary files are removed; untagged images use the existing clone path. Conversion failures stop export.
+- A D-drive test with an injected converter checks profile handling, pixels and temporary-file cleanup. Full solution build and 1069 tests passed (196 Core, 75 Infrastructure, 786 App, 12 InstallerShell). Actual sips conversion and system profile location have not been verified on a Mac.
+
+
+## 2026-11-08 — exclude library root from detected volumes
+
+- Corrected Mac volume filtering when the library root equals the volume root, while retaining boundary-aware exclusion for nested libraries. A D-drive synthetic-path regression reproduces the previous equal-path failure and checks nested and sibling cases.
+- Full solution build and 1070 tests passed (196 Core, 75 Infrastructure, 787 App, 12 InstallerShell). Physical macOS volume detection remains unverified.
+
+
+## 2026-11-08 — ICC failure-path verification
+
+- Added a regression proving a failed Mac ICC conversion does not return an image and removes both temporary files. Full solution build and 1071 tests passed (196 Core, 75 Infrastructure, 788 App, 12 InstallerShell); actual macOS ColorSync remains unverified.
+
+
+## 2026-11-08 — sandbox classification comparison
+
+- Compared the existing Windows classifiers with Shared ONNX Runtime classifiers on the 30 JPG files in the documented sandbox. All four model implementations actually ran (no fallback). Top-category agreement was 29/30 for MobileNet and 23/30 for MobileCLIP. The detailed per-file results are in .artifacts/classification-port-qa/comparison.json.
+- Windows remains on its existing classifiers because switching with these differences could change existing classifications. Further analysis and representative accuracy evaluation are needed; no real library was accessed.
+
+
+## 2026-11-08 — MobileCLIP difference investigation
+
+- For sandbox JK0019, feeding the exact same OpenCV-preprocessed tensor to OpenCV DNN and ONNX Runtime yielded cosine similarity 0.9999999999848 and identical labels. The ImageSharp-preprocessed JPEG input differed by 0.00167 on average after normalization, and its first label changed.
+- Re-encoding that same decoded image as a lossless PNG inside .artifacts reduced mean input difference to 0.00000028 and all top labels matched. This isolates the observed discrepancy to the JPEG decode path for this sample, not ONNX Runtime; it does not establish which output is more accurate. Windows classification remains unchanged. Diagnostic source and logs are under .artifacts/clip-runtime-qa.
+
+
+## 2026-11-08 — shared map projection
+
+- Added Shared Web Mercator tile projection and inverse projection, with longitude wrapping, polar latitude clamping and zoom validation. This is a foundation only; no map control or tile downloader has been connected.
+- Coordinate, wrapping and invalid-zoom regressions passed; full solution build and 1073 tests passed (196 Core, 75 Infrastructure, 790 App, 12 InstallerShell). OSM tile service policy was reviewed: visible attribution, identifying User-Agent, caching and no bulk prefetch will be required by the eventual map control.
+
+
+## 2026-11-08 — map tile cache foundation
+
+- Added a Shared single-tile HTTPS cache with application User-Agent, server cache lifetime, ETag/Last-Modified conditional requests, PNG signature and size checks, isolated provider directories and atomic file replacement. No prefetch or map UI is included.
+- Fake-HTTP tests verify cache reuse, invalid tile rejection and 304 revalidation without network access. Full solution build and 1075 tests passed (196 Core, 75 Infrastructure, 792 App, 12 InstallerShell). Map attribution, viewport rendering and real-provider integration remain pending.
+
+
+## 2026-11-08 — map tile HTTP age handling
+
+- Fixed cache freshness to account for the response Age and Date headers before applying max-age. An isolated fake-HTTP regression reproduced the stale-cache issue and now passes. Full solution build and 1076 tests passed (196 Core, 75 Infrastructure, 793 App, 12 InstallerShell).
+
+
+## 2026-11-08 — map visible tile calculation
+
+- Added a Shared viewport calculation that returns only tiles intersecting the current rectangle, wrapping longitude at the antimeridian and constraining tile Y. It performs no network requests or prefetching.
+- Viewport and dateline regression passed; full solution build and 1077 tests passed (196 Core, 75 Infrastructure, 794 App, 12 InstallerShell). A visible map control and attribution remain outstanding.
+
+
+## 2026-11-08 — Avalonia native map control foundation
+
+- Added an Avalonia raster map control using Shared viewport and cache, with visible OSM attribution, markers, pan, wheel zoom and marker/coordinate selection events. It is not yet connected to the Mac map page; thumbnail markers, page interactions and Mac runtime validation remain outstanding.
+- A standalone Windows Avalonia QA host used an injected fake tile handler, with no network requests. The inspected screenshot .artifacts/map-control-qa/map.png shows the fixture tiles, marker and attribution. Full solution build and 1077 tests passed (196 Core, 75 Infrastructure, 794 App, 12 InstallerShell). Input interactions still require verification.
+
+
+## 2026-11-08 — native map input smoke
+
+- Exercised the isolated Windows Avalonia map QA host with injected local fixture tiles: clicking the marker raised its selection event, dragging changed latitude/longitude, and the mouse wheel changed zoom from 2 to 3. Event evidence is in .artifacts/map-control-qa/events.log. No OSM network requests were made. Formal Mac page integration and macOS runtime remain pending.
+
+
+## 2026-11-08 — VideoLAN macOS arm64 dependency investigation
+
+- Official VideoLAN.LibVLC.Mac 3.1.3.1 NuGet archive was inspected and contains only build/osx-x64/libvlc.dylib. It cannot satisfy the Apple Silicon target by itself.
+- Downloaded VideoLAN VLC 3.0.24 arm64 DMG to .artifacts/videolan-official and verified its SHA-256 against VideoLAN's published checksum: 64A89D93CDD30B0E97131743E246373DB82D6826EA882D265D46D74B136DA2B7. Selective extraction confirms Mach-O CPU 0x100000C for libvlc, libvlccore and an avcodec plugin.
+- The distribution uses symlinks and @rpath/libvlccore.dylib. Windows 7-Zip cannot create the symlinks without privilege, and the existing apphost contains no LC_RPATH. The files were not added to the product package; loader paths, symlink preservation, licensing, signing and actual macOS playback still require a verified solution.
+
+
+## 2026-11-08 — macOS signing prerequisites
+
+- Added the four hardened-runtime entitlements documented for .NET: JIT, unsigned executable memory, dyld environment variables and disabled library validation. The latter permits third-party native video plugins; these privileges require deliberate review for a future Developer ID release. Packaging does not yet apply them.
+- Downloaded rcodesign 0.29.0 for Windows to D-drive artifacts and checked SHA-256 54BB500E2DA7A8DE02FCAE0F331D1CAC6E6D7173B4281042FF9C528BA3159AAA against the upstream release checksum. In an isolated test it generated an ARM64 ad-hoc/runtime signature whose 26 CodeDirectory page hashes were independently checked; rcodesign verify itself returned a CMS error while warning that its verifier is known to be buggy. This is not proof of acceptance by macOS.
+- Also downloaded and checked official VLC 3.0.24 Intel DMG SHA-256 1EF6C903E2DC026D4E58DDF7B2A9ED0EB6F8CAF80A9A9F46F96490340B962707. The two VLC architectures are staged only under .artifacts, not yet packaged; library loading, plugin exclusions, licensing, signing and real Mac verification remain outstanding.
+- Entitlements regression and full solution build/tests passed: 1078 tests (196 Core, 75 Infrastructure, 795 App, 12 InstallerShell). References: https://learn.microsoft.com/en-us/dotnet/core/install/macos-notarization-issues and https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.security.cs.disable-library-validation
+
+
+## 2026-11-08 — Avalonia video view dependency
+
+- Added LibVLCSharp.Avalonia 3.9.4 to the Mac project and the existing Windows native LibVLC version for Windows debug builds only. Version 3.9.4 supports the project's Avalonia 11.2 baseline; LibVLCSharp.Avalonia 3.10.1 requires Avalonia 11.3.13 and would force a broader UI framework upgrade. The VideoLAN Mac NuGet package is deliberately not used because its released archive contains only x64.
+- Full solution build and 1078 tests passed. No video playback or macOS native library packaging is claimed yet; the dependency selection and actual playback still require verification.
+
+
+## 2026-11-08 — Avalonia video playback foundation
+
+- Added a platform video-session owner using LibVLCSharp, loading custom VLC lib/plugins paths on macOS and releasing native media/player resources on close. Added a Windows compatibility manifest to the Mac host, required for Avalonia NativeControlHost when debugging on Windows. This is not yet wired into the Mac viewer.
+- Built a standalone Avalonia QA host and generated a blue 12-second MPEG-4 clip inside .artifacts. Initial execution failed because the host lacked a Windows supportedOS manifest; after applying the manifest and FluentTheme, the actual player reported started=True, playing=True and time=2901 ms. Inspected frame screenshot: .artifacts/video-control-qa/video.png; event log is alongside it.
+- Full solution build and 1078 tests passed (196 Core, 75 Infrastructure, 795 App, 12 InstallerShell). This is Windows debug playback only: macOS native VLC packaging, signing, player controls, integration and actual Mac playback remain unverified.
+
+
+## 2026-11-08 — Mach-O runtime search path and signing diagnostic
+
+- Added an isolated Mach-O LC_RPATH patch utility for unsigned arm64/x64 binaries. It checks CPU, command boundaries, section padding and existing signatures, writes atomically, is idempotent, and rejects insufficient space without modifying input. The utility is not yet invoked by the release packaging script.
+- Synthetic regression and both staged .NET apphost copies passed patch checks; rcodesign subsequently produced ad-hoc/runtime signatures with the expected rpath. A Windows-specific rcodesign issue was found: absolute D: entitlement paths are parsed as a scope and silently omitted; using a repository-relative entitlement path produced both XML and DER entitlement slots. This must be enforced by the eventual script. rcodesign verify reports a CMS error for the ad-hoc test, so macOS acceptance is not established.
+- Full solution build and 1079 tests passed (196 Core, 75 Infrastructure, 796 App, 12 InstallerShell). No final package was built.
+
+
+## 2026-11-08 — isolated VLC bundle signing experiment
+
+- Assembled a small ARM64 test bundle in .artifacts with a patched apphost, official VLC libvlc/libvlccore and an avcodec plugin; rcodesign recursively signed it with the .NET entitlements. The main binary contains XML and DER entitlement slots. Independent verification of CodeDirectory page hashes succeeded for the apphost and all three native libraries.
+- Scanned every extracted arm64 and x64 VLC dylib: all matched their intended CPU architecture. Apart from system dependencies and libvlccore, two VLC application-interface plugins depend on Sparkle/Growl frameworks; deciding how to package or omit them and verifying actual playback still remains. This experiment is not a release or macOS execution test.
+
+
+## 2026-11-08 — prepare official VLC binaries for packaging
+
+- Added a staging utility that downloads fixed VideoLAN 3.0.24 ARM64/Intel DMGs and license texts only when absent, verifies pinned SHA-256 values, extracts selected libraries/plugins, verifies every Mach-O CPU type, and copies the versioned libraries as ordinary files so Windows need not create symlinks. It rejects paths outside project artifacts and nonempty or overlapping staging directories.
+- Excluded VLC's macOS application-interface and Growl notification plugins because they depend on frameworks not included in the app; their omission and actual playback still require Mac verification. Added source and license references alongside the staged files; this is not a legal-compliance or playback claim.
+- Isolated staging verified the nonempty-directory guard and prepared 333 ARM64 and 339 x64 plugin binaries; full solution build and 1079 tests passed. The main packaging script does not yet call the utility.
+
+
+## 2026-11-08 — pinned signing-tool acquisition
+
+- Added a D-drive-only rcodesign acquisition helper. It downloads the fixed upstream 0.29.0 archive when needed, verifies both the archive and extracted executable SHA-256, refuses an incomplete or mismatched cache, and returns the verified executable path without requiring user commands.
+- The existing verified cache was checked twice successfully; full solution build and 1079 tests passed. The release packaging script is not yet connected to this helper and macOS signature acceptance remains unverified.
+
+
+## 2026-11-08 — Mach-O signature integrity checks
+
+- Added a signature inspection utility that checks the target CPU, signed code-page hashes, required .NET entitlement blobs and optional bundle metadata hashes; added regression coverage for a valid fixture, missing entitlements and modified code.
+- The isolated ARM64 signed bundle passed checks for its executable and three VLC libraries, including entitlement and bundle metadata hashes. This checks file integrity only and does not establish macOS signature acceptance or successful playback.
+- Full solution build and 1080 tests passed (196 Core, 75 Infrastructure, 797 App, 12 InstallerShell).
+
+## 2026-11-08 — connect macOS package staging
+
+- Connected isolated per-run packaging to the pinned signing tool, verified VLC staging, Mach-O runtime path patch and signature integrity checks. Builds retain earlier artifacts instead of deleting fixed staging paths; actual macOS acceptance remains to be verified.
+- An isolated ARM64 package was generated; its zip CRC, main executable permissions and 333 plugin executable permissions passed inspection. Full solution build and 1080 tests passed. This artifact is a development package, not a claim of feature completeness or macOS execution.
+
+## 2026-11-08 — Intel signature verification compatibility
+
+- Intel VLC binaries use a SHA-1 primary CodeDirectory and a SHA-256 alternate. Updated the integrity checker to select the SHA-256 directory and added regression coverage; all 341 signed Intel VLC libraries passed the updated check. Actual macOS signature acceptance remains unverified.
+- Full solution build and 1081 tests passed. Intel test zip CRC and executable permissions passed for its 339 plugins; rcodesign warned about plugins.dat, so macOS validation is still necessary.
+
+## 2026-11-08 — legacy Mac settings migration foundation
+
+- Added a Shared migration operation that preserves an existing shared library path and unrelated preferences, reads legacy settings without deleting them, and records one-time completion. Malformed legacy JSON fails without changing shared settings. The Mac UI is not yet connected to this migration.
+- Full solution build and 1083 tests passed (196 Core, 75 Infrastructure, 800 App, 12 InstallerShell).
+
+## 2026-11-08 — connect Mac settings to shared storage
+
+- Connected first-stage Mac preferences to the Shared settings store through the one-time migration. Each UI change updates only its own fields under the shared store lock, retaining unrelated shared preferences and the legacy file. Migration errors are surfaced rather than overwriting an unreadable legacy file.
+- Full solution build and 1083 tests passed. A Windows-hosted Mac app launch with a fresh isolated data directory confirmed that all four legacy settings were migrated to Shared; the original legacy file remained in place. The full settings center remains incomplete and macOS execution remains unverified.
+
+## 2026-11-08 — login startup preference
+
+- Added Shared coordination for platform login registration and settings persistence, including rollback if saving fails, and connected a macOS-only settings control. A fake platform verifies success and registration failure without changing the user's login items. The real LaunchAgent interaction still requires macOS testing.
+- Full build passed. One full test run reported two HEIF conversion failures without detailed failure output at quiet verbosity; targeted rerun and a full normal-verbosity rerun passed all 1085 tests. The initial failure was not reproduced or diagnosed and remains a regression risk.
+- Added a regression test confirming a canceled settings write restores the prior login registration.
+
+## 2026-11-08 — import defaults in Mac settings
+
+- Exposed the existing shared-persisted duplicate and verified-move choices in the Mac settings view. The import flow retains its separate confirmation before deleting source files after verified transfer.
+- Full solution build and 1086 tests passed (196 Core, 75 Infrastructure, 803 App, 12 InstallerShell).
+
+## 2026-11-08 — transient image-test cleanup locks
+
+- A detailed repeated test run reproduced intermittent cleanup failures for both an HEIF fixture and an unrelated rule-classifier JPEG: the assertions had completed, but Windows reported the test image was in use when the isolated test directory was removed. The process holding each file was not identified, so an external scanner is possible but unconfirmed.
+- Test cleanup now retries transient IO locks for at most two seconds and still fails for persistent locks; cleanup is restricted to project artifacts, and the rule-classifier fixtures were moved to D-drive artifacts. No production file handling was altered.
+- Full build and 1086 tests passed after bounded test cleanup; three further full App-suite runs passed. The source of the short-lived Windows file locks remains unconfirmed.
+
+## 2026-11-08 — move early Mac import coordinator into Shared
+
+- Moved the existing portable import coordinator and its models into Shared without changing their namespace or behavior; added a boundary regression check. This alone does not unify the early Mac import workflow with the richer Windows workflow, which remains unfinished.
+- Full solution build and 1087 tests passed after the move. A synthetic D-drive sandbox import additionally verified byte-identical copy, retained source, and duplicate skip on a second import; the destination name follows the existing import naming policy.
+
+## 2026-11-08 — prevent incomplete signed packages
+
+- Found that rcodesign separate-output bundle signing omitted ordinary managed assemblies and model assets; the earlier ARM64 and Intel QA zips are invalid and must not be used. Switched to in-place signing and added a check that every published file exists, comparing all non-Mach-O resources by SHA-256 after signing. Regression coverage detects missing and changed resources.
+- Full build and 1089 tests passed. Rebuilt both QA packages with the corrected in-place signing; zip CRC, 0755 executable/plugin permissions, managed assembly, runtime configuration, 9 model files and 24 asset files were checked for each. rcodesign reports non-Mach-O nested-code warnings, and its generated CodeResources does not list the managed DLLs under Contents/MacOS; macOS signature acceptance and resource sealing are not established. These remain development artifacts, not complete releases.
+
+## 2026-11-08 — portable bundle resource lookup
+
+- Added a Shared resource path resolver for standard macOS Contents/Resources placement, with standalone-directory fallback. Connected portable face/classification models and sound lookup. An isolated single-file ARM64 publish and runtime-path patch were prepared as an experiment; no macOS execution has been performed and the main packaging script has not yet switched layouts.
+- Full solution build and 1090 tests passed; the bundle resource resolver was also verified against isolated bundle and standalone layouts.
+
+## 2026-11-08 — 同一天分段放文件夹 HANABE-IMPORT-DAY-SPLIT（Claude）
+- 接手说明：ChatGPT 任务 11:31 因额度用完停在签名单文件实验（未定稿，见上一条）；本条只做导入分段，不碰签名/打包。
+- Shared：新增 `Imports/ImportDaySplitPlanner.cs`（按间隔切段、少于 5 组并入较近段、同目录同名配对不拆、上午/下午/晚上默认备注与去重）、`Imports/ImportDayPlan.cs`（`ImportDayPlanBuilder`，Windows 与 Mac 共用）。`ImportDateFolderDecision` 增加分段信息（段号、时间、间隔、成员、是否整天放一起）；`ImportDateFolderPreflightService.CreateSegmentedDecisions`：当天已有文件夹时第 1 段默认用原文件夹，其余段新建。
+- Windows VM：`MainWindowViewModel.ImportDaySplit.cs`（设置 `AutoSplitImportDays` 默认开、`ImportDaySplitHours` 1–4 默认 2；命令 KeepImportDayTogether / SplitImportDay / MergeImportSegmentWithPrevious；后台补读 EXIF 拍摄时间，分段变化时静默重建）。导入执行改为按队列项给目标（`RunImportToTargetsAsync`，原 `RunImportAsync(dict)` 保留为整天入口）；查重预览按段计数；“个拍摄日”按日期去重。
+- Windows UI：检查页每段一张卡（色点 + 第几段 + 时间 + 与上一段间隔，“和上一段放一起 / 这一天都放进一个文件夹”，整天时“分开放”）；导入设置弹层加开关与小时数。与画布 win/ImportSplit 的差异：没有单独的当天详情页和时间轴，改为每段一张卡，功能相同。
+- Mac：`MacImportEngine.CreateDecisions(..., autoSplit, threshold, keptTogether, mergedAnchors)` 与 `Covers`；ImportViewModel 与 MainWindow.axaml 加同样的分段卡和设置。修复：DataTemplate 内用 `$parent[Window].DataContext`（工程未启用编译绑定，强转写法运行时崩溃）。
+- 验证：全量 1100 项通过（新增 10 项 ImportDaySplitTests，更新 ImportWorkflowUiTests 的源码断言）。沙盒 14 张（09:12–12:07 与 18:30–20:10）实际导入：Windows 与 Mac 都分别落到 11.04_婚礼（原文件夹，8 张）和 11.04_晚上（新建，6 张）。截图 `.artifacts/split-review.png`、`.artifacts/mac-split.png`；测试导入的文件夹已删除。
+- 已知：WPF PrintWindow 截图不显示 TextBox 文字（UIA 读值正常，Mac 截图可见“晚上”），不是界面问题。
+
+## 2026-11-08 — 导入页标题与步骤条统一（Claude）
+- 步骤条从三颗独立药丸改为一个分段容器（Radius.Control 圆角、与按钮同底色和描边），放在“导入”标题同一行；当前步用侧栏选中同款粉色渐变，已完成为实心粉圆 ✓，未到为描边圆；步骤之间用 › 分隔。仍只有“回到选择来源”可点。
+- 页面提示句由粉色改为次要文字色（粉色只用于强调和可点项）。
+- 验证：全量 1100 项通过；沙盒截图 `.artifacts/claude-build/import-h1-*.png`。桌面快捷方式指向的 Release 版已重新生成并重新打开。
+
+## 2026-11-08 — 图库浏览与筛选重排、查看器过渡动画（Claude）
+- 图库：去掉“浏览条件”折叠面板和三层页头。标题“浏览 · 全部日期 · N 张”与搜索框同一行；“扫描重复内容 / 安全隔离区”收进“⋯”菜单。筛选常驻在照片墙上方：类型分段（全部 / RAW / JPG / 修后 / 视频 / 运动相机 / 素材）、修图状态分段、评分、排序、多选、智能识别（展开）、有筛选时才出现“清除筛选”。缩略图大小移到照片墙底栏。
+- 左栏：日历卡片换成按年 / 月分组的拍摄日列表（显示日期文件夹名，点一天只看这一天，“全部日期”回到全部），底部是人物筛选，点“按人物筛选…”弹出头像。
+- 照片卡片：只保留格式小角标和“已修”角标；文件名等文字只在指针悬停时出现；圆角改为控件圆角。日期分组标题去掉“日”方块与“拍摄日期”小字。右侧信息面板可开关（按钮或 Ctrl+I）。
+- VM：MainWindowViewModel.Gallery.cs（PreviewCategoryChips、SelectLibraryDateCommand、IsBrowseInspectorOpen、HasActiveBrowseFilters、GalleryScopeText、GalleryCurrentDatePath）；LibraryDateNode.ShortTitle。
+- 查看器：PhotoViewerWindow.Transitions.cs。打开时内容从 94% 放大淡入（260ms），关闭时缩回淡出（160ms）后才关窗；视频画面等打开动画结束再显示（VLC 子窗口不受 WPF 动画影响）；左右切换照片时新照片轻微淡入。系统关闭动画时全部跳过。
+- 测试：更新 6 个记录旧布局的源码断言测试，新增 GalleryChromeTests 4 项；全量 1104 项通过。--viewer 截图与改动前一致（动画结束后画面不变）。
+- 注意：调试时发现隔离测试数据目录 appdata 的照片库被改成了真实照片库（原因未明，可能是测试窗口被手动操作），已改回沙盒库；期间只做了浏览，没有导入或改动文件。
+- 桌面快捷方式的 Release 版已重新生成并重新打开。
+
+## 2026-11-08 — 照片 / 视频查看器：无边窗口与悬浮按钮重做（Claude）
+- 窗口：无边窗口，按主窗口所在显示器可用区域取 86% × 88%（不小于 980×640）并居中，Windows 11 系统圆角（PhotoViewerWindow.Sizing.cs）。F11 / 双击空白切换铺满屏幕；铺满时 Esc 先回到窗口，再按关闭；窗口模式下拖空白处移动。
+- 背景：当前照片的大半径模糊铺底 + 四周压暗（颜色走主题 Token）。
+- 悬浮按钮：统一 40px 圆形图标按钮、深色玻璃胶囊 + 细描边。左上：返回 + 文件名，第二行“第几张 · 拍摄时间 · 尺寸”。右上：5 颗评分星（点亮为粉色，可点、可按 1–5）｜详细信息（I）、在资源管理器中显示、移到回收站（悬停变红）｜关闭。左右两侧居中 52px 翻页按钮（到头时变淡）。底部：照片为“− 百分比 +”缩放条（点百分比适应屏幕）；视频为后退 / 粉色播放主按钮 / 快进、时间、加长进度条、倍速、音量。
+- 视频：画面窗口为左右翻页按钮让出 96px、顶部 84px、底部 92px（工具栏显示时）。
+- 信息面板去掉重复的评分按钮和删除按钮，快捷键说明更新。
+- 验证：全量 1104 项通过（含设计系统“无裸色值”测试）；--viewer 截图确认窗口 2202×1226（2560 宽屏）与按钮布局。桌面 Release 版已更新并重新打开。
+
+## 2026-11-08 · 查看器黑边 / 视频封面 / 图库卡顿（Claude）
+
+用户反馈：「四边黑边不等，然后我只是想要视频有个快捷封面，不是说我要生成一个jpg来单纯看，另外 这个软件好像卡住了」。
+
+- **卡顿根因**：照片墙进入图库时把 `VisiblePreviewFiles` 全部（6000+ 张，网络盘原图）一次性解码成缩略图，4 个线程连续跑满数分钟、内存 1GB+。
+  改为只预载前 `GalleryEagerThumbnailCount`(160) 张，其余由 `VirtualizingWrapPanel` 的 ScrollInfoChanged → `RequestGalleryViewportThumbnails`（已实例化格子）按需加载；缩放时同理。实测图库空闲 CPU≈0、内存 1.1GB → 370MB。
+  新增 `GalleryLazyThumbnailTests`。
+- **查看器卡**：氛围背景原来是全尺寸图 + BlurEffect(90)，亚克力层用 RenderTargetBitmap（软件渲染）截 MediaRoot 时极慢。改为 32px 小图线性放大（自带柔和模糊），无 BlurEffect。
+- **四边黑边不等**：PhotoImage 的 Margin=24 叠加 Width/Height=视口尺寸导致右/下溢出；Margin 移到 PhotoViewport，四边留白相等。
+- **视频快捷封面**：Sony 卡里的 `C3858T01.JPG` 封面导入改名为 `JK0166（C3858T01）.JPG` 后没被识别，作为普通 JPG 出现在图库里。
+  `ThumbnailResolver.SonyPosterStemFor / VideoStemForSonyPoster` 支持括号（全角/半角）内的 Sony 片段名，图库隐藏这些封面（6367 → 6193 项），视频格子用它当缩略图。
+  查看器打开视频时先显示封面（`VideoCover`，VLC 子窗口在出第一帧前缩成 1px），收到 `Vout` 后切到视频；打开动画最多等 450ms，不再卡住播放。
+
+## 2026-11-08 · 已导入日期的同日分场 + 父子级（Claude，HANABE-LIBRARY-DAY-SESSIONS）
+
+用户：「优化同一天的拍摄内容的父子级分类情况，以及根据间隔时间自动分类，哪怕我已经导入」；选择「图库里虚拟分组 + 可一键拆分」。随后反馈拆分确认框（系统 MessageBox）不好看，已换成主题化窗口。
+
+- **父子级**：同一天有多个文件夹（11.07 / 11.07_晚上）时，日期导航里归到「11.07」父级下（`LibraryDateNode.IsDayGroup / FolderPaths / SelectionKey`）；点父级一次读这一天的全部文件夹。`FlattenDateNodes` 只返回叶子，统计不重复。
+- **虚拟分场**：`LibraryDaySessionPlanner`（Shared/Browsing）沿用导入同日分段规则（`ImportDaySplitPlanner`，阈值 / 开关共用导入设置「按间隔自动分场」）。时间取文件修改时间；同名 RAW/JPG/视频封面 T01/XML M01/xmp 永远同一场；「修后」不参与计时，按同名原片归场。
+  图库分组变成「11月 · 11.07 · 晚上」+ 副标题「第 2 场 · 19:30–20:09 · 距上一场 9 小时 51 分」，导航里显示场次子级，点击滚到那一场（`VirtualizingWrapPanel.ScrollToItemIndex`）。不动硬盘文件。
+- **一键拆分**：导航「按场次拆成文件夹…」→ `DaySplitConfirmWindow`（时间线卡片、可改新文件夹备注、校验）→ 第 2 场起的文件移到「11.07_晚上」（重名加 2），子目录结构不变，「修后」不动；移动清单写到 `%AppData%/day-split-journal/*.json`；`media-metadata.json` 里的评分 / 标签路径同步改；完成后刷新图库。
+- 测试：`Browsing/LibraryDaySessionTests`（9 个）。沙盒实测：80 张两场 → 40 张移到 11.07_晚上，日志写入。
+
+- 2026-11-08 追加（同日分场）：
+  - **拍摄时间改读 EXIF**：真实图库里导入后文件修改时间 = 导入时刻（11.07 被分成「21:46 / 次日 08:35」两场是错的）。新增 `LibraryCaptureTimeCache`（%AppData%/capture-times.json）：照片读 EXIF DateTimeOriginal，视频读 Sony M01.XML CreationDate / QuickTime 创建时间；同名文件只读一个（JPG 优先），后台 4 并发按文件夹读，读完才分场；读不到时间的文件不参与计时。
+  - **拆分窗口**：改成无边独立卡片（不再套系统标题栏 + 深色底），分区：标题 / 分场间隔滑块（30 分钟–8 小时，步长 0.5，实时重新分场）/ 预览卡片 / 说明 / 底部操作条；改过的备注在调间隔后保留；只有 1 场时按钮置灰。
+  - 同一天多个文件夹时，照片墙分组标题带上文件夹备注（11.07 · 下午）。

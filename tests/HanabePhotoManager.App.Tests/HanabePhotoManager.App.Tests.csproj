@@ -19,6 +19,14 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/HanabePhotoManager.App/HanabePhotoManager.App.csproj" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacHeifDecoder.cs" Link="MacHeifDecoder.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacSettingsStore.cs" Link="MacSettingsStore.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacOriginMetadataStore.cs" Link="MacOriginMetadataStore.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacStartupRegistration.cs" Link="MacStartupRegistration.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacKeychainSecretProtector.cs" Link="MacKeychainSecretProtector.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacTrashService.cs" Link="MacTrashService.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/MacCollageColorConverter.cs" Link="MacCollageColorConverter.cs" />
+    <Compile Include="../../src/HanabePhotoManager.Mac/Services/VolumeService.cs" Link="VolumeService.cs" />
   </ItemGroup>
 
   <ItemGroup>

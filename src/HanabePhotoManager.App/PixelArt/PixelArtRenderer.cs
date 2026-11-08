@@ -28,14 +28,13 @@ public static class PixelArtRenderer
     /// <summary>计算像素网格尺寸：等比缩放，长边 = targetSize，但绝不放大（原图小于目标时保持原尺寸）。</summary>
     public static (int Width, int Height) CalculateGridSize(int sourceWidth, int sourceHeight, int targetSize)
     {
-        var scale = Math.Min(1.0, Math.Min((double)targetSize / sourceWidth, (double)targetSize / sourceHeight));
-        return (Math.Max(1, (int)Math.Round(sourceWidth * scale)), Math.Max(1, (int)Math.Round(sourceHeight * scale)));
+        return PortablePixelArtProcessor.CalculateGridSize(sourceWidth, sourceHeight, targetSize);
     }
 
     /// <summary>计算导出时的块放大倍数：输出长边约 1024px，块至少 1。</summary>
     public static int CalculateBlockSize(int gridWidth, int gridHeight)
     {
-        return Math.Max(1, (int)Math.Ceiling(1024d / Math.Max(gridWidth, gridHeight)));
+        return PortablePixelArtProcessor.CalculateBlockSize(gridWidth, gridHeight);
     }
 
     /// <summary>把源图等比缩到目标网格（长边 = targetSize），返回网格位图与网格尺寸。</summary>

@@ -102,8 +102,8 @@ public sealed class ImportWorkspaceTests : IDisposable
     [Fact] public void InvalidThumbnail_DoesNotKeepFileLocked()
     {
         var path=Path.Combine(Source("invalid-thumbnail",1),"C0001.MP4");
-        var decode=typeof(MainWindowViewModel).GetMethod("TryLoadWpfThumbnail",BindingFlags.Static|BindingFlags.NonPublic)!;
-        Assert.Null(decode.Invoke(null,[path,260]));
+        var decoder = new HanabePhotoManager.App.Platform.WpfThumbnailBackend();
+        Assert.Null(decoder.Decode(path,260));
         using var exclusive=new FileStream(path,FileMode.Open,FileAccess.ReadWrite,FileShare.None);
         Assert.Equal(3,exclusive.Length);
     }

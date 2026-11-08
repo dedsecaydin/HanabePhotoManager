@@ -1,7 +1,8 @@
 <UserControl x:Class="HanabePhotoManager.App.DateFolders.DateFolderManagementPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:datefolders="clr-namespace:HanabePhotoManager.App.DateFolders">
+             xmlns:datefolders="clr-namespace:HanabePhotoManager.App.DateFolders"
+         xmlns:datefolderss="clr-namespace:HanabePhotoManager.App.DateFolders;assembly=HanabePhotoManager.Shared">
   <UserControl.Resources>
     <Thickness x:Key="DateHeat.CellGap">2</Thickness>
     <Thickness x:Key="DateHeat.Zero">0</Thickness>
@@ -53,7 +54,7 @@
               <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
-              <DataTemplate DataType="{x:Type datefolders:DateHeatMonth}">
+              <DataTemplate DataType="{x:Type datefolderss:DateHeatMonth}">
                 <Border Width="170" Margin="{StaticResource DateHeat.MonthGap}" Padding="{StaticResource DateHeat.CardPadding}" CornerRadius="{StaticResource Radius.Card}" Background="{DynamicResource Brush.Glass.Surface}" BorderBrush="{DynamicResource Brush.Glass.Stroke}" BorderThickness="{StaticResource BorderThickness.Glass}">
                   <StackPanel>
                     <DockPanel>
@@ -65,7 +66,7 @@
                         <ItemsPanelTemplate><UniformGrid Columns="7" /></ItemsPanelTemplate>
                       </ItemsControl.ItemsPanel>
                       <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type datefolders:DateHeatCell}">
+                        <DataTemplate DataType="{x:Type datefolderss:DateHeatCell}">
                           <Button x:Name="HeatCell" Height="20" Margin="{StaticResource DateHeat.CellGap}" Padding="{StaticResource DateHeat.Zero}" IsEnabled="{Binding HasFolder}" ToolTip="{Binding ToolTipText}" ToolTipService.ShowOnDisabled="True"
                                   Command="{Binding DataContext.SelectHeatCellCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Cursor="Hand">
                             <Button.Template>
@@ -116,7 +117,7 @@
                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
                  ScrollViewer.CanContentScroll="True" AutomationProperties.Name="日期文件夹备注列表">
           <ListBox.ItemTemplate>
-            <DataTemplate DataType="{x:Type datefolders:DateFolderItemViewModel}">
+            <DataTemplate DataType="{x:Type datefolderss:DateFolderItemViewModel}">
               <Border Padding="{StaticResource Spacing.Row.Vertical.8}" BorderBrush="{DynamicResource Brush.Border.Subtle}" BorderThickness="{StaticResource BorderThickness.Divider.Bottom}">
                 <Grid>
                   <Grid.ColumnDefinitions>
